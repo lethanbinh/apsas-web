@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -508,4 +510,35 @@ a {
   .reset-password-button {
     flex: none;
   }
+}
+
+.apsis-header-root {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 64px !important; /* h-16 */
+  padding: 0 24px !important; /* px-6 (24px) */
+  background-color: #BBDEF8 !important; /* bg-blue-100/50 */
+}
+
+.apsis-header-left-group {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  gap: 32px !important; /* space-x-8 (32px) */
+}
+
+.apsis-nav-group {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  gap: 20px !important; /* Tăng khoảng cách giữa các mục menu lên 20px */
+}
+
+.apsis-user-group {
+  display: flex !important;
+  align-items: center !important;
+  line-height: normal !important;
+  gap: 8px !important; /* gap-2 (8px) */
+  font-size: 16px !important; /* Tăng kích thước font tên Anle */
 }

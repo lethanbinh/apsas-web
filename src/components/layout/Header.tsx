@@ -1,91 +1,143 @@
 /**
- * Header component
+ * Header component - FINAL FIX with Global CSS AND Inline Styles for State
+ * Sửa lỗi ReferenceError: hoverKey is not defined.
  */
 
-'use client';
+"use client";
 
-import React from 'react';
-import { Layout, Menu, Avatar, Dropdown, Button, Space } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
-import { useAuth } from '@/hooks/useAuth';
-import { useRouter } from 'next/navigation';
+import { Dropdown } from "antd";
+import type { MenuProps } from "antd";
+import { DownOutlined, UserOutlined } from "@ant-design/icons";
+import Link from "next/link";
+import { LogoComponent } from "@/components/ui/Logo"; // Import the shared LogoComponent
+import { useState } from "react";
 
-const { Header: AntHeader } = Layout;
+// Dùng Icon Ant Design cho Avatar
+const AvatarPlaceholder = () => (
+    <div className="!w-8 !h-8 !rounded-full !flex !items-center !justify-center !bg-gray-300 !border-2 !border-pink-500">
+        <UserOutlined className="!text-gray-600 !text-lg" />
+    </div>
+);
+
+// Bổ sung hoverKey: string | null vào danh sách tham số
+const getLinkStyle = (key: string, activeKey: string, hoverKey: string | null): React.CSSProperties => {
+    const isSelected = key === activeKey;
+    
+    // Style mặc định cho link (inactive)
+    let currentStyle: React.CSSProperties = {
+        padding: '0 8px', // px-2
+        color: '#4b5563', // text-gray-700
+        fontWeight: 500,
+        transition: 'all 0.15s ease',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        whiteSpace: 'nowrap',
+        fontSize: '15px',
+        textDecoration: 'none', // Đảm bảo không có gạch chân
+    };
+
+    // Áp dụng style ACTIVE
+    if (isSelected) {
+        currentStyle = {
+            ...currentStyle,
+            color: '#ffffff', 
+            backgroundColor: '#4cbfb6', 
+            borderRadius: '20px', 
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1)', 
+            padding: '8px 20px', 
+            height: 'auto',
+        };
+    }
+    
+    // Áp dụng style HOVER (Chỉ khi hoverKey khớp với key hiện tại)
+    if (hoverKey === key) {
+        if (isSelected) {
+            // Hover trên mục đang ACTIVE (Home): Nền đậm hơn, chữ xám
+            currentStyle = {
+                ...currentStyle,
+                backgroundColor: '#38a199', // hover:bg-teal-500
+            };
+        } else {
+            // Hover trên mục INACTIVE: Chữ xanh ngọc
+            currentStyle = {
+                ...currentStyle,
+                color: '#38a199', // hover:text-teal-600
+            };
+        }
+    }
+
+    return currentStyle;
+};
 
 export const Header: React.FC = () => {
-  const { user, logout, isAuthenticated } = useAuth();
-  const router = useRouter();
+    // hoverKey được khai báo ở đây
+    const [activeKey, setActiveKey] = useState("home"); 
+    const [hoverKey, setHoverKey] = useState<string | null>(null);
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
+    const navigation = [
+        { key: "home", label: "Home", href: "/" },
+        { key: "dashboard", label: "Dashboard", href: "/dashboard" },
+        { key: "my-courses", label: "My courses", href: "/my-courses" },
+        { key: "all-courses", label: "All courses", href: "/all-courses" },
+    ];
 
-  const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: 'Hồ sơ',
-      onClick: () => router.push('/profile'),
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Cài đặt',
-      onClick: () => router.push('/settings'),
-    },
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: 'Đăng xuất',
-      onClick: handleLogout,
-    },
-  ];
+    const userMenuItems: MenuProps['items'] = [
+        { key: "profile", label: "Profile" },
+        { key: "settings", label: "Settings" },
+        { type: "divider" },
+        { key: "logout", label: "Logout" },
+    ];
 
-  return (
-    <AntHeader className="app-header">
-      <div className="header-content">
-        <div className="header-logo">
-          <h2>APSAS Web</h2>
-        </div>
+    return (
+        // Sử dụng Global CSS cho bố cục
+        <header className="apsis-header-root">
+            
+            <div className="apsis-header-left-group">
+                
+                <Link href="/home" className="!flex !items-center !h-full">
+                    <LogoComponent /> 
+                </Link>
+                
 
-        <div className="header-actions">
-          {isAuthenticated ? (
-            <Space>
-              <span>Xin chào, {user?.firstName}</span>
-              <Dropdown
-                menu={{ items: userMenuItems }}
+                <nav className="apsis-nav-group">
+                    {navigation.map((item) => {
+                        return (
+                            <Link 
+                                key={item.key}
+                                href={item.href}
+                                // Cập nhật trạng thái active khi click
+                                onClick={() => setActiveKey(item.key)}
+                                // Cập nhật trạng thái hover
+                                onMouseEnter={() => setHoverKey(item.key)}
+                                onMouseLeave={() => setHoverKey(null)}
+                                // Truyền cả hoverKey vào hàm getLinkStyle
+                                style={getLinkStyle(item.key, activeKey, hoverKey)}
+                            >
+                                {item.label}
+                            </Link>
+                        );
+                    })}
+                </nav>
+            </div>
+
+            <Dropdown 
+                menu={{ items: userMenuItems }} 
+                trigger={["click"]} 
                 placement="bottomRight"
-                trigger={['click']}
-              >
-                <Avatar
-                  src={user?.avatar}
-                  icon={<UserOutlined />}
-                  style={{ cursor: 'pointer' }}
-                />
-              </Dropdown>
-            </Space>
-          ) : (
-            <Space>
-              <Button
-                type="default"
-                onClick={() => router.push('/login')}
-              >
-                Đăng nhập
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => router.push('/register')}
-              >
-                Đăng ký
-              </Button>
-            </Space>
-          )}
-        </div>
-      </div>
-    </AntHeader>
-  );
+                arrow
+            >
+                <div className="apsis-user-group !cursor-pointer hover:!opacity-90 !transition">
+                    <AvatarPlaceholder />
+                    
+                    <span className="!text-gray-800 !font-medium !text-base">
+                        Anle 
+                        <DownOutlined className="!text-gray-800 !text-xs !ml-1" />
+                    </span>
+                </div>
+            </Dropdown>
+        </header>
+    );
 };
+
+export default Header;
