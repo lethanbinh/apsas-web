@@ -1,0 +1,130 @@
+/* Tên file: components/SearchBanner/SearchBanner.module.css */
+
+.bannerWrapper {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    /* Bạn có thể điều chỉnh chiều cao */
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Lớp phủ mờ màu teal (giống trong ảnh) */
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Màu từ ảnh của bạn */
+    background: linear-gradient(90deg, #b0e5e6, #a1e2e3);
+    opacity: 0.7;
+    z-index: 1;
+}
+
+.contentWrapper {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 800px;
+    /* Giới hạn chiều rộng của nội dung */
+}
+
+/* .searchButton {
+    padding: 20px 16px
+} */
+
+.searchBar {
+    width: 100%;
+    margin-bottom: 25px;
+}
+
+/* Tùy chỉnh AntD Input để giống thiết kế */
+/* Dùng :global để style component con của AntD */
+.searchBar :global(.ant-input-wrapper) {
+    border-radius: 50px !important;
+    /* Bo tròn hết cỡ */
+    overflow: hidden;
+    padding: 6px;
+    /* Tạo khoảng trắng bên trong viền */
+    background-color: #ffffff;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.searchBar :global(.ant-input) {
+    border: none !important;
+    box-shadow: none !important;
+    font-size: 1rem;
+}
+
+.searchBar :global(.ant-input-search-button) {
+    border: none !important;
+    border-radius: 50px !important;
+    height: 100% !important;
+    background-color: #49BBBD !important;
+    /* Màu nút */
+    font-weight: bold;
+}
+
+.searchBar :global(.ant-input-search-button:hover) {
+    background-color: #3daaaC !important;
+}
+
+/* XÓA HOẶC COMMENT OUT BLOCK NÀY ĐI */
+/*
+.searchBar :global(.ant-input-search-button) {
+  border: none !important;
+  border-radius: 50px !important;
+  height: 100% !important;
+  background-color: #49BBBD !important; 
+  font-weight: bold;
+}
+*/
+
+/* THÊM STYLE MÀU TEAL VÀO CLASS NÀY */
+.searchButton {
+    background-color: #49BBBD !important;
+    border-color: #49BBBD !important;
+    border-radius: 50px !important;
+    font-weight: bold;
+    height: 40px;
+    /* Chỉnh chiều cao cho khớp */
+}
+
+.searchButton:hover {
+    background-color: #3daaaC !important;
+    border-color: #3daaaC !important;
+}
+/* Style cho các nút category */
+.categoryWrapper {
+    display: flex;
+    flex-wrap: wrap;
+    /* Cho phép xuống dòng trên mobile */
+    gap: 15px;
+    justify-content: center;
+}
+
+.categoryButton {
+    background-color: rgba(255, 255, 255, 0.9) !important;
+    border: none !important;
+    color: #333 !important;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    height: 45px !important;
+    padding: 0 25px !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.categoryButton:hover {
+    background-color: #ffffff !important;
+    color: #49BBBD !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}

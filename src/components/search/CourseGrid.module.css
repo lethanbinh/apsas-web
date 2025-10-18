@@ -1,0 +1,76 @@
+/* Tên file: components/SearchBanner/CourseGrid.module.css */
+
+.sectionWrapper {
+    width: 100%;
+    padding: 60px 10%;
+    background-color: #f0f7ff;
+}
+
+/* === Style cho CourseCard (Copy từ file CSS cũ) === */
+
+.courseCard {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 380px;
+    margin: 0 auto;
+}
+
+.paddedImageWrapper {
+    padding: 15px 15px 0 15px;
+}
+
+.cardImageWrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 60%;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cardImage {
+    object-fit: cover;
+}
+
+.cardContent {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.authorInfo {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cardActions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 15px;
+    gap: 8px;
+}
+
+.viewButton {
+    font-weight: bold;
+    color: #a0a0a0;
+}
+
+.joinButton {
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+    border-radius: 25px;
+    font-weight: bold;
+}
+
+.joinButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}

@@ -1,0 +1,71 @@
+/* Tên file: components/CoachesSlider/CoachesSlider.module.css */
+
+.sliderSection {
+    width: 100%;
+    padding: 40px 5% 60px 5%;
+    /* Thêm padding-bottom cho pagination */
+    background-color: #f9faff;
+    /* Màu nền nhạt */
+}
+
+.swiperContainer {
+    /* Thêm padding 5% bên trái để slide bắt đầu ở lề,
+     và padding phải để thấy slide tiếp theo */
+    padding: 0 5% 40px 5% !important;
+}
+
+/* Đây là class quan trọng nhất */
+.swiperSlide {
+    /* Đặt chiều rộng cố định cho mỗi thẻ */
+    height: auto !important;
+    padding-bottom: 10px;
+    /* Thêm space cho box-shadow */
+}
+
+.coachCard {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+}
+
+.paddedImageWrapper {
+    padding: 12px;
+    /* Padding nhỏ bọc ảnh */
+}
+
+.imageWrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 75%;
+    /* Tỷ lệ ảnh 4:3 */
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cardImage {
+    object-fit: cover;
+}
+
+.cardContent {
+    padding: 0px 20px 20px 20px;
+    /* Padding cho nội dung */
+}
+
+.categoryInfo {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Tùy chỉnh pagination (giữ nguyên từ trước) */
+.swiperContainer :global(.swiper-pagination-bullet) {
+    background-color: #aaa;
+    opacity: 0.7;
+}
+
+.swiperContainer :global(.swiper-pagination-bullet-active) {
+    background-color: #49BBBD;
+    opacity: 1;
+}

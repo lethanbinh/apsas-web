@@ -1,0 +1,100 @@
+/* Tên file: components/AllCoursesSlider/AllCoursesSlider.module.css */
+
+.sliderSection {
+    width: 100%;
+    padding: 60px 10%;
+    background-color: #f0f7ff;
+}
+
+.swiperContainer {
+    padding-bottom: 40px !important;
+}
+
+.swiperSlide {
+    height: auto !important;
+    padding-bottom: 10px;
+}
+
+/* === CẬP NHẬT QUAN TRỌNG === */
+.courseCard {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    /* 1. Đặt chiều rộng tối đa cho card */
+    /* 2. Tự động căn giữa card trong SwiperSlide */
+    margin: 0 auto;
+}
+
+/* 3. Giảm padding bọc ảnh */
+.paddedImageWrapper {
+    padding: 15px 15px 0 15px;
+}
+
+.cardImageWrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 60%;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cardImage {
+    object-fit: cover;
+}
+
+/* 4. Giảm padding nội dung */
+.cardContent {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* 5. Giảm margin */
+.authorInfo {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cardActions {
+    display: flex;
+    align-items: center;
+    margin-top: 15px;
+    gap: 8px;
+}
+
+.viewButton {
+    font-weight: bold;
+    color: #a0a0a0;
+    padding: 8px 16px;
+}
+
+.joinButton {
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+    border-radius: 25px;
+    font-weight: bold;
+    padding: 20px 16px;
+}
+
+.joinButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}
+
+/* Style cho Swiper (giữ nguyên) */
+.swiperContainer :global(.swiper-pagination-bullet-active) {
+    background-color: #49BBBD;
+}
+
+.swiperContainer :global(.swiper-button-next),
+.swiperContainer :global(.swiper-button-prev) {
+    color: #49BBBD;
+}
