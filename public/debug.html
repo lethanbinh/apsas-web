@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Image</title>
+</head>
+<body>
+    <h1>Debug Image Loading</h1>
+    
+    <h2>Test 1: JPG Image</h2>
+    <img src="/img.jpg" alt="JPG Test" width="200" height="150" 
+         onload="console.log('JPG loaded successfully')" 
+         onerror="console.error('JPG failed to load')" />
+    
+    <h2>Test 2: SVG Image</h2>
+    <img src="/globe.svg" alt="SVG Test" width="200" height="150" 
+         onload="console.log('SVG loaded successfully')" 
+         onerror="console.error('SVG failed to load')" />
+    
+    <h2>Test 3: External Image</h2>
+    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200&h=150&fit=crop" 
+         alt="External Test" width="200" height="150" 
+         onload="console.log('External loaded successfully')" 
+         onerror="console.error('External failed to load')" />
+    
+    <script>
+        console.log('Debug page loaded');
+        console.log('Current URL:', window.location.href);
+    </script>
+</body>
+</html>

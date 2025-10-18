@@ -1,6 +1,14 @@
+@import "tailwindcss";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary-color: #20B2AA;
+  --secondary-color: #4A90E2;
+  --accent-color: #F5A623;
+  --text-color: #333333;
+  --border-color: #E0E0E0;
+  --error-color: #FF6B6B;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,7 +27,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -39,4 +47,498 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+/* Login Page Styles */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 20px;
+}
+
+.login-container {
+  display: flex;
+  max-width: 1200px;
+  width: 100%;
+  background: white;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  min-height: 600px;
+  gap: 40px;
+}
+
+/* Left Side - Illustration */
+.login-illustration {
+  flex: 1.3;
+  background: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.illustration-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 700px;
+  max-height: 600px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.illustration-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 20px;
+}
+
+.illustration-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #4A90E2 0%, #357ABD 100%);
+  border-radius: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+  padding: 40px;
+}
+
+.placeholder-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.placeholder-icon {
+  font-size: 4rem;
+  margin-bottom: 10px;
+}
+
+.placeholder-content h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: white;
+}
+
+.placeholder-content p {
+  font-size: 1rem;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+
+/* Right Side - Login Form */
+.login-form-section {
+  flex: 0.7;
+  padding: 60px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.login-form-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.login-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.login-form {
+  margin-bottom: 30px;
+}
+
+.login-form .ant-form-item-label > label {
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+}
+
+.login-input {
+  height: 50px;
+  border-radius: 30px;
+  border: 2px solid var(--border-color);
+  font-size: 16px;
+  padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.login-input:focus,
+.login-input:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.1);
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.remember-checkbox {
+  margin: 0;
+}
+
+.remember-checkbox .ant-checkbox-wrapper {
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.forgot-password-link {
+  color: var(--text-color);
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.forgot-password-link:hover {
+  color: var(--primary-color);
+}
+
+.error-message {
+  margin-bottom: 20px;
+}
+
+.error-text {
+  color: var(--error-color);
+  font-size: 14px;
+  margin: 0;
+  text-align: center;
+}
+
+.login-button {
+  width: 100%;
+  height: 50px;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  background: #1a9b95;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(32, 178, 170, 0.3);
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.divider-text {
+  margin: 0 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+.google-login-button {
+  width: 100%;
+  height: 50px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+}
+
+.google-login-button:hover {
+  border-color: #7499d6;
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(66, 133, 244, 0.1);
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.login-footer p {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.register-link {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.register-link:hover {
+  color: #1a9b95;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+    max-width: 400px;
+    gap: 20px;
+  }
+  
+  .login-illustration {
+    min-height: 200px;
+    padding: 20px;
+  }
+  
+  .login-form-section {
+    padding: 40px 20px;
+  }
+  
+  .login-title {
+    font-size: 2rem;
+  }
+  
+  .illustration-wrapper {
+    max-width: 300px;
+    max-height: 200px;
+  }
+}
+
+/* Reset Password Page Styles */
+.reset-password-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  padding: 20px;
+}
+
+.reset-password-container {
+  display: flex;
+  max-width: 1200px;
+  width: 100%;
+  background: white;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  min-height: 600px;
+  gap: 40px;
+}
+
+/* Left Side - Illustration */
+.reset-password-illustration {
+  flex: 1.3;
+  background: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Right Side - Reset Password Form */
+.reset-password-form-section {
+  flex: 0.7;
+  padding: 60px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reset-password-form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.reset-password-form-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.reset-password-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--text-color);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.reset-password-form {
+  margin-bottom: 30px;
+}
+
+.reset-password-input {
+  height: 50px;
+  border-radius: 30px;
+  border: 2px solid var(--border-color);
+  font-size: 16px;
+  padding: 0 16px;
+  transition: all 0.3s ease;
+}
+
+.reset-password-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(32, 178, 170, 0.1);
+}
+
+.reset-password-actions {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.back-to-login-button {
+  flex: 1;
+  height: 50px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+.back-to-login-button:hover {
+  border-color: var(--primary-color);
+  background: #f8f9fa;
+  transform: translateY(-2px);
+}
+
+.reset-password-button {
+  flex: 1;
+  height: 50px;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.reset-password-button:hover {
+  background: #1a9b95;
+  transform: translateY(-2px);
+}
+
+.reset-password-divider {
+  display: flex;
+  align-items: center;
+  margin: 30px 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+.divider-text {
+  padding: 0 20px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsive Design for Reset Password */
+@media (max-width: 768px) {
+  .reset-password-container {
+    flex-direction: column;
+    max-width: 400px;
+    gap: 20px;
+  }
+  
+  .reset-password-illustration {
+    min-height: 200px;
+    padding: 20px;
+  }
+  
+  .reset-password-form-section {
+    padding: 40px 20px;
+  }
+  
+  .reset-password-title {
+    font-size: 2rem;
+  }
+  
+  .illustration-wrapper {
+    max-width: 300px;
+    max-height: 200px;
+  }
+  
+  .reset-password-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .back-to-login-button,
+  .reset-password-button {
+    flex: none;
+  }
+}
+
+.apsis-header-root {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 64px !important; /* h-16 */
+  padding: 0 24px !important; /* px-6 (24px) */
+  background-color: #BBDEF8 !important; /* bg-blue-100/50 */
+}
+
+.apsis-header-left-group {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  gap: 32px !important; /* space-x-8 (32px) */
+}
+
+.apsis-nav-group {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+  gap: 20px !important; /* Tăng khoảng cách giữa các mục menu lên 20px */
+}
+
+.apsis-user-group {
+  display: flex !important;
+  align-items: center !important;
+  line-height: normal !important;
+  gap: 8px !important; /* gap-2 (8px) */
+  font-size: 16px !important; /* Tăng kích thước font tên Anle */
 }
