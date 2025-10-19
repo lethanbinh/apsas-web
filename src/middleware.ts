@@ -15,6 +15,14 @@ export function middleware(request: NextRequest) {
     "/home",
     "/classes",
     "/search-classes",
+    "/classes/my-classes",
+    "/student/class-detail",
+    "/student/assignments",
+    "/student/submissions",
+    "/student/members",
+    "/student/exams",
+    "/hod/semester-plans",
+    "/hod/approval",
   ];
 
   // Check if current path is a public route

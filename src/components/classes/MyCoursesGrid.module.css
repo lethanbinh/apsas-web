@@ -1,0 +1,50 @@
+/* Tên file: components/MyCoursesGrid/MyCoursesGrid.module.css */
+
+.sectionWrapper {
+    width: 100%;
+    padding: 60px 10%;
+    background-color: #f0f7ff;
+}
+
+/* Style cho SimpleCourseCard */
+.courseCard {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    /* Giới hạn chiều rộng để giống trong ảnh */
+    max-width: 400px;
+    /* Không dùng margin: auto để nó căn trái trong Col */
+}
+
+.paddedImageWrapper {
+    padding: 15px;
+    /* Padding cho ảnh */
+}
+
+.imageWrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 60%;
+    /* Tỷ lệ ảnh */
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cardImage {
+    object-fit: cover;
+}
+
+.cardContent {
+    padding: 0 20px 20px 20px;
+    /* Padding nội dung */
+}
+
+.authorInfo {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+}

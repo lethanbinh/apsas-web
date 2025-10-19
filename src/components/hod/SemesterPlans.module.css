@@ -1,0 +1,82 @@
+/* Tên file: components/SemesterPlans/SemesterPlans.module.css */
+
+.wrapper {
+    width: 100%;
+    padding: 30px 40px;
+    background-color: #f0f7ff;
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.createButton {
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+    border-radius: 25px;
+    font-weight: bold;
+}
+
+.createButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}
+
+/* Style cho Tabs */
+.tabs :global(.ant-tabs-tab-btn) {
+    font-weight: 500;
+    color: #888;
+}
+
+.tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+    color: #2F327D !important;
+    /* Màu xanh đậm cho tab active */
+    font-weight: 600;
+}
+
+.tabs :global(.ant-tabs-ink-bar) {
+    background: #2F327D !important;
+    /* Màu gạch chân */
+}
+
+/* Style cho PlanCard (Tái sử dụng từ MyCoursesGrid) */
+.planCard {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    max-width: 400px;
+}
+
+.paddedImageWrapper {
+    padding: 15px;
+}
+
+.imageWrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 60%;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.cardImage {
+    object-fit: cover;
+}
+
+.cardContent {
+    padding: 0 20px 20px 20px;
+}
+
+.authorInfo {
+    display: flex;
+    align-items: center;
+    margin-top: 12px;
+}

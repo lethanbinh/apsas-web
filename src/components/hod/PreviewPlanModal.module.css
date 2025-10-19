@@ -1,0 +1,59 @@
+/* Tên file: components/SemesterPlans/PreviewPlanModal.module.css */
+
+.steps {
+    margin-top: 25px;
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* Style cho Tab/Steps của AntD */
+.steps :global(.ant-tabs-tab-btn) {
+    font-weight: 500;
+    color: #888;
+}
+
+.steps :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
+    color: #2F327D !important;
+    font-weight: 600;
+}
+
+.steps :global(.ant-tabs-ink-bar) {
+    background: #2F327D !important;
+}
+
+.stepContent {
+    min-height: 300px;
+}
+
+/* --- Style cho Bảng (Tái sử dụng từ ClassRoster) --- */
+.previewTable :global(.ant-table) {
+    background: transparent;
+}
+
+.previewTable :global(.ant-table-thead > tr > th) {
+    background: transparent !important;
+    color: #888;
+    font-weight: 600;
+    border-bottom: 1px solid #f0f0f0;
+    text-align: left !important;
+    padding-left: 10px !important;
+}
+
+.previewTable :global(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 18px 10px;
+}
+
+/* Tùy chỉnh 2 hàng chẵn/lẻ */
+.previewTable :global(.ant-table-tbody > tr:nth-child(even) > td) {
+    background: #f9faff;
+}
+
+.previewTable :global(.ant-table-tbody > tr:nth-child(odd) > td) {
+    background: #ffffff;
+}
+
+.previewTable :global(.ant-table-container) {
+    border: none;
+}
