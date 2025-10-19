@@ -76,7 +76,7 @@ export const Header: React.FC = () => {
     const [hoverKey, setHoverKey] = useState<string | null>(null);
 
     const navigation = [
-        { key: "home", label: "Home", href: "/" },
+        { key: "home", label: "Home", href: "/home" },
         { key: "dashboard", label: "Dashboard", href: "/dashboard" },
         { key: "my-courses", label: "My courses", href: "/my-courses" },
         { key: "all-courses", label: "All courses", href: "/all-courses" },
