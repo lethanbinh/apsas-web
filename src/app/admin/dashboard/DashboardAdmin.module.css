@@ -1,0 +1,131 @@
+.container {
+  max-width: 1200px; /* mx-auto */
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.5rem; /* p-6 */
+}
+
+.title {
+  font-size: 1.875rem; /* text-3xl */
+  font-weight: 700; /* font-bold */
+  color: #333333; /* text-gray-800 */
+  margin-bottom: 2rem; /* mb-8 */
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem; /* gap-6 */
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card.purple {
+  background: linear-gradient(135deg, #B19CD9 0%, #8E7BCC 100%);
+  color: #ffffff;
+}
+
+.stat-card.pink {
+  background: linear-gradient(135deg, #FFB6C1 0%, #F08080 100%);
+  color: #ffffff;
+}
+
+.stat-value {
+  font-size: 2.25rem; /* text-4xl */
+  font-weight: 700; /* font-bold */
+  margin-bottom: 0.5rem;
+  z-index: 1;
+}
+
+.stat-label {
+  font-size: 0.875rem; /* text-sm */
+  font-weight: 500;
+  text-transform: uppercase;
+  opacity: 0.8;
+  z-index: 1;
+}
+
+.stat-icon-wrapper {
+  position: absolute;
+  bottom: -10px;
+  right: -10px;
+  opacity: 0.2;
+  z-index: 0;
+}
+
+.stat-icon {
+  width: 70px;
+  height: 70px;
+  color: #ffffff;
+}
+
+.stat-icon.pink {
+  color: #ffffff;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 1.5rem;
+}
+
+.chart-card {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+}
+
+.chart-title {
+  font-size: 1.25rem; /* text-xl */
+  font-weight: 600; /* font-semibold */
+  color: #333333; /* text-gray-800 */
+  margin-bottom: 1rem;
+}
+
+.legend-items {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.dot.asm {
+  background-color: #9AD0EE; /* Soft Blue */
+}
+
+.dot.lab {
+  background-color: #A8E6CF; /* Soft Green */
+}
+
+.dot.pe {
+  background-color: #B19CD9; /* Soft Purple */
+}
+
+.dot.course {
+  background-color: #B19CD9; /* Soft Purple */
+}
