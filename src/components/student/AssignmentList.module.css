@@ -1,0 +1,159 @@
+.wrapper {
+    min-height: 100vh;
+    padding: 30px 40px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
+}
+
+.collapse {
+    background-color: #ffffff !important;
+}
+
+.panelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* THÊM CLASS MỚI NÀY */
+.deadlineTag {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.deadlineTag:hover {
+    opacity: 0.8;
+}
+
+.collapse :global(.ant-collapse-item) {
+    margin-bottom: 15px;
+    background-color: #f9faff;
+    border: 1px solid #e6f7ff;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.collapse :global(.ant-collapse-content) {
+    border-top: 1px solid #e6f7ff;
+}
+
+.collapse :global(.ant-collapse-header) {
+    padding: 20px !important;
+    align-items: center !important;
+}
+
+.itemContent {}
+
+.contentSection {
+    margin-top: 15px;
+}
+
+.contentSection:first-child {
+    margin-top: 0;
+}
+
+.viewRequirementButton {
+    border-radius: 20px !important;
+    font-weight: 500;
+    border-color: #49BBBD !important;
+    color: #49BBBD !important;
+}
+
+.viewRequirementButton:hover {
+    border-color: #3daaaC !important;
+    color: #3daaaC !important;
+}
+
+.downloadSection {
+    margin-top: 15px;
+    display: grid;
+    gap: 10px;
+}
+
+.requirementAlert {
+    background-color: #f0f7ff;
+    border-color: #d8eaff;
+}
+
+.submissionSection {
+    margin-top: 25px;
+    padding-top: 25px;
+    border-top: 1px solid #e6f7ff;
+}
+
+.uploadDragger {
+    background-color: #f9faff;
+}
+
+.uploadDragger:hover {
+    border-color: #49BBBD !important;
+}
+
+.viewScoreButton {
+    border-radius: 20px !important;
+    font-weight: 500;
+    border-color: #49BBBD !important;
+    color: #49BBBD !important;
+    flex-shrink: 0;
+    margin-left: 20px;
+}
+
+.viewScoreButton:hover {
+    border-color: #3daaaC !important;
+    color: #3daaaC !important;
+}
+
+.submitButton {
+    margin-top: 20px;
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+    border-radius: 25px;
+    font-weight: bold;
+}
+
+.submitButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}
+
+.submitButton:disabled {
+    background-color: #f5f5f5 !important;
+    border-color: #d9d9d9 !important;
+    color: rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Modal Styles */
+.requirementModal :global(.ant-modal-content) {
+    border-radius: 16px;
+    padding: 0;
+}
+
+.requirementModal :global(.ant-modal-header) {
+    padding: 24px;
+    border-bottom: 1px solid #f0f0f0;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+}
+
+.requirementModal :global(.ant-modal-footer) {
+    padding: 20px 24px;
+    border-top: 1px solid #f0f0f0;
+    margin: 0;
+}
+
+.requirementModal :global(.ant-modal-body) {
+    padding: 0;
+}
+
+.modalBody {
+    padding: 24px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modalImage {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    margin-top: 10px;
+}

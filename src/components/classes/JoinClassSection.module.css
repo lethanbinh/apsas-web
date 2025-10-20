@@ -1,0 +1,31 @@
+.sectionWrapper {
+    background-color: #d0e7ff;
+    width: 100%;
+    padding: 60px 5%;
+}
+
+.joinButton {
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+    border-radius: 25px;
+    height: 50px;
+    padding: 0 30px;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.joinButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}
+
+.imageWrapper {
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.image {
+    width: 100%;
+    height: auto;
+}

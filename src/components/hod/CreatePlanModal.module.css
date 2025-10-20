@@ -1,0 +1,25 @@
+.steps {
+    margin-top: 25px;
+    margin-bottom: 25px;
+    padding-bottom: 25px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.stepContent {
+    padding: 20px 0;
+    min-height: 250px;
+}
+
+.actionButton {
+    width: 100%;
+    margin-bottom: 10px !important;
+    text-align: left;
+}
+
+.dragger {
+    background-color: #f9faff;
+}
+
+.dragger:hover {
+    border-color: #49BBBD !important;
+}

@@ -1,0 +1,55 @@
+/* Tên file: components/MemberList/MemberList.module.css */
+
+.sectionWrapper {
+    width: 100%;
+    padding: 40px;
+    background-color: #fff;
+}
+
+.listContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    /* Khoảng cách giữa các item */
+}
+
+.memberItem {
+    display: flex;
+    align-items: center;
+}
+
+.avatarWrapper {
+    position: relative;
+    margin-right: 16px;
+    /* Đảm bảo avatar và cờ là một khối */
+    width: 60px;
+    height: 60px;
+}
+
+.flagWrapper {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 24px;
+    /* Kích thước vòng tròn trắng bọc cờ */
+    height: 24px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.flagImage {
+    border-radius: 50%;
+    width: 20px;
+    /* Kích thước cờ bên trong */
+    height: 20px;
+}
+
+.textWrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
