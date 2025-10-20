@@ -25,6 +25,7 @@ export function middleware(request: NextRequest) {
         "/classes",
         "/search-classes",
         "/classes/my-classes",
+        "/classes/join",
         "/student/class-detail",
         "/student/assignments",
         "/student/submissions",
