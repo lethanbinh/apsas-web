@@ -15,7 +15,7 @@ export interface User {
   updatedAt: string;
 }
 
-export type UserRole = 'admin' | 'user' | 'moderator';
+export type UserRole = 'admin' | 'hod' | 'teacher' | 'student';
 
 // Auth Types
 export interface AuthState {
@@ -23,6 +23,8 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  error: string | null;
+  refreshToken: string | null;
 }
 
 export interface LoginCredentials {

@@ -11,6 +11,10 @@ import { DownOutlined, UserOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { LogoComponent } from "@/components/ui/Logo"; // Import the shared LogoComponent
 import { useState } from "react";
+import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { logout } from '@/store/slices/authSlice';
+import { authService } from '@/services/authService';
 
 // Dùng Icon Ant Design cho Avatar
 const AvatarPlaceholder = () => (
@@ -74,6 +78,14 @@ export const Header: React.FC = () => {
     // hoverKey được khai báo ở đây
     const [activeKey, setActiveKey] = useState("home"); 
     const [hoverKey, setHoverKey] = useState<string | null>(null);
+    const router = useRouter();
+    const dispatch = useDispatch();
+
+    const handleLogout = async () => {
+        // await authService.logout(); // Backend does not have /auth/logout endpoint
+        dispatch(logout()); // Clear frontend state
+        router.push("/login");
+    };
 
     const navigation = [
         { key: "home", label: "Home", href: "/home" },
@@ -86,7 +98,7 @@ export const Header: React.FC = () => {
         { key: "profile", label: "Profile" },
         { key: "settings", label: "Settings" },
         { type: "divider" },
-        { key: "logout", label: "Logout" },
+        { key: "logout", label: "Logout", onClick: handleLogout },
     ];
 
     return (

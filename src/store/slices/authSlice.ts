@@ -24,7 +24,7 @@ const initialState: AuthState = {
 
 // Async thunks
 export const loginUser = createAsyncThunk(
-  'auth/login',
+  'Auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
       const response = await authService.login(credentials);
@@ -65,21 +65,12 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    login: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-      state.error = null;
-    },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
       localStorage.removeItem('auth_token');
-    },
-    setUser: (state, action: PayloadAction<User>) => {
-      state.user = action.payload;
     },
     clearError: (state) => {
       state.error = null;
@@ -137,5 +128,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { login, logout, setUser, clearError } = authSlice.actions;
+export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;

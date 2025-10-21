@@ -29,7 +29,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     try {
       setErrors({});
       await login(values);
-      router.push('/dashboard');
+      router.push('/home');
       onSuccess?.();
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed';

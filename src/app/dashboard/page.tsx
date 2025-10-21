@@ -2,19 +2,15 @@
  * Dashboard home page
  */
 
-import { Metadata } from 'next';
-import { Card, Row, Col, Statistic, Typography, Space } from 'antd';
-import { 
-  UserOutlined, 
-  ShoppingCartOutlined, 
-  DollarOutlined, 
-  EyeOutlined 
-} from '@ant-design/icons';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'Dashboard - APSAS Web',
-  description: 'Bảng điều khiển chính',
-};
+import { Card, Row, Col, Statistic, Typography, Space } from 'antd';
+import {
+  UserOutlined,
+  ShoppingCartOutlined,
+  DollarOutlined,
+  EyeOutlined
+} from '@ant-design/icons';
 
 export default function DashboardPage() {
   return (
