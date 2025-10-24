@@ -4,7 +4,8 @@
 
 import { apiService } from './api';
 import { API_ENDPOINTS } from '@/lib/constants';
-import { LoginCredentials, RegisterData, User } from '@/types';
+import { LoginCredentials, RegisterData, User, ForgotPasswordRequest, VerifyOtpRequest, ResetPasswordRequest, GoogleLoginRequest, GoogleLoginResponse } from '@/types';
+import { config } from '@/lib/config';
 
 export class AuthService {
   async login(credentials: LoginCredentials): Promise<{ user: User; token: string }> {
@@ -20,6 +21,25 @@ export class AuthService {
   async logout(): Promise<void> {
     // No backend endpoint for logout, so just return a resolved promise.
     return Promise.resolve();
+  }
+
+  async forgotPassword(data: ForgotPasswordRequest): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH.FORGOT_PASSWORD, data);
+  }
+
+  async verifyOtp(data: VerifyOtpRequest): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH.VERIFY_OTP, data);
+  }
+
+  async resetPassword(data: ResetPasswordRequest): Promise<void> {
+    await apiService.post(API_ENDPOINTS.AUTH.RESET_PASSWORD, data);
+  }
+
+  async googleLogin(data: { idToken: string }): Promise<GoogleLoginResponse> {
+    const response = await apiService.post<GoogleLoginResponse>(API_ENDPOINTS.AUTH.GOOGLE, {
+      idToken: data.idToken,
+    });
+    return response;
   }
 
   async refreshToken(): Promise<{ token: string }> {

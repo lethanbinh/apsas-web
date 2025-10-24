@@ -4,12 +4,16 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox } from 'antd';
 import { useAuth } from '@/hooks/useAuth';
 import { LoginCredentials } from '@/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { initializeApp, getApps } from "firebase/app";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { config } from '@/lib/config';
+import { authService } from '@/services/authService';
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -25,6 +29,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Firebase app initialization (moved outside to be consistent and avoid re-init)
+  let app;
+  if (getApps().length === 0) {
+    app = initializeApp(config.firebase);
+  } else {
+    app = getApps()[0];
+  }
+  const auth = getAuth(app);
+
+  // Handle redirect result for Google Login
+  useEffect(() => {
+    // No longer needed for signInWithPopup, remove this block if switching to popup.
+  }, []); // Remove dependencies as well if the block is empty.
+
   const handleSubmit = async (values: LoginCredentials) => {
     try {
       setErrors({});
@@ -38,9 +56,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     }
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google login
-    console.log('Google login clicked');
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider); // Use signInWithPopup
+      console.log("result:", result);
+      if (result && result.user) {
+        const idToken = await result.user.getIdToken();
+        console.log("Google ID Token:", idToken);
+        if (idToken) {
+          console.log("Sending ID Token to backend:", idToken);
+          const response = await authService.googleLogin({ idToken });
+          console.log("Backend response for Google Login:", response);
+          if (response.result.token) {
+            localStorage.setItem('auth_token', response.result.token);
+            console.log("Attempting redirection to /home");
+            router.push('/home');
+            onSuccess?.();
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Google login failed:", error);
+      setErrors({ general: error.message || 'Google login failed' });
+      onError?.(error.message || 'Google login failed');
+    }
   };
 
   return (

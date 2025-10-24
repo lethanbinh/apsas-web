@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 export default function ResetPasswordPage() {
   return (
     <AuthGuard requireAuth={false}>
-      <div className="reset-password-page">
-        <div className="reset-password-container">
+      <div className="reset-password-main-container">
+        <div className="reset-password-content-wrapper">
           {/* Left side - Illustration */}
-          <div className="reset-password-illustration">
+          <div className="reset-password-illustration-section">
             <div className="illustration-wrapper">
               <Image
                 src="https://cdn-res.keymedia.com/cdn-cgi/image/f=auto/https://cdn-res.keymedia.com/cms/images/us/036/0308_638042050063908337.jpg"

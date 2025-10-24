@@ -4,16 +4,26 @@
 
 // User Types
 export interface User {
-  id: string;
-  email: string;
+  id: number;
+  accountCode: string;
   username: string;
-  firstName: string;
-  lastName: string;
+  email: string;
+  phoneNumber: string;
+  fullName: string;
   avatar?: string;
-  role: UserRole;
-  createdAt: string;
-  updatedAt: string;
+  address: string;
+  gender: number;
+  dateOfBirth: string;
+  role: number;
 }
+
+// Interface for user update payload (including optional password)
+export interface UserUpdatePayload extends Partial<Omit<User, 'id'>> {
+  password?: string;
+}
+
+// Interface for a simpler User object that might not include all fields (e.g., without password) for display
+// export interface UserDisplay extends Omit<User, 'password'> {}
 
 export type UserRole = 'admin' | 'hod' | 'teacher' | 'student';
 
@@ -40,6 +50,35 @@ export interface RegisterData {
   lastName: string;
 }
 
+// Password Reset Types
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  otp: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface GoogleLoginRequest {
+  idToken: string;
+}
+ export interface GoogleLoginResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: {
+    token: string;
+    refreshToken: string;
+    expiresAt: string;
+  }
+ }
 // API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -49,11 +88,18 @@ export interface ApiResponse<T = any> {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
   totalPages: number;
+  items: T[];
+}
+
+export interface AccountListResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: PaginatedResponse<User>; // Updated to PaginatedResponse<User>
 }
 
 // Component Props Types

@@ -9,10 +9,22 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',
+    FORGOT_PASSWORD: '/Auth/forgot-password',
+    VERIFY_OTP: '/Auth/verify-otp',
+    RESET_PASSWORD: '/Auth/reset-password',
+    GOOGLE: '/Auth/google',
   },
   USER: {
     PROFILE: '/user/profile',
     UPDATE: '/user/update',
+  },
+  ACCOUNT: {
+    PAGINATED_LIST: '/Account/page',
+  },
+  ADMIN: {
+    DELETE: '/Admin',
+    UPDATE: '/Admin',
+    CREATE: '/Admin/create',
   },
 } as const;
 
