@@ -95,11 +95,28 @@ export interface PaginatedResponse<T> {
   items: T[];
 }
 
+interface GetPaginatedSemestersResponse {
+  semesters: Semester[];
+  total: number;
+}
+
 export interface AccountListResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
   result: PaginatedResponse<User>; // Updated to PaginatedResponse<User>
+}
+
+// Semester Types
+export interface Semester {
+  id: number;
+  semesterCode: string; // e.g., "FALL2025"
+  academicYear: number;
+  note: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Component Props Types

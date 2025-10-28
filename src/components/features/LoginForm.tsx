@@ -46,8 +46,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const handleSubmit = async (values: LoginCredentials) => {
     try {
       setErrors({});
-      await login(values);
-      router.push('/home');
+      const result = await login(values);
+      
+      // Get user from result or Redux state
+      const userInfo = result?.user;
+      console.log('User info for redirect:', userInfo);
+      
+      // Redirect based on user role
+      const roleRedirects: { [key: number]: string } = {
+        0: '/admin/dashboard', // Admin
+        1: '/lecturer/dashboard', // Lecturer
+        2: '/home', // Student
+        3: '/hod/semester-plans', // HOD
+      };
+      
+      const redirectPath = userInfo?.role !== undefined 
+        ? roleRedirects[userInfo.role] || '/home' 
+        : '/home';
+      
+      console.log('Redirecting to:', redirectPath);
+      router.push(redirectPath);
       onSuccess?.();
     } catch (error: any) {
       const errorMessage = error.message || 'Login failed';
@@ -70,8 +88,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           console.log("Backend response for Google Login:", response);
           if (response.result.token) {
             localStorage.setItem('auth_token', response.result.token);
-            console.log("Attempting redirection to /home");
-            router.push('/home');
+            
+            // Decode JWT to get user role for redirect
+            const token = response.result.token;
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            const decoded = JSON.parse(jsonPayload);
+            
+            const roleRedirects: { [key: number]: string } = {
+              0: '/admin/dashboard', // Admin
+              1: '/lecturer/dashboard', // Lecturer
+              2: '/home', // Student
+              3: '/hod/semester-plans', // HOD
+            };
+            
+            const redirectPath = roleRedirects[decoded.role] || '/home';
+            console.log("Redirecting to:", redirectPath);
+            router.push(redirectPath);
             onSuccess?.();
           }
         }

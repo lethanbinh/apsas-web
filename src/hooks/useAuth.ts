@@ -21,8 +21,13 @@ export const useAuth = () => {
     // Only run on client-side to prevent hydration mismatch
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('auth_token');
-      if (token && !isAuthenticated) {
-        // dispatch(fetchUserProfile()); // Commented out as per user request
+      const userData = localStorage.getItem('user_data');
+      
+      if (token && !isAuthenticated && !userData) {
+        console.log('🔍 Token found, fetching user profile...');
+        dispatch(fetchUserProfile());
+      } else if (userData) {
+        console.log('✅ User data found in localStorage');
       }
     }
     setIsInitialized(true);
@@ -30,9 +35,25 @@ export const useAuth = () => {
 
   const handleLogin = async (credentials: { email: string; password: string }) => {
     try {
-      await dispatch(loginUser(credentials)).unwrap();
+      const result = await dispatch(loginUser(credentials)).unwrap();
+      console.log('✅ Login successful, result:', result);
+      console.log('👤 User info after login:', result.user);
+      console.log('👤 User ID:', result.user?.id);
+      console.log('👤 User role:', result.user?.role);
+      console.log('👤 User full name:', result.user?.fullName);
+      
+      // Fetch latest user profile from server using the correct API
+      console.log('🔄 Fetching latest user profile from server...');
+      try {
+        await dispatch(fetchUserProfile());
+        console.log('✅ User profile refreshed from server');
+      } catch (profileError) {
+        console.warn('⚠️ Could not fetch profile, using login response data:', profileError);
+      }
+      
+      return result;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('❌ Login failed:', error);
       throw error;
     }
   };

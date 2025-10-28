@@ -13,50 +13,38 @@ export function middleware(request: NextRequest) {
         '/',
         '/login',
         '/reset-password',
-        '/lecturer/detail-assignment',
-        '/lecturer/assignment-grading',
-        '/lecturer/dashboard', // Re-add dashboard route
-        '/lecturer/grading-history', // Add grading history route
-        '/lecturer/practical-exam', // Add practical exam route
-        '/lecturer/tasks', // Add tasks route
-        '/admin/dashboard', // Add admin dashboard route
-        '/admin/manage-users', // Add admin manage users route
-        "/home",
-        "/classes",
-        "/search-classes",
-        "/classes/my-classes",
-        "/classes/join",
-        "/student/class-detail",
-        "/student/assignments",
-        "/student/submissions",
-        "/student/members",
-        "/student/exams",
-        "/hod/semester-plans",
-        "/hod/approval",
     ];
-    // All routes under /lecturer/* are protected by default as they are not listed in publicRoutes.
+
+    // Role-based route access mapping
+    const roleRoutes = {
+        0: ['/admin/dashboard', '/admin/manage-users'], // Admin
+        1: ['/lecturer'], // Lecturer - can access all /lecturer/* routes
+        2: ['/student'], // Student - can access all /student/* routes
+        3: ['/hod/semester-plans', '/hod/approval'], // HOD
+    };
 
     // Check if current path is a public route
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+    const isPublicRoute = publicRoutes.some(route => pathname === route || pathname.startsWith(route));
 
     // If it's a public route, allow access
     if (isPublicRoute) {
         return NextResponse.next();
     }
 
-    // Check for authentication token in cookies
+    // Check for authentication token
     const token = request.cookies.get('auth_token')?.value;
 
-    // If no token and not on public route, redirect to login
-    if (!token && !isPublicRoute) {
+    // If no token and trying to access protected route, redirect to login
+    if (!token) {
         const loginUrl = new URL('/login', request.url);
         return NextResponse.redirect(loginUrl);
     }
 
-    // If user is authenticated and trying to access login/register, redirect to dashboard
+    // If user is authenticated and trying to access login/register, redirect based on role
     if (token && (pathname === '/login' || pathname === '/register')) {
-        const dashboardUrl = new URL('/dashboard', request.url);
-        return NextResponse.redirect(dashboardUrl);
+        // Get user role from localStorage (middleware runs on server, so we can't access localStorage directly)
+        // We'll handle redirect in LoginForm component instead
+        return NextResponse.redirect(new URL('/home', request.url));
     }
 
     return NextResponse.next();
