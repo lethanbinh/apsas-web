@@ -4,7 +4,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Layout as AntLayout } from 'antd';
 import { Header } from './Header';
@@ -22,9 +23,29 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useAuth();
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const role = user?.role;
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
   const isProfilePage = pathname === '/profile';
+
+  // Wait for mount to avoid hydration mismatch
+  if (!mounted) {
+    // Return a consistent structure during SSR
+    return (
+      <AntLayout className="app-layout">
+        <Header />
+        <Content className="app-content">
+          {children}
+        </Content>
+        <Footer />
+      </AntLayout>
+    );
+  }
 
   // If profile page, use simple layout with role-specific header but no sidebar
   if (isProfilePage) {

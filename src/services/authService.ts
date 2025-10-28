@@ -85,9 +85,21 @@ export class AuthService {
     return userData;
   }
 
-  async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await apiService.put<User>(API_ENDPOINTS.USER.UPDATE, data);
-    return response;
+  async updateProfile(id: number, data: {
+    phoneNumber: string;
+    fullName: string;
+    avatar: string;
+    address: string;
+    gender: number;
+    dateOfBirth: string;
+  }): Promise<User> {
+    const response = await apiService.put<any>(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}`, data);
+    
+    // Extract user from result
+    if (response.result) {
+      return response.result as User;
+    }
+    return response as User;
   }
 }
 

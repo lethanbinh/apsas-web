@@ -10,7 +10,7 @@ import type { MenuProps } from "antd";
 import { DownOutlined, UserOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { LogoComponent } from "@/components/ui/Logo"; // Import the shared LogoComponent
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter, usePathname } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/store/slices/authSlice';
@@ -80,10 +80,15 @@ const getLinkStyle = (key: string, activeKey: string, hoverKey: string | null): 
 export const Header: React.FC = () => {
     // hoverKey được khai báo ở đây
     const [hoverKey, setHoverKey] = useState<string | null>(null);
+    const [mounted, setMounted] = useState(false);
     const router = useRouter();
     const dispatch = useDispatch();
     const pathname = usePathname();
     const { user } = useAuth();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleLogout = async () => {
         // await authService.logout(); // Backend does not have /auth/logout endpoint
@@ -133,7 +138,12 @@ export const Header: React.FC = () => {
             <div className="apsis-header-left-group">
                 
                 <Link 
-                    href={user?.role === 0 ? '/admin/dashboard' : user?.role === 3 ? '/hod/semester-plans' : '/home'} 
+                    href={
+                        !mounted ? '/home' : 
+                        user?.role === 0 ? '/admin/dashboard' : 
+                        user?.role === 3 ? '/hod/semester-plans' : 
+                        '/home'
+                    } 
                     className="!flex !items-center !h-full"
                 >
                     <LogoComponent /> 
@@ -169,7 +179,7 @@ export const Header: React.FC = () => {
                     <AvatarPlaceholder />
                     
                     <span className="!text-gray-800 !font-medium !text-base">
-                        {user?.fullName || 'User'} 
+                        {mounted && user?.fullName ? user.fullName : 'User'} 
                         <DownOutlined className="!text-gray-800 !text-xs !ml-1" />
                     </span>
                 </div>

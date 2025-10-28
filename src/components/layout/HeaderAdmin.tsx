@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { DownOutlined, UserOutlined } from "@ant-design/icons";
@@ -21,6 +22,11 @@ export const HeaderAdmin: React.FC = () => {
     const router = useRouter();
     const dispatch = useDispatch();
     const { user } = useAuth();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleLogout = () => {
         dispatch(logout());
@@ -62,7 +68,7 @@ export const HeaderAdmin: React.FC = () => {
                     <AvatarPlaceholder />
                     
                     <span className={styles.userName}>
-                        {user?.fullName || 'User'} 
+                        {mounted && user?.fullName ? user.fullName : 'User'} 
                         <DownOutlined className={styles.downArrowIcon} />
                     </span>
                 </div>
