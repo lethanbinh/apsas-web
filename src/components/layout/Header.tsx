@@ -93,9 +93,19 @@ export const Header: React.FC = () => {
 
     // Get navigation items based on user role
     const navigation = useMemo(() => {
-        if (!user?.role) return [];
+        console.log('🔍 Header - Current user:', user);
+        console.log('🔍 Header - User role:', user?.role);
+        
+        if (!user?.role) {
+            console.log('⚠️ No user role found, returning empty navigation');
+            return [];
+        }
+        
         const userRole = user.role as Role;
-        return ROLE_NAVIGATION[userRole] || [];
+        const navItems = ROLE_NAVIGATION[userRole] || [];
+        console.log('✅ Header - Navigation items for role', userRole, ':', navItems);
+        
+        return navItems;
     }, [user?.role]);
 
     // Determine active key based on current pathname
@@ -122,7 +132,10 @@ export const Header: React.FC = () => {
             
             <div className="apsis-header-left-group">
                 
-                <Link href="/home" className="!flex !items-center !h-full">
+                <Link 
+                    href={user?.role === 0 ? '/admin/dashboard' : user?.role === 3 ? '/hod/semester-plans' : '/home'} 
+                    className="!flex !items-center !h-full"
+                >
                     <LogoComponent /> 
                 </Link>
                 

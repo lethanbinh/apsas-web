@@ -31,8 +31,17 @@ export class AdminService {
     await apiService.delete(`${API_ENDPOINTS.ADMIN.DELETE}/${id}`);
   }
 
-  async updateAccount(id: number, userData: any): Promise<void> {
-    await apiService.put(`${API_ENDPOINTS.ADMIN.UPDATE}/${id}`, userData);
+  async updateAccount(id: number, userData: any): Promise<User> {
+    const response = await apiService.patch<any>(
+      `${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}/profile`,
+      userData
+    );
+    
+    // Extract user from result
+    if (response.result) {
+      return response.result as User;
+    }
+    return response as User;
   }
 
   async createAccount(newUserData: any): Promise<void> {

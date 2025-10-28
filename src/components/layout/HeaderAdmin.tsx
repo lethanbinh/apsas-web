@@ -4,8 +4,12 @@ import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { DownOutlined, UserOutlined } from "@ant-design/icons";
 import Link from "next/link";
-import { LogoComponent } from "@/components/ui/Logo"; // Import the shared LogoComponent
-import styles from './HeaderAdmin.module.css'; // Import CSS module
+import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { LogoComponent } from "@/components/ui/Logo";
+import { logout } from '@/store/slices/authSlice';
+import { useAuth } from '@/hooks/useAuth';
+import styles from './HeaderAdmin.module.css';
 
 const AvatarPlaceholder = () => (
     <div className={styles.avatarPlaceholder}>
@@ -14,12 +18,27 @@ const AvatarPlaceholder = () => (
 );
 
 export const HeaderAdmin: React.FC = () => {
+    const router = useRouter();
+    const dispatch = useDispatch();
+    const { user } = useAuth();
+
+    const handleLogout = () => {
+        dispatch(logout());
+        router.push("/login");
+    };
 
     const userMenuItems: MenuProps['items'] = [
-        { key: "profile", label: "Profile" },
-        { key: "settings", label: "Settings" },
+        { 
+            key: "profile", 
+            label: "Profile",
+            onClick: () => router.push("/profile")
+        },
         { type: "divider" },
-        { key: "logout", label: "Logout" },
+        { 
+            key: "logout", 
+            label: "Logout",
+            onClick: handleLogout
+        },
     ];
 
     return (
@@ -43,7 +62,7 @@ export const HeaderAdmin: React.FC = () => {
                     <AvatarPlaceholder />
                     
                     <span className={styles.userName}>
-                        Anle 
+                        {user?.fullName || 'User'} 
                         <DownOutlined className={styles.downArrowIcon} />
                     </span>
                 </div>

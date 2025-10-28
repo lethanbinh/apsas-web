@@ -108,7 +108,7 @@ const ProfilePage = () => {
         <Row gutter={[24, 24]}>
           {/* Profile Card */}
           <Col xs={24} md={8}>
-            <Card className={styles.profileCard} bordered={false}>
+            <Card className={styles.profileCard}>
               <div className={styles.avatarSection}>
                 <Avatar 
                   size={120} 
@@ -129,7 +129,7 @@ const ProfilePage = () => {
             </Card>
 
             {/* Quick Info Card */}
-            <Card className={styles.quickInfoCard} bordered={false}>
+            <Card className={styles.quickInfoCard}>
               <h3 className={styles.sectionTitle}>Quick Info</h3>
               <div className={styles.quickInfoItem}>
                 <IdcardOutlined className={styles.quickInfoIcon} />
@@ -146,7 +146,7 @@ const ProfilePage = () => {
 
           {/* Main Info Card */}
           <Col xs={24} md={16}>
-            <Card className={styles.mainCard} bordered={false}>
+            <Card className={styles.mainCard}>
               <h2 className={styles.sectionTitle}>Personal Information</h2>
               <Descriptions column={1} bordered className={styles.descriptions}>
                 <Descriptions.Item label={
@@ -188,7 +188,7 @@ const ProfilePage = () => {
             </Card>
 
             {/* Account Details Card */}
-            <Card className={styles.accountCard} bordered={false}>
+            <Card className={styles.accountCard}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
               <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12}>

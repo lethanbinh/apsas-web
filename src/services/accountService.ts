@@ -20,15 +20,15 @@ export class AccountService {
   }
 
   async deleteAccount(id: number): Promise<void> {
-    await apiService.delete(`${API_ENDPOINTS.ACCOUNT.DELETE}/${id}`);
+    await apiService.delete(`${API_ENDPOINTS.ADMIN.DELETE}/${id}`);
   }
 
   async updateAccount(id: number, userData: any): Promise<void> {
-    await apiService.put(`${API_ENDPOINTS.ACCOUNT.UPDATE}/${id}`, userData);
+    await apiService.patch(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}/profile`, userData);
   }
 
   async createAccount(newUserData: any): Promise<void> {
-    await apiService.post(API_ENDPOINTS.ACCOUNT.CREATE, newUserData);
+    await apiService.post(API_ENDPOINTS.ADMIN.CREATE, newUserData);
   }
 }
 

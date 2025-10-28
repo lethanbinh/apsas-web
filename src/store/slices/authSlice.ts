@@ -14,13 +14,47 @@ interface AuthState {
   error: string | null;
 }
 
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
+// Helper to get initial state from localStorage
+const getInitialState = (): AuthState => {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    return {
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    };
+  }
+
+  const token = localStorage.getItem('auth_token');
+  const userDataStr = localStorage.getItem('user_data');
+  
+  if (token && userDataStr) {
+    try {
+      const user = JSON.parse(userDataStr);
+      return {
+        user,
+        token,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      };
+    } catch (error) {
+      console.error('Failed to parse user data from localStorage:', error);
+    }
+  }
+
+  return {
+    user: null,
+    token: null,
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+  };
 };
+
+const initialState: AuthState = getInitialState();
 
 // Async thunks
 // Helper function to decode JWT token
@@ -83,7 +117,15 @@ export const loginUser = createAsyncThunk(
           address: '',
           gender: 0,
           dateOfBirth: '',
-          role: decoded.role === 'HOD' ? 3 : decoded.role === 'Lecturer' ? 1 : decoded.role === 'Student' ? 0 : 2,
+          role: decoded.role === 'ADMIN' ? 0 
+            : decoded.role === 'Admin' ? 0 
+            : decoded.role === 'STUDENT' ? 2 
+            : decoded.role === 'Student' ? 2 
+            : decoded.role === 'LECTURER' ? 1 
+            : decoded.role === 'Lecturer' ? 1 
+            : decoded.role === 'HOD' ? 3 
+            : decoded.role === 'hod' ? 3 
+            : 2, // default to Student
         };
         
         console.log('👤 User info from JWT:', userInfo);
@@ -160,6 +202,13 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
+        
+        // Save to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', action.payload.token);
+          localStorage.setItem('user_data', JSON.stringify(action.payload.user));
+          console.log('✅ User data saved to localStorage in loginUser.fulfilled');
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;

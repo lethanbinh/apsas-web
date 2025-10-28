@@ -16,41 +16,12 @@ const ManageUsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10); // Users per page
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
-  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  // Removed delete functionality
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreateModalVisible, setIsCreateModalVisible] = useState<boolean>(false); // State for create modal
 
-  // Handlers for delete modal
-  const showDeleteModal = (user: User) => {
-    setUserToDelete(user);
-    setIsDeleteModalVisible(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (userToDelete) {
-      try {
-        setLoading(true); // Show loading during delete operation
-        await adminService.deleteAccount(userToDelete.id);
-        // Refetch users after successful deletion
-        setCurrentPage(1); // Reset to first page after deletion
-        // The useEffect will refetch due to currentPage/pageSize dependency
-      } catch (err: any) {
-        console.error("Failed to delete user:", err);
-        setError(err.message || 'Failed to delete user');
-      } finally {
-        setIsDeleteModalVisible(false);
-        setUserToDelete(null);
-        setLoading(false); // Hide loading
-      }
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setIsDeleteModalVisible(false);
-    setUserToDelete(null);
-  };
+  // Delete functionality removed
 
   // Handlers for edit modal
   const showEditModal = (user: User) => {
@@ -61,16 +32,30 @@ const ManageUsersPage: React.FC = () => {
   const handleEditOk = async (values: UserUpdatePayload) => {
     if (editingUser) {
       try {
-        setLoading(true); // Show loading during edit operation
-        await adminService.updateAccount(editingUser.id, values);
-        setCurrentPage(1); // Refetch users after successful update, reset to first page
+        // Only send editable fields to API (role is not editable)
+        const updatePayload = {
+          phoneNumber: values.phoneNumber,
+          fullName: values.fullName,
+          address: values.address,
+        };
+        
+        await adminService.updateAccount(editingUser.id, updatePayload);
+        
+        // Close modal first
+        setIsEditModalVisible(false);
+        setEditingUser(null);
+        
+        // Refetch users to show updated data - this will trigger the useEffect
+        setLoading(true);
+        const response = await accountService.getAccountList(currentPage, pageSize);
+        setUsers(response.users || []);
+        setTotalUsers(response.total);
+        setLoading(false);
+        
+        console.log('✅ User updated successfully and list refreshed');
       } catch (err: any) {
         console.error("Failed to update user:", err);
         setError(err.message || 'Failed to update user');
-      } finally {
-        setIsEditModalVisible(false);
-        setEditingUser(null);
-        setLoading(false); // Hide loading
       }
     }
   };
@@ -87,16 +72,23 @@ const ManageUsersPage: React.FC = () => {
 
   const handleCreateOk = async (values: UserUpdatePayload) => {
     try {
-      setLoading(true); // Show loading during create operation
-      console.log("Creating user with payload:", values); // ADDED THIS LOG
+      console.log("Creating user with payload:", values);
       await adminService.createAccount(values);
-      setCurrentPage(1); // Refetch users after successful creation, reset to first page
+      
+      // Close modal first
+      setIsCreateModalVisible(false);
+      
+      // Refetch users to show new data
+      setLoading(true);
+      const response = await accountService.getAccountList(1, pageSize); // Use first page after create
+      setUsers(response.users || []);
+      setTotalUsers(response.total);
+      setLoading(false);
+      
+      console.log('✅ User created successfully and list refreshed');
     } catch (err: any) {
       console.error("Failed to create user:", err);
       setError(err.message || 'Failed to create user');
-    } finally {
-      setIsCreateModalVisible(false);
-      setLoading(false); // Hide loading
     }
   };
 
@@ -141,12 +133,15 @@ const ManageUsersPage: React.FC = () => {
   );
 
   const mapRoleToString = (role: number): string => {
-    switch (role) {
-      case 0: return "Student";
+    // Ensure role is a number
+    const roleNumber = typeof role === 'string' ? parseInt(role, 10) : role;
+    
+    switch (roleNumber) {
+      case 0: return "Admin";
       case 1: return "Lecturer";
-      case 2: return "Admin";
+      case 2: return "Student";
       case 3: return "HOD";
-      default: return "Unknown";
+      default: return `Unknown (${role})`;
     }
   };
 
@@ -221,7 +216,19 @@ const ManageUsersPage: React.FC = () => {
                   console.warn("User object has missing or invalid ID, using fallback key for user:", user);
                 }
                 return (
-                  <tr key={user.id} className={styles['table-row']}><td>{(currentPage - 1) * pageSize + index + 1}</td><td>{user.email}</td><td>{user.fullName}</td><td>{new Date(user.dateOfBirth).toLocaleDateString()}</td><td>{mapRoleToString(user.role)}</td><td>{user.accountCode}</td><td><Button size="small" type="primary" onClick={() => showEditModal(user)} style={{ marginRight: 8 }} className={styles['rounded-button']}>Edit</Button><Button size="small" danger onClick={() => showDeleteModal(user)} className={styles['rounded-button']}>Delete</Button></td></tr>
+                  <tr key={user.id} className={styles['table-row']}>
+                    <td>{(currentPage - 1) * pageSize + index + 1}</td>
+                    <td>{user.email}</td>
+                    <td>{user.fullName}</td>
+                    <td>{new Date(user.dateOfBirth).toLocaleDateString()}</td>
+                    <td>{mapRoleToString(user.role)}</td>
+                    <td>{user.accountCode}</td>
+                    <td>
+                      <Button size="small" type="primary" onClick={() => showEditModal(user)} className={styles['rounded-button']}>
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
@@ -248,17 +255,6 @@ const ManageUsersPage: React.FC = () => {
           </div>
         )}
 
-        <Modal
-          title="Confirm Deletion"
-          open={isDeleteModalVisible}
-          onOk={handleDeleteConfirm}
-          onCancel={handleDeleteCancel}
-          okText="Delete"
-          cancelText="Cancel"
-          confirmLoading={loading} // Use loading state for confirmation button
-        >
-          <p className={styles['modal-confirm-text']}>Are you sure you want to delete user <b>{userToDelete?.fullName}</b>?</p>
-        </Modal>
 
         {isEditModalVisible && (
           <UserDetailFormModal
