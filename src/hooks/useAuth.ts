@@ -21,13 +21,19 @@ export const useAuth = () => {
     // Only run on client-side to prevent hydration mismatch
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('auth_token');
-      const userData = localStorage.getItem('user_data');
+      const userDataStr = localStorage.getItem('user_data');
       
-      if (token && !isAuthenticated && !userData) {
-        console.log('🔍 Token found, fetching user profile...');
+      console.log('🔍 useAuth - Token exists:', !!token);
+      console.log('🔍 useAuth - UserData exists:', !!userDataStr);
+      console.log('🔍 useAuth - isAuthenticated:', isAuthenticated);
+      
+      if (token && !isAuthenticated) {
+        console.log('🔄 Fetching user profile from server...');
         dispatch(fetchUserProfile());
-      } else if (userData) {
-        console.log('✅ User data found in localStorage');
+      } else if (token && isAuthenticated) {
+        console.log('✅ User already authenticated');
+      } else {
+        console.log('⚠️ No token found');
       }
     }
     setIsInitialized(true);

@@ -21,11 +21,12 @@ export const API_ENDPOINTS = {
   },
   ACCOUNT: {
     PAGINATED_LIST: '/Account/page',
+    UPDATE_PROFILE: '/Account',
   },
   ADMIN: {
     DELETE: '/Admin',
     UPDATE: '/Admin',
-    CREATE: '/Admin/create',
+    CREATE: '/Account/create',
   },
   IMPORT: {
     EXCEL_TEMPLATE: '/Import/excel/template',
@@ -66,9 +67,9 @@ export const ROUTES = {
 
 // Role Constants
 export const ROLES = {
-  STUDENT: 0,
+  ADMIN: 0,
   LECTURER: 1,
-  ADMIN: 2,
+  STUDENT: 2,
   HOD: 3,
 } as const;
 
@@ -84,25 +85,22 @@ export interface NavigationItem {
 
 export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   [ROLES.STUDENT]: [
-    { key: 'home', label: 'Trang chủ', href: '/home' },
-    { key: 'my-classes', label: 'Lớp của tôi', href: '/classes/my-classes' },
-    { key: 'all-classes', label: 'Tất cả lớp học', href: '/search-classes' },
+    { key: 'home', label: 'Home', href: '/home' },
+    { key: 'my-classes', label: 'My Classes', href: '/classes/my-classes' },
+    { key: 'all-classes', label: 'All Classes', href: '/search-classes' },
   ],
   [ROLES.LECTURER]: [
-    { key: 'home', label: 'Trang chủ', href: '/home' },
-    { key: 'dashboard', label: 'Dashboard', href: '/lecturer/dashboard' },
-    { key: 'tasks', label: 'Nhiệm vụ', href: '/lecturer/tasks' },
-    { key: 'grading-history', label: 'Lịch sử chấm', href: '/lecturer/grading-history' },
+    { key: 'home', label: 'Home', href: '/home' },
+    { key: 'my-classes', label: 'My Classes', href: '/classes/my-classes' },
+    { key: 'all-classes', label: 'All Classes', href: '/search-classes' },
   ],
   [ROLES.ADMIN]: [
-    { key: 'home', label: 'Trang chủ', href: '/home' },
     { key: 'dashboard', label: 'Dashboard', href: '/admin/dashboard' },
-    { key: 'manage-users', label: 'Quản lý người dùng', href: '/admin/manage-users' },
+    { key: 'manage-users', label: 'Manage Users', href: '/admin/manage-users' },
   ],
   [ROLES.HOD]: [
-    { key: 'home', label: 'Trang chủ', href: '/home' },
-    { key: 'semester-plans', label: 'Kế hoạch học kỳ', href: '/hod/semester-plans' },
-    { key: 'approval', label: 'Phê duyệt', href: '/hod/approval' },
+    { key: 'semester-plans', label: 'Semester Plans', href: '/hod/semester-plans' },
+    { key: 'approval', label: 'Approval', href: '/hod/approval' },
   ],
 };
 

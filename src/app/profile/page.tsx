@@ -10,7 +10,13 @@ import {
   Tag, 
   Spin,
   Empty,
-  Button
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  message
 } from 'antd';
 import { 
   UserOutlined, 
@@ -18,19 +24,26 @@ import {
   PhoneOutlined, 
   HomeOutlined,
   CalendarOutlined,
-  IdcardOutlined
+  IdcardOutlined,
+  EditOutlined
 } from '@ant-design/icons';
+import moment from 'moment';
 import { Layout } from '@/components/layout/Layout';
 import styles from './Profile.module.css';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
 import type { User } from '@/types';
 
+const { Option } = Select;
+
 const ProfilePage = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -79,6 +92,65 @@ const ProfilePage = () => {
     return gender === 1 ? 'Female' : gender === 0 ? 'Male' : 'Other';
   };
 
+  const handleEdit = () => {
+    if (profile) {
+      form.setFieldsValue({
+        phoneNumber: profile.phoneNumber,
+        fullName: profile.fullName,
+        avatar: profile.avatar,
+        address: profile.address,
+        gender: profile.gender,
+        dateOfBirth: profile.dateOfBirth ? moment(profile.dateOfBirth) : null,
+      });
+      setIsEditModalVisible(true);
+    }
+  };
+
+  const handleEditOk = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (!profile?.id) {
+        message.error('Profile ID not found');
+        return;
+      }
+
+      setUpdating(true);
+      
+      const updateData = {
+        phoneNumber: values.phoneNumber,
+        fullName: values.fullName,
+        avatar: values.avatar || '',
+        address: values.address,
+        gender: values.gender,
+        dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : profile.dateOfBirth,
+      };
+
+      const updatedProfile = await authService.updateProfile(profile.id, updateData);
+      
+      setProfile(updatedProfile);
+      setIsEditModalVisible(false);
+      message.success('Profile updated successfully');
+      
+      // Refresh profile data
+      const userId = localStorage.getItem('user_id');
+      if (userId) {
+        const freshProfile = await authService.getProfile();
+        setProfile(freshProfile);
+      }
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      message.error(err.message || 'Failed to update profile');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleEditCancel = () => {
+    setIsEditModalVisible(false);
+    form.resetFields();
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -108,7 +180,7 @@ const ProfilePage = () => {
         <Row gutter={[24, 24]}>
           {/* Profile Card */}
           <Col xs={24} md={8}>
-            <Card className={styles.profileCard} bordered={false}>
+            <Card className={styles.profileCard}>
               <div className={styles.avatarSection}>
                 <Avatar 
                   size={120} 
@@ -122,14 +194,20 @@ const ProfilePage = () => {
                 </Tag>
               </div>
               <div className={styles.profileActions}>
-                <Button type="primary" size="large" block icon={<UserOutlined />}>
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  block 
+                  icon={<EditOutlined />}
+                  onClick={handleEdit}
+                >
                   Edit Profile
                 </Button>
               </div>
             </Card>
 
             {/* Quick Info Card */}
-            <Card className={styles.quickInfoCard} bordered={false}>
+            <Card className={styles.quickInfoCard}>
               <h3 className={styles.sectionTitle}>Quick Info</h3>
               <div className={styles.quickInfoItem}>
                 <IdcardOutlined className={styles.quickInfoIcon} />
@@ -146,7 +224,7 @@ const ProfilePage = () => {
 
           {/* Main Info Card */}
           <Col xs={24} md={16}>
-            <Card className={styles.mainCard} bordered={false}>
+            <Card className={styles.mainCard}>
               <h2 className={styles.sectionTitle}>Personal Information</h2>
               <Descriptions column={1} bordered className={styles.descriptions}>
                 <Descriptions.Item label={
@@ -188,7 +266,7 @@ const ProfilePage = () => {
             </Card>
 
             {/* Account Details Card */}
-            <Card className={styles.accountCard} bordered={false}>
+            <Card className={styles.accountCard}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
               <Row gutter={[16, 16]}>
                 <Col xs={24} sm={12}>
@@ -207,6 +285,75 @@ const ProfilePage = () => {
             </Card>
           </Col>
         </Row>
+
+        {/* Edit Profile Modal */}
+        <Modal
+          title="Edit Profile"
+          open={isEditModalVisible}
+          onOk={handleEditOk}
+          onCancel={handleEditCancel}
+          confirmLoading={updating}
+          width={600}
+          okText="Update"
+          cancelText="Cancel"
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            name="edit_profile_form"
+          >
+            <Form.Item
+              name="fullName"
+              label="Full Name"
+              rules={[{ required: true, message: 'Please input your full name!' }]}
+            >
+              <Input placeholder="Enter full name" />
+            </Form.Item>
+
+            <Form.Item
+              name="phoneNumber"
+              label="Phone Number"
+              rules={[{ required: true, message: 'Please input your phone number!' }]}
+            >
+              <Input placeholder="Enter phone number" />
+            </Form.Item>
+
+            <Form.Item
+              name="avatar"
+              label="Avatar URL"
+            >
+              <Input placeholder="Enter avatar URL (optional)" />
+            </Form.Item>
+
+            <Form.Item
+              name="address"
+              label="Address"
+              rules={[{ required: true, message: 'Please input your address!' }]}
+            >
+              <Input.TextArea rows={3} placeholder="Enter address" />
+            </Form.Item>
+
+            <Form.Item
+              name="gender"
+              label="Gender"
+              rules={[{ required: true, message: 'Please select gender!' }]}
+            >
+              <Select placeholder="Select gender">
+                <Option value={0}>Male</Option>
+                <Option value={1}>Female</Option>
+                <Option value={2}>Other</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="dateOfBirth"
+              label="Date of Birth"
+              rules={[{ required: true, message: 'Please select date of birth!' }]}
+            >
+              <DatePicker style={{ width: '100%' }} placeholder="Select date of birth" />
+            </Form.Item>
+          </Form>
+        </Modal>
       </div>
     </Layout>
   );

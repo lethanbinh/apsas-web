@@ -28,6 +28,7 @@ class ApiService {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
         return config;
       },
       (error) => {
@@ -37,8 +38,12 @@ class ApiService {
 
     // Response interceptor
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log('✅ API Response:', response.status, response.config.url);
+        return response;
+      },
       (error) => {
+        console.error('❌ API Error:', error.response?.status, error.config?.url, error.response?.data);
         if (error.response?.status === 401) {
           // Handle unauthorized access
           localStorage.removeItem('auth_token');
@@ -62,6 +67,11 @@ class ApiService {
 
   async put<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.api.put(url, data, config);
+    return response.data;
+  }
+
+  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const response: AxiosResponse<T> = await this.api.patch(url, data, config);
     return response.data;
   }
 

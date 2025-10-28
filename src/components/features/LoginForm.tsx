@@ -7,6 +7,9 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Checkbox } from 'antd';
 import { useAuth } from '@/hooks/useAuth';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { fetchUserProfile } from '@/store/slices/authSlice';
 import { LoginCredentials } from '@/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -26,6 +29,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -48,9 +53,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       setErrors({});
       const result = await login(values);
       
-      // Get user from result or Redux state
-      const userInfo = result?.user;
-      console.log('User info for redirect:', userInfo);
+      // Wait a moment for user state to update with correct role
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Get user from Redux store
+      const state = (dispatch as any).getState?.() || null;
+      const currentUser = state ? state.auth?.user : user;
+      const userInfo = currentUser || result?.user;
+      
+      console.log('Login successful!');
       
       // Redirect based on user role
       const roleRedirects: { [key: number]: string } = {
@@ -65,9 +76,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({
         : '/home';
       
       console.log('Redirecting to:', redirectPath);
+      console.log('User role is:', userInfo?.role, 'which maps to:', redirectPath);
+      
       router.push(redirectPath);
       onSuccess?.();
     } catch (error: any) {
+      console.error('Login error:', error);
       const errorMessage = error.message || 'Login failed';
       setErrors({ general: errorMessage });
       onError?.(errorMessage);
@@ -98,13 +112,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             }).join(''));
             const decoded = JSON.parse(jsonPayload);
             
-            const roleRedirects: { [key: number]: string } = {
-              0: '/admin/dashboard', // Admin
-              1: '/lecturer/dashboard', // Lecturer
-              2: '/home', // Student
-              3: '/hod/semester-plans', // HOD
+            const roleRedirects: { [key: string]: string } = {
+              'Admin': '/admin/dashboard',
+              'Lecturer': '/lecturer/dashboard',
+              'Student': '/home',
+              'HOD': '/hod/semester-plans',
             };
             
+            console.log('Decoded role from JWT:', decoded.role);
             const redirectPath = roleRedirects[decoded.role] || '/home';
             console.log("Redirecting to:", redirectPath);
             router.push(redirectPath);
