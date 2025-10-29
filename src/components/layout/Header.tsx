@@ -10,11 +10,14 @@ import type { MenuProps } from "antd";
 import { DownOutlined, UserOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { LogoComponent } from "@/components/ui/Logo"; // Import the shared LogoComponent
-import { useState } from "react";
-import { useRouter } from 'next/navigation';
+import { useState, useMemo } from "react";
+import { useRouter, usePathname } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/store/slices/authSlice';
 import { authService } from '@/services/authService';
+import { useAuth } from '@/hooks/useAuth';
+import { ROLE_NAVIGATION, ROLES } from '@/lib/constants';
+import type { Role } from '@/lib/constants';
 
 // Dùng Icon Ant Design cho Avatar
 const AvatarPlaceholder = () => (
@@ -76,10 +79,11 @@ const getLinkStyle = (key: string, activeKey: string, hoverKey: string | null): 
 
 export const Header: React.FC = () => {
     // hoverKey được khai báo ở đây
-    const [activeKey, setActiveKey] = useState("home"); 
     const [hoverKey, setHoverKey] = useState<string | null>(null);
     const router = useRouter();
     const dispatch = useDispatch();
+    const pathname = usePathname();
+    const { user } = useAuth();
 
     const handleLogout = async () => {
         // await authService.logout(); // Backend does not have /auth/logout endpoint
@@ -87,15 +91,26 @@ export const Header: React.FC = () => {
         router.push("/login");
     };
 
-    const navigation = [
-        { key: "home", label: "Home", href: "/home" },
-        { key: "dashboard", label: "Dashboard", href: "/dashboard" },
-        { key: "my-courses", label: "My courses", href: "/my-courses" },
-        { key: "all-courses", label: "All courses", href: "/all-courses" },
-    ];
+    // Get navigation items based on user role
+    const navigation = useMemo(() => {
+        if (!user?.role) return [];
+        const userRole = user.role as Role;
+        return ROLE_NAVIGATION[userRole] || [];
+    }, [user?.role]);
+
+    // Determine active key based on current pathname
+    const activeKey = useMemo(() => {
+        // Sort navigation keys by length (longest first) to match more specific routes first
+        const sortedKeys = [...navigation].sort((a, b) => b.href.length - a.href.length);
+        
+        // Find the first navigation item that matches the current path
+        const matchingItem = sortedKeys.find(item => pathname.startsWith(item.href));
+        
+        return matchingItem?.key || 'home';
+    }, [pathname, navigation]);
 
     const userMenuItems: MenuProps['items'] = [
-        { key: "profile", label: "Profile" },
+        { key: "profile", label: "Profile", onClick: () => router.push("/profile") },
         { key: "settings", label: "Settings" },
         { type: "divider" },
         { key: "logout", label: "Logout", onClick: handleLogout },
@@ -118,8 +133,6 @@ export const Header: React.FC = () => {
                             <Link 
                                 key={item.key}
                                 href={item.href}
-                                // Cập nhật trạng thái active khi click
-                                onClick={() => setActiveKey(item.key)}
                                 // Cập nhật trạng thái hover
                                 onMouseEnter={() => setHoverKey(item.key)}
                                 onMouseLeave={() => setHoverKey(null)}
@@ -143,7 +156,7 @@ export const Header: React.FC = () => {
                     <AvatarPlaceholder />
                     
                     <span className="!text-gray-800 !font-medium !text-base">
-                        Anle 
+                        {user?.fullName || 'User'} 
                         <DownOutlined className="!text-gray-800 !text-xs !ml-1" />
                     </span>
                 </div>

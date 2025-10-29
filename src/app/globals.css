@@ -7,6 +7,7 @@
   --secondary-color: #4A90E2;
   --accent-color: #F5A623;
   --text-color: #333333;
+  --text-color-secondary: #888888;
   --border-color: #E0E0E0;
   --error-color: #FF6B6B;
 }
@@ -166,7 +167,7 @@ a {
 /* Right Side - Login Form */
 .login-form-section {
   flex: 0.7;
-  padding: 60px 40px;
+  padding: 60px 0px; /* Removed horizontal padding */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -362,18 +363,18 @@ a {
 }
 
 /* Reset Password Page Styles */
-.reset-password-page {
+.reset-password-main-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: white;
-  padding: 20px;
+  padding: 0px; /* No padding on the main container */
 }
 
-.reset-password-container {
+.reset-password-content-wrapper {
   display: flex;
-  max-width: 1200px;
+  max-width: 1200px; /* Adjust as needed */
   width: 100%;
   background: white;
   border-radius: 0;
@@ -384,7 +385,7 @@ a {
 }
 
 /* Left Side - Illustration */
-.reset-password-illustration {
+.reset-password-illustration-section {
   flex: 1.3;
   background: transparent;
   position: relative;
@@ -397,10 +398,15 @@ a {
 /* Right Side - Reset Password Form */
 .reset-password-form-section {
   flex: 0.7;
-  padding: 60px 40px;
+  padding: 60px 0px; /* Remove horizontal padding */
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Ensure the inner form container can expand */
+.reset-password-form-section .login-form-container {
+  max-width: none; /* Override default max-width to allow full expansion */
 }
 
 .reset-password-form-container {
@@ -501,13 +507,13 @@ a {
 
 /* Responsive Design for Reset Password */
 @media (max-width: 768px) {
-  .reset-password-container {
+  .reset-password-content-wrapper {
     flex-direction: column;
     max-width: 400px;
     gap: 20px;
   }
   
-  .reset-password-illustration {
+  .reset-password-illustration-section {
     min-height: 200px;
     padding: 20px;
   }
@@ -1481,4 +1487,18 @@ a {
   .tagline-text {
       font-size: 0.75rem;
   }
+}
+
+/* Override for Reset Password Form Section */
+.login-form-section.reset-password-override-section {
+  padding: 60px 0px; /* Remove horizontal padding */
+}
+
+.login-form-section.reset-password-override-section .login-form-container {
+  max-width: none; /* Allow the form to take full width of its section */
+}
+
+.login-form-section.reset-password-override-section .reset-password-form {
+  /* This is if we keep the .reset-password-form class, but we will change it to .login-form */
+  max-width: none;
 }

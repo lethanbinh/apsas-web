@@ -2,7 +2,7 @@
  * Navigation utilities
  */
 
-import { ROUTES } from '@/lib/constants';
+import { ROUTES, ROLE_NAVIGATION, ROLES, type Role } from '@/lib/constants';
 
 export const navigation = {
   // Public routes
@@ -18,12 +18,22 @@ export const navigation = {
   products: () => '/products',
   productDetail: (id: string) => `/products/${id}`,
   
+  // Role-based navigation
+  getRoleNavigation: (role: Role) => {
+    return ROLE_NAVIGATION[role] || [];
+  },
+  
   // Helper functions
   isActiveRoute: (currentPath: string, targetPath: string): boolean => {
     if (targetPath === '/') {
       return currentPath === '/';
     }
     return currentPath.startsWith(targetPath);
+  },
+  
+  // Check if user has access to a route
+  hasRoleAccess: (userRole: Role, requiredRoles: Role[]): boolean => {
+    return requiredRoles.includes(userRole);
   },
   
   // Breadcrumb generation

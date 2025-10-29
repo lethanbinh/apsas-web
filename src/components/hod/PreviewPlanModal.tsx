@@ -10,7 +10,52 @@ import styles from "./PreviewPlanModal.module.css";
 const { Title, Text } = Typography;
 const { Step } = Steps;
 
-// --- DỮ LIỆU MẪU (Tôi đã tạo 4 bộ dữ liệu khác nhau) ---
+interface CourseData {
+  key: string;
+  code: string;
+  name: string;
+  credits: number;
+  labs: number;
+  assigns: number;
+  pe: number;
+  notes: string | null;
+}
+
+interface ClassData {
+  key: string;
+  classCode: string;
+  courseCode: string;
+  campus: string;
+}
+
+interface StudentData {
+  key: string;
+  id: string;
+  name: string;
+  email: string;
+  classCode: string;
+}
+
+interface TeacherAssignmentData {
+  key: string;
+  email: string;
+  classCode: string;
+  courseCode: string;
+}
+
+export interface PreviewData {
+  courses: CourseData[];
+  classes: ClassData[];
+  students: StudentData[];
+  teacherAssignments: TeacherAssignmentData[];
+}
+
+export interface PreviewPlanModalProps {
+  open: boolean;
+  onCancel: () => void;
+  onConfirm: () => void; // Nút cuối cùng (Close)
+  previewData: PreviewData | null; // New prop for preview data
+}
 
 // Step 1: Courses
 const coursesColumns = [
@@ -22,48 +67,12 @@ const coursesColumns = [
   { title: "No. of PE", dataIndex: "pe", key: "pe" },
   { title: "Notes", dataIndex: "notes", key: "notes" },
 ];
-const coursesData = [
-  {
-    key: "1",
-    code: "PRJ301",
-    name: "Java Web Application",
-    credits: 3,
-    labs: 5,
-    assigns: 2,
-    pe: 1,
-    notes: "For SE students",
-  },
-  {
-    key: "2",
-    code: "DBI202",
-    name: "Database Systems",
-    credits: 3,
-    labs: 4,
-    assigns: 2,
-    pe: 1,
-    notes: null,
-  },
-  {
-    key: "3",
-    code: "SWP391",
-    name: "Software Project",
-    credits: 3,
-    labs: 3,
-    assigns: 3,
-    pe: 0,
-    notes: "Capstone project",
-  },
-];
 
 // Step 2: Classes
 const classesColumns = [
   { title: "Class Code", dataIndex: "classCode", key: "classCode" },
   { title: "Course Code", dataIndex: "courseCode", key: "courseCode" },
   { title: "Campus", dataIndex: "campus", key: "campus" },
-];
-const classesData = [
-  { key: "1", classCode: "SE1720", courseCode: "PRJ301", campus: "HCM" },
-  { key: "2", classCode: "SE1721", courseCode: "DBI202", campus: "HCM" },
 ];
 
 // Step 3: Students
@@ -73,15 +82,6 @@ const studentsColumns = [
   { title: "Email", dataIndex: "email", key: "email" },
   { title: "Class Code", dataIndex: "classCode", key: "classCode" },
 ];
-const studentsData = [
-  {
-    key: "1",
-    id: "SE172257",
-    name: "Le Thu An",
-    email: "anlt@fpt.edu.vn",
-    classCode: "SE1720",
-  },
-];
 
 // Step 4: Teacher Assignments
 const teacherAssignmentsColumns = [
@@ -89,55 +89,53 @@ const teacherAssignmentsColumns = [
   { title: "Class Code", dataIndex: "classCode", key: "classCode" },
   { title: "Course Code", dataIndex: "courseCode", key: "courseCode" },
 ];
-const teacherAssignmentsData = [
-  {
-    key: "1",
-    email: "SangNM@fpt.edu.vn",
-    classCode: "SE1720",
-    courseCode: "PRJ301",
-  },
-];
-
-// --- HẾT DỮ LIỆU MẪU ---
-
-const steps = [
-  {
-    title: "Courses",
-    content: <PreviewTable columns={coursesColumns} dataSource={coursesData} />,
-  },
-  {
-    title: "Classes",
-    content: <PreviewTable columns={classesColumns} dataSource={classesData} />,
-  },
-  {
-    title: "Students",
-    content: (
-      <PreviewTable columns={studentsColumns} dataSource={studentsData} />
-    ),
-  },
-  {
-    title: "Teacher assignments",
-    content: (
-      <PreviewTable
-        columns={teacherAssignmentsColumns}
-        dataSource={teacherAssignmentsData}
-      />
-    ),
-  },
-];
-
-interface PreviewPlanModalProps {
-  open: boolean;
-  onCancel: () => void;
-  onConfirm: () => void; // Nút cuối cùng (Close)
-}
 
 export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   open,
   onCancel,
   onConfirm,
+  previewData,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Using optional chaining and nullish coalescing for safe access to previewData
+  const coursesDataSource = previewData?.courses || [];
+  const classesDataSource = previewData?.classes || [];
+  const studentsDataSource = previewData?.students || [];
+  const teacherAssignmentsDataSource = previewData?.teacherAssignments || [];
+
+  const steps = [
+    {
+      title: "Courses",
+      content: (
+        <PreviewTable columns={coursesColumns} dataSource={coursesDataSource} />
+      ),
+    },
+    {
+      title: "Classes",
+      content: (
+        <PreviewTable columns={classesColumns} dataSource={classesDataSource} />
+      ),
+    },
+    {
+      title: "Students",
+      content: (
+        <PreviewTable
+          columns={studentsColumns}
+          dataSource={studentsDataSource}
+        />
+      ),
+    },
+    {
+      title: "Teacher assignments",
+      content: (
+        <PreviewTable
+          columns={teacherAssignmentsColumns}
+          dataSource={teacherAssignmentsDataSource}
+        />
+      ),
+    },
+  ];
 
   const handleNext = () => {
     setCurrentStep(currentStep + 1);
