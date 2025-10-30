@@ -68,12 +68,12 @@ export const Header: React.FC = () => {
         <Link
           href={
             !mounted
-              ? "/home"
+              ? "/home/students"
               : user?.role === 0
               ? "/admin/dashboard"
               : user?.role === 3
               ? "/hod/semester-plans"
-              : "/home"
+              : "/home/students"
           }
           className={styles.logoLink}
         >

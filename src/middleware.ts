@@ -13,9 +13,6 @@ export function middleware(request: NextRequest) {
         '/',
         '/login',
         '/reset-password',
-        '/home',
-        '/classes/my-classes',
-        '/search-classes'
     ];
 
     // Role-based route access mapping

@@ -5,36 +5,36 @@
 // API Endpoints
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/Auth/login',
-    REGISTER: '/auth/register',
-    LOGOUT: '/auth/logout',
-    REFRESH: '/auth/refresh',
-    FORGOT_PASSWORD: '/Auth/forgot-password',
-    VERIFY_OTP: '/Auth/verify-otp',
-    RESET_PASSWORD: '/Auth/reset-password',
-    GOOGLE: '/Auth/google',
+    LOGIN: "/Auth/login",
+    REGISTER: "/auth/register",
+    LOGOUT: "/auth/logout",
+    REFRESH: "/auth/refresh",
+    FORGOT_PASSWORD: "/Auth/forgot-password",
+    VERIFY_OTP: "/Auth/verify-otp",
+    RESET_PASSWORD: "/Auth/reset-password",
+    GOOGLE: "/Auth/google",
   },
   USER: {
-    PROFILE: '/user/profile',
-    UPDATE: '/user/update',
-    GET_BY_ID: '/Account',
+    PROFILE: "/user/profile",
+    UPDATE: "/user/update",
+    GET_BY_ID: "/Account",
   },
   ACCOUNT: {
-    PAGINATED_LIST: '/Account/page',
-    UPDATE_PROFILE: '/Account',
+    PAGINATED_LIST: "/Account/page",
+    UPDATE_PROFILE: "/Account",
   },
   ADMIN: {
-    DELETE: '/Admin',
-    UPDATE: '/Admin',
-    CREATE: '/Account/create',
+    DELETE: "/Admin",
+    UPDATE: "/Admin",
+    CREATE: "/Account/create",
   },
   IMPORT: {
-    EXCEL_TEMPLATE: '/Import/excel/template',
-    SEMESTER_COURSE_DATA: '/Import/excel/semester-course-data',
-    CLASS_STUDENT_DATA: '/Import/excel/class-student-data',
+    EXCEL_TEMPLATE: "/Import/excel/template",
+    SEMESTER_COURSE_DATA: "/Import/excel/semester-course-data",
+    CLASS_STUDENT_DATA: "/Import/excel/class-student-data",
   },
   SEMESTER: {
-    PAGINATED_LIST: '/Semester',
+    PAGINATED_LIST: "/Semester",
   },
 } as const;
 
@@ -51,18 +51,18 @@ export const HTTP_STATUS = {
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  TOKEN: 'auth_token',
-  USER: 'user_data',
-  THEME: 'theme',
+  TOKEN: "auth_token",
+  USER: "user_data",
+  THEME: "theme",
 } as const;
 
 // Route Paths
 export const ROUTES = {
-  HOME: '/',
-  LOGIN: '/login',
-  REGISTER: '/register',
-  PROFILE: '/profile',
-  DASHBOARD: '/dashboard',
+  HOME: "/",
+  LOGIN: "/login",
+  REGISTER: "/register",
+  PROFILE: "/profile",
+  DASHBOARD: "/dashboard",
 } as const;
 
 // Role Constants
@@ -73,7 +73,7 @@ export const ROLES = {
   HOD: 3,
 } as const;
 
-export type Role = typeof ROLES[keyof typeof ROLES];
+export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 // Navigation items based on role
 export interface NavigationItem {
@@ -85,22 +85,42 @@ export interface NavigationItem {
 
 export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   [ROLES.STUDENT]: [
-    { key: 'home', label: 'Home', href: '/home' },
-    { key: 'my-classes', label: 'My Classes', href: '/classes/my-classes' },
-    { key: 'all-classes', label: 'All Classes', href: '/search-classes' },
+    { key: "home", label: "Home", href: "/home/student" },
+    {
+      key: "my-classes",
+      label: "My Classes",
+      href: "/classes/my-classes/student",
+    },
+    {
+      key: "all-classes",
+      label: "All Classes",
+      href: "/search-classes/student",
+    },
   ],
   [ROLES.LECTURER]: [
-    { key: 'home', label: 'Home', href: '/home' },
-    { key: 'my-classes', label: 'My Classes', href: '/classes/my-classes' },
-    { key: 'all-classes', label: 'All Classes', href: '/search-classes' },
+    { key: "home", label: "Home", href: "/home/lecturer" },
+    {
+      key: "my-classes",
+      label: "My Classes",
+      href: "/classes/my-classes/lecturer",
+    },
+    {
+      key: "all-classes",
+      label: "All Classes",
+      href: "/search-classes/lecturer",
+    },
   ],
   [ROLES.ADMIN]: [
-    { key: 'dashboard', label: 'Dashboard', href: '/admin/dashboard' },
-    { key: 'manage-users', label: 'Manage Users', href: '/admin/manage-users' },
+    { key: "dashboard", label: "Dashboard", href: "/admin/dashboard" },
+    { key: "manage-users", label: "Manage Users", href: "/admin/manage-users" },
   ],
   [ROLES.HOD]: [
-    { key: 'semester-plans', label: 'Semester Plans', href: '/hod/semester-plans' },
-    { key: 'approval', label: 'Approval', href: '/hod/approval' },
+    {
+      key: "semester-plans",
+      label: "Semester Plans",
+      href: "/hod/semester-plans",
+    },
+    { key: "approval", label: "Approval", href: "/hod/approval" },
   ],
 };
 
