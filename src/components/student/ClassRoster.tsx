@@ -99,7 +99,7 @@ export default function ClassRoster() {
             margin: 0,
           }}
         >
-          Class Roster
+          Class Members
         </Title>
         <Input
           placeholder="Search members..."

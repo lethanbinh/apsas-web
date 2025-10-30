@@ -1,0 +1,62 @@
+.logoWrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.logoImage {
+    object-fit: contain;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    image-rendering: -webkit-optimize-contrast;
+    transition: transform 0.2s ease;
+}
+
+.logoImage:hover {
+    transform: scale(1.02);
+}
+
+.small {
+    width: 64px;
+    height: 32px;
+}
+
+.medium {
+    width: 100px;
+    height: 40px;
+}
+
+.large {
+    width: 150px;
+    height: 60px;
+}
+
+/* Fallback khi ảnh lỗi */
+.logoFallback {
+    background-color: #4cbfb6;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.logoFallback.small {
+    width: 64px;
+    height: 32px;
+}
+
+.logoFallback.medium {
+    width: 100px;
+    height: 40px;
+}
+
+.logoFallback.large {
+    width: 150px;
+    height: 60px;
+}

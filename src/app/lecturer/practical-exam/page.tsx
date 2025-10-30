@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import LayoutLecturer from '@/components/layout/LayoutLecturer';
-import Link from 'next/link';
-import styles from './PracticalExam.module.css';
-import PaperAssignmentModal from '@/components/features/PaperAssignmentModal';
 import DatePickerModal from '@/components/features/DatePickerModal';
+import PaperAssignmentModal from '@/components/features/PaperAssignmentModal';
 import { format } from 'date-fns';
+import Link from 'next/link';
+import { useState } from 'react';
+import styles from './PracticalExam.module.css';
 
 const PracticalExamPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -23,7 +22,7 @@ const PracticalExamPage = () => {
   };
 
   return (
-    <LayoutLecturer>
+    <div>
       <div className={styles.container}>
         <div className={styles['header-section']}>
           <h1 className={styles.title}>Practical exam</h1>
@@ -229,7 +228,7 @@ const PracticalExamPage = () => {
         onDateSelect={handleDateSelect}
         selectedDate={selectedDate}
       />
-    </LayoutLecturer>
+    </div>
   );
 };
 

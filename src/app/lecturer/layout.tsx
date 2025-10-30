@@ -3,15 +3,15 @@
 import React from "react";
 import { Layout as AntLayout } from "antd";
 import Header from "@/components/layout/Header";
-import StudentSidebar from "@/components/sidebar/StudentSidebar";
 import { Footer } from "@/components/layout/Footer";
+import SidebarLecturer from "@/components/layout/SidebarLecturer";
 const { Content } = AntLayout;
 
-interface StudentLayoutProps {
+interface LecturerLayoutProps {
   children: React.ReactNode;
 }
 
-export default function StudentLayout({ children }: StudentLayoutProps) {
+export default function LecturerLayout({ children }: LecturerLayoutProps) {
   return (
     <AntLayout className="app-layout">
       <Header />
@@ -21,7 +21,7 @@ export default function StudentLayout({ children }: StudentLayoutProps) {
           overflow: "visible !important",
         }}
       >
-        <StudentSidebar />
+        <SidebarLecturer />
         <Content className="app-content">{children}</Content>
       </AntLayout>
       <Footer />

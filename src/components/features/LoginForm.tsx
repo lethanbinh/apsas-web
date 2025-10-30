@@ -66,7 +66,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       // Redirect based on user role
       const roleRedirects: { [key: number]: string } = {
         0: '/admin/dashboard', // Admin
-        1: '/lecturer/dashboard', // Lecturer
+        1: '/home', // Lecturer
         2: '/home', // Student
         3: '/hod/semester-plans', // HOD
       };
@@ -114,7 +114,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             
             const roleRedirects: { [key: string]: string } = {
               'Admin': '/admin/dashboard',
-              'Lecturer': '/lecturer/dashboard',
+              'Lecturer': '/home',
               'Student': '/home',
               'HOD': '/hod/semester-plans',
             };

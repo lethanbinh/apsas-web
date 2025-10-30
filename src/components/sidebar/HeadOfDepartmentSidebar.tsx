@@ -17,7 +17,6 @@ import styles from "./StudentSidebar.module.css";
 const { Sider } = Layout;
 const { Search } = Input;
 
-// --- ĐÃ CẬP NHẬT MENU ITEMS ---
 const menuItems = [
   {
     key: "/hod/semester-plans",
