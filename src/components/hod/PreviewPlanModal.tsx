@@ -1,4 +1,4 @@
-// Tên file: components/SemesterPlans/PreviewPlanModal.tsx
+// Tên file: components/hod/PreviewPlanModal.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -10,86 +10,93 @@ import styles from "./PreviewPlanModal.module.css";
 const { Title, Text } = Typography;
 const { Step } = Steps;
 
-interface CourseData {
-  key: string;
-  code: string;
-  name: string;
-  credits: number;
-  labs: number;
-  assigns: number;
-  pe: number;
-  notes: string | null;
+// --- Dữ liệu Mock Structure (Tái cấu trúc để khớp với File Excel) ---
+// Dựa trên file Semester Course Data (image_acbcdd.png)
+interface CourseElementData {
+    key: string;
+    CourseCode: string;
+    SemesterCode: string; // Thêm cột này để dễ nhận biết
+    AcademicYear: string;
+    StartEndDates: string;
+    CourseName: string;
+    CourseDescription: string;
+    CourseElementName: string;
+    CourseElementDescription: string;
+    CourseElementWeight: string;
+    LecturerAccountCode: string;
 }
 
-interface ClassData {
-  key: string;
-  classCode: string;
-  courseCode: string;
-  campus: string;
-}
-
-interface StudentData {
-  key: string;
-  id: string;
-  name: string;
-  email: string;
-  classCode: string;
-}
-
-interface TeacherAssignmentData {
-  key: string;
-  email: string;
-  classCode: string;
-  courseCode: string;
+// Dựa trên file Class Student Data (image_acbcf9.png & image_ad3ca4.png)
+interface ClassStudentData {
+    key: string;
+    ClassCode: string;
+    ClassDescription: string;
+    SemesterCourseId: string;
+    LecturerAccountCode: string;
+    StudentAccountCode: string;
+    EnrollmentDescription: string;
 }
 
 export interface PreviewData {
-  courses: CourseData[];
-  classes: ClassData[];
-  students: StudentData[];
-  teacherAssignments: TeacherAssignmentData[];
+  // Gộp thông tin Khóa học và các phần tử của nó
+  semesterPlan: CourseElementData[];
+  // Gộp thông tin Lớp và Sinh viên
+  classRoster: ClassStudentData[];
 }
+
+const emptyPreviewData: PreviewData = {
+    semesterPlan: [],
+    classRoster: [],
+};
 
 export interface PreviewPlanModalProps {
   open: boolean;
   onCancel: () => void;
-  onConfirm: () => void; // Nút cuối cùng (Close)
-  previewData: PreviewData | null; // New prop for preview data
+  onConfirm: () => void;
+  previewData: PreviewData | null;
 }
 
-// Step 1: Courses
-const coursesColumns = [
-  { title: "Course Code", dataIndex: "code", key: "code" },
-  { title: "Course Name", dataIndex: "name", key: "name" },
-  { title: "Credits", dataIndex: "credits", key: "credits" },
-  { title: "No. of Labs", dataIndex: "labs", key: "labs" },
-  { title: "No. of Assignments", dataIndex: "assigns", key: "assigns" },
-  { title: "No. of PE", dataIndex: "pe", key: "pe" },
-  { title: "Notes", dataIndex: "notes", key: "notes" },
+// --- MOCK DATA THỰC TẾ DỰA TRÊN CẤU TRÚC EXCEL ---
+const mockSemesterPlanData: CourseElementData[] = [
+    { key: "1", SemesterCode: "FALL2025", AcademicYear: "2025/Fall", StartEndDates: "1202-09-01 | 12-31", CourseCode: "CS101", CourseName: "Intro to Programming", CourseDescription: "Basic programming concepts", CourseElementName: "Assignment 1", CourseElementDescription: "First programming assignment", CourseElementWeight: "0.3", LecturerAccountCode: "LECT001" },
+    { key: "2", SemesterCode: "FALL2025", AcademicYear: "2025/Fall", StartEndDates: "1202-09-01 | 12-31", CourseCode: "CS101", CourseName: "Intro to Programming", CourseDescription: "Basic programming concepts", CourseElementName: "Midterm Exam", CourseElementDescription: "Midterm examination", CourseElementWeight: "0.4", LecturerAccountCode: "LECT001" },
+    { key: "3", SemesterCode: "FALL2025", AcademicYear: "2025/Fall", StartEndDates: "1202-09-01 | 12-31", CourseCode: "CS102", CourseName: "Data Structures", CourseDescription: "Advanced programming concepts", CourseElementName: "Project 1", CourseElementDescription: "Binary tree implementation", CourseElementWeight: "0.4", LecturerAccountCode: "LECT002" },
 ];
 
-// Step 2: Classes
-const classesColumns = [
-  { title: "Class Code", dataIndex: "classCode", key: "classCode" },
-  { title: "Course Code", dataIndex: "courseCode", key: "courseCode" },
-  { title: "Campus", dataIndex: "campus", key: "campus" },
+const mockClassRosterData: ClassStudentData[] = [
+    { key: "1", ClassCode: "CS103-01", ClassDescription: "Introduction to Programming - Section 01", SemesterCourseId: "1", LecturerAccountCode: "LEC00003", StudentAccountCode: "STU00001", EnrollmentDescription: "Regular enrollment" },
+    { key: "2", ClassCode: "CS103-01", ClassDescription: "Introduction to Programming - Section 01", SemesterCourseId: "1", LecturerAccountCode: "LEC00003", StudentAccountCode: "STU00002", EnrollmentDescription: "Regular enrollment" },
+    { key: "3", ClassCode: "CS103-01", ClassDescription: "Introduction to Programming - Section 01", SemesterCourseId: "1", LecturerAccountCode: "LEC00003", StudentAccountCode: "STU00003", EnrollmentDescription: "Late enrollment" },
+    { key: "4", ClassCode: "CS104-01", ClassDescription: "Data Structures - Section 01", SemesterCourseId: "2", LecturerAccountCode: "LEC00004", StudentAccountCode: "STU00004", EnrollmentDescription: "Regular enrollment" },
+];
+// --- HẾT MOCK DATA ---
+
+
+// --- Định nghĩa Columns KHỚP VỚI EXCEL ---
+
+const semesterPlanColumns = [
+    { title: "SemesterCode", dataIndex: "SemesterCode", key: "SemesterCode" },
+    { title: "AcademicYear", dataIndex: "AcademicYear", key: "AcademicYear" },
+    { title: "StartEndDates", dataIndex: "StartEndDates", key: "StartEndDates" },
+    { title: "CourseCode", dataIndex: "CourseCode", key: "CourseCode" },
+    { title: "CourseName", dataIndex: "CourseName", key: "CourseName" },
+    { title: "CourseElementName", dataIndex: "CourseElementName", key: "CourseElementName" },
+    { title: "CourseElementDescription", dataIndex: "CourseElementDescription", key: "CourseElementDescription" },
+    { title: "CourseElementWeight", dataIndex: "CourseElementWeight", key: "CourseElementWeight" },
+    { title: "LecturerAccountCode", dataIndex: "LecturerAccountCode", key: "LecturerAccountCode" },
 ];
 
-// Step 3: Students
-const studentsColumns = [
-  { title: "Student ID", dataIndex: "id", key: "id" },
-  { title: "Student Name", dataIndex: "name", key: "name" },
-  { title: "Email", dataIndex: "email", key: "email" },
-  { title: "Class Code", dataIndex: "classCode", key: "classCode" },
+const classRosterColumns = [
+    { title: "ClassCode", dataIndex: "ClassCode", key: "ClassCode" },
+    { title: "ClassDescription", dataIndex: "ClassDescription", key: "ClassDescription" },
+    { title: "SemesterCourseId", dataIndex: "SemesterCourseId", key: "SemesterCourseId" },
+    { title: "LecturerAccountCode", dataIndex: "LecturerAccountCode", key: "LecturerAccountCode" },
+    { title: "StudentAccountCode", dataIndex: "StudentAccountCode", key: "StudentAccountCode" },
+    { title: "EnrollmentDescription", dataIndex: "EnrollmentDescription", key: "EnrollmentDescription" },
 ];
 
-// Step 4: Teacher Assignments
-const teacherAssignmentsColumns = [
-  { title: "Teacher Email", dataIndex: "email", key: "email" },
-  { title: "Class Code", dataIndex: "classCode", key: "classCode" },
-  { title: "Course Code", dataIndex: "courseCode", key: "courseCode" },
-];
 
+// --- Cập nhật Component chính ---
 export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   open,
   onCancel,
@@ -98,44 +105,41 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Using optional chaining and nullish coalescing for safe access to previewData
-  const coursesDataSource = previewData?.courses || [];
-  const classesDataSource = previewData?.classes || [];
-  const studentsDataSource = previewData?.students || [];
-  const teacherAssignmentsDataSource = previewData?.teacherAssignments || [];
+  const finalPreviewData = previewData || emptyPreviewData;
 
+  const { 
+      semesterPlan: semesterPlanDataSource, 
+      classRoster: classRosterDataSource,
+  } = finalPreviewData;
+
+  // --- RÚT GỌN STEPS THÀNH 2 BƯỚC VÀ HIỂN THỊ DỮ LIỆU KHỚP EXCEL ---
   const steps = [
     {
-      title: "Courses",
+      title: `1. Semester Plan Data (${semesterPlanDataSource.length} items)`,
       content: (
-        <PreviewTable columns={coursesColumns} dataSource={coursesDataSource} />
+        <Space direction="vertical" style={{ width: '100%', gap: '15px' }}>
+            <Title level={4}>Semester Plan Details</Title>
+            {semesterPlanDataSource.length === 0 && previewData !== null
+                ? <Text type="warning">No semester plan data found in the uploaded file.</Text>
+                : <PreviewTable columns={semesterPlanColumns} dataSource={semesterPlanDataSource} />
+            }
+        </Space>
       ),
     },
     {
-      title: "Classes",
+      title: `2. Class Roster Data (${classRosterDataSource.length} items)`,
       content: (
-        <PreviewTable columns={classesColumns} dataSource={classesDataSource} />
-      ),
-    },
-    {
-      title: "Students",
-      content: (
-        <PreviewTable
-          columns={studentsColumns}
-          dataSource={studentsDataSource}
-        />
-      ),
-    },
-    {
-      title: "Teacher assignments",
-      content: (
-        <PreviewTable
-          columns={teacherAssignmentsColumns}
-          dataSource={teacherAssignmentsDataSource}
-        />
+        <Space direction="vertical" style={{ width: '100%', gap: '15px' }}>
+            <Title level={4}>Class Roster Details</Title>
+            {classRosterDataSource.length === 0 && previewData !== null
+                ? <Text type="warning">No class roster data found in the uploaded file.</Text>
+                : <PreviewTable columns={classRosterColumns} dataSource={classRosterDataSource} />
+            }
+        </Space>
       ),
     },
   ];
+  // --- KẾT THÚC RÚT GỌN STEPS ---
 
   const handleNext = () => {
     setCurrentStep(currentStep + 1);
@@ -145,7 +149,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
     setCurrentStep(currentStep - 1);
   };
 
-  // Đóng modal và reset về bước 0
   const handleClose = () => {
     onCancel();
     setTimeout(() => {
@@ -153,8 +156,8 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
     }, 300);
   };
 
-  // Nút bấm cho Footer
   const renderFooter = () => {
+    // Logic render footer (giữ nguyên)
     if (currentStep < steps.length - 1) {
       return (
         <Space>
@@ -166,7 +169,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
         </Space>
       );
     }
-    // Bước cuối cùng
     return (
       <Space>
         <Button onClick={handleBack}>Back</Button>
@@ -187,8 +189,15 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
       open={open}
       onCancel={handleClose}
       footer={renderFooter()}
-      width={900} // Cho modal rộng hơn
+      width={1000} // Tăng chiều rộng để phù hợp với nhiều cột hơn
     >
+      {/* Hiển thị cảnh báo chung nếu không có dữ liệu nào được tải */}
+      {previewData === null && (
+          <Title level={5} style={{ textAlign: 'center', color: '#faad14', marginBottom: '20px' }}>
+              Upload both files to see the structural preview.
+          </Title>
+      )}
+      
       <Steps current={currentStep} className={styles.steps}>
         {steps.map((item) => (
           <Step key={item.title} title={item.title} />

@@ -21,6 +21,7 @@ export const PreviewTable: React.FC<PreviewTableProps> = ({
       dataSource={dataSource}
       pagination={false}
       className={styles.previewTable}
+      scroll={{ x: 'max-content' }}
     />
   );
 };
