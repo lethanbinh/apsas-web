@@ -1,4 +1,3 @@
-
 export interface User {
   id: number;
   accountCode: string;
@@ -108,12 +107,12 @@ export interface AccountListResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
-  result: PaginatedResponse<User>; 
+  result: PaginatedResponse<User>;
 }
 
 export interface Semester {
   id: number;
-  semesterCode: string; 
+  semesterCode: string;
   academicYear: number;
   note: string;
   startDate: string;
@@ -125,7 +124,7 @@ export interface Semester {
 export interface ApiApprovalItem {
   id: number;
   message: string;
-  status: number; 
+  status: number;
   assignedAt: string;
   courseElementId: number;
   assignedLecturerId: number;
@@ -141,13 +140,21 @@ export interface ApiApprovalItem {
   assignedByHODName: string;
 }
 
+export interface ApiAssignRequestUpdatePayload {
+  message: string;
+  courseElementId: number;
+  assignedLecturerId: number;
+  assignedByHODId: number;
+  status: number;
+  assignedAt: string;
+}
+
 export interface ApprovalListResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
   result: PaginatedResponse<ApiApprovalItem>;
 }
-
 
 export interface ApiRubricItem {
   id: number;
@@ -207,24 +214,18 @@ export interface ApiAssessmentTemplate {
   status: number; 
 }
 
-// Response cho /api/AssessmentTemplate/list 
+// --- SỬA LỖI: Quay lại SingleResponse<PaginatedResponse<...>> ---
 export type AssessmentTemplateListResponse = SingleResponse<PaginatedResponse<ApiAssessmentTemplate>>;
 
-// Response cho /api/AssessmentTemplate/{id}
 export type AssessmentTemplateDetailResponse = SingleResponse<ApiAssessmentTemplate>;
 
-// Response cho /api/RubricItem/question/{id}
 export type RubricItemListResponse = ListResponse<ApiRubricItem>;
-// --- KẾT THÚC SỬA LỖI ---
 
-
-// Component Props Types
 export interface BaseComponentProps {
   className?: string;
   children?: React.ReactNode;
 }
 
-// Form Types
 export interface FormField {
   name: string;
   label: string;
@@ -234,7 +235,6 @@ export interface FormField {
   options?: { value: string; label: string }[];
 }
 
-// Theme Types
 export type Theme = 'light' | 'dark';
 
 export interface ThemeConfig {

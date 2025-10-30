@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useState } from "react";
-import { App, Collapse, Typography, Tag, Input, Space } from "antd";
+// 1. Import 'App', 'message', 'Alert'
+import { App, Collapse, Typography, Tag, Input, Space, message, Alert } from "antd"; 
 import type { CollapseProps } from "antd";
 import { Button } from "../ui/Button";
 import { ApprovalItem } from "./ApprovalItem";
 import styles from "./ApprovalDetail.module.css";
-import { ApiAssessmentTemplate } from "@/types"; 
+// Import các types và service cần thiết
+import { ApiAssessmentTemplate, ApiApprovalItem, ApiAssignRequestUpdatePayload } from "@/types"; 
+import { adminService } from "@/services/adminService";
+import { useRouter } from "next/navigation"; 
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -14,6 +18,7 @@ const { TextArea } = Input;
 
 interface ApprovalDetailProps {
   template: ApiAssessmentTemplate;
+  approvalItem: ApiApprovalItem; 
 }
 
 const getStatusProps = (status: number) => {
@@ -34,31 +39,80 @@ const getStatusProps = (status: number) => {
 };
 
 
-export default function ApprovalDetail({ template }: ApprovalDetailProps) {
+export default function ApprovalDetail({ template, approvalItem }: ApprovalDetailProps) {
+  const router = useRouter();
+  // 2. Lấy 'antMessage' từ hook 'App.useApp()'
+  const { message: antMessage } = App.useApp(); 
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(approvalItem.status);
+  
   const [rejectReasonVisibleForItem, setRejectReasonVisibleForItem] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [outerActiveKeys, setOuterActiveKeys] = useState<string | string[]>(
     template.papers.length > 0 ? [`paper-${template.papers[0].id}`] : []
   );
 
-  const handleApprove = (paperId: string) => {
-    console.log(`Approved paper: ${paperId}!`);
-    setRejectReasonVisibleForItem(null);
+  // Hàm helper để tạo payload
+  const createPayload = (status: number, message: string): ApiAssignRequestUpdatePayload => {
+    return {
+      message: message,
+      courseElementId: approvalItem.courseElementId,
+      assignedLecturerId: approvalItem.assignedLecturerId,
+      assignedByHODId: approvalItem.assignedByHODId,
+      status: status,
+      assignedAt: approvalItem.assignedAt, 
+    };
   };
 
-  const handleRejectClick = (paperId: string) => {
-    if (rejectReasonVisibleForItem === paperId) {
-      console.log(`Rejected paper ${paperId} with reason: ${rejectReason}`);
-    } else {
-      setRejectReasonVisibleForItem(paperId);
-      setRejectReason("");
+  // Xử lý Approve
+  const handleApprove = async () => {
+    setIsSubmitting(true);
+    try {
+      const payload = createPayload(5, "Approved by HOD");
+      await adminService.updateAssignRequestStatus(approvalItem.id, payload);
+      
+      setCurrentStatus(5); 
+      setRejectReasonVisibleForItem(null); 
+    }  finally {
+      setIsSubmitting(false);
     }
   };
 
-  const statusInfo = getStatusProps(template.status); 
+  // Xử lý Reject
+  const handleRejectClick = async () => {
+    if (rejectReasonVisibleForItem === null) {
+      setRejectReasonVisibleForItem(`paper-${template.papers[0].id}`); 
+      return;
+    }
 
-  const courseCollapseItems: CollapseProps['items'] = template.papers.map((paper) => ({
-    key: `paper-${paper.id}`, 
+    if (!rejectReason.trim()) {
+      antMessage.error("Please enter a reject reason.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload = createPayload(3, rejectReason);
+      await adminService.updateAssignRequestStatus(approvalItem.id, payload);
+
+      setCurrentStatus(3); 
+    }  finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const isActionDisabled = isSubmitting || currentStatus === 3 || currentStatus === 5;
+  const statusInfo = getStatusProps(currentStatus); 
+
+  const paper = template.papers[0];
+  if (!paper) {
+    return <Alert message="Error" description="This template has no papers." type="error" showIcon />;
+  }
+  const paperKey = `paper-${paper.id}`;
+
+  const courseCollapseItems: CollapseProps['items'] = [{
+    key: paperKey, 
     label: (
       <div className={styles.mainPanelHeader}>
         <Title level={4} style={{ margin: 0 }}>
@@ -76,13 +130,14 @@ export default function ApprovalDetail({ template }: ApprovalDetailProps) {
         <ApprovalItem questions={paper.questions} />
 
         <div className={styles.actionArea}>
-          {rejectReasonVisibleForItem === `paper-${paper.id}` && (
+          {rejectReasonVisibleForItem === paperKey && (
             <TextArea
               rows={3}
               placeholder="Enter reject reason..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className={styles.rejectReasonInput}
+              disabled={isActionDisabled}
             />
           )}
           <Space className={styles.actionButtons}>
@@ -90,28 +145,31 @@ export default function ApprovalDetail({ template }: ApprovalDetailProps) {
               variant="primary"
               size="large"
               className={styles.approveButton}
-              onClick={() => handleApprove(`paper-${paper.id}`)}
-              disabled={rejectReasonVisibleForItem === `paper-${paper.id}`}
+              onClick={handleApprove}
+              loading={isSubmitting}
+              disabled={isActionDisabled}
             >
-              Approve
+              {currentStatus === 5 ? "Approved" : "Approve"}
             </Button>
             <Button
               variant="danger"
               size="large"
               className={styles.rejectButton}
-              onClick={() => handleRejectClick(`paper-${paper.id}`)}
-              disabled={rejectReasonVisibleForItem === `paper-${paper.id}` && !rejectReason.trim()}
+              onClick={handleRejectClick}
+              loading={isSubmitting}
+              disabled={isActionDisabled}
             >
-              {rejectReasonVisibleForItem === `paper-${paper.id}` ? "Confirm Reject" : "Reject"}
+              {currentStatus === 3 ? "Rejected" : (rejectReasonVisibleForItem === paperKey ? "Confirm Reject" : "Reject")}
             </Button>
           </Space>
         </div>
       </>
     ),
     className: styles.mainPanel,
-  }));
+  }];
 
   return (
+    // 3. Bọc mọi thứ trong <App>
     <App>
       <div className={styles.wrapper}>
         <Title

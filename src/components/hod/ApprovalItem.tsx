@@ -20,7 +20,6 @@ import { adminService } from "@/services/adminService";
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
 
-
 interface RubricListProps {
   questionId: number;
 }
@@ -31,6 +30,12 @@ const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!questionId) {
+      setLoading(false);
+      setRubrics([]);
+      return;
+    }
+    
     setLoading(true);
     adminService.getRubricItemsByQuestionId(questionId)
       .then(data => {
@@ -41,10 +46,10 @@ const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
         setError("Failed to load criteria.");
       })
       .finally(() => setLoading(false));
-  }, [questionId]); 
+  }, [questionId]);
 
   if (loading) {
-    return <Spin size="small" />;
+    return <div style={{textAlign: 'center', padding: '20px'}}><Spin size="small" /></div>;
   }
 
   if (error) {
@@ -68,12 +73,11 @@ const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
               {criterion.description}
             </Descriptions.Item>
             <Descriptions.Item label="Input">
-              {criterion.input}
+              {criterion.input || "N/A"}
             </Descriptions.Item>
             <Descriptions.Item label="Output">
-              {criterion.output}
+              {criterion.output || "N/A"}
             </Descriptions.Item>
-            
           </Descriptions>
         </Panel>
       ))}
@@ -81,9 +85,8 @@ const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
   );
 };
 
-
 interface ApprovalItemProps {
-  questions: ApiAssessmentQuestion[]; 
+  questions: ApiAssessmentQuestion[];
 }
 
 export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
@@ -107,7 +110,7 @@ export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
             className={styles.innerPanel}
           >
             <Row gutter={[24, 16]}>
-              <Col xs={24} md={12}>
+              <Col xs={24} md={24}> 
                 <div className={styles.formGroup}>
                   <Text strong>Question Text</Text>
                   <Paragraph>{question.questionText}</Paragraph>
@@ -124,10 +127,6 @@ export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
                   <Text strong>Score</Text>
                   <Input value={question.score} readOnly style={{width: "100px"}} />
                 </div>
-              </Col>
-              <Col xs={24} md={12}>
-               
-                <Paragraph type="secondary">Image placeholder</Paragraph>
               </Col>
             </Row>
 
