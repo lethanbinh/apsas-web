@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Collapse,
   Typography,
@@ -10,81 +10,130 @@ import {
   Row,
   Col,
   Space,
+  Spin,
+  Alert
 } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
-import { Button } from "../ui/Button";
 import styles from "./ApprovalDetail.module.css";
-import { AssignmentApprovalDetails, QuestionData, CriteriaData } from "./data"; // Adjust path if needed
+import { ApiAssessmentQuestion, ApiRubricItem } from "@/types"; 
+import { adminService } from "@/services/adminService";
 
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
 
-interface ApprovalItemProps {
-  data: AssignmentApprovalDetails;
+
+interface RubricListProps {
+  questionId: number;
 }
 
-export const ApprovalItem: React.FC<ApprovalItemProps> = ({ data }) => {
+const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
+  const [rubrics, setRubrics] = useState<ApiRubricItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    adminService.getRubricItemsByQuestionId(questionId)
+      .then(data => {
+        setRubrics(data);
+      })
+      .catch(err => {
+        console.error(`Error fetching rubrics for Q_ID ${questionId}:`, err);
+        setError("Failed to load criteria.");
+      })
+      .finally(() => setLoading(false));
+  }, [questionId]); 
+
+  if (loading) {
+    return <Spin size="small" />;
+  }
+
+  if (error) {
+    return <Alert message={error} type="error" showIcon />;
+  }
+
+  if (rubrics.length === 0) {
+    return <Text type="secondary">No criteria defined for this question.</Text>;
+  }
+
+  return (
+    <Collapse ghost accordion className={styles.criteriaCollapse}>
+      {rubrics.map((criterion) => (
+        <Panel
+          header={<Text strong>{criterion.description || "Criteria"}</Text>}
+          key={criterion.id}
+          className={styles.criteriaPanel}
+        >
+          <Descriptions bordered size="small" column={1}>
+            <Descriptions.Item label="Description">
+              {criterion.description}
+            </Descriptions.Item>
+            <Descriptions.Item label="Input">
+              {criterion.input}
+            </Descriptions.Item>
+            <Descriptions.Item label="Output">
+              {criterion.output}
+            </Descriptions.Item>
+            
+          </Descriptions>
+        </Panel>
+      ))}
+    </Collapse>
+  );
+};
+
+
+interface ApprovalItemProps {
+  questions: ApiAssessmentQuestion[]; 
+}
+
+export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
+  if (!questions || questions.length === 0) {
+    return <Text type="secondary" style={{padding: "16px"}}>This paper has no questions.</Text>
+  }
+  
   return (
     <div className={styles.itemWrapper}>
       <Collapse
         ghost
         defaultActiveKey={
-          data.questions.length > 0 ? [data.questions[0].id] : undefined
+          questions.length > 0 ? [`question-${questions[0].id}`] : undefined
         }
         className={styles.innerCollapse}
       >
-        {data.questions.map((question) => (
+        {questions.map((question) => (
           <Panel
-            header={<Title level={5}>{question.title}</Title>}
-            key={question.id}
+            header={<Title level={5}>{question.questionText || "Question"}</Title>}
+            key={`question-${question.id}`}
             className={styles.innerPanel}
           >
             <Row gutter={[24, 16]}>
               <Col xs={24} md={12}>
                 <div className={styles.formGroup}>
-                  <Text strong>Title</Text>
-                  <Input value={question.name} readOnly />
+                  <Text strong>Question Text</Text>
+                  <Paragraph>{question.questionText}</Paragraph>
                 </div>
                 <div className={styles.formGroup}>
-                  <Text strong>Content</Text>
-                  <Input value={question.content} readOnly />
+                  <Text strong>Sample Input</Text>
+                  <Input.TextArea value={question.questionSampleInput} readOnly autoSize />
+                </div>
+                 <div className={styles.formGroup}>
+                  <Text strong>Sample Output</Text>
+                  <Input.TextArea value={question.questionSampleOutput} readOnly autoSize />
+                </div>
+                 <div className={styles.formGroup}>
+                  <Text strong>Score</Text>
+                  <Input value={question.score} readOnly style={{width: "100px"}} />
                 </div>
               </Col>
               <Col xs={24} md={12}>
-                <AntImage
-                  src={question.imageUrl}
-                  alt={question.title}
-                  className={styles.questionImage}
-                />
+               
+                <Paragraph type="secondary">Image placeholder</Paragraph>
               </Col>
             </Row>
 
-            {question.criteria && question.criteria.length > 0 && (
-              <Collapse ghost accordion className={styles.criteriaCollapse}>
-                {question.criteria.map((criterion) => (
-                  <Panel
-                    header={<Text strong>{criterion.title}</Text>}
-                    key={criterion.id}
-                    className={styles.criteriaPanel}
-                  >
-                    <Descriptions bordered size="small" column={1}>
-                      <Descriptions.Item label="Name">
-                        {criterion.details.Name}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Content">
-                        {criterion.details.Content}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Data type">
-                        {criterion.details.DataType}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Score">
-                        {criterion.details.Score}
-                      </Descriptions.Item>
-                    </Descriptions>
-                  </Panel>
-                ))}
-              </Collapse>
-            )}
+            <Title level={5} style={{marginTop: "20px"}}>Criteria ({question.rubricCount})</Title>
+            <RubricList questionId={question.id} />
+            
           </Panel>
         ))}
       </Collapse>

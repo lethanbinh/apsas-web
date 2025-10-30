@@ -1,19 +1,18 @@
-// Tên file: components/SemesterPlans/PlanCard.tsx
 "use client";
 
 import React from "react";
 import Image from "next/image";
 import { Avatar, Typography } from "antd";
 import styles from "./SemesterPlans.module.css";
+import { UserOutlined } from "@ant-design/icons"; 
 
 const { Title, Text } = Typography;
 
-// Định nghĩa props
 export interface PlanCardProps {
   imageUrl: string;
   title: string;
-  authorAvatarUrl: string;
-  authorName: string;
+  authorAvatarUrl: string; 
+  authorName: string; 
 }
 
 export const PlanCard: React.FC<PlanCardProps> = ({
@@ -37,11 +36,13 @@ export const PlanCard: React.FC<PlanCardProps> = ({
 
       <div className={styles.cardContent}>
         <Title
-          level={5}
+          level={4} 
           style={{
             fontWeight: "bold",
-            color: "#333",
-            fontSize: "1.1rem",
+            color: "#2F327D", 
+            fontSize: "1.25rem", 
+            margin: 0,
+            marginBottom: "8px",
           }}
           ellipsis={{ rows: 1 }}
         >
@@ -49,12 +50,14 @@ export const PlanCard: React.FC<PlanCardProps> = ({
         </Title>
 
         <div className={styles.authorInfo}>
-          <Avatar
-            src={authorAvatarUrl}
-            size="small"
-            style={{ marginRight: "8px" }}
+          <UserOutlined 
+            style={{ 
+                color: "#ff5b8a", 
+                fontSize: "16px",
+                marginRight: "8px"
+            }}
           />
-          <Text style={{ fontWeight: 500, fontSize: "0.9rem" }}>
+          <Text style={{ fontWeight: 500, fontSize: "0.95rem", color: "#666" }}>
             {authorName}
           </Text>
         </div>

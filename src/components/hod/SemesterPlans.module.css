@@ -1,20 +1,29 @@
-/* Tên file: components/SemesterPlans/SemesterPlans.module.css */
-
 .wrapper {
     width: 100%;
     padding: 30px 40px;
-    background-color: #f0f7ff;
+    background-color: #f0f7ff; 
     min-height: 100vh;
 }
 
 .header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+ 
+    grid-template-columns: 1fr auto 1fr; 
     align-items: center;
     margin-bottom: 25px;
+    gap: 20px; 
+}
+
+.pageTitle {
+    grid-column: 2 / 3;   
+    justify-self: center; 
+    
 }
 
 .createButton {
+    grid-column: 3 / 4;   
+    justify-self: end;    
+    
     background-color: #49BBBD;
     border-color: #49BBBD;
     border-radius: 25px;
@@ -26,7 +35,6 @@
     border-color: #3daaaC;
 }
 
-/* Style cho Tabs */
 .tabs :global(.ant-tabs-tab-btn) {
     font-weight: 500;
     color: #888;
@@ -34,16 +42,13 @@
 
 .tabs :global(.ant-tabs-tab-active .ant-tabs-tab-btn) {
     color: #2F327D !important;
-    /* Màu xanh đậm cho tab active */
     font-weight: 600;
 }
 
 .tabs :global(.ant-tabs-ink-bar) {
     background: #2F327D !important;
-    /* Màu gạch chân */
 }
 
-/* Style cho PlanCard (Tái sử dụng từ MyCoursesGrid) */
 .planCard {
     background: #ffffff;
     border-radius: 20px;

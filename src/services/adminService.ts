@@ -1,22 +1,31 @@
-/**
- * Account service
- */
+
 
 import { apiService } from './api';
 import { API_ENDPOINTS } from '@/lib/constants';
-import { User, AccountListResponse, PaginatedResponse, Semester } from '@/types';
+import { 
+  User, 
+  AccountListResponse, 
+  PaginatedResponse, 
+  Semester,
+  ApiApprovalItem,
+  ApprovalListResponse,
+  AssessmentTemplateListResponse, 
+  AssessmentTemplateDetailResponse,
+  RubricItemListResponse,
+  ApiAssessmentTemplate,
+  ApiRubricItem
+} from '@/types';
 
 interface GetAccountListResponse {
   users: User[];
   total: number;
 }
 
-// Interface for the raw Semester API response
 interface RawSemesterApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
-  result: Semester[]; // The array of semesters is directly in 'result'
+  result: Semester[]; 
 }
 
 export class AdminService {
@@ -37,7 +46,6 @@ export class AdminService {
       userData
     );
     
-    // Extract user from result
     if (response.result) {
       return response.result as User;
     }
@@ -50,7 +58,7 @@ export class AdminService {
 
   async downloadExcelTemplate(): Promise<Blob> {
     const response = await apiService.get(API_ENDPOINTS.IMPORT.EXCEL_TEMPLATE, {
-      responseType: 'blob', // Important for file downloads
+      responseType: 'blob', 
     });
     return response as Blob;
   }
@@ -87,6 +95,51 @@ export class AdminService {
       }
     );
     return response;
+  }
+
+  async getApprovalList(pageNumber: number, pageSize: number): Promise<PaginatedResponse<ApiApprovalItem>> {
+    const response = await apiService.get<ApprovalListResponse>(
+      `${API_ENDPOINTS.HOD.APPROVAL_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`
+    );
+    
+    if (response && response.result && Array.isArray(response.result.items)) {
+      return response.result;
+    }
+    
+    console.error("Unexpected API response structure in getApprovalList:", response);
+    throw new Error("Invalid data structure received from server.");
+  }
+
+  async getAssessmentTemplateList(pageNumber: number = 1, pageSize: number = 100): Promise<PaginatedResponse<ApiAssessmentTemplate>> {
+    console.log("Fetching template list...");
+    const response = await apiService.get<AssessmentTemplateListResponse>(
+      `${API_ENDPOINTS.HOD.ASSESSMENT_TEMPLATE_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`
+    );
+
+    if (!response.isSuccess || !response.result || !Array.isArray(response.result.items)) {
+      console.error("Failed to fetch assessment templates or invalid data structure:", response);
+      throw new Error("Failed to fetch assessment templates or invalid data structure.");
+    }
+    
+    console.log(`Found ${response.result.items.length} templates`);
+    return response.result;
+  }
+  
+  async getRubricItemsByQuestionId(questionId: number): Promise<ApiRubricItem[]> {
+    console.log(`Fetching rubrics for questionId: ${questionId}`);
+    const response = await apiService.get<RubricItemListResponse>(
+      `${API_ENDPOINTS.HOD.RUBRIC_ITEM_BY_QUESTION}/${questionId}`
+    );
+    
+    if (response && response.isSuccess && Array.isArray(response.result)) {
+       console.log(`Found ${response.result.length} rubrics for question ${questionId}`);
+      return response.result;
+    }
+
+    if (!response.isSuccess) {
+      console.error("API error fetching rubrics:", response.errorMessages);
+    }
+    return []; 
   }
 }
 

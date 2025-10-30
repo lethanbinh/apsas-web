@@ -35,9 +35,27 @@ export const API_ENDPOINTS = {
   },
   SEMESTER: {
     PAGINATED_LIST: '/Semester',
+    // Giả định các endpoint này (sửa lại nếu cần)
+    ONGOING_LIST: '/Semester/ongoing-list', 
+    ENDED_LIST: '/Semester/ended-list',     
+    UPCOMING_LIST: '/Semester/upcoming-list', 
+    DRAFTS_LIST: '/Semester/draft-list'       
   },
+
+  // --- PHẦN SỬA LỖI ĐẦY ĐỦ ---
+  // Đảm bảo object HOD có tất cả các key này
+  HOD: {
+    APPROVAL_LIST: '/AssignRequest/list',
+    ASSIGN_REQUEST_UPDATE: '/AssignRequest',
+    ASSESSMENT_TEMPLATE_LIST: '/AssessmentTemplate/list', 
+    ASSESSMENT_TEMPLATE_DETAIL: '/AssessmentTemplate', 
+    RUBRIC_ITEM_BY_QUESTION: '/RubricItem/question',
+  },
+  // --- KẾT THÚC SỬA LỖI ---
+
 } as const;
 
+// (Các hằng số còn lại giữ nguyên...)
 // HTTP Status Codes
 export const HTTP_STATUS = {
   OK: 200,

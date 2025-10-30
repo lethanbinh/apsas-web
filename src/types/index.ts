@@ -1,8 +1,4 @@
-/**
- * TypeScript type definitions
- */
 
-// User Types
 export interface User {
   id: number;
   accountCode: string;
@@ -17,17 +13,12 @@ export interface User {
   role: number;
 }
 
-// Interface for user update payload (including optional password)
 export interface UserUpdatePayload extends Partial<Omit<User, 'id'>> {
   password?: string;
 }
 
-// Interface for a simpler User object that might not include all fields (e.g., without password) for display
-// export interface UserDisplay extends Omit<User, 'password'> {}
-
 export type UserRole = 'admin' | 'hod' | 'teacher' | 'student';
 
-// Auth Types
 export interface AuthState {
   user: User | null;
   token: string | null;
@@ -50,7 +41,6 @@ export interface RegisterData {
   lastName: string;
 }
 
-// Password Reset Types
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -79,7 +69,6 @@ export interface GoogleLoginRequest {
     expiresAt: string;
   }
  }
-// API Response Types
 export interface ApiResponse<T = any> {
   success: boolean;
   data: T;
@@ -95,6 +84,21 @@ export interface PaginatedResponse<T> {
   items: T[];
 }
 
+export interface SingleResponse<T> {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: T;
+}
+
+export interface ListResponse<T> {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: T[];
+}
+
+
 interface GetPaginatedSemestersResponse {
   semesters: Semester[];
   total: number;
@@ -104,13 +108,12 @@ export interface AccountListResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
-  result: PaginatedResponse<User>; // Updated to PaginatedResponse<User>
+  result: PaginatedResponse<User>; 
 }
 
-// Semester Types
 export interface Semester {
   id: number;
-  semesterCode: string; // e.g., "FALL2025"
+  semesterCode: string; 
   academicYear: number;
   note: string;
   startDate: string;
@@ -118,6 +121,102 @@ export interface Semester {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface ApiApprovalItem {
+  id: number;
+  message: string;
+  status: number; 
+  assignedAt: string;
+  courseElementId: number;
+  assignedLecturerId: number;
+  assignedByHODId: number;
+  createdAt: string;
+  updatedAt: string;
+  courseElementName: string;
+  courseElementDescription: string;
+  courseName: string;
+  semesterName: string;
+  assignedLecturerName: string;
+  assignedLecturerDepartment: string;
+  assignedByHODName: string;
+}
+
+export interface ApprovalListResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: string[];
+  result: PaginatedResponse<ApiApprovalItem>;
+}
+
+
+export interface ApiRubricItem {
+  id: number;
+  description: string;
+  input: string;
+  output: string;
+  assessmentQuestionId: number;
+  questionText: string;
+  createdAt: string;
+  updatedAt: string;
+  name?: string; 
+  score?: number;
+}
+
+export interface ApiAssessmentQuestion {
+  id: number;
+  questionText: string;
+  questionSampleInput: string;
+  questionSampleOutput: string;
+  score: number;
+  rubricCount: number;
+}
+
+export interface ApiAssessmentPaper {
+  id: number;
+  name: string;
+  description: string;
+  questionCount: number;
+  questions: ApiAssessmentQuestion[];
+}
+
+export interface ApiTemplateFile {
+  id: number;
+  name: string;
+  fileUrl: string;
+  fileTemplate: number;
+}
+
+export interface ApiAssessmentTemplate {
+  id: number;
+  assignRequestId: number;
+  templateType: number;
+  name: string;
+  description: string;
+  createdByLecturerId: number;
+  lecturerName: string;
+  lecturerCode: string;
+  assignedToHODId: number;
+  hodName: string;
+  hodCode: string;
+  courseElementId: number;
+  courseElementName: string;
+  createdAt: string;
+  updatedAt: string;
+  files: ApiTemplateFile[];
+  papers: ApiAssessmentPaper[];
+  status: number; 
+}
+
+// Response cho /api/AssessmentTemplate/list 
+export type AssessmentTemplateListResponse = SingleResponse<PaginatedResponse<ApiAssessmentTemplate>>;
+
+// Response cho /api/AssessmentTemplate/{id}
+export type AssessmentTemplateDetailResponse = SingleResponse<ApiAssessmentTemplate>;
+
+// Response cho /api/RubricItem/question/{id}
+export type RubricItemListResponse = ListResponse<ApiRubricItem>;
+// --- KẾT THÚC SỬA LỖI ---
+
 
 // Component Props Types
 export interface BaseComponentProps {
