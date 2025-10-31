@@ -1,9 +1,9 @@
 "use client";
-import React from "react";
-import Image from "next/image";
-import Link from "next/link"; // <-- 1. Import Link
 import { Avatar, Typography } from "antd";
+import Image from "next/image";
+import React from "react";
 import styles from "./MyCoursesGrid.module.css";
+import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
 
@@ -24,7 +24,8 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
   href,
   id,
 }) => {
-  // Tách nội dung card ra một biến
+  const router = useRouter();
+
   const cardContent = (
     <div className={styles.courseCard}>
       <div className={styles.paddedImageWrapper}>
@@ -64,11 +65,13 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
       </div>
     </div>
   );
+  const handleCardClick = () => {
+    localStorage.setItem("selectedClassId", id ? id.toString() : "");
+    router.push(`/lecturer/info/${id}`);
+  };
 
-  // 4. Nếu có href, bọc nội dung card bằng Link.
-  // Nếu không, trả về nội dung card như cũ.
   if (href) {
-    return <Link href={href}>{cardContent}</Link>;
+    return <div onClick={handleCardClick}>{cardContent}</div>;
   }
 
   return cardContent;

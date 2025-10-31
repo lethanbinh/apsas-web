@@ -4,24 +4,32 @@ import {
   BarChartOutlined,
   BookOutlined,
   FileTextOutlined,
+  InfoCircleOutlined,
   MoonOutlined,
   SearchOutlined,
   SunOutlined,
-  UsergroupAddOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Input, Layout, Menu, Switch } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import styles from "../sidebar/StudentSidebar.module.css";
+import styles from "./SidebarLecturer.module.css";
 
 const { Sider } = Layout;
 const { Search } = Input;
 
-const menuItems: NonNullable<MenuProps["items"]> = [
+type MenuItem = Required<MenuProps>["items"][number];
+const id = localStorage.getItem("selectedClassId") || "";
+const menuItems: MenuItem[] = [
   {
-    key: "/lecturer/assignments", // Key cha cho sub-menu
+    key: `/lecturer/info/${id}`,
+    icon: <InfoCircleOutlined />,
+    label: <Link href={`/lecturer/info/${id}`}>Info</Link>,
+  },
+  {
+    key: "/lecturer/assignments",
     icon: <BarChartOutlined />,
     label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
   },
@@ -31,49 +39,30 @@ const menuItems: NonNullable<MenuProps["items"]> = [
     label: <Link href="/lecturer/grading-history">Grading history</Link>,
   },
   {
-    key: "/lecturer/practical-exam",
+    key: "/lecturer/tasks",
     icon: <FileTextOutlined />,
-    label: <Link href="/lecturer/practical-exam">Practical exam</Link>,
+    label: <Link href="/lecturer/tasks">Tasks</Link>,
   },
   {
-    key: "/lecturer/tasks",
-    icon: <FileTextOutlined />, // Có thể dùng icon khác
-    label: <Link href="/lecturer/tasks">Tasks</Link>,
+    key: "/lecturer/members",
+    icon: <UserOutlined />,
+    label: <Link href="/lecturer/members">Members</Link>,
   },
 ];
 
-// Helper: Lấy tất cả các key (kể cả key con) từ menuItems
-const allKeys = menuItems.flatMap((item) => {
-  if (item && "children" in item && item.children) {
-    return [item.key, ...item.children.map((child) => child.key)];
-  }
-  return [item.key];
-});
+// ✅ Helper: Lấy tất cả key để xác định menu đang active
+const allKeys = menuItems.map((item) => String(item?.key));
 
 export default function SidebarLecturer() {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const pathname = usePathname();
 
+  // ✅ Tính toán selectedKey dựa trên pathname hiện tại
   const selectedKey = useMemo(() => {
-    const sortedKeys = [...allKeys].sort(
-      (a, b) => String(b).length - String(a).length
-    );
-    const matchingKey = sortedKeys.find((key) =>
-      pathname.startsWith(String(key))
-    );
-    return matchingKey ? String(matchingKey) : "";
+    const sortedKeys = [...allKeys].sort((a, b) => b.length - a.length);
+    const matched = sortedKeys.find((key) => pathname.startsWith(key));
+    return matched ?? "";
   }, [pathname]);
-
-  const defaultOpenKey = useMemo(() => {
-    const parent = menuItems.find(
-      (item) =>
-        item &&
-        "children" in item &&
-        item.children &&
-        item.children.some((child) => child.key === selectedKey)
-    );
-    return parent ? String(parent.key) : "";
-  }, [selectedKey]);
 
   const onThemeChange = (checked: boolean) => {
     setTheme(checked ? "dark" : "light");
@@ -90,11 +79,7 @@ export default function SidebarLecturer() {
 
         <Menu
           mode="inline"
-          // 4. Sử dụng các key đã tính toán
           selectedKeys={[selectedKey]}
-          // Dùng defaultOpenKeys để sub-menu tự mở khi tải trang
-          // nhưng vẫn cho phép người dùng đóng/mở thủ công
-          defaultOpenKeys={[defaultOpenKey]}
           className={styles.menu}
           items={menuItems}
         />

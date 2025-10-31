@@ -1,140 +1,89 @@
-.sidebar-root {
-  width: 250px; /* w-64 */
-  background-color: #BBDEF8; /* bg-blue-200 */
-  color: #1f2937; /* text-gray-900 */
-  padding: 1.5rem 1rem; /* p-6 */
+.sider {
+  background-color: #d8eaff !important;
+  height: calc(100vh - 64px);
+  position: sticky;
+  top: 64px;
+  align-self: flex-start;
+}
+
+/* đảm bảo layout đầy đủ chiều cao */
+.sider :global(.ant-layout-sider-children) {
   display: flex;
   flex-direction: column;
-  min-height: 100%; /* Ensure it spans full height */
-  /* box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); */ /* shadow-md */
-}
-
-.navigation-menu {
-  flex-grow: 1; /* Allows navigation to take up available space */
-}
-
-.navigation-menu ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.nav-item {
-  margin-bottom: 0.5rem;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 1rem; /* py-3 px-4 */
-  border-radius: 0.5rem; /* rounded-lg */
-  text-decoration: none;
-  color: #1f2937; /* text-gray-900 */
-  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
-  font-weight: 500;
-}
-
-.nav-link:hover {
-  background-color: #90CAF9; /* hover:bg-blue-300 */
-  color: #1f2937; /* hover:text-gray-900 */
-}
-
-.nav-icon {
-  width: 1.25rem; /* w-5 */
-  height: 1.25rem; /* h-5 */
-  margin-right: 0.75rem;
-}
-
-.light-mode-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto; /* Pushes to the bottom */
-  padding-top: 1rem;
-  border-top: 1px solid #d1d5db; /* border-t border-gray-300 */
-}
-
-.light-mode-text {
-  display: flex;
-  align-items: center;
-  color: #1f2937; /* text-gray-900 */
-  font-weight: 500;
-}
-
-.toggle-label {
-  position: relative;
-  display: inline-block;
-  width: 44px; /* Adjust width as needed */
-  height: 24px; /* Adjust height as needed */
-  cursor: pointer;
-}
-
-.toggle-relative-wrapper {
-  position: relative;
-  width: 100%;
   height: 100%;
+  padding: 24px 20px;
 }
 
-.toggle-checkbox {
-  opacity: 0;
-  width: 0;
-  height: 0;
+.siderContent {}
+
+.searchBar :global(.ant-input-wrapper) {
+  border-radius: 25px !important;
+  overflow: hidden;
+  background: #ffffff;
 }
 
-.toggle-track {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #A78BFA; /* bg-purple-400 */
-  border-radius: 20px;
-  transition: background-color 0.2s ease;
+.searchBar :global(.ant-input) {
+  background: #ffffff;
 }
 
-.toggle-checkbox:checked + .toggle-track {
-  background-color: #8B5CF6; /* bg-purple-600 */
+.searchBar :global(.ant-input-prefix) {
+  color: #888;
 }
 
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 20px; /* Adjust thumb size */
-  height: 20px; /* Adjust thumb size */
-  background-color: #ffffff;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
+.menu {
+  background: transparent !important;
+  border: none !important;
+  margin-top: 20px;
 }
 
-.toggle-checkbox:checked + .toggle-track .toggle-thumb {
-  transform: translateX(20px); /* Move thumb to the right */
+.menu :global(.ant-menu-item) {
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  font-weight: 500;
+  color: #444;
 }
 
-.light-mode-moon-icon {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  width: 20px;
-  height: 20px;
-  color: #ffffff; /* text-white */
-  pointer-events: none; /* Allows click to pass through to label/input */
+.menu :global(.ant-menu-item-selected) {
+  background-color: #ffffff !important;
+  color: #333 !important;
+  font-weight: 600;
 }
 
-.light-mode-sun-icon {
-  position: absolute;
-  top: 2px;
-  left: 4px;
-  width: 20px;
-  height: 20px;
-  color: #ffffff; /* text-white */
-  pointer-events: none;
+.menu :global(.ant-menu-item-icon) {
+  font-size: 1.1rem !important;
 }
 
-.toggle-checkbox:checked ~ .light-mode-moon-icon {
-  color: #ffffff;
+.themeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px 10px;
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  font-size: 1rem;
+  color: #333;
+  margin-top: auto;
 }
 
-.toggle-checkbox:not(:checked) ~ .light-mode-sun-icon {
-  color: #ffffff;
+.themeLabel {
+  flex-grow: 1;
+  margin: 0 12px;
+  font-weight: 500;
+}
+
+.themeSwitch :global(.ant-switch-handle::before) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.themeSwitch :global(.ant-switch-handle:not(.ant-switch-handle-checked)::before) {
+  content: "☀️";
+  color: #fadb14;
+}
+
+.themeSwitch :global(.ant-switch-handle-checked::before) {
+  content: "🌙";
+  color: #444;
 }

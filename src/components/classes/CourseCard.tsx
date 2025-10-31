@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Avatar, Typography } from "antd";
 import { Button } from "../ui/Button";
 import styles from "./AllCoursesSlider.module.css";
-import { useRouter } from "next/navigation"; // 1. Import useRouter
+import { useRouter } from "next/navigation";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -28,26 +28,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
 }) => {
   const router = useRouter(); // 2. Khởi tạo router
 
-  // 3. Hàm xử lý khi click vào card
   const handleCardClick = () => {
-    router.push(`/lecturer/info/${id}`); // Điều hướng đến trang chi tiết
-  };
-
-  // 4. Hàm xử lý click button (ngăn sự kiện nổi bọt)
-  const handleJoinClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("Join class clicked", id);
-    // Thêm logic join class tại đây
-  };
-
-  // 5. Nút View cũng có thể dùng router
-  const handleViewClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    localStorage.setItem("selectedClassId", id ? id.toString() : "");
     router.push(`/lecturer/info/${id}`);
   };
-
+  const handleViewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    localStorage.setItem("selectedClassId", id ? id.toString() : "");
+    router.push(`/lecturer/info/${id}`);
+  };
   return (
-    // 6. Thêm onClick và cursor pointer
     <div
       className={styles.courseCard}
       onClick={handleCardClick}
@@ -107,14 +97,6 @@ export const CourseCard: React.FC<CourseCardProps> = ({
             onClick={handleViewClick} // 7. Thêm onClick
           >
             View
-          </Button>
-          <Button
-            variant="primary"
-            size="small"
-            className={styles.joinButton}
-            onClick={handleJoinClick} // 8. Thêm onClick
-          >
-            Join class
           </Button>
         </div>
       </div>

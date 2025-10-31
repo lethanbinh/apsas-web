@@ -55,7 +55,6 @@ export default function ClassDetailPage({
   return (
     <div>
       <ClassInfo classData={classData} />
-      <ClassRoster classId={classData.id} />
     </div>
   );
 }

@@ -354,7 +354,6 @@ export default function HomePage() {
                 </p>
                 <div className="my-course-card-actions">
                   <button className="my-course-card-view-button">View</button>
-                  <button className="my-course-card-join-button">Join class</button>
                 </div>
               </div>
             </div>
@@ -385,7 +384,6 @@ export default function HomePage() {
                 </p>
                 <div className="my-course-card-actions">
                   <button className="my-course-card-view-button">View</button>
-                  <button className="my-course-card-join-button">Join class</button>
                 </div>
               </div>
             </div>

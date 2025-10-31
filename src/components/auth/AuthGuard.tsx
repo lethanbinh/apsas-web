@@ -1,7 +1,3 @@
-/**
- * Authentication guard component
- */
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -49,7 +45,7 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       if (requireAuth && !isAuthenticated) {
         router.push('/login');
       } else if (!requireAuth && isAuthenticated) {
-        router.push('/dashboard');
+        router.push('/home');
       }
     }
   }, [isAuthenticated, isLoading, requireAuth, router]);
