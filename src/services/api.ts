@@ -1,7 +1,3 @@
-/**
- * API service configuration and methods
- */
-
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '@/lib/config';
 

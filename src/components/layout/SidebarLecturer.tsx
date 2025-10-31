@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Layout, Input, Menu, Switch } from "antd";
-import type { MenuProps } from "antd";
 import {
-  SearchOutlined,
-  InfoCircleOutlined,
   BarChartOutlined,
   BookOutlined,
-  UsergroupAddOutlined,
   FileTextOutlined,
-  SunOutlined,
   MoonOutlined,
+  SearchOutlined,
+  SunOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
+import type { MenuProps } from "antd";
+import { Input, Layout, Menu, Switch } from "antd";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useMemo, useState } from "react";
 import styles from "../sidebar/StudentSidebar.module.css";
 
 const { Sider } = Layout;
@@ -22,24 +21,9 @@ const { Search } = Input;
 
 const menuItems: NonNullable<MenuProps["items"]> = [
   {
-    key: "/lecturer/info", // Đặt một path (đường dẫn) cho mục Info
-    icon: <InfoCircleOutlined />,
-    label: <Link href="/lecturer/info">Info</Link>,
-  },
-  {
     key: "/lecturer/assignments", // Key cha cho sub-menu
     icon: <BarChartOutlined />,
-    label: "Assignments",
-    children: [
-      {
-        key: "/lecturer/detail-assignment", // Key con
-        label: <Link href="/lecturer/detail-assignment">Assignments 1</Link>,
-      },
-      {
-        key: "/lecturer/assignments-2", // Key con
-        label: <Link href="/lecturer/assignments-2">Assignments 2</Link>,
-      },
-    ],
+    label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
   },
   {
     key: "/lecturer/grading-history",
@@ -56,11 +40,6 @@ const menuItems: NonNullable<MenuProps["items"]> = [
     icon: <FileTextOutlined />, // Có thể dùng icon khác
     label: <Link href="/lecturer/tasks">Tasks</Link>,
   },
-  {
-    key: "/lecturer/members", // Đặt một path cho Member list
-    icon: <UsergroupAddOutlined />,
-    label: <Link href="/lecturer/members">Member list</Link>,
-  },
 ];
 
 // Helper: Lấy tất cả các key (kể cả key con) từ menuItems
@@ -75,8 +54,6 @@ export default function SidebarLecturer() {
   const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
-  // 2. Logic tìm key đang được chọn (selectedKey)
-  // Sử dụng logic tương tự như StudentSidebar
   const selectedKey = useMemo(() => {
     const sortedKeys = [...allKeys].sort(
       (a, b) => String(b).length - String(a).length
@@ -87,8 +64,6 @@ export default function SidebarLecturer() {
     return matchingKey ? String(matchingKey) : "";
   }, [pathname]);
 
-  // 3. Logic tìm sub-menu cần mở (openKey)
-  // Tìm key cha của selectedKey (nếu có)
   const defaultOpenKey = useMemo(() => {
     const parent = menuItems.find(
       (item) =>

@@ -1,14 +1,15 @@
-import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice';
-
+import { configureStore } from "@reduxjs/toolkit";
+import authReducer from "./slices/authSlice";
+import classReducer from "./slices/classSlice";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    class: classReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST'],
+        ignoredActions: ["persist/PERSIST"],
       },
     }),
 });

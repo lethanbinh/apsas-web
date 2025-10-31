@@ -2,30 +2,36 @@
 
 import React from "react";
 import Image from "next/image";
-import { Avatar, Tag, Typography } from "antd";
+import { Avatar, Typography, Descriptions, Divider } from "antd";
+import {
+  ReadOutlined,
+  CalendarOutlined,
+  TeamOutlined,
+  UserOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
 import styles from "./ClassInfo.module.css";
+import { ClassInfo as ClassInfoType } from "@/services/classService";
 
 const { Title, Paragraph, Text } = Typography;
 
-// Dữ liệu mẫu
-const tags = ["affordable", "Stunning", "making", "madbrawns"];
-
-export default function ClassInfo() {
+export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
   return (
     <div className={styles.pageWrapper}>
       {/* 1. Ảnh Banner */}
       <div className={styles.imageWrapper}>
         <Image
-          src="/classes/class-info.png" // <-- THAY ĐỔI ĐƯỜNG DẪN ẢNH
+          src="/classes/class-info.png"
           alt="Class Banner"
           width={1200}
-          height={400} // Điều chỉnh tỷ lệ ảnh nếu cần
+          height={400}
           className={styles.image}
         />
       </div>
 
       {/* 2. Nội dung */}
       <div className={styles.contentWrapper}>
+        {/* Tiêu đề chính */}
         <Title
           level={2}
           style={{
@@ -35,63 +41,93 @@ export default function ClassInfo() {
             fontSize: "2.2rem",
           }}
         >
-          Class SE172257 - Mobile Programing
+          {classData.courseName} ({classData.classCode})
         </Title>
 
+        {/* 6. Phần chi tiết (Đã sửa lỗi 'icon') */}
+        <Descriptions
+          bordered
+          column={{ xs: 1, sm: 2 }}
+          className={styles.descriptions}
+        >
+          <Descriptions.Item
+            // SỬA Ở ĐÂY: Đặt icon bên trong label
+            label={
+              <span>
+                <ReadOutlined style={{ marginRight: 8 }} />
+                Course Code
+              </span>
+            }
+            span={1}
+          >
+            {classData.courseCode}
+          </Descriptions.Item>
+          <Descriptions.Item
+            // SỬA Ở ĐÂY: Đặt icon bên trong label
+            label={
+              <span>
+                <CalendarOutlined style={{ marginRight: 8 }} />
+                Semester
+              </span>
+            }
+            span={1}
+          >
+            {classData.semesterName}
+          </Descriptions.Item>
+          <Descriptions.Item
+            // SỬA Ở ĐÂY: Đặt icon bên trong label
+            label={
+              <span>
+                <InfoCircleOutlined style={{ marginRight: 8 }} />
+                Class Code
+              </span>
+            }
+            span={1}
+          >
+            {classData.classCode}
+          </Descriptions.Item>
+          <Descriptions.Item
+            // SỬA Ở ĐÂY: Đặt icon bên trong label
+            label={
+              <span>
+                <TeamOutlined style={{ marginRight: 8 }} />
+                Total Students
+              </span>
+            }
+            span={1}
+          >
+            {classData.studentCount}
+          </Descriptions.Item>
+        </Descriptions>
+
+        {/* 7. Phần mô tả */}
+        <Title level={4} style={{ marginTop: "30px" }}>
+          Class Description
+        </Title>
         <Paragraph
           style={{
             fontSize: "1.1rem",
             lineHeight: 1.7,
             color: "#555",
+            marginBottom: "30px",
           }}
         >
-          TOTC is a platform that allows educators to create online classes
-          whereby they can store the course materials online; manage
-          assignments, quizzes and exams; monitor due dates; grade results and
-          provide students with feedback all in one place.
-        </Paragraph>
-        <Paragraph
-          style={{
-            fontSize: "1.1rem",
-            lineHeight: 1.7,
-            color: "#555",
-          }}
-        >
-          TOTC is a platform that allows educators to create online classes
-          whereby they can store the course materials online; manage
-          assignments, quizzes and exams; monitor due dates; grade results and
-          provide students with feedback all in one place.
-        </Paragraph>
-        <Paragraph
-          style={{
-            fontSize: "1.1rem",
-            lineHeight: 1.7,
-            color: "#555",
-            marginBottom: "30px", // Khoảng cách trước tags
-          }}
-        >
-          TOTC is a platform
+          {classData.description}
         </Paragraph>
 
-        {/* 3. Tags */}
-        <div className={styles.tagWrapper}>
-          {tags.map((tag) => (
-            <Tag key={tag} className={styles.tag}>
-              {tag}
-            </Tag>
-          ))}
-        </div>
+        <Divider />
 
-        {/* 4. Tác giả */}
+        {/* 8. Tác giả (Giảng viên) */}
         <div className={styles.authorBox}>
           <Avatar
-            src="/classes/avatar-teacher.png" // <-- THAY ĐỔI ĐƯỜNG DẪN AVATAR
+            src="/classes/avatar-teacher.png"
             size={50}
             style={{ marginRight: "15px" }}
+            icon={<UserOutlined />}
           />
           <div>
             <Text type="secondary" style={{ fontSize: "0.9rem" }}>
-              Written by
+              Lecturer
             </Text>
             <Text
               style={{
@@ -101,7 +137,7 @@ export default function ClassInfo() {
                 color: "#333",
               }}
             >
-              SangNM
+              {classData.lecturerName}
             </Text>
           </div>
         </div>

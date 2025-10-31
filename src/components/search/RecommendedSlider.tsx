@@ -1,53 +1,92 @@
 "use client";
-import React from "react";
-import { Typography } from "antd";
+import React, { useState, useEffect } from "react";
+import { Typography, Spin } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
-// 1. Bỏ FreeMode, thêm Navigation
 import { Pagination, Navigation } from "swiper/modules";
 
-// 2. Thêm CSS cho Navigation
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
 
 import styles from "../classes/CoachesSlider.module.css";
 import { CoachCard } from "../classes/CoachCard";
+import { classService, ClassInfo } from "@/services/classService";
 
 const { Title } = Typography;
-const recommendedData = [
-  {
-    id: 1,
-    name: "SangNM",
-    category: "Frontend",
+
+interface MappedCoachProps {
+  id: string | number;
+  name: string;
+  category: string;
+  imageUrl: string;
+}
+
+function shuffleArray(array: any[]) {
+  let currentIndex = array.length,
+    randomIndex;
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex],
+      array[currentIndex],
+    ];
+  }
+  return array;
+}
+
+function mapClassToCoachProps(cls: ClassInfo): MappedCoachProps {
+  return {
+    id: cls.id,
+    name: cls.lecturerName,
+    category: cls.courseName,
     imageUrl: "/classes/class.png",
-  },
-  {
-    id: 2,
-    name: "SangNM",
-    category: "Frontend",
-    imageUrl: "/classes/class.png",
-  },
-  {
-    id: 3,
-    name: "SangNM",
-    category: "Frontend",
-    imageUrl: "/classes/class.png",
-  },
-  {
-    id: 4,
-    name: "SangNM",
-    category: "Frontend",
-    imageUrl: "/classes/class.png",
-  },
-  {
-    id: 5,
-    name: "SangNM",
-    category: "Frontend",
-    imageUrl: "/classes/class.png",
-  },
-];
+  };
+}
 
 export default function RecommendedSlider() {
+  const [recommendedData, setRecommendedData] = useState<MappedCoachProps[]>(
+    []
+  );
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setIsLoading(true);
+        const { classes } = await classService.getClassList({
+          pageNumber: 1,
+          pageSize: 20,
+        });
+
+        const shuffled = shuffleArray(classes);
+        const recommendations = shuffled
+          .slice(0, 5)
+          .map(mapClassToCoachProps);
+
+        setRecommendedData(recommendations);
+      } catch (error) {
+        console.error("Failed to fetch recommendations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className={styles.sliderSection} style={{ textAlign: "center" }}>
+        <Spin />
+      </div>
+    );
+  }
+
+  if (recommendedData.length === 0) {
+    return null;
+  }
+
   return (
     <div className={styles.sliderSection}>
       <Title
@@ -64,26 +103,20 @@ export default function RecommendedSlider() {
       </Title>
 
       <Swiper
-        // 3. Cập nhật modules
         modules={[Pagination, Navigation]}
         spaceBetween={24}
-        // 4. Bỏ slidesPerView={"auto"}
         pagination={{ clickable: true }}
         className={styles.swiperContainer}
-        // 6. THÊM BREAKPOINTS
         breakpoints={{
-          // Khi màn hình >= 640px (tablet nhỏ)
           640: {
             slidesPerView: 2,
             spaceBetween: 20,
-            centeredSlides: false, // Bỏ căn giữa
+            centeredSlides: false,
           },
-          // Khi màn hình >= 768px (tablet lớn)
           768: {
             slidesPerView: 3,
             spaceBetween: 24,
           },
-          // Khi màn hình >= 1024px (desktop)
           1024: {
             slidesPerView: 4,
             spaceBetween: 24,

@@ -1,17 +1,19 @@
 "use client";
 import React from "react";
 import Image from "next/image";
+import Link from "next/link"; // <-- 1. Import Link
 import { Avatar, Typography } from "antd";
 import styles from "./MyCoursesGrid.module.css";
 
 const { Title, Text } = Typography;
 
-// Định nghĩa props
 export interface SimpleCourseCardProps {
   imageUrl: string;
   title: string;
   authorAvatarUrl: string;
   authorName: string;
+  href?: string;
+  id?: number;
 }
 
 export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
@@ -19,8 +21,11 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
   title,
   authorAvatarUrl,
   authorName,
+  href,
+  id,
 }) => {
-  return (
+  // Tách nội dung card ra một biến
+  const cardContent = (
     <div className={styles.courseCard}>
       <div className={styles.paddedImageWrapper}>
         <div className={styles.imageWrapper}>
@@ -59,4 +64,12 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
       </div>
     </div>
   );
+
+  // 4. Nếu có href, bọc nội dung card bằng Link.
+  // Nếu không, trả về nội dung card như cũ.
+  if (href) {
+    return <Link href={href}>{cardContent}</Link>;
+  }
+
+  return cardContent;
 };

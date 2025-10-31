@@ -1,14 +1,12 @@
-// Tên file: components/MyCoursesGrid/index.tsx
 "use client";
 
 import React from "react";
-import { Row, Col, Typography } from "antd";
-import { SimpleCourseCard } from "./SimpleCourseCard"; // Import card mới
+import { Row, Col, Typography, Select } from "antd";
+import { SimpleCourseCard, SimpleCourseCardProps } from "./SimpleCourseCard";
 import styles from "./MyCoursesGrid.module.css";
 
 const { Title } = Typography;
 
-// Dữ liệu mẫu
 const myCoursesData = [
   {
     id: 1,
@@ -16,6 +14,7 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
   {
     id: 2,
@@ -23,6 +22,7 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
   {
     id: 3,
@@ -30,6 +30,7 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
   {
     id: 4,
@@ -37,6 +38,7 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
   {
     id: 5,
@@ -44,6 +46,7 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
   {
     id: 6,
@@ -51,10 +54,25 @@ const myCoursesData = [
     authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     imageUrl: "/classes/class.png",
+    href: "/lecturer/info",
   },
 ];
 
-export default function MyCoursesGrid() {
+interface MyCoursesGridProps {
+  userName?: string;
+  courses?: SimpleCourseCardProps[];
+  semesterOptions?: { label: string; value: string }[];
+  selectedSemester?: string;
+  onSemesterChange?: (value: string) => void;
+}
+
+export default function MyCoursesGrid({
+  userName = "User",
+  courses = myCoursesData,
+  semesterOptions = [],
+  selectedSemester,
+  onSemesterChange,
+}: MyCoursesGridProps) {
   return (
     <div className={styles.sectionWrapper}>
       <Title
@@ -66,18 +84,27 @@ export default function MyCoursesGrid() {
           fontSize: "2rem",
         }}
       >
-        Welcome Anle!
+        Welcome {userName}!
       </Title>
 
+      <Select
+        value={selectedSemester}
+        onChange={onSemesterChange}
+        options={semesterOptions}
+        placeholder="Filter by semester"
+        style={{ width: 240, marginBottom: "30px" }}
+      />
+
       <Row gutter={[32, 32]} justify="start">
-        {myCoursesData.map((course) => (
-          // xs={24} (1 cột mobile), md={12} (2 cột desktop)
+        {courses.map((course) => (
           <Col key={course.id} xs={24} md={8}>
             <SimpleCourseCard
               title={course.title}
               authorAvatarUrl={course.authorAvatarUrl}
               authorName={course.authorName}
               imageUrl={course.imageUrl}
+              id={course.id}
+              href={course.href}
             />
           </Col>
         ))}

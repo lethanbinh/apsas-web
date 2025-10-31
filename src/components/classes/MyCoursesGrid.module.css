@@ -48,3 +48,15 @@
     align-items: center;
     margin-top: 12px;
 }
+
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.courseCardLink {
+  text-decoration: none; /* Bỏ gạch chân của link */
+  color: inherit; /* Kế thừa màu chữ */
+}
