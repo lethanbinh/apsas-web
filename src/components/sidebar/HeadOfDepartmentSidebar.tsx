@@ -1,4 +1,3 @@
-// Tên file: components/sidebar/HeadOfDepartmentSidebar.tsx
 "use client";
 
 import React, { useState, useMemo } from "react";
@@ -7,12 +6,12 @@ import { usePathname } from "next/navigation";
 import { Layout, Input, Menu, Switch } from "antd";
 import {
   SearchOutlined,
-  FileTextOutlined, // Icon cho Semester plans
-  BarChartOutlined, // Icon cho Approval
+  FileTextOutlined, 
+  BarChartOutlined, 
   SunOutlined,
   MoonOutlined,
 } from "@ant-design/icons";
-import styles from "./StudentSidebar.module.css";
+import styles from "../sidebar/StudentSidebar.module.css"; 
 
 const { Sider } = Layout;
 const { Search } = Input;
@@ -29,13 +28,11 @@ const menuItems = [
     label: <Link href="/hod/approval">Approval</Link>,
   },
 ];
-// --- KẾT THÚC CẬP NHẬT ---
 
 export default function HeadOfDepartmentSidebar() {
   const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
-  // Logic tìm activeKey (giữ nguyên)
   const activeKey = useMemo(() => {
     const sortedKeys = [...menuItems].sort(
       (a, b) => b.key.length - a.key.length
@@ -53,17 +50,17 @@ export default function HeadOfDepartmentSidebar() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Search
+        <Input
           placeholder="Search..."
           prefix={<SearchOutlined />}
-          className={styles.searchBar}
+          className={styles.searchBar} 
         />
-
+        
         <Menu
           mode="inline"
           selectedKeys={[activeKey]}
           className={styles.menu}
-          items={menuItems} // Dùng menu items mới
+          items={menuItems}
         />
       </div>
 

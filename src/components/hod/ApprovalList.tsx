@@ -1,110 +1,145 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, Input, Table, Tag, Typography } from "antd";
+import React, { useState, useEffect } from "react";
+import { Card, Input, Table, Tag, Typography, Alert } from "antd";
 import type { TableProps } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
 import styles from "./ApprovalList.module.css";
 import { useRouter } from "next/navigation";
+import { adminService } from "@/services/adminService"; 
+import { ApiApprovalItem } from "@/types"; 
+import type { TablePaginationConfig } from 'antd/es/table';
 
-const { Title, Text } = Typography; // Added Text import
+const { Title, Text } = Typography;
 
-interface ApprovalItem {
-  key: string;
-  no: number;
-  name: string;
-  teacher: string;
-  date: string;
-  semester: string;
-  status: "Approved" | "Rejected" | "Pending";
-}
+const getStatusProps = (status: number) => {
+  switch (status) {
+    case 1: // PENDING
+      return { color: "warning", text: "Pending" };
+    case 2: // ACCEPTED
+      return { color: "processing", text: "Accepted" };
+    case 3: // REJECTED
+      return { color: "error", text: "Rejected" };
+    case 4: // IN_PROGRESS
+      return { color: "processing", text: "In Progress" };
+    case 5: // COMPLETED (coi là Approved)
+      return { color: "success", text: "Approved" };
+    default:
+      return { color: "default", text: `Unknown (${status})` };
+  }
+};
 
-const approvalData: ApprovalItem[] = [
-  { key: "1", no: 1, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "13/05/2022", semester: "Fall2025", status: "Approved" },
-  { key: "2", no: 2, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "22/05/2022", semester: "Fall2025", status: "Rejected" },
-  { key: "3", no: 3, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "15/06/2022", semester: "Fall2025", status: "Pending" },
-  { key: "4", no: 4, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "06/09/2022", semester: "Fall2025", status: "Pending" },
-  { key: "5", no: 5, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "25/09/2022", semester: "Fall2025", status: "Pending" },
-  { key: "6", no: 6, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "04/10/2022", semester: "Fall2025", status: "Approved" },
-  { key: "7", no: 7, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "17/10/2022", semester: "Fall2025", status: "Approved" },
-  { key: "8", no: 8, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "24/10/2022", semester: "Fall2025", status: "Approved" },
-  { key: "9", no: 9, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "01/11/2022", semester: "Fall2025", status: "Rejected" },
-  { key: "10", no: 10, name: "Assignment 01 - NguyenNT", teacher: "Tran Thanh Nguyen", date: "22/11/2022", semester: "Fall2025", status: "Rejected" },
-];
-
-
-const columns: TableProps<ApprovalItem>["columns"] = [
-  {
-    title: "No",
-    dataIndex: "no",
-    key: "no",
-    width: 60,
-  },
-  {
-    title: "Name",
-    dataIndex: "name",
-    key: "name",
-    render: (text) => <Text strong>{text}</Text>,
-  },
-  {
-    title: "Teacher",
-    dataIndex: "teacher",
-    key: "teacher",
-    sorter: (a, b) => a.teacher.localeCompare(b.teacher),
-  },
-  {
-    title: "Date",
-    dataIndex: "date",
-    key: "date",
-    sorter: (a, b) => a.date.localeCompare(b.date),
-  },
-  {
-    title: "Semester",
-    dataIndex: "semester",
-    key: "semester",
-  },
-  {
-    title: "Status",
-    dataIndex: "status",
-    key: "status",
-    render: (status: ApprovalItem["status"]) => {
-      let color;
-      switch (status) {
-        case "Approved":
-          color = "success";
-          break;
-        case "Rejected":
-          color = "error";
-          break;
-        case "Pending":
-          color = "warning";
-          break;
-        default:
-          color = "default";
-      }
-      return <Tag color={color} className={styles.statusTag}>{status}</Tag>;
-    },
-    filters: [
-      { text: "Approved", value: "Approved" },
-      { text: "Rejected", value: "Rejected" },
-      { text: "Pending", value: "Pending" },
-    ],
-    onFilter: (value, record) => record.status === value,
-  },
-];
 
 export default function ApprovalList() {
   const [searchText, setSearchText] = useState("");
   const router = useRouter();
 
-  const filteredData = approvalData.filter(
+  const [approvals, setApprovals] = useState<ApiApprovalItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState<TablePaginationConfig>({
+    current: 1,
+    pageSize: 10,
+    total: 0,
+  });
+
+  const columns: TableProps<ApiApprovalItem>["columns"] = [
+    {
+      title: "No",
+      key: "no",
+      render: (text, record, index) => 
+        ((pagination.current || 1) - 1) * (pagination.pageSize || 10) + index + 1,
+      width: 60,
+    },
+    {
+      title: "Name",
+      dataIndex: "courseElementName", 
+      key: "name",
+      render: (text) => <Text strong>{text}</Text>,
+    },
+    {
+      title: "Teacher",
+      dataIndex: "assignedLecturerName", 
+      key: "teacher",
+      sorter: (a, b) => a.assignedLecturerName.localeCompare(b.assignedLecturerName),
+    },
+    {
+      title: "Date",
+      dataIndex: "createdAt", 
+      key: "date",
+      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
+      sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    },
+    {
+      title: "Semester",
+      dataIndex: "semesterName", 
+      key: "semester",
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (status: number) => {
+        const { color, text } = getStatusProps(status); 
+        return <Tag color={color} className={styles.statusTag}>{text}</Tag>;
+      },
+      filters: [
+        { text: "Pending", value: 1 },
+        { text: "Accepted", value: 2 },
+        { text: "Rejected", value: 3 },
+        { text: "In Progress", value: 4 },
+        { text: "Approved", value: 5 }, 
+      ],
+      onFilter: (value, record) => record.status === value,
+    },
+  ];
+
+  useEffect(() => {
+    const fetchApprovals = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        console.log("Fetching approvals with params:", pagination.current, pagination.pageSize);
+        const response = await adminService.getApprovalList(
+          pagination.current || 1,
+          pagination.pageSize || 10
+        );
+        console.log("API Response:", response);
+        
+        setApprovals(response.items);
+        setPagination(prev => ({
+          ...prev,
+          total: response.totalCount,
+        }));
+      } catch (err: any) {
+        console.error("Failed to fetch approvals:", err);
+        const apiError = err.response?.data?.errorMessages?.[0] || err.message || "Failed to load approval data.";
+        setError(apiError);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApprovals();
+  }, [pagination.current, pagination.pageSize]); 
+
+  const filteredData = approvals.filter(
     (item) =>
-      item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.teacher.toLowerCase().includes(searchText.toLowerCase())
+      item.courseElementName.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.assignedLecturerName.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const handleRowClick = (record: ApprovalItem) => {
-    router.push(`/hod/approval/${record.key}`);
+  const handleRowClick = (record: ApiApprovalItem) => {
+    router.push(`/hod/approval/${record.id}`);
+  };
+
+  const handleTableChange: TableProps<ApiApprovalItem>['onChange'] = (newPagination) => {
+    setPagination(prev => ({
+      ...prev,
+      current: newPagination.current,
+      pageSize: newPagination.pageSize,
+    }));
   };
 
   return (
@@ -121,18 +156,23 @@ export default function ApprovalList() {
           Approval
         </Title>
         <Input
-          placeholder="Search..."
+          placeholder="Search by name or teacher..."
           onChange={(e) => setSearchText(e.target.value)}
           className={styles.searchBar}
           prefix={<SearchOutlined />}
         />
       </div>
 
+      {error && <Alert message="Error" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
+
       <Card className={styles.approvalCard}>
         <Table
           columns={columns}
           dataSource={filteredData}
-          pagination={{ pageSize: 10, hideOnSinglePage: true }}
+          rowKey="id" 
+          loading={loading}
+          pagination={pagination} 
+          onChange={handleTableChange} 
           className={styles.approvalTable}
           onRow={(record) => {
             return {

@@ -1,8 +1,3 @@
-/**
- * Application constants
- */
-
-// API Endpoints
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/Auth/login",
@@ -33,12 +28,20 @@ export const API_ENDPOINTS = {
     SEMESTER_COURSE_DATA: "/Import/excel/semester-course-data",
     CLASS_STUDENT_DATA: "/Import/excel/class-student-data",
   },
+  // --- SỬA LỖI: Chỉ giữ lại endpoint chung ---
   SEMESTER: {
     PAGINATED_LIST: "/Semester",
   },
+  // --- KẾT THÚC SỬA LỖI ---
+  HOD: {
+    APPROVAL_LIST: '/AssignRequest/list',
+    ASSIGN_REQUEST_UPDATE: '/AssignRequest',
+    ASSESSMENT_TEMPLATE_LIST: '/AssessmentTemplate/list', 
+    ASSESSMENT_TEMPLATE_DETAIL: '/AssessmentTemplate', 
+    RUBRIC_ITEM_BY_QUESTION: '/RubricItem/question',
+  },
 } as const;
 
-// HTTP Status Codes
 export const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
@@ -49,14 +52,12 @@ export const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
 } as const;
 
-// Local Storage Keys
 export const STORAGE_KEYS = {
   TOKEN: "auth_token",
   USER: "user_data",
   THEME: "theme",
 } as const;
 
-// Route Paths
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
@@ -65,7 +66,6 @@ export const ROUTES = {
   DASHBOARD: "/dashboard",
 } as const;
 
-// Role Constants
 export const ROLES = {
   ADMIN: 0,
   LECTURER: 1,
@@ -75,7 +75,6 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-// Navigation items based on role
 export interface NavigationItem {
   key: string;
   label: string;
@@ -124,7 +123,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   ],
 };
 
-// Validation Rules
 export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PASSWORD_MIN_LENGTH: 8,

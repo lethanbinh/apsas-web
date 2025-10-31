@@ -1,147 +1,72 @@
-// Tên file: app/hod/approval/[approvalId]/page.tsx
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Spin, Alert } from "antd";
 import ApprovalDetail from "@/components/hod/ApprovalDetail";
-
-const fetchApprovalDetail = async (id: string) => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const mockData = {
-    id: "1", // Use the id from the param for real fetching
-    title: "Assignment 01 - NguyenNT", // Fetch real title
-    status: "Pending", // Fetch real status
-    questionCount: 5, // Fetch real count
-    details: {
-      // Fetch real details based on id
-      id: "item1",
-      type: "Basic Assignment",
-      databaseFileUrl: "#",
-      exportUrl: "#",
-      questions: [
-        {
-          id: "q1",
-          title: "Question 1",
-          name: "Name of card",
-          content: "Card Number",
-          imageUrl:
-            "https://congnghethongtinaau.com/wp-content/uploads/2024/11/code-la-gi.jpg",
-          criteria: [
-            {
-              id: "c1",
-              title: "Criteria 1",
-              details: {
-                Name: "Name",
-                Content: "Learn about the various elements...",
-                DataType: "Numeric",
-                Score: 2,
-              },
-            },
-            {
-              id: "c2",
-              title: "Criteria 2",
-              details: {
-                Name: "Detail 2",
-                Content: "...",
-                DataType: "String",
-                Score: 3,
-              },
-            },
-            {
-              id: "c3",
-              title: "Criteria 3",
-              details: {
-                Name: "Detail 3",
-                Content: "...",
-                DataType: "Boolean",
-                Score: 1,
-              },
-            },
-            {
-              id: "c4",
-              title: "Criteria 4",
-              details: {
-                Name: "Detail 4",
-                Content: "...",
-                DataType: "Numeric",
-                Score: 4,
-              },
-            },
-          ],
-        },
-        {
-          id: "q2",
-          title: "Question 2",
-          name: "Q2 Name",
-          content: "Q2 Content",
-          imageUrl: "https://via.placeholder.com/300",
-          criteria: [
-            {
-              id: "c5",
-              title: "Criteria 5",
-              details: {
-                Name: "...",
-                Content: "...",
-                DataType: "...",
-                Score: 5,
-              },
-            },
-          ],
-        },
-        {
-          id: "q3",
-          title: "Question 3",
-          name: "Q3 Name",
-          content: "Q3 Content",
-          imageUrl: "https://via.placeholder.com/300",
-          criteria: [],
-        },
-        {
-          id: "q4",
-          title: "Question 4",
-          name: "Q4 Name",
-          content: "Q4 Content",
-          imageUrl: "https://via.placeholder.com/300",
-          criteria: [],
-        },
-      ],
-    },
-  };
-
-  // Return mock data for any ID for now, adjust logic as needed
-  return mockData;
-  // In a real app, you might return null if not found
-  // return null;
-};
+import { adminService } from "@/services/adminService";
+import { ApiAssessmentTemplate, ApiApprovalItem } from "@/types";
 
 export default function ApprovalDetailPage() {
   const params = useParams();
   const approvalId = params.approvalId as string;
 
-  const [detailData, setDetailData] = React.useState<any | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const [template, setTemplate] = useState<ApiAssessmentTemplate | null>(null);
+  const [approvalItem, setApprovalItem] = useState<ApiApprovalItem | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (approvalId) {
-      setLoading(true);
-      fetchApprovalDetail(approvalId)
-        .then((data) => {
-          if (data) {
-            setDetailData(data);
-          } else {
-            setError("Approval item not found.");
+      const assignRequestId = parseInt(approvalId, 10);
+      if (isNaN(assignRequestId)) {
+        setError("Invalid Approval ID.");
+        setLoading(false);
+        return;
+      }
+
+      const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          // BƯỚC 1: Lấy approval item
+          console.log(`Fetching approval list to find item ID: ${assignRequestId}`);
+          const approvalResponse = await adminService.getApprovalList(1, 100); 
+          const foundApproval = approvalResponse.items.find(item => item.id === assignRequestId);
+          
+          if (!foundApproval) {
+            throw new Error(`Approval request with ID ${assignRequestId} not found.`);
           }
-        })
-        .catch((err) => {
+          
+          setApprovalItem(foundApproval); 
+          
+          // Lấy courseElementId từ item đó
+          const courseElementId = foundApproval.courseElementId;
+          console.log(`Found courseElementId: ${courseElementId} for approvalId: ${assignRequestId}`);
+
+          // BƯỚC 2: Lấy Assessment Template
+          const templateResponse = await adminService.getAssessmentTemplateList(1, 100);
+          
+          // So sánh assignRequestId (của Template) với courseElementId (của Approval)
+          const foundTemplate = templateResponse.items.find(t => t.assignRequestId === assignRequestId);
+
+          if (foundTemplate) {
+            foundTemplate.status = foundApproval.status;
+            setTemplate(foundTemplate);
+            console.log("Successfully found template:", foundTemplate);
+          } else {
+            console.error(`No template found with assignRequestId matching: ${assignRequestId}`);
+            throw new Error("Assessment template not found for this approval request.");
+          }
+        } catch (err: any) { 
           console.error("Error fetching approval detail:", err);
-          setError("Failed to load approval details.");
-        })
-        .finally(() => {
+          setError(err.message || "Failed to load approval details.");
+        } finally {
           setLoading(false);
-        });
+        }
+      };
+
+      fetchData();
     }
   }, [approvalId]);
 
@@ -155,15 +80,16 @@ export default function ApprovalDetailPage() {
     return <Alert message="Error" description={error} type="error" showIcon />;
   }
 
-  if (!detailData) {
+  if (!template || !approvalItem) {
     return (
       <Alert
         message="Not Found"
-        description="Approval item could not be loaded."
+        description="Approval item or template data could not be loaded."
         type="warning"
         showIcon
       />
     );
   }
-  return <ApprovalDetail />;
+  
+  return <ApprovalDetail template={template} approvalItem={approvalItem} />;
 }
