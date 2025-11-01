@@ -4,30 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="Lecturer class list">
+    <list default="true" id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="Lecturer Screens">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/dashboard/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/dashboard/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/classes/join/page.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/home/lecturer/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/lecturer/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/home/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/home/student/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/student/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/DetailAsm.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/DetailAsm.module.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/practical-exam/PracticalExam.module.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/practical-exam/page.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/auth/AuthGuard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/AuthGuard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/classes/CourseCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/CourseCard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/classes/JoinCourseSection.module.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/classes/JoinCourseSection.tsx" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/classes/SimpleCourseCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/SimpleCourseCard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/features/DatePickerModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/DatePickerModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/features/PaperAssignmentModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/PaperAssignmentModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.module.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.module.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +85,8 @@
       <updated>1761831112173</updated>
       <workItem from="1761831113740" duration="745000" />
       <workItem from="1761880761526" duration="112000" />
-      <workItem from="1761915554907" duration="2827000" />
+      <workItem from="1761915554907" duration="2877000" />
+      <workItem from="1761930710262" duration="2000" />
     </task>
     <task id="LOCAL-00001" summary="Fix css problems, remove tailwind">
       <option name="closed" value="true" />
@@ -133,7 +112,15 @@
       <option name="project" value="LOCAL" />
       <updated>1761915603938</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Lecturer Screens">
+      <option name="closed" value="true" />
+      <created>1761930675436</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1761930675436</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -154,6 +141,7 @@
     <MESSAGE value="Fix css problems, remove tailwind" />
     <MESSAGE value="Fix pages" />
     <MESSAGE value="Lecturer class list" />
-    <option name="LAST_COMMIT_MESSAGE" value="Lecturer class list" />
+    <MESSAGE value="Lecturer Screens" />
+    <option name="LAST_COMMIT_MESSAGE" value="Lecturer Screens" />
   </component>
 </project>

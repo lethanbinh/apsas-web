@@ -14,8 +14,6 @@ import {
 import styles from "../sidebar/StudentSidebar.module.css"; 
 
 const { Sider } = Layout;
-const { Search } = Input;
-
 const menuItems = [
   {
     key: "/hod/semester-plans",

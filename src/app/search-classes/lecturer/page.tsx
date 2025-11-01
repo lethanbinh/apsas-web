@@ -8,6 +8,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { classService, ClassInfo } from "@/services/classService";
 import { CourseCardProps } from "@/components/classes/CourseCard";
 import { Spin } from "antd";
+import { useLecturer } from "@/hooks/useLecturer";
 
 const categories = ["UI/UX", "BE", "FE", "BA", "Testing"];
 const background = "/classes/search-banner.png";
@@ -20,6 +21,7 @@ function mapApiDataToCardProps(classes: ClassInfo[]): CourseCardProps[] {
     description: cls.description,
     imageUrl: "/classes/class.png",
     authorAvatarUrl: "/classes/avatar-teacher.png",
+    lecturerId: cls.lecturerId,
   }));
 }
 
@@ -28,6 +30,8 @@ export default function SearchClassesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const { lecturerId: currentLecturerId, isLoading: isLecturerLoading } =
+    useLecturer();
 
   useEffect(() => {
     const fetchAllClasses = async () => {
@@ -89,6 +93,8 @@ export default function SearchClassesPage() {
     return mapApiDataToCardProps(filtered);
   }, [allCourses, searchTerm, selectedCategory]);
 
+  const pageLoading = isLoading || isLecturerLoading;
+
   return (
     <Layout>
       <SearchBanner
@@ -97,12 +103,15 @@ export default function SearchClassesPage() {
         onSearch={handleSearch}
         onCategoryClick={handleCategoryClick}
       />
-      {isLoading ? (
+      {pageLoading ? (
         <div style={{ textAlign: "center", padding: "50px" }}>
           <Spin size="large" />
         </div>
       ) : (
-        <CourseGrid courses={filteredMappedCourses} />
+        <CourseGrid
+          courses={filteredMappedCourses}
+          currentLecturerId={currentLecturerId}
+        />
       )}
       <RecommendedSlider />
     </Layout>

@@ -9,8 +9,10 @@ const { Title } = Typography;
 
 export default function CourseGrid({
   courses,
+  currentLecturerId,
 }: {
   courses: CourseCardProps[];
+  currentLecturerId: string | null;
 }) {
   return (
     <div className={styles.sectionWrapper}>
@@ -29,6 +31,8 @@ export default function CourseGrid({
                 authorName={course.authorName}
                 description={course.description}
                 imageUrl={course.imageUrl}
+                lecturerId={course.lecturerId}
+                currentLecturerId={currentLecturerId}
               />
             </Col>
           ))}

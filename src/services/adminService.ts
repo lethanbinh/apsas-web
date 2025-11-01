@@ -72,7 +72,6 @@ export class AdminService {
     return response as Blob;
   }
   
-  // HÀM ĐÚNG CHO SEMESTERPLANS (trả về mảng)
   async getPaginatedSemesters(pageNumber: number, pageSize: number): Promise<Semester[]> {
     const response = await apiService.get<RawSemesterApiResponse>(
       `${API_ENDPOINTS.SEMESTER.PAGINATED_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`

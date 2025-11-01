@@ -108,6 +108,11 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       label: "All Classes",
       href: "/search-classes/lecturer",
     },
+    {
+      key: "tasks",
+      label: "Tasks",
+      href: "/lecturer/tasks",
+    },
   ],
   [ROLES.ADMIN]: [
     { key: "dashboard", label: "Dashboard", href: "/admin/dashboard" },

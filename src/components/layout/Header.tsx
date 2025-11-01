@@ -71,9 +71,13 @@ export const Header: React.FC = () => {
               ? "/home/students"
               : user?.role === 0
               ? "/admin/dashboard"
+              : user?.role === 1
+              ? "/home/lecturer"
+              : user?.role === 2
+              ? "/home/student"
               : user?.role === 3
               ? "/hod/semester-plans"
-              : "/home/students"
+              : "/home"
           }
           className={styles.logoLink}
         >

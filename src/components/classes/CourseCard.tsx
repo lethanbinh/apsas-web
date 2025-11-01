@@ -16,6 +16,8 @@ export interface CourseCardProps {
   authorAvatarUrl: string;
   authorName: string;
   description: string;
+  lecturerId: string;
+  currentLecturerId?: string | null;
 }
 
 export const CourseCard: React.FC<CourseCardProps> = ({
@@ -25,23 +27,30 @@ export const CourseCard: React.FC<CourseCardProps> = ({
   authorAvatarUrl,
   authorName,
   description,
+  lecturerId,
+  currentLecturerId,
 }) => {
-  const router = useRouter(); // 2. Khởi tạo router
+  const router = useRouter();
+  const isMyClass = lecturerId === currentLecturerId;
 
   const handleCardClick = () => {
+    if (!isMyClass) return;
     localStorage.setItem("selectedClassId", id ? id.toString() : "");
     router.push(`/lecturer/info/${id}`);
   };
+
   const handleViewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isMyClass) return;
     localStorage.setItem("selectedClassId", id ? id.toString() : "");
     router.push(`/lecturer/info/${id}`);
   };
+
   return (
     <div
       className={styles.courseCard}
-      onClick={handleCardClick}
-      style={{ cursor: "pointer" }}
+      onClick={isMyClass ? handleCardClick : undefined}
+      style={{ cursor: isMyClass ? "pointer" : "default" }}
     >
       <div className={styles.paddedImageWrapper}>
         <div className={styles.cardImageWrapper}>
@@ -90,14 +99,16 @@ export const CourseCard: React.FC<CourseCardProps> = ({
         </Paragraph>
 
         <div className={styles.cardActions}>
-          <Button
-            variant="ghost"
-            size="small"
-            className={styles.viewButton}
-            onClick={handleViewClick} // 7. Thêm onClick
-          >
-            View
-          </Button>
+          {isMyClass && (
+            <Button
+              variant="ghost"
+              size="small"
+              className={styles.viewButton}
+              onClick={handleViewClick}
+            >
+              View
+            </Button>
+          )}
         </div>
       </div>
     </div>

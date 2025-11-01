@@ -73,6 +73,29 @@ export interface GetAssessmentTemplatesResponse {
   total: number;
 }
 
+export interface CreateAssessmentTemplatePayload {
+  assignRequestId: number;
+  templateType: number;
+  name: string;
+  description: string;
+  createdByLecturerId: number;
+  assignedToHODId: number;
+}
+
+export interface AssessmentTemplateApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: AssessmentTemplate;
+}
+
+export interface UpdateAssessmentTemplatePayload {
+  templateType: number;
+  name: string;
+  description: string;
+  assignedToHODId: number;
+}
+
 export class AssessmentTemplateService {
   async getAssessmentTemplates(
     params: GetAssessmentTemplatesParams
@@ -85,6 +108,27 @@ export class AssessmentTemplateService {
       items: response.result.items,
       total: response.result.totalCount,
     };
+  }
+
+  async createAssessmentTemplate(
+    payload: CreateAssessmentTemplatePayload
+  ): Promise<AssessmentTemplate> {
+    const response = await apiService.post<AssessmentTemplateApiResponse>(
+      "/AssessmentTemplate/create",
+      payload
+    );
+    return response.result;
+  }
+
+  async updateAssessmentTemplate(
+    assessmentTemplateId: string | number,
+    payload: UpdateAssessmentTemplatePayload
+  ): Promise<AssessmentTemplate> {
+    const response = await apiService.put<AssessmentTemplateApiResponse>(
+      `/AssessmentTemplate/${assessmentTemplateId}`,
+      payload
+    );
+    return response.result;
   }
 }
 
