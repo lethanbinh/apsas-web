@@ -120,6 +120,29 @@ export interface GetSemestersParams {
   pageSize: number;
 }
 
+export interface SemesterApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: Semester;
+}
+
+export interface CreateSemesterPayload {
+  semesterCode: string;
+  academicYear: number;
+  note: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdateSemesterPayload {
+  semesterCode: string;
+  academicYear: number;
+  note: string;
+  startDate: string;
+  endDate: string;
+}
+
 export class SemesterService {
   async getSemesterPlanDetail(
     semesterCode: string
@@ -136,6 +159,29 @@ export class SemesterService {
       { params: params }
     );
     return response.result;
+  }
+
+  async createSemester(payload: CreateSemesterPayload): Promise<Semester> {
+    const response = await apiService.post<SemesterApiResponse>(
+      "/Semester",
+      payload
+    );
+    return response.result;
+  }
+
+  async updateSemester(
+    semesterId: string | number,
+    payload: UpdateSemesterPayload
+  ): Promise<Semester> {
+    const response = await apiService.put<SemesterApiResponse>(
+      `/Semester/${semesterId}`,
+      payload
+    );
+    return response.result;
+  }
+
+  async deleteSemester(semesterId: string | number): Promise<void> {
+    await apiService.delete(`/Semester/${semesterId}`);
   }
 }
 

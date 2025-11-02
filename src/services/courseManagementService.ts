@@ -27,6 +27,18 @@ export interface CourseApiResponse {
   result: Course;
 }
 
+export interface CourseListApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: Course[];
+}
+
+export interface GetCourseListParams {
+  pageNumber: number;
+  pageSize: number;
+}
+
 export interface CreateSemesterCoursePayload {
   semesterId: number;
   courseId: number;
@@ -76,6 +88,14 @@ export class CourseService {
 
   async deleteCourse(courseId: string | number): Promise<void> {
     await apiService.delete(`/Course/${courseId}`);
+  }
+
+  async getCourseList(params: GetCourseListParams): Promise<Course[]> {
+    const response = await apiService.get<CourseListApiResponse>(
+      "/Course",
+      { params: params }
+    );
+    return response.result;
   }
 }
 

@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation";
 import { Layout, Input, Menu, Switch } from "antd";
 import {
   SearchOutlined,
-  FileTextOutlined, 
-  BarChartOutlined, 
+  FileTextOutlined,
+  BarChartOutlined,
   SunOutlined,
   MoonOutlined,
+  CalendarOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
-import styles from "../sidebar/StudentSidebar.module.css"; 
+import styles from "../sidebar/StudentSidebar.module.css";
 
 const { Sider } = Layout;
 const menuItems = [
@@ -24,6 +26,16 @@ const menuItems = [
     key: "/hod/approval",
     icon: <BarChartOutlined />,
     label: <Link href="/hod/approval">Approval</Link>,
+  },
+  {
+    key: "/hod/semester-management",
+    icon: <CalendarOutlined />,
+    label: <Link href="/hod/semester-management">Semester management</Link>,
+  },
+  {
+    key: "/hod/course-management",
+    icon: <BookOutlined />,
+    label: <Link href="/hod/course-management">Course management</Link>,
   },
 ];
 
@@ -51,9 +63,9 @@ export default function HeadOfDepartmentSidebar() {
         <Input
           placeholder="Search..."
           prefix={<SearchOutlined />}
-          className={styles.searchBar} 
+          className={styles.searchBar}
         />
-        
+
         <Menu
           mode="inline"
           selectedKeys={[activeKey]}

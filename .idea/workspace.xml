@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="Lecturer Screens">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="All Lecturers and HOD Functions" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -87,6 +85,7 @@
       <workItem from="1761880761526" duration="112000" />
       <workItem from="1761915554907" duration="2877000" />
       <workItem from="1761930710262" duration="2000" />
+      <workItem from="1762001821797" duration="640000" />
     </task>
     <task id="LOCAL-00001" summary="Fix css problems, remove tailwind">
       <option name="closed" value="true" />
@@ -120,7 +119,15 @@
       <option name="project" value="LOCAL" />
       <updated>1761930675436</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="All Lecturers and HOD Functions">
+      <option name="closed" value="true" />
+      <created>1762002508431</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1762002508431</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -142,6 +149,7 @@
     <MESSAGE value="Fix pages" />
     <MESSAGE value="Lecturer class list" />
     <MESSAGE value="Lecturer Screens" />
-    <option name="LAST_COMMIT_MESSAGE" value="Lecturer Screens" />
+    <MESSAGE value="All Lecturers and HOD Functions" />
+    <option name="LAST_COMMIT_MESSAGE" value="All Lecturers and HOD Functions" />
   </component>
 </project>
