@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import LayoutAdmin from "@/components/layout/LayoutAdmin";
-import styles from "./ManageUsers.module.css";
+import { UserDetailFormModal } from "@/components/admin/UserDetailFormModal";
 import { accountService } from "@/services/accountService"; // For fetching account list
 import { adminService } from "@/services/adminService"; // For Admin CRUD operations
 import { User, UserUpdatePayload } from "@/types";
-import { Modal, Button } from "antd";
-import { UserDetailFormModal } from "@/components/admin/UserDetailFormModal";
+import { Button } from "antd";
+import React, { useEffect, useState } from "react";
+import styles from "./ManageUsers.module.css";
 
 const ManageUsersPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);

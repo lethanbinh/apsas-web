@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import { Modal, Form, Input, Select, DatePicker, InputNumber, Button } from 'antd';
-import moment from 'moment';
 import { User, UserUpdatePayload } from '@/types';
+import { DatePicker, Form, Input, Modal, Select } from 'antd';
+import moment from 'moment';
+import React, { useEffect } from 'react';
 
 interface UserDetailFormModalProps {
   visible: boolean;
