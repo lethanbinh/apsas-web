@@ -1696,13 +1696,3 @@ a {
   /* This is if we keep the .reset-password-form class, but we will change it to .login-form */
   max-width: none;
 }
-
-.ant-picker-cell-inner {
-  border: 1px solid transparent;
-  /* THÊM DÒNG NÀY */
-}
-
-.ant-picker-cell-inner:hover {
-  border: 1px solid #1677ff;
-  /* Giữ nguyên dòng này */
-}

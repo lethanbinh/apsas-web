@@ -2,14 +2,13 @@
 
 import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
-
-import moment from "moment";
+import dayjs from "dayjs";
 import {
-    ExamShift,
-    mockCourses,
-    mockLecturers,
-    mockPapers,
-    mockSemesters,
+  ExamShift,
+  mockCourses,
+  mockLecturers,
+  mockPapers,
+  mockSemesters,
 } from "./mockData";
 
 const { Option } = Select;
@@ -23,10 +22,7 @@ interface ExamShiftModalProps {
 
 const parseUtcDate = (dateString?: string) => {
   if (!dateString) return null;
-  const date = new Date(
-    dateString.endsWith("Z") ? dateString : dateString + "Z"
-  );
-  return moment(date);
+  return dayjs(dateString);
 };
 
 const ExamShiftModalContent: React.FC<ExamShiftModalProps> = ({
