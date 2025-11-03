@@ -1,8 +1,16 @@
 "use client";
 
 import ClassRoster from "@/components/student/ClassRoster";
-const id = localStorage.getItem("selectedClassId") || "";
+import { useEffect, useState } from "react";
 
 export default function MemberListPage() {
-  return <ClassRoster classId={id} />;
+  const [classId, setClassId] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setClassId(localStorage.getItem("selectedClassId") || "");
+    }
+  }, []);
+
+  return <ClassRoster classId={classId} />;
 }

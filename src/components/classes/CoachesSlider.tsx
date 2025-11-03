@@ -1,4 +1,3 @@
-// Tên file: components/CoachesSlider/index.tsx
 "use client";
 
 import React from "react";

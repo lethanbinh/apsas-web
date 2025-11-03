@@ -10,13 +10,13 @@ import { useRouter } from "next/navigation";
 const { Title, Paragraph, Text } = Typography;
 
 export interface CourseCardProps {
-  id: string | number;
+  id?: string | number;
   imageUrl: string;
   title: string;
   authorAvatarUrl: string;
   authorName: string;
   description: string;
-  lecturerId: string;
+  lecturerId?: string;
   currentLecturerId?: string | null;
 }
 

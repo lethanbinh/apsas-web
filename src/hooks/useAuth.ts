@@ -1,7 +1,3 @@
-/**
- * Custom hook for authentication
- */
-
 'use client';
 
 import { useSelector, useDispatch } from 'react-redux';

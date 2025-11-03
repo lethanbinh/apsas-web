@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { Row, Col, Typography, Tabs, App, Spin, Alert } from "antd";
-import type { TabsProps } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
-import { Button } from "../ui/Button";
-import { PlanCard } from "./PlanCard";
-import styles from "./SemesterPlans.module.css";
-import { CreatePlanModal } from "./CreatePlanModal";
 import { adminService } from "@/services/adminService";
 import { Semester } from "@/types";
+import { PlusOutlined } from "@ant-design/icons";
+import type { TabsProps } from "antd";
+import { Alert, Col, Row, Spin, Tabs, Typography } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { Button } from "../ui/Button";
+import { CreatePlanModal } from "./CreatePlanModal";
+import { PlanCard } from "./PlanCard";
+import styles from "./SemesterPlans.module.css";
 
 const { Title, Text } = Typography;
 
@@ -25,7 +25,9 @@ const SemesterPlanCardGrid: React.FC<SemesterPlanCardGridProps> = ({
 }) => {
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", padding: "50px" }}>
+      <div
+        style={{ display: "flex", justifyContent: "center", padding: "50px" }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -88,21 +90,20 @@ export default function SemesterPlans() {
     setIsModalOpen(false);
   };
 
-  const { ongoingSemesters, endedSemesters, upcomingSemesters } = useMemo(() => {
-    const now = new Date();
-    return {
-      ongoingSemesters: semesters.filter(
-        (sem) =>
-          new Date(sem.startDate) <= now && new Date(sem.endDate) >= now
-      ),
-      endedSemesters: semesters.filter(
-        (sem) => new Date(sem.endDate) < now
-      ),
-      upcomingSemesters: semesters.filter(
-        (sem) => new Date(sem.startDate) > now
-      ),
-    };
-  }, [semesters]);
+  const { ongoingSemesters, endedSemesters, upcomingSemesters } =
+    useMemo(() => {
+      const now = new Date();
+      return {
+        ongoingSemesters: semesters.filter(
+          (sem) =>
+            new Date(sem.startDate) <= now && new Date(sem.endDate) >= now
+        ),
+        endedSemesters: semesters.filter((sem) => new Date(sem.endDate) < now),
+        upcomingSemesters: semesters.filter(
+          (sem) => new Date(sem.startDate) > now
+        ),
+      };
+    }, [semesters]);
 
   const tabItems: TabsProps["items"] = [
     {
@@ -140,7 +141,7 @@ export default function SemesterPlans() {
     },
   ];
   return (
-    <App>
+    <div>
       <div className={styles.wrapper}>
         <div className={styles.header}>
           <Title
@@ -174,6 +175,6 @@ export default function SemesterPlans() {
         onCancel={() => setIsModalOpen(false)}
         onCreate={handleCreatePlan}
       />
-    </App>
+    </div>
   );
 }

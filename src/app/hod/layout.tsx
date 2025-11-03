@@ -1,4 +1,3 @@
-// Tên file: components/layout/HeadOfDepartmentLayout.tsx
 "use client";
 
 import { Footer } from "@/components/layout/Footer";

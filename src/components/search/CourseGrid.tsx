@@ -8,21 +8,21 @@ import styles from "./CourseGrid.module.css";
 const { Title } = Typography;
 
 export default function CourseGrid({
-  courses,
-  currentLecturerId,
+  courses = [],
+  currentLecturerId = null,
 }: {
-  courses: CourseCardProps[];
-  currentLecturerId: string | null;
+  courses?: CourseCardProps[] | null;
+  currentLecturerId?: string | null;
 }) {
   return (
     <div className={styles.sectionWrapper}>
-      {courses.length === 0 ? (
+      {courses?.length === 0 ? (
         <Title level={4} style={{ textAlign: "center", color: "#888" }}>
           No courses found.
         </Title>
       ) : (
         <Row gutter={[50, 50]} justify="center">
-          {courses.map((course) => (
+          {courses?.map((course) => (
             <Col key={course.id} xs={24} md={12} lg={8}>
               <CourseCard
                 id={course.id}

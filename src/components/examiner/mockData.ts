@@ -6,7 +6,7 @@ export interface ExamShift {
   endDate: string;
   course: string;
   semester: string;
-  lecturer: string;
+  examiner: string;
 }
 
 export interface Semester {
@@ -52,9 +52,10 @@ export const mockPapers: Paper[] = [
 
 export const mockLecturers: Lecturer[] = [
   { id: 1, name: "NguyenNT" },
-  { id: 2, name: "Prof. Kim (Data Structures)" },
-  { id: 3, name: "Prof. Chen (Database Design)" },
-  { id: 4, name: "Dr. Rodriguez (Network Security)" },
+  { id: 2, name: "Prof. Kim" },
+  { id: 3, name: "Prof. Chen" },
+  { id: 4, name: "Dr. Rodriguez" },
+  { id: 5, name: "Prof. Sharma" },
 ];
 
 export const mockExamShifts: ExamShift[] = [
@@ -62,40 +63,40 @@ export const mockExamShifts: ExamShift[] = [
     id: 1,
     paper: "Paper1",
     name: "Shift1",
-    startDate: "2025-05-13T10:00:00Z",
-    endDate: "2025-05-13T11:00:00Z",
+    startDate: "2025-05-13T03:00:00Z", // (10:00 AM GMT+7)
+    endDate: "2025-05-13T04:00:00Z", // (11:00 AM GMT+7)
     course: "DB Design",
     semester: "Fall2025",
-    lecturer: "NguyenNT",
+    examiner: "NguyenNT",
   },
   {
     id: 2,
     paper: "Paper1",
     name: "Shift1",
-    startDate: "2025-05-13T10:00:00Z",
-    endDate: "2025-05-13T11:00:00Z",
+    startDate: "2025-11-03T10:00:00Z", // (5:00 PM GMT+7 - In Progress)
+    endDate: "2025-11-03T13:00:00Z", // (8:00 PM GMT+7 - In Progress)
     course: "DB Design",
     semester: "Fall2025",
-    lecturer: "NguyenNT",
+    examiner: "NguyenNT",
   },
   {
     id: 3,
     paper: "Paper2",
     name: "Shift2",
-    startDate: "2025-05-14T14:00:00Z",
-    endDate: "2025-05-14T15:00:00Z",
+    startDate: "2025-11-05T07:00:00Z", // (2:00 PM GMT+7 - Upcoming)
+    endDate: "2025-11-05T08:00:00Z", // (3:00 PM GMT+7 - Upcoming)
     course: "Data Structures",
     semester: "Fall2025",
-    lecturer: "Prof. Kim",
+    examiner: "Prof. Kim",
   },
   {
     id: 4,
     paper: "Paper1",
     name: "Shift1",
-    startDate: "2024-10-10T09:00:00Z",
-    endDate: "2024-10-10T10:00:00Z",
+    startDate: "2024-10-10T02:00:00Z", // (9:00 AM GMT+7 - Finished)
+    endDate: "2024-10-10T03:00:00Z", // (10:00 AM GMT+7 - Finished)
     course: "DB Design",
     semester: "Fall2024",
-    lecturer: "NguyenNT",
+    examiner: "Prof. Chen",
   },
 ];

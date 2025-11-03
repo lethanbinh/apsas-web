@@ -88,7 +88,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={isLoading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {error && (
@@ -126,7 +126,5 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
 };
 
 export const CourseCrudModal: React.FC<CourseCrudModalProps> = (props) => (
-  <App>
-    <CourseCrudModalContent {...props} />
-  </App>
+  <CourseCrudModalContent {...props} />
 );

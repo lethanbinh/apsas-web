@@ -1,29 +1,28 @@
 "use client";
 
-import { Layout } from "@/components/layout/Layout";
 import ClassInfo from "@/components/student/ClassInfo";
-import ClassRoster from "@/components/student/ClassRoster";
 import { ClassInfo as ClassInfoType, classService } from "@/services/classService";
 import { useEffect, useState } from "react";
 
 export default function ClassDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = params as unknown as { id: string };
   const [classData, setClassData] = useState<ClassInfoType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchClassData = async () => {
-      if (!params.id) {
+      if (!resolvedParams.id) {
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-        const data = await classService.getClassById(params.id);
+        const data = await classService.getClassById(resolvedParams.id);
         setClassData(data);
       } catch (error) {
         console.error("Failed to fetch class data:", error);
@@ -34,22 +33,14 @@ export default function ClassDetailPage({
     };
 
     fetchClassData();
-  }, [params.id]);
+  }, [resolvedParams.id]);
 
   if (isLoading) {
-    return (
-      <Layout>
-        <div>Loading...</div>
-      </Layout>
-    );
+    return <div>Loading...</div>;
   }
 
   if (!classData) {
-    return (
-      <Layout>
-        <div>Class not found.</div>
-      </Layout>
-    );
+    return <div>Class not found.</div>;
   }
 
   return (

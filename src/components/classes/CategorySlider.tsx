@@ -1,4 +1,3 @@
-// Tên file: components/CategorySlider/index.tsx
 "use client";
 
 import { Typography } from "antd";

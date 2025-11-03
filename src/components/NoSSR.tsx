@@ -1,7 +1,3 @@
-/**
- * NoSSR component to prevent hydration mismatch
- */
-
 'use client';
 
 import React, { useState, useEffect } from 'react';

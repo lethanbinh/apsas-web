@@ -182,7 +182,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={isLoading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form
         form={form}
@@ -232,22 +232,14 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
           label="Start Date"
           rules={[{ required: true, message: "Please select a start date" }]}
         >
-          <DatePicker
-            showTime
-            style={{ width: "100%" }}
-            disabled
-          />
+          <DatePicker showTime style={{ width: "100%" }} disabled />
         </Form.Item>
         <Form.Item
           name="endDate"
           label="End Date"
           rules={[{ required: true, message: "Please select an end date" }]}
         >
-          <DatePicker
-            showTime
-            style={{ width: "100%" }}
-            disabled
-          />
+          <DatePicker showTime style={{ width: "100%" }} disabled />
         </Form.Item>
         <Form.Item
           name="note"
@@ -262,7 +254,5 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
 };
 
 export const SemesterCrudModal: React.FC<SemesterCrudModalProps> = (props) => (
-  <App>
-    <SemesterCrudModalContent {...props} />
-  </App>
+  <SemesterCrudModalContent {...props} />
 );

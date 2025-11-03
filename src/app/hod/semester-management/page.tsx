@@ -4,14 +4,14 @@ import { SemesterCrudModal } from "@/components/modals/SemesterCrudModal";
 import { Semester, semesterService } from "@/services/semesterService";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
-    Alert,
-    App,
-    Button,
-    Space,
-    Spin,
-    Table,
-    TableProps,
-    Typography
+  Alert,
+  App,
+  Button,
+  Space,
+  Spin,
+  Table,
+  TableProps,
+  Typography,
 } from "antd";
 import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
@@ -156,7 +156,11 @@ const SemesterManagementPageContent = () => {
         }}
       >
         <Title level={2}>Semester Management</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleOpenCreate}
+        >
           Create Semester
         </Button>
       </Space>
@@ -196,9 +200,5 @@ const SemesterManagementPageContent = () => {
 };
 
 export default function SemesterManagementPage() {
-  return (
-    <App>
-      <SemesterManagementPageContent />
-    </App>
-  );
+  return <SemesterManagementPageContent />;
 }

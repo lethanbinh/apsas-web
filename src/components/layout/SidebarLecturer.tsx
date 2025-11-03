@@ -14,48 +14,58 @@ import type { MenuProps } from "antd";
 import { Input, Layout, Menu, Switch } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./SidebarLecturer.module.css";
 
 const { Sider } = Layout;
 const { Search } = Input;
 
 type MenuItem = Required<MenuProps>["items"][number];
-const id = localStorage.getItem("selectedClassId") || "";
-const menuItems: MenuItem[] = [
-  {
-    key: `/lecturer/info/${id}`,
-    icon: <InfoCircleOutlined />,
-    label: <Link href={`/lecturer/info/${id}`}>Info</Link>,
-  },
-  {
-    key: "/lecturer/assignments",
-    icon: <BarChartOutlined />,
-    label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
-  },
-  {
-    key: "/lecturer/grading-history",
-    icon: <BookOutlined />,
-    label: <Link href="/lecturer/grading-history">Grading history</Link>,
-  },
-  {
-    key: "/lecturer/tasks",
-    icon: <FileTextOutlined />,
-    label: <Link href="/lecturer/tasks">Tasks</Link>,
-  },
-  {
-    key: "/lecturer/members",
-    icon: <UserOutlined />,
-    label: <Link href="/lecturer/members">Members</Link>,
-  },
-];
-
-// ✅ Helper: Lấy tất cả key để xác định menu đang active
-const allKeys = menuItems.map((item) => String(item?.key));
 
 export default function SidebarLecturer() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [selectedClassId, setSelectedClassId] = useState("");
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSelectedClassId(localStorage.getItem("selectedClassId") || "");
+    }
+  }, []);
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    const id = selectedClassId;
+    return [
+      {
+        key: `/lecturer/info/${id}`,
+        icon: <InfoCircleOutlined />,
+        label: <Link href={`/lecturer/info/${id}`}>Info</Link>,
+      },
+      {
+        key: "/lecturer/assignments",
+        icon: <BarChartOutlined />,
+        label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
+      },
+      {
+        key: "/lecturer/grading-history",
+        icon: <BookOutlined />,
+        label: <Link href="/lecturer/grading-history">Grading history</Link>,
+      },
+      {
+        key: "/lecturer/tasks",
+        icon: <FileTextOutlined />,
+        label: <Link href="/lecturer/tasks">Tasks</Link>,
+      },
+      {
+        key: "/lecturer/members",
+        icon: <UserOutlined />,
+        label: <Link href="/lecturer/members">Members</Link>,
+      },
+    ];
+  }, [selectedClassId]);
+
+  // ✅ Helper: Lấy tất cả key để xác định menu đang active
+  const allKeys = useMemo(() => menuItems.map((item) => String(item?.key)), [menuItems]);
 
   // ✅ Tính toán selectedKey dựa trên pathname hiện tại
   const selectedKey = useMemo(() => {

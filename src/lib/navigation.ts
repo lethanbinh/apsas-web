@@ -38,8 +38,9 @@ export const navigation = {
   
   // Breadcrumb generation
   generateBreadcrumbs: (pathname: string) => {
+    type Breadcrumb = { label: string; href: string; isLast?: boolean };
     const segments = pathname.split('/').filter(Boolean);
-    const breadcrumbs = [{ label: 'Trang chủ', href: '/' }];
+    const breadcrumbs: Breadcrumb[] = [{ label: 'Trang chủ', href: '/' }];
     
     let currentPath = '';
     segments.forEach((segment, index) => {

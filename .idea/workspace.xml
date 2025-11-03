@@ -1,10 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="AutoImportSettings">
-    <option name="autoReloadType" value="SELECTIVE" />
-  </component>
   <component name="ChangeListManager">
-    <list default="true" id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="Examiners page" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/app/dashboard/profile/ProfileForm.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/app/dashboard/settings/SettingsForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/AUTHENTICATION_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/CLIENT_COMPONENT_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/COMPLETE_SUCCESS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_SUCCESS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FINAL_TEST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_HYDRATION_MISMATCH.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/FIX_ROUTING_CONFLICT.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/RESET_PASSWORD_PAGE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROUTING_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/SUCCESS_SUMMARY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/TEST_ROUTING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/next.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/next.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/debug.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/test.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dashboard/profile/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dashboard/profile/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dashboard/settings/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dashboard/settings/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-management/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/members/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/members/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/products/[id]/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/products/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/assignments/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/class-detail/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/exams/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/layout.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/members/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/student/submissions/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/NoSSR.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/NoSSR.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/AllCoursesSlider.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/AllCoursesSlider.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/CategorySlider.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/CategorySlider.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/CoachesSlider.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/CoachesSlider.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/CourseCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/CourseCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/ExamShiftModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/ExamShiftModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/mockData.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/mockData.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/features/ResetPasswordForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/ResetPasswordForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/ApprovalDetail.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/ApprovalDetail.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/CreatePlanModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/CreatePlanModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/SemesterPlans.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/SemesterPlans.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseOnlyCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseOnlyCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/SemesterCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/SemesterCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/providers/Providers.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/providers/Providers.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/search/CourseGrid.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/search/CourseGrid.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/student/PracticalExams.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/PracticalExams.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/student/SubmissionHistory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/SubmissionHistory.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/ui/Button.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/ui/Button.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/useAuth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useAuth.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/hooks/useLocalStorage.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useLocalStorage.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/navigation.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/navigation.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/middleware.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/middleware.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test-reset-password.html" beforeDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,44 +79,44 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory">{
-  &quot;lastFilter&quot;: {
-    &quot;state&quot;: &quot;OPEN&quot;,
-    &quot;assignee&quot;: &quot;lethanbinh&quot;
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "lethanbinh"
   }
-}</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/lethanbinh/apsas-web.git&quot;,
-    &quot;accountId&quot;: &quot;b93c1590-533c-40d5-8641-b6e4528e19d4&quot;
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/lethanbinh/apsas-web.git",
+    "accountId": "b93c1590-533c-40d5-8641-b6e4528e19d4"
   }
-}</component>
-  <component name="ProjectColorInfo">{
-  &quot;customColor&quot;: &quot;&quot;,
-  &quot;associatedIndex&quot;: 5
-}</component>
-  <component name="ProjectId" id="34muXyYIBzp7LN3H0DbEz3qxjWR" />
+}]]></component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 5
+}]]></component>
+  <component name="ProjectId" id="34y2piGTIdQL2zs7JFp8p6gVu7P" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
-    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "js.debugger.nextJs.config.created.client": "true",
+    "js.debugger.nextJs.config.created.server": "true",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -76,91 +142,16 @@
   </component>
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="15284b7c-4b49-4299-a4ec-c6ecfd5dadac" name="Changes" comment="" />
-      <created>1761831112173</created>
+      <changelist id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="" />
+      <created>1762171678143</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1761831112173</updated>
-      <workItem from="1761831113740" duration="745000" />
-      <workItem from="1761880761526" duration="112000" />
-      <workItem from="1761915554907" duration="2877000" />
-      <workItem from="1761930710262" duration="2000" />
-      <workItem from="1762001821797" duration="640000" />
-      <workItem from="1762086660679" duration="65000" />
-      <workItem from="1762140110169" duration="666000" />
+      <updated>1762171678143</updated>
+      <workItem from="1762171679610" duration="328000" />
     </task>
-    <task id="LOCAL-00001" summary="Fix css problems, remove tailwind">
-      <option name="closed" value="true" />
-      <created>1761831172262</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1761831172262</updated>
-    </task>
-    <task id="LOCAL-00002" summary="Fix pages">
-      <option name="closed" value="true" />
-      <created>1761833039478</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1761833039478</updated>
-    </task>
-    <task id="LOCAL-00003" summary="Lecturer class list">
-      <option name="closed" value="true" />
-      <created>1761915603938</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1761915603938</updated>
-    </task>
-    <task id="LOCAL-00004" summary="Lecturer Screens">
-      <option name="closed" value="true" />
-      <created>1761930675436</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1761930675436</updated>
-    </task>
-    <task id="LOCAL-00005" summary="All Lecturers and HOD Functions">
-      <option name="closed" value="true" />
-      <created>1762002508431</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1762002508431</updated>
-    </task>
-    <task id="LOCAL-00006" summary="Examiners page">
-      <option name="closed" value="true" />
-      <created>1762145742166</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1762145742166</updated>
-    </task>
-    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
-  </component>
-  <component name="Vcs.Log.Tabs.Properties">
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State />
-          </value>
-        </entry>
-      </map>
-    </option>
-  </component>
-  <component name="VcsManagerConfiguration">
-    <MESSAGE value="Fix css problems, remove tailwind" />
-    <MESSAGE value="Fix pages" />
-    <MESSAGE value="Lecturer class list" />
-    <MESSAGE value="Lecturer Screens" />
-    <MESSAGE value="All Lecturers and HOD Functions" />
-    <MESSAGE value="Examiners page" />
-    <option name="LAST_COMMIT_MESSAGE" value="Examiners page" />
   </component>
 </project>

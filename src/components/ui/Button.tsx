@@ -1,13 +1,9 @@
-/**
- * Reusable Button component
- */
-
 import React from 'react';
 import { Button as AntButton, ButtonProps as AntButtonProps } from 'antd';
 
-interface ButtonProps extends Omit<AntButtonProps, 'type'> {
+interface ButtonProps extends Omit<AntButtonProps, 'type' | 'size' | 'variant'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
-  size?: 'small' | 'medium' | 'large';
+  size?: 'small' | 'middle' | 'large';
   loading?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
@@ -15,7 +11,7 @@ interface ButtonProps extends Omit<AntButtonProps, 'type'> {
 
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
-  size = 'medium',
+  size = 'middle',
   loading = false,
   disabled = false,
   children,
@@ -39,18 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
     }
   };
 
-  const getSizeProps = () => {
-    switch (size) {
-      case 'small':
-        return { size: 'small' as const };
-      case 'medium':
-        return { size: 'middle' as const };
-      case 'large':
-        return { size: 'large' as const };
-      default:
-        return { size: 'middle' as const };
-    }
-  };
+  const getSizeProps = () => ({ size });
 
   return (
     <AntButton

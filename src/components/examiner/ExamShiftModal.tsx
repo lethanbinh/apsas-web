@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
+import { Alert, DatePicker, Form, Input, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import {
@@ -9,7 +9,7 @@ import {
   mockLecturers,
   mockPapers,
   mockSemesters,
-} from "./mockData";
+} from "../examiner/mockData";
 
 const { Option } = Select;
 
@@ -17,7 +17,7 @@ interface ExamShiftModalProps {
   open: boolean;
   initialData: ExamShift | null;
   onCancel: () => void;
-  onOk: (data: ExamShift) => void;
+  onOk: (data: Omit<ExamShift, "id" | "status">) => void;
 }
 
 const parseUtcDate = (dateString?: string) => {
@@ -54,7 +54,6 @@ const ExamShiftModalContent: React.FC<ExamShiftModalProps> = ({
   const handleFinish = (values: any) => {
     onOk({
       ...values,
-      id: initialData?.id || 0,
       startDate: values.startDate.toISOString(),
       endDate: values.endDate.toISOString(),
     });
@@ -67,7 +66,7 @@ const ExamShiftModalContent: React.FC<ExamShiftModalProps> = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={isLoading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {error && (
@@ -130,11 +129,11 @@ const ExamShiftModalContent: React.FC<ExamShiftModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          name="lecturer"
-          label="Lecturer"
-          rules={[{ required: true, message: "Please select a lecturer" }]}
+          name="examiner"
+          label="Examiner"
+          rules={[{ required: true, message: "Please select an examiner" }]}
         >
-          <Select placeholder="Select lecturer">
+          <Select placeholder="Select examiner">
             {mockLecturers.map((l) => (
               <Option key={l.id} value={l.name}>
                 {l.name}
@@ -172,7 +171,5 @@ const ExamShiftModalContent: React.FC<ExamShiftModalProps> = ({
 };
 
 export const ExamShiftModal: React.FC<ExamShiftModalProps> = (props) => (
-  <App>
-    <ExamShiftModalContent {...props} />
-  </App>
+  <ExamShiftModalContent {...props} />
 );

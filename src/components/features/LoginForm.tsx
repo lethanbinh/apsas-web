@@ -4,25 +4,22 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Checkbox } from "antd";
 import { useAuth } from "@/hooks/useAuth";
-import { useDispatch, useSelector } from "react-redux";
+import { config } from "@/lib/config";
+import { authService } from "@/services/authService";
 import { RootState } from "@/store/store";
-import { fetchUserProfile } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { initializeApp, getApps } from "firebase/app";
+import { Button, Checkbox, Form, Input } from "antd";
+import { getApps, initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup
 } from "firebase/auth";
-import { config } from "@/lib/config";
-import { authService } from "@/services/authService";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 interface LoginFormProps {
   onSuccess?: () => void;

@@ -1,8 +1,6 @@
-/**
- * Custom hook for localStorage
- */
+"use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from "react";
 
 export const useLocalStorage = <T>(
   key: string,
@@ -10,7 +8,7 @@ export const useLocalStorage = <T>(
 ): [T, (value: T | ((val: T) => T)) => void] => {
   // Get from local storage then parse stored json or return initialValue
   const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return initialValue;
     }
     try {
@@ -26,9 +24,10 @@ export const useLocalStorage = <T>(
   const setValue = (value: T | ((val: T) => T)) => {
     try {
       // Allow value to be a function so we have the same API as useState
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      const valueToStore =
+        value instanceof Function ? value(storedValue) : value;
       setStoredValue(valueToStore);
-      if (typeof window !== 'undefined') {
+      if (typeof window !== "undefined") {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
     } catch (error) {

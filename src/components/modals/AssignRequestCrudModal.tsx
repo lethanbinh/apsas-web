@@ -1,11 +1,11 @@
 "use client";
 
-import { Modal, Form, Input, Spin, Alert, App, Select, DatePicker } from "antd";
-import { useEffect, useState } from "react";
 import { assignRequestService } from "@/services/assignRequestService";
-import moment from "moment";
-import { AssignRequest, CourseElement } from "@/services/semesterService";
 import { Lecturer } from "@/services/lecturerService";
+import { AssignRequest, CourseElement } from "@/services/semesterService";
+import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
+import moment from "moment";
+import { useEffect, useState } from "react";
 
 const parseUtcDate = (dateString?: string) => {
   if (!dateString) return null;
@@ -115,7 +115,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
       onCancel={onCancel}
       onOk={() => form.submit()}
       confirmLoading={isLoading}
-      destroyOnClose
+      destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {error && (
@@ -182,8 +182,4 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
 
 export const AssignRequestCrudModal: React.FC<AssignRequestCrudModalProps> = (
   props
-) => (
-  <App>
-    <AssignRequestCrudModalContent {...props} />
-  </App>
-);
+) => <AssignRequestCrudModalContent {...props} />;

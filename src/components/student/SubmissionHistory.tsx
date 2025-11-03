@@ -1,4 +1,3 @@
-// Tên file: components/SubmissionHistory/index.tsx
 "use client";
 
 import React, { useState } from "react";

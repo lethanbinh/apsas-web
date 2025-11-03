@@ -184,9 +184,5 @@ const CourseManagementPageContent = () => {
 };
 
 export default function CourseManagementPage() {
-  return (
-    <App>
-      <CourseManagementPageContent />
-    </App>
-  );
+  return <CourseManagementPageContent />;
 }

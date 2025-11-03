@@ -1,4 +1,5 @@
 "use client";
+
 import { ExamShiftModal } from "@/components/examiner/ExamShiftModal";
 import {
   ExamShift,
@@ -16,6 +17,7 @@ import {
   Space,
   Spin,
   Table,
+  Tag,
   Typography,
 } from "antd";
 import { format } from "date-fns";
@@ -31,6 +33,20 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
     dateString.endsWith("Z") ? dateString : dateString + "Z"
   );
   return format(date, formatStr);
+};
+
+const getStatusTag = (startDate: string, endDate: string) => {
+  const now = new Date();
+  const start = new Date(startDate.endsWith("Z") ? startDate : startDate + "Z");
+  const end = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
+
+  if (now > end) {
+    return <Tag color="green">Finished</Tag>;
+  }
+  if (now >= start && now <= end) {
+    return <Tag color="processing">In Progress</Tag>;
+  }
+  return <Tag color="blue">Upcoming</Tag>;
 };
 
 const ExamShiftPageContent = () => {
@@ -60,16 +76,18 @@ const ExamShiftPageContent = () => {
     setEditingShift(null);
   };
 
-  const handleModalOk = (values: ExamShift) => {
+  const handleModalOk = (values: Omit<ExamShift, "id" | "status">) => {
     setLoading(true);
     if (editingShift) {
       setShifts(
-        shifts.map((s) => (s.id === values.id ? { ...s, ...values } : s))
+        shifts.map((s) =>
+          s.id === editingShift.id ? { ...editingShift, ...values } : s
+        )
       );
     } else {
-      const newShift = {
+      const newShift: ExamShift = {
         ...values,
-        id: Math.max(...shifts.map((s) => s.id)) + 1,
+        id: Math.max(0, ...shifts.map((s) => s.id)) + 1,
       };
       setShifts([newShift, ...shifts]);
     }
@@ -145,9 +163,14 @@ const ExamShiftPageContent = () => {
       key: "semester",
     },
     {
-      title: "Lecturer",
-      dataIndex: "lecturer",
-      key: "lecturer",
+      title: "Examiner",
+      dataIndex: "examiner",
+      key: "examiner",
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_, record) => getStatusTag(record.startDate, record.endDate),
     },
     {
       title: "Actions",
