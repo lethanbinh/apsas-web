@@ -183,56 +183,6 @@ const AssignmentDetailItem = ({
         >
           {assignment.name}
         </h2>
-
-        <div className={styles["date-info-container"]}>
-          <div
-            className={styles["date-info"]}
-            onClick={openStartDatePicker}
-            style={{ cursor: "pointer" }}
-          >
-            <svg
-              className={styles["date-icon"]}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a 2 2 0 002 2z"
-              ></path>
-            </svg>
-            {selectedStartDate
-              ? `Start: ${format(selectedStartDate, "dd/MM/yy HH:mm")}`
-              : "Set Start"}
-          </div>
-          <div
-            className={styles["date-info"]}
-            onClick={openEndDatePicker}
-            style={{ cursor: "pointer" }}
-          >
-            <svg
-              className={styles["date-icon"]}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a 2 2 0 002 2z"
-              ></path>
-            </svg>
-            {selectedEndDate
-              ? `End: ${format(selectedEndDate, "dd/MM/yy HH:mm")}`
-              : "Set End"}
-          </div>
-        </div>
-
         <div className={styles["requirement-link-container"]}>
           {isFilesLoading ? (
             <Spin size="small" />
@@ -384,22 +334,16 @@ const DetailAssignmentPage = () => {
         throw new Error("Class not found");
       }
 
-      const [allElements, templateResponse, classAssessmentResponse] =
-        await Promise.all([
-          courseElementService.getCourseElements({
-            pageNumber: 1,
-            pageSize: 1000,
-          }),
-          assessmentTemplateService.getAssessmentTemplates({
-            pageNumber: 1,
-            pageSize: 1000,
-          }),
-          classAssessmentService.getClassAssessments({
-            classId: Number(selectedClassId),
-            pageNumber: 1,
-            pageSize: 1000,
-          }),
-        ]);
+      const [allElements, templateResponse] = await Promise.all([
+        courseElementService.getCourseElements({
+          pageNumber: 1,
+          pageSize: 1000,
+        }),
+        assessmentTemplateService.getAssessmentTemplates({
+          pageNumber: 1,
+          pageSize: 1000,
+        }),
+      ]);
 
       const filteredAssignments = allElements.filter(
         (el) => el.semesterCourseId.toString() === classData.semesterCourseId
@@ -407,7 +351,6 @@ const DetailAssignmentPage = () => {
 
       setAssignments(filteredAssignments);
       setTemplates(templateResponse.items);
-      setClassAssessments(classAssessmentResponse.items);
     } catch (err: any) {
       console.error("Failed to fetch data:", err);
       setError(err.message || "Failed to load assignments.");

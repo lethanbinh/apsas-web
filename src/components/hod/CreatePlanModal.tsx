@@ -1,110 +1,24 @@
 "use client";
 
+import React, { useState } from "react";
+import { Modal, Space, Typography, Upload, App, Spin, Alert } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
 import {
   DownloadOutlined,
   EyeOutlined,
   FileExcelOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import {
-  App,
-  Modal, // Giữ lại Col để dùng cho Dragger nếu cần
-  Space,
-  Typography,
-  Upload,
-} from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
-import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import styles from "./CreatePlanModal.module.css";
 import { useAuth } from "@/hooks/useAuth";
 import { adminService } from "@/services/adminService";
 import { PreviewData, PreviewPlanModal } from "./PreviewPlanModal";
+import * as XLSX from "xlsx";
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
 
-const mockPreviewData: PreviewData = {
-  semesterPlan: [
-    {
-      key: "1",
-      SemesterCode: "FALL2025",
-      AcademicYear: "2025/Fall",
-      StartEndDates: "1202-09-01 | 12-31",
-      CourseCode: "CS101",
-      CourseName: "Introduction to Programming",
-      CourseDescription: "Basic programming concepts",
-      CourseElementName: "Assignment 1",
-      CourseElementDescription: "First programming assignment",
-      CourseElementWeight: "0.3",
-      LecturerAccountCode: "LECT001",
-    },
-    {
-      key: "2",
-      SemesterCode: "FALL2025",
-      AcademicYear: "2025/Fall",
-      StartEndDates: "1202-09-01 | 12-31",
-      CourseCode: "CS101",
-      CourseName: "Introduction to Programming",
-      CourseDescription: "Basic programming concepts",
-      CourseElementName: "Midterm Exam",
-      CourseElementDescription: "Midterm examination",
-      CourseElementWeight: "0.4",
-      LecturerAccountCode: "LECT001",
-    },
-    {
-      key: "3",
-      SemesterCode: "FALL2025",
-      AcademicYear: "2025/Fall",
-      StartEndDates: "1202-09-01 | 12-31",
-      CourseCode: "CS102",
-      CourseName: "Data Structures",
-      CourseDescription: "Advanced programming concepts",
-      CourseElementName: "Project 1",
-      CourseElementDescription: "Binary tree implementation",
-      CourseElementWeight: "0.4",
-      LecturerAccountCode: "LECT002",
-    },
-  ],
-  classRoster: [
-    {
-      key: "1",
-      ClassCode: "CS103-01",
-      ClassDescription: "Introduction to Programming - Section 01",
-      SemesterCourseId: "1",
-      LecturerAccountCode: "LEC00003",
-      StudentAccountCode: "STU00001",
-      EnrollmentDescription: "Regular enrollment",
-    },
-    {
-      key: "2",
-      ClassCode: "CS103-01",
-      ClassDescription: "Introduction to Programming - Section 01",
-      SemesterCourseId: "1",
-      LecturerAccountCode: "LEC00003",
-      StudentAccountCode: "STU00002",
-      EnrollmentDescription: "Regular enrollment",
-    },
-    {
-      key: "3",
-      ClassCode: "CS103-01",
-      ClassDescription: "Introduction to Programming - Section 01",
-      SemesterCourseId: "1",
-      LecturerAccountCode: "LEC00003",
-      StudentAccountCode: "STU00003",
-      EnrollmentDescription: "Late enrollment",
-    },
-    {
-      key: "4",
-      ClassCode: "CS104-01",
-      ClassDescription: "Data Structures - Section 01",
-      SemesterCourseId: "2",
-      LecturerAccountCode: "LEC00004",
-      StudentAccountCode: "STU00004",
-      EnrollmentDescription: "Regular enrollment",
-    },
-  ],
-};
 interface CreatePlanModalProps {
   open: boolean;
   onCancel: () => void;
@@ -115,23 +29,42 @@ export const CreatePlanModal: React.FC<CreatePlanModalProps> = (props) => {
   return <ModalContent {...props} />;
 };
 
+const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target?.result as ArrayBuffer);
+    reader.onerror = (err) => reject(err);
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+const getNativeFile = (fileLike: any): File => {
+  return fileLike && fileLike.originFileObj
+    ? (fileLike.originFileObj as File)
+    : (fileLike as File);
+};
+
+const parseExcelSheet = (sheet: XLSX.WorkSheet): any[] => {
+  return XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: "",
+  });
+};
+
 function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
-  // ... (Giữ nguyên các state và hooks)
   const [fileListExcel, setFileListExcel] = useState<UploadFile[]>([]);
   const [fileListPdf, setFileListPdf] = useState<UploadFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const { message } = App.useApp();
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [livePreviewData, setLivePreviewData] = useState<PreviewData | null>(
     null
   );
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const { user } = useAuth();
 
-  // ... (Giữ nguyên handleDownloadTemplate, handleCreate, handleClose, handlePreviewClick)
   const handleDownloadTemplate = async () => {
     try {
-      message.loading("Downloading template...", 0);
       const blob = await adminService.downloadExcelTemplate();
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement("a");
@@ -141,11 +74,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-      message.destroy();
-      message.success("Template downloaded successfully!");
     } catch (error) {
-      message.destroy();
-      message.error("Failed to download template.");
       console.error("Download template error:", error);
     }
   };
@@ -154,73 +83,57 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     const semesterCodePlaceholder = `NEW_SEMESTER_${Date.now()}`;
 
     if (fileListExcel.length === 0) {
-      message.error("Please upload semester course file.");
       return;
     }
     if (fileListPdf.length === 0) {
-      message.error("Please upload class student file.");
       return;
     }
 
     setIsCreating(true);
     try {
-      // Logic upload file
       const semesterFormData = new FormData();
       if (fileListExcel[0]) {
         const file = fileListExcel[0].originFileObj || fileListExcel[0];
         semesterFormData.append("file", file as File);
       } else {
-        message.error("Uploaded semester course file is invalid.");
         setIsCreating(false);
         return;
       }
 
-      message.loading("Uploading semester course data...", 0);
       const semesterResponse = await adminService.uploadSemesterCourseData(
         semesterCodePlaceholder,
         semesterFormData
       );
-      message.destroy();
 
       const classFormData = new FormData();
       if (fileListPdf[0]) {
         const file = fileListPdf[0].originFileObj || fileListPdf[0];
         classFormData.append("file", file as File);
       } else {
-        message.error("Uploaded class student file is invalid.");
         setIsCreating(false);
         return;
       }
 
-      message.loading("Uploading class student data...", 0);
       const classResponse = await adminService.uploadClassStudentData(
         semesterCodePlaceholder,
         classFormData
       );
-      message.destroy();
 
-      message.success("Semester plan created successfully!");
       if (semesterResponse.warnings && semesterResponse.warnings.length > 0) {
         semesterResponse.warnings.forEach((warning: string) => {
-          message.warning(warning);
+          console.warn(warning);
         });
       }
       if (classResponse.warnings && classResponse.warnings.length > 0) {
         classResponse.warnings.forEach((warning: string) => {
-          message.warning(warning);
+          console.warn(warning);
         });
       }
 
       handleClose();
       onCreate({});
     } catch (error: any) {
-      message.destroy();
       console.error("Error uploading semester plan:", error);
-      message.error(
-        error.response?.data?.errorMessages?.[0] ||
-          error.response?.data?.message ||
-          "Failed to create semester plan."
-      );
     } finally {
       setIsCreating(false);
     }
@@ -235,24 +148,141 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }, 300);
   };
 
-  const handlePreviewClick = () => {
-    if (fileListExcel.length > 0 && fileListPdf.length > 0) {
-      setLivePreviewData(mockPreviewData);
-      message.success("Successfully loaded structural preview from files.");
-    } else {
-      setLivePreviewData(null);
-      message.warning(
+  const handlePreviewClick = async () => {
+    if (fileListExcel.length === 0 || fileListPdf.length === 0) {
+      console.warn(
         "Please upload both Excel files to preview the structural plan."
       );
+      setLivePreviewData(null);
+      setIsPreviewModalOpen(true);
+      return;
     }
+
+    setIsPreviewLoading(true);
     setIsPreviewModalOpen(true);
+    setLivePreviewData(null);
+
+    try {
+      const filePlan = getNativeFile(fileListExcel[0]);
+      const fileRoster = getNativeFile(fileListPdf[0]);
+
+      const [planBuffer, rosterBuffer] = await Promise.all([
+        readFileAsArrayBuffer(filePlan),
+        readFileAsArrayBuffer(fileRoster),
+      ]);
+
+      const planWb = XLSX.read(planBuffer);
+      const rosterWb = XLSX.read(rosterBuffer);
+
+      const planSheet = planWb.Sheets[planWb.SheetNames[0]];
+      const rosterSheet = rosterWb.Sheets[rosterWb.SheetNames[0]];
+
+      if (!planSheet || !rosterSheet) {
+        throw new Error("One of the Excel files is empty or invalid.");
+      }
+
+      const planJson = parseExcelSheet(planSheet);
+      const rosterJson = parseExcelSheet(rosterSheet);
+
+      const mapToKeys = (
+        data: any[],
+        keys: string[]
+      ): { [key: string]: any }[] => {
+        const headers = (data[0] || []).map((h: string) =>
+          (h || "").toString().trim()
+        );
+
+        const normalize = (s: string) =>
+          (s || "")
+            .toString()
+            .toLowerCase()
+            .replace(/\s+/g, "")
+            .replace(/[_-]/g, "");
+
+        const normalizedHeaderToIndex: Record<string, number> = {};
+        headers.forEach((h: string, idx: number) => {
+          const n = normalize(h);
+          if (!(n in normalizedHeaderToIndex)) {
+            normalizedHeaderToIndex[n] = idx;
+          }
+        });
+
+        const missing: string[] = [];
+        const keyToIndex: Record<string, number> = {};
+        keys.forEach((k) => {
+          const n = normalize(k);
+          const idx = normalizedHeaderToIndex[n];
+          if (idx === undefined) {
+            missing.push(k);
+          } else {
+            keyToIndex[k] = idx;
+          }
+        });
+
+        if (missing.length > 0) {
+          throw new Error(
+            `File headers do not match template. Missing: ${missing.join(
+              ", "
+            )}. Found: ${headers.join(", ")}`
+          );
+        }
+
+        return data.slice(1).map((row, rowIndex) => {
+          const rowObject: { [key: string]: any } = {
+            key: rowIndex.toString(),
+          };
+          keys.forEach((k) => {
+            const idx = keyToIndex[k];
+            rowObject[k] = row ? row[idx] : undefined;
+          });
+          return rowObject;
+        });
+      };
+
+      const semesterPlanKeys = [
+        "SemesterCode",
+        "AcademicYear",
+        "SemesterNote",
+        "StartDate",
+        "EndDate",
+        "CourseCode",
+        "CourseName",
+        "CourseDescription",
+        "CourseElementName",
+        "CourseElementDescription",
+        "CourseElementWeight",
+        "LecturerAccountCode",
+      ];
+
+      const classRosterKeys = [
+        "ClassCode",
+        "ClassDescription",
+        "SemesterCourseId",
+        "LecturerAccountCode",
+        "StudentAccountCode",
+        "EnrollmentDescription",
+      ];
+
+      const semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
+      const classRosterData = mapToKeys(rosterJson, classRosterKeys);
+
+      setLivePreviewData({
+        semesterPlan: semesterPlanData as any,
+        classRoster: classRosterData as any,
+      });
+    } catch (err: any) {
+      console.error("Error parsing Excel for preview:", err);
+      setLivePreviewData(null);
+    } finally {
+      setIsPreviewLoading(false);
+    }
   };
 
   const uploadPropsExcel = {
     fileList: fileListExcel,
     maxCount: 1,
     accept: ".xlsx, .xls",
-    showUploadList: false, // <-- Giữ nguyên
+    showUploadList: false,
     onRemove: () => setFileListExcel([]),
     beforeUpload: (file: UploadFile) => {
       setFileListExcel([file]);
@@ -264,7 +294,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     fileList: fileListPdf,
     maxCount: 1,
     accept: ".xlsx, .xls",
-    showUploadList: false, // <-- Giữ nguyên
+    showUploadList: false,
     onRemove: () => setFileListPdf([]),
     beforeUpload: (file: UploadFile) => {
       setFileListPdf([file]);
@@ -272,7 +302,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     },
   };
 
-  // Style inline cho tên file (giữ nguyên)
   const fileNameStyle: React.CSSProperties = {
     fontSize: "16px",
     color: "#333",
@@ -287,28 +316,22 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     textAlign: "center",
   };
 
-  // --- REDESIGN LAYOUT: BỐ CỤC DỌC ---
   const CombinedStepContent = (
     <div className={styles.stepContent}>
       <Title level={4} style={{ marginBottom: "20px" }}>
         Import Excel Files
       </Title>
 
-      {/* 1. TEMPLATE ACTIONS */}
       <div style={{ marginBottom: "24px" }}>
         <Title level={5}>Template Actions</Title>
         <Space direction="horizontal" style={{ width: "100%" }} wrap>
-          <Button
-            icon={<DownloadOutlined />}
-            // Bỏ class .actionButton cũ
-            onClick={handleDownloadTemplate}
-          >
+          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
             Download Template
           </Button>
           <Button
             icon={<EyeOutlined />}
             variant="outline"
-            className={styles.previewButton} // Giữ lại previewButton nếu có style riêng
+            className={styles.previewButton}
             onClick={handlePreviewClick}
             style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
             disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
@@ -318,7 +341,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         </Space>
       </div>
 
-      {/* 2. UPLOAD SEMESTER COURSE FILE */}
       <div style={{ marginBottom: "24px" }}>
         <Title level={5}>Upload Semester Course File</Title>
         <Dragger {...uploadPropsExcel} className={styles.dragger}>
@@ -344,7 +366,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         </Dragger>
       </div>
 
-      {/* 3. UPLOAD CLASS STUDENT FILE */}
       <div>
         <Title level={5}>Upload Class Student File</Title>
         <Dragger {...uploadPropsPdf} className={styles.dragger}>
@@ -372,7 +393,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     </div>
   );
 
-  // ... (Giữ nguyên renderFooter và return)
   const renderFooter = () => (
     <Space>
       <Button onClick={handleClose}>Cancel</Button>
@@ -398,7 +418,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         open={open}
         onCancel={handleClose}
         footer={renderFooter()}
-        width={700} // Giữ nguyên chiều rộng 700px
+        width={700}
       >
         <div>{CombinedStepContent}</div>
       </Modal>
@@ -408,6 +428,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         onCancel={() => setIsPreviewModalOpen(false)}
         onConfirm={() => setIsPreviewModalOpen(false)}
         previewData={livePreviewData}
+        isLoading={isPreviewLoading}
       />
     </>
   );

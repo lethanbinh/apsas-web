@@ -1,10 +1,9 @@
-// Tên file: components/SemesterPlans/PreviewTable.tsx
 "use client";
 
 import React from "react";
 import { Table } from "antd";
 import type { TableProps } from "antd";
-import styles from "./PreviewPlanModal.module.css"; // Dùng file CSS mới
+import styles from "./PreviewPlanModal.module.css";
 
 interface PreviewTableProps {
   columns: TableProps<any>["columns"];
