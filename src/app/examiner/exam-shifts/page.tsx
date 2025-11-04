@@ -1,29 +1,30 @@
 "use client";
 
-import { ExamShiftModal } from "@/components/examiner/ExamShiftModal";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  ExamShift,
-  mockCourses,
-  mockExamShifts,
-  mockSemesters,
-} from "@/components/examiner/mockData";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import type { TableProps } from "antd";
-import {
+  Table,
+  Spin,
   Alert,
   App,
   Button,
-  Select,
   Space,
-  Spin,
-  Table,
-  Tag,
   Typography,
+  Select,
+  Tag,
 } from "antd";
+import type { TableProps } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { format } from "date-fns";
+import { ExamSession, examSessionService } from "@/services/examSessionService";
+import { classService, ClassInfo } from "@/services/classService";
+import {
+  AssessmentTemplate,
+  assessmentTemplateService,
+} from "@/services/assessmentTemplateService";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
 import styles from "./ExamShifts.module.css";
+import { AddExamShiftModal } from "@/components/examiner/AddExamShiftModal";
+import { EditExamShiftModal } from "@/components/examiner/EditExamShiftModal";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -36,66 +37,98 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-const getStatusTag = (startDate: string, endDate: string) => {
-  const now = new Date();
-  const start = new Date(startDate.endsWith("Z") ? startDate : startDate + "Z");
-  const end = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
-
-  if (now > end) {
+const getStatusTag = (status: string) => {
+  if (status === "ENDED") {
     return <Tag color="green">Finished</Tag>;
   }
-  if (now >= start && now <= end) {
+  if (status === "ACTIVE") {
     return <Tag color="processing">In Progress</Tag>;
   }
-  return <Tag color="blue">Upcoming</Tag>;
+  return <Tag color="blue">{status}</Tag>;
 };
 
 const ExamShiftPageContent = () => {
-  const [shifts, setShifts] = useState<ExamShift[]>(mockExamShifts);
-  const [loading, setLoading] = useState(false);
+  const [shifts, setShifts] = useState<ExamSession[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingShift, setEditingShift] = useState<ExamShift | null>(null);
 
-  const [filterSemester, setFilterSemester] = useState<string>("all");
-  const [filterCourse, setFilterCourse] = useState<string>("all");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<ExamSession | null>(null);
+
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
+  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
+
+  const [filterClass, setFilterClass] = useState<number | undefined>(undefined);
+  const [filterTemplate, setFilterTemplate] = useState<number | undefined>(
+    undefined
+  );
 
   const { modal } = App.useApp();
   const router = useRouter();
 
+  const fetchShifts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await examSessionService.getExamSessions({
+        classId: filterClass,
+        assessmentTemplateId: filterTemplate,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setShifts(response.items);
+    } catch (err: any) {
+      setError(err.message || "Failed to load exam shifts.");
+    } finally {
+      setLoading(false);
+    }
+  }, [filterClass, filterTemplate]);
+
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [classResponse, templateResponse] = await Promise.all([
+          classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
+          assessmentTemplateService.getAssessmentTemplates({
+            pageNumber: 1,
+            pageSize: 1000,
+          }),
+        ]);
+        setClasses(classResponse.classes);
+        setTemplates(templateResponse.items);
+      } catch (err) {
+        console.error("Failed to fetch filters:", err);
+      }
+    };
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    fetchShifts();
+  }, [fetchShifts]);
+
   const handleOpenCreate = () => {
     setEditingShift(null);
-    setIsModalOpen(true);
+    setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (record: ExamShift) => {
+  const handleOpenEdit = (record: ExamSession) => {
     setEditingShift(record);
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
   const handleModalCancel = () => {
-    setIsModalOpen(false);
+    setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
     setEditingShift(null);
   };
 
-  const handleModalOk = (values: Omit<ExamShift, "id" | "status">) => {
-    setLoading(true);
-    if (editingShift) {
-      setShifts(
-        shifts.map((s) =>
-          s.id === editingShift.id ? { ...editingShift, ...values } : s
-        )
-      );
-    } else {
-      const newShift: ExamShift = {
-        ...values,
-        id: Math.max(0, ...shifts.map((s) => s.id)) + 1,
-      };
-      setShifts([newShift, ...shifts]);
-    }
-    setLoading(false);
-    setIsModalOpen(false);
+  const handleModalOk = () => {
+    setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
     setEditingShift(null);
+    fetchShifts();
   };
 
   const handleDelete = (id: number) => {
@@ -107,97 +140,93 @@ const ExamShiftPageContent = () => {
       cancelText: "No",
       onOk: async () => {
         setLoading(true);
-        setShifts(shifts.filter((s) => s.id !== id));
-        setLoading(false);
+        try {
+          await examSessionService.deleteExamSession(id);
+          fetchShifts();
+        } catch (err: any) {
+          setError(err.message || "Failed to delete shift.");
+        } finally {
+          setLoading(false);
+        }
       },
     });
   };
 
-  const filteredData = useMemo(() => {
-    return shifts.filter((shift) => {
-      const semesterMatch =
-        filterSemester === "all" || shift.semester === filterSemester;
-      const courseMatch =
-        filterCourse === "all" || shift.course === filterCourse;
-      return semesterMatch && courseMatch;
-    });
-  }, [shifts, filterSemester, filterCourse]);
-
-  const columns: TableProps<ExamShift>["columns"] = [
+  const columns: TableProps<ExamSession>["columns"] = [
     {
-      title: "No",
+      title: "ID",
       dataIndex: "id",
       key: "id",
       sorter: (a, b) => a.id - b.id,
     },
     {
       title: "Paper",
-      dataIndex: "paper",
+      dataIndex: "assessmentTemplateName",
       key: "paper",
     },
     {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
+      title: "Class",
+      dataIndex: "classCode",
+      key: "classCode",
     },
     {
       title: "Start date",
-      dataIndex: "startDate",
-      key: "startDate",
+      dataIndex: "startAt",
+      key: "startAt",
       render: (date) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
       sorter: (a, b) =>
-        new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+        new Date(a.startAt).getTime() - new Date(b.startAt).getTime(),
     },
     {
       title: "End date",
-      dataIndex: "endDate",
+      dataIndex: "endAt",
       key: "endDate",
       render: (date) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
     },
     {
       title: "Course",
-      dataIndex: "course",
+      dataIndex: "courseName",
       key: "course",
     },
     {
-      title: "Semester",
-      dataIndex: "semester",
-      key: "semester",
-    },
-    {
       title: "Examiner",
-      dataIndex: "examiner",
+      dataIndex: "lecturerName",
       key: "examiner",
     },
     {
       title: "Status",
+      dataIndex: "status",
       key: "status",
-      render: (_, record) => getStatusTag(record.startDate, record.endDate),
+      render: (status) => getStatusTag(status),
     },
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpenEdit(record);
-            }}
-          />
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(record.id);
-            }}
-          />
-        </Space>
-      ),
+      render: (_, record) => {
+        const isEditable = record.status !== "ENDED";
+        return (
+          <Space size="middle">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              disabled={!isEditable}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isEditable) handleOpenEdit(record);
+              }}
+            />
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDelete(record.id);
+              }}
+            />
+          </Space>
+        );
+      },
     },
   ];
 
@@ -209,29 +238,35 @@ const ExamShiftPageContent = () => {
         </Title>
         <Space>
           <Select
-            value={filterSemester}
-            onChange={setFilterSemester}
-            style={{ width: 200 }}
-          >
-            <Option value="all">All Semesters</Option>
-            {mockSemesters.map((sem) => (
-              <Option key={sem.id} value={sem.name}>
-                {sem.name}
-              </Option>
-            ))}
-          </Select>
-          <Select
-            value={filterCourse}
-            onChange={setFilterCourse}
+            allowClear
+            value={filterClass}
+            onChange={setFilterClass}
             style={{ width: 240 }}
-          >
-            <Option value="all">All Courses</Option>
-            {mockCourses.map((course) => (
-              <Option key={course.id} value={course.name}>
-                {course.name} ({course.code})
-              </Option>
-            ))}
-          </Select>
+            placeholder="Filter by Class"
+            showSearch
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+            options={classes.map((cls) => ({
+              label: `${cls.classCode} (${cls.courseName})`,
+              value: Number(cls.id),
+            }))}
+          />
+          <Select
+            allowClear
+            value={filterTemplate}
+            onChange={setFilterTemplate}
+            style={{ width: 240 }}
+            placeholder="Filter by Paper"
+            showSearch
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+            options={templates.map((t) => ({
+              label: t.name,
+              value: t.id,
+            }))}
+          />
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -259,7 +294,7 @@ const ExamShiftPageContent = () => {
       {!loading && !error && (
         <Table
           columns={columns}
-          dataSource={filteredData}
+          dataSource={shifts}
           rowKey="id"
           pagination={{ pageSize: 10 }}
           className={styles.table}
@@ -274,12 +309,22 @@ const ExamShiftPageContent = () => {
         />
       )}
 
-      <ExamShiftModal
-        open={isModalOpen}
-        initialData={editingShift}
-        onCancel={handleModalCancel}
-        onOk={handleModalOk}
-      />
+      {isAddModalOpen && (
+        <AddExamShiftModal
+          open={isAddModalOpen}
+          onCancel={handleModalCancel}
+          onOk={handleModalOk}
+        />
+      )}
+
+      {isEditModalOpen && editingShift && (
+        <EditExamShiftModal
+          open={isEditModalOpen}
+          initialData={editingShift}
+          onCancel={handleModalCancel}
+          onOk={handleModalOk}
+        />
+      )}
     </div>
   );
 };

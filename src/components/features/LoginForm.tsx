@@ -1,21 +1,14 @@
-/**
- * Login form component
- */
-
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
+import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
 import { RootState } from "@/store/store";
 import { LoginCredentials } from "@/types";
 import { Button, Checkbox, Form, Input } from "antd";
 import { getApps, initializeApp } from "firebase/app";
-import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithPopup
-} from "firebase/auth";
+import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
@@ -26,6 +19,38 @@ interface LoginFormProps {
   onError?: (error: string) => void;
 }
 
+const decodeJWT = (token: string): any => {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => {
+          return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+        })
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Failed to decode JWT:", error);
+    return null;
+  }
+};
+
+const mapRoleToNumber = (role: string | number): Role => {
+  if (typeof role === "number") {
+    return role as Role;
+  }
+  const roleLower = role.toLowerCase();
+  if (roleLower === "admin") return 0;
+  if (roleLower === "lecturer") return 1;
+  if (roleLower === "student") return 2;
+  if (roleLower === "hod") return 3;
+  if (roleLower === "examiner") return 4;
+  return 2; // Default to Student
+};
+
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
@@ -34,7 +59,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Firebase app initialization (moved outside to be consistent and avoid re-init)
   let app;
   if (getApps().length === 0) {
     app = initializeApp(config.firebase);
@@ -43,46 +67,39 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   }
   const auth = getAuth(app);
 
-  // Handle redirect result for Google Login
-  useEffect(() => {
-    // No longer needed for signInWithPopup, remove this block if switching to popup.
-  }, []); // Remove dependencies as well if the block is empty.
+  useEffect(() => {}, []);
 
   const handleSubmit = async (values: LoginCredentials) => {
     try {
       setErrors({});
       const result = await login(values);
 
-      // Wait a moment for user state to update with correct role
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Get user from Redux store
-      const state = (dispatch as any).getState?.() || null;
-      const currentUser = state ? state.auth?.user : user;
-      const userInfo = currentUser || result?.user;
-
       console.log("Login successful!");
 
-      // Redirect based on user role
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/dashboard", // Admin
         1: "/classes/my-classes/lecturer", // Lecturer
         2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
+        4: "/examiner/exam-shifts", // examiner
       };
 
-      const redirectPath =
-        userInfo?.role !== undefined
-          ? roleRedirects[userInfo.role] || "/home/student"
-          : "/home/student";
+      let userRole: Role = 2;
+
+      if (result && result.token) {
+        const decoded = decodeJWT(result.token);
+        userRole = mapRoleToNumber(decoded?.role || 2);
+      } else {
+        const state = (dispatch as any).getState?.() || null;
+        const currentUser = state ? state.auth?.user : user;
+        const userInfo = currentUser || result?.user;
+        userRole = mapRoleToNumber(userInfo?.role || 2);
+      }
+
+      const redirectPath = roleRedirects[userRole] || "/home/student";
 
       console.log("Redirecting to:", redirectPath);
-      console.log(
-        "User role is:",
-        userInfo?.role,
-        "which maps to:",
-        redirectPath
-      );
+      console.log("User role is:", userRole, "which maps to:", redirectPath);
 
       router.push(redirectPath);
       onSuccess?.();
@@ -97,7 +114,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider); // Use signInWithPopup
+      const result = await signInWithPopup(auth, provider);
       console.log("result:", result);
       if (result && result.user) {
         const idToken = await result.user.getIdToken();
@@ -109,29 +126,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           if (response.result.token) {
             localStorage.setItem("auth_token", response.result.token);
 
-            // Decode JWT to get user role for redirect
             const token = response.result.token;
-            const base64Url = token.split(".")[1];
-            const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-            const jsonPayload = decodeURIComponent(
-              atob(base64)
-                .split("")
-                .map((c) => {
-                  return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-                })
-                .join("")
-            );
-            const decoded = JSON.parse(jsonPayload);
+            const decoded = decodeJWT(token);
 
             const roleRedirects: { [key: number]: string } = {
               0: "/admin/dashboard", // Admin
               1: "/classes/my-classes/lecturer", // Lecturer
               2: "/classes/my-classes/student", // Student
               3: "/hod/semester-plans", // HOD
+              4: "/examiner/exam-shifts", // examiner
             };
 
-            console.log("Decoded role from JWT:", decoded.role);
-            const redirectPath = roleRedirects[decoded.role] || "/home/student";
+            const userRole = mapRoleToNumber(decoded?.role || 2);
+            console.log(
+              "Decoded role from JWT:",
+              decoded?.role,
+              "Mapped to:",
+              userRole
+            );
+
+            const redirectPath = roleRedirects[userRole] || "/home/student";
             console.log("Redirecting to:", redirectPath);
             router.push(redirectPath);
             onSuccess?.();

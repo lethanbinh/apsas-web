@@ -209,9 +209,6 @@ const TasksPage = () => {
                         {task.courseElementName}
                       </div>
                       {getStatusTag(task.status)}
-                      <button className={styles["export-button"]}>
-                        Export
-                      </button>
                       <svg
                         className={`${styles["question-dropdown-arrow"]} ${
                           openAssignments[task.id.toString()]

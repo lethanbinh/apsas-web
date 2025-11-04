@@ -1,6 +1,6 @@
 "use client";
 
-import { Spin, Button, Input, Radio, Space } from "antd";
+import { Spin, Button, Input, Radio, Space, Upload, App, Modal } from "antd";
 import { useState, useEffect } from "react";
 import styles from "./Tasks.module.css";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
@@ -17,6 +17,27 @@ import {
   AssessmentTemplate,
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
+import {
+  assessmentFileService,
+  AssessmentFile,
+} from "@/services/assessmentFileService";
+import {
+  UploadOutlined,
+  DeleteOutlined,
+  PaperClipOutlined,
+  DownloadOutlined,
+} from "@ant-design/icons";
+import type { UploadFile, UploadChangeParam } from "antd/es/upload/interface";
+import {
+  Document,
+  Packer,
+  Paragraph,
+  HeadingLevel,
+  TextRun,
+  AlignmentType,
+} from "docx";
+import { saveAs } from "file-saver";
+
 const { TextArea } = Input;
 
 const RubricItemComponent = ({
@@ -657,8 +678,11 @@ export const LecturerTaskContent = ({
 }) => {
   const [template, setTemplate] = useState<AssessmentTemplate | null>(null);
   const [papers, setPapers] = useState<AssessmentPaper[]>([]);
+  const [files, setFiles] = useState<AssessmentFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingPaper, setIsAddingPaper] = useState(false);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { modal } = App.useApp();
 
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
@@ -680,6 +704,7 @@ export const LecturerTaskContent = ({
       if (response.items.length > 0) {
         setTemplate(response.items[0]);
         fetchPapers(response.items[0].id);
+        fetchFiles(response.items[0].id);
       } else {
         setTemplate(null);
       }
@@ -700,6 +725,19 @@ export const LecturerTaskContent = ({
       setPapers(response.items);
     } catch (error) {
       console.error("Failed to fetch papers:", error);
+    }
+  };
+
+  const fetchFiles = async (templateId: number) => {
+    try {
+      const response = await assessmentFileService.getFilesForTemplate({
+        assessmentTemplateId: templateId,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setFiles(response.items);
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
     }
   };
 
@@ -762,6 +800,139 @@ export const LecturerTaskContent = ({
     }
   };
 
+  const handleUploadFile = async () => {
+    if (fileList.length === 0 || !template) {
+      console.error("Please select files to upload.");
+      return;
+    }
+
+    const uploadPromises = fileList.map((file) => {
+      const nativeFile = file.originFileObj as File;
+      return assessmentFileService.createAssessmentFile({
+        File: nativeFile,
+        Name: nativeFile.name,
+        FileTemplate: 0,
+        AssessmentTemplateId: template.id,
+      });
+    });
+
+    try {
+      await Promise.all(uploadPromises);
+      setFileList([]);
+      fetchFiles(template.id);
+    } catch (error: any) {
+      console.error("File upload error:", error);
+    }
+  };
+
+  const handleDeleteFile = (fileId: number) => {
+    if (!template) return;
+    modal.confirm({
+      title: "Delete this file?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await assessmentFileService.deleteAssessmentFile(fileId);
+          fetchFiles(template.id);
+        } catch (error: any) {
+          console.error("Failed to delete file:", error);
+        }
+      },
+    });
+  };
+
+  const handleFileChange = (info: UploadChangeParam) => {
+    setFileList(info.fileList);
+  };
+
+  const handleExport = async () => {
+    if (!template) {
+      console.error("No template data to export.");
+      return;
+    }
+
+    const sections = [];
+
+    sections.push(
+      new Paragraph({
+        text: template.name,
+        heading: HeadingLevel.TITLE,
+        alignment: AlignmentType.CENTER,
+      })
+    );
+    sections.push(
+      new Paragraph({ text: template.description, style: "italic" })
+    );
+    sections.push(new Paragraph({ text: " " }));
+
+    for (const paper of papers) {
+      sections.push(
+        new Paragraph({
+          text: paper.name,
+          heading: HeadingLevel.HEADING_1,
+        })
+      );
+      sections.push(new Paragraph({ text: paper.description }));
+      sections.push(new Paragraph({ text: " " }));
+
+      const questions = await assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+
+      for (const [index, question] of questions.items.entries()) {
+        sections.push(
+          new Paragraph({
+            text: `Question ${index + 1}: ${question.questionText}`,
+            heading: HeadingLevel.HEADING_2,
+          })
+        );
+        sections.push(
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Score: ", bold: true }),
+              new TextRun(question.score.toString()),
+            ],
+          })
+        );
+        sections.push(new Paragraph({ text: " " }));
+        sections.push(
+          new Paragraph({
+            children: [new TextRun({ text: "Sample Input: ", bold: true })],
+          })
+        );
+        sections.push(new Paragraph({ text: question.questionSampleInput }));
+        sections.push(new Paragraph({ text: " " }));
+        sections.push(
+          new Paragraph({
+            children: [new TextRun({ text: "Sample Output: ", bold: true })],
+          })
+        );
+        sections.push(new Paragraph({ text: question.questionSampleOutput }));
+        sections.push(new Paragraph({ text: " " }));
+      }
+    }
+
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: sections,
+        },
+      ],
+    });
+
+    try {
+      const blob = await Packer.toBlob(doc);
+      saveAs(blob, `${template.name || "exam"}.docx`);
+    } catch (err) {
+      console.error("Error generating docx:", err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center" }}>
@@ -811,6 +982,64 @@ export const LecturerTaskContent = ({
         )
       ) : (
         <>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleExport}
+            style={{ marginBottom: 16 }}
+          >
+            Export to .docx
+          </Button>
+          <div className={styles["basic-assignment-section"]}>
+            <h3 className={styles["question-title-text"]}>Attached Files</h3>
+            <Space direction="vertical" style={{ width: "100%" }}>
+              {files.map((file) => (
+                <Space
+                  key={file.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <PaperClipOutlined /> {file.name}
+                  </a>
+                  {isEditable && (
+                    <Button
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDeleteFile(file.id)}
+                    />
+                  )}
+                </Space>
+              ))}
+              {isEditable && (
+                <Space.Compact style={{ width: "100%", marginTop: "10px" }}>
+                  <Upload
+                    fileList={fileList}
+                    onChange={handleFileChange}
+                    beforeUpload={() => false}
+                    multiple={true}
+                  >
+                    <Button icon={<UploadOutlined />}>Select Files</Button>
+                  </Upload>
+                  <Button
+                    type="primary"
+                    onClick={handleUploadFile}
+                    disabled={fileList.length === 0}
+                  >
+                    Upload ({fileList.length})
+                  </Button>
+                </Space.Compact>
+              )}
+            </Space>
+          </div>
+
           {papers.map((paper) => (
             <PaperItemComponent
               key={paper.id}
@@ -868,3 +1097,11 @@ export const LecturerTaskContent = ({
     </div>
   );
 };
+
+export default function LecturerTaskContentWrapper(props: any) {
+  return (
+    <App>
+      <LecturerTaskContent {...props} />
+    </App>
+  );
+}

@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix Bugs UI">
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix bugs examiner role">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -85,6 +85,8 @@
       <updated>1762171678143</updated>
       <workItem from="1762171679610" duration="1697000" />
       <workItem from="1762178816952" duration="4000" />
+      <workItem from="1762229919429" duration="69000" />
+      <workItem from="1762230322334" duration="5000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -102,7 +104,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762178718338</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Fix bugs examiner role">
+      <option name="closed" value="true" />
+      <created>1762229980250</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1762229980250</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -111,6 +121,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Optimize speed and fix deploy" />
     <MESSAGE value="Fix Bugs UI" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix Bugs UI" />
+    <MESSAGE value="Fix bugs examiner role" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix bugs examiner role" />
   </component>
 </project>

@@ -34,11 +34,11 @@ export const API_ENDPOINTS = {
   },
   // --- KẾT THÚC SỬA LỖI ---
   HOD: {
-    APPROVAL_LIST: '/AssignRequest/list',
-    ASSIGN_REQUEST_UPDATE: '/AssignRequest',
-    ASSESSMENT_TEMPLATE_LIST: '/AssessmentTemplate/list', 
-    ASSESSMENT_TEMPLATE_DETAIL: '/AssessmentTemplate', 
-    RUBRIC_ITEM_BY_QUESTION: '/RubricItem/question',
+    APPROVAL_LIST: "/AssignRequest/list",
+    ASSIGN_REQUEST_UPDATE: "/AssignRequest",
+    ASSESSMENT_TEMPLATE_LIST: "/AssessmentTemplate/list",
+    ASSESSMENT_TEMPLATE_DETAIL: "/AssessmentTemplate",
+    RUBRIC_ITEM_BY_QUESTION: "/RubricItem/question",
   },
 } as const;
 
@@ -71,6 +71,7 @@ export const ROLES = {
   LECTURER: 1,
   STUDENT: 2,
   HOD: 3,
+  EXAMINER: 4,
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -125,6 +126,13 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       href: "/hod/semester-plans",
     },
     { key: "approval", label: "Approval", href: "/hod/approval" },
+  ],
+  [ROLES.EXAMINER]: [
+    {
+      key: "exam-shifts",
+      label: "Exam Shifts",
+      href: "/examiner/exam-shifts",
+    },
   ],
 };
 

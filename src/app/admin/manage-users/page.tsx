@@ -1,64 +1,78 @@
 "use client";
 
 import { UserDetailFormModal } from "@/components/admin/UserDetailFormModal";
-import { accountService } from "@/services/accountService"; // For fetching account list
-import { adminService } from "@/services/adminService"; // For Admin CRUD operations
+import { Role } from "@/lib/constants";
+import { accountService } from "@/services/accountService";
+import { adminService } from "@/services/adminService";
+import { CreateExaminerPayload, examinerService } from "@/services/examinerService";
 import { User, UserUpdatePayload } from "@/types";
-import { Button } from "antd";
-import React, { useEffect, useState } from "react";
+import { App, Button } from "antd";
+import React, { useCallback, useEffect, useState } from "react";
 import styles from "./ManageUsers.module.css";
 
-const ManageUsersPage: React.FC = () => {
+const ManageUsersPageContent: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [pageSize] = useState<number>(10); // Users per page
+  const [pageSize] = useState<number>(10);
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  // Removed delete functionality
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreateModalVisible, setIsCreateModalVisible] =
-    useState<boolean>(false); // State for create modal
+    useState<boolean>(false);
 
-  // Delete functionality removed
+  const { modal, notification } = App.useApp();
 
-  // Handlers for edit modal
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await accountService.getAccountList(
+        currentPage,
+        pageSize
+      );
+      setUsers(response.users || []);
+      setTotalUsers(response.total);
+    } catch (err: any) {
+      console.error("Failed to fetch users:", err);
+      setError(err.message || "Failed to fetch users");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
   const showEditModal = (user: User) => {
     setEditingUser(user);
     setIsEditModalVisible(true);
   };
 
-  const handleEditOk = async (values: UserUpdatePayload) => {
+  const handleEditOk = async (
+    values: UserUpdatePayload | CreateExaminerPayload,
+    role: Role
+  ) => {
     if (editingUser) {
       try {
-        // Only send editable fields to API (role is not editable)
+        setLoading(true);
         const updatePayload = {
-          phoneNumber: values.phoneNumber,
-          fullName: values.fullName,
-          address: values.address,
+          phoneNumber: (values as UserUpdatePayload).phoneNumber,
+          fullName: (values as UserUpdatePayload).fullName,
+          address: (values as UserUpdatePayload).address,
         };
 
         await adminService.updateAccount(editingUser.id, updatePayload);
 
-        // Close modal first
         setIsEditModalVisible(false);
         setEditingUser(null);
-
-        // Refetch users to show updated data - this will trigger the useEffect
-        setLoading(true);
-        const response = await accountService.getAccountList(
-          currentPage,
-          pageSize
-        );
-        setUsers(response.users || []);
-        setTotalUsers(response.total);
-        setLoading(false);
-
-        console.log("✅ User updated successfully and list refreshed");
+        notification.success({ message: "User updated successfully" });
+        fetchUsers();
       } catch (err: any) {
         console.error("Failed to update user:", err);
         setError(err.message || "Failed to update user");
+        setLoading(false);
       }
     }
   };
@@ -68,57 +82,35 @@ const ManageUsersPage: React.FC = () => {
     setEditingUser(null);
   };
 
-  // Handlers for create modal
   const showCreateModal = () => {
     setIsCreateModalVisible(true);
   };
 
-  const handleCreateOk = async (values: UserUpdatePayload) => {
+  const handleCreateOk = async (
+    values: UserUpdatePayload | CreateExaminerPayload,
+    role: Role
+  ) => {
     try {
-      console.log("Creating user with payload:", values);
-      await adminService.createAccount(values);
-
-      // Close modal first
-      setIsCreateModalVisible(false);
-
-      // Refetch users to show new data
       setLoading(true);
-      const response = await accountService.getAccountList(1, pageSize); // Use first page after create
-      setUsers(response.users || []);
-      setTotalUsers(response.total);
-      setLoading(false);
+      if (role === 4) {
+        await examinerService.createExaminer(values as CreateExaminerPayload);
+      } else {
+        await adminService.createAccount(values as UserUpdatePayload);
+      }
 
-      console.log("✅ User created successfully and list refreshed");
+      setIsCreateModalVisible(false);
+      notification.success({ message: "User created successfully" });
+      fetchUsers();
     } catch (err: any) {
       console.error("Failed to create user:", err);
       setError(err.message || "Failed to create user");
+      setLoading(false);
     }
   };
 
   const handleCreateCancel = () => {
     setIsCreateModalVisible(false);
   };
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoading(true);
-        const response = await accountService.getAccountList(
-          currentPage,
-          pageSize
-        ); // Use accountService for list
-        setUsers(response.users || []); // Ensure users is always an array
-        setTotalUsers(response.total);
-      } catch (err: any) {
-        console.error("Failed to fetch users:", err); // Log the actual error
-        setError(err.message || "Failed to fetch users");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, [currentPage, pageSize]); // Depend on currentPage and pageSize for refetching
 
   const SortIcon = () => (
     <svg
@@ -139,7 +131,6 @@ const ManageUsersPage: React.FC = () => {
   );
 
   const mapRoleToString = (role: number): string => {
-    // Ensure role is a number
     const roleNumber = typeof role === "string" ? parseInt(role, 10) : role;
 
     switch (roleNumber) {
@@ -151,6 +142,8 @@ const ManageUsersPage: React.FC = () => {
         return "Student";
       case 3:
         return "HOD";
+      case 4:
+        return "Examiner";
       default:
         return `Unknown (${role})`;
     }
@@ -191,8 +184,7 @@ const ManageUsersPage: React.FC = () => {
       {error && <p className="!text-red-500">Error: {error}</p>}
       {!loading && !error && (!users || users.length === 0) && (
         <p>No users found.</p>
-      )}{" "}
-      {/* Added !users check */}
+      )}
       {!loading && !error && users && users.length > 0 && (
         <table className={styles.table}>
           <thead className={styles["table-header"]}>
@@ -222,7 +214,6 @@ const ManageUsersPage: React.FC = () => {
           </thead>
           <tbody>
             {users.map((user, index) => {
-              // Ensure user.id is valid; otherwise, use index as a fallback and warn
               const key =
                 user.id !== undefined && user.id !== null
                   ? user.id
@@ -290,7 +281,7 @@ const ManageUsersPage: React.FC = () => {
           visible={isCreateModalVisible}
           onCancel={handleCreateCancel}
           onOk={handleCreateOk}
-          editingUser={null} // No editing user for creation
+          editingUser={null}
           confirmLoading={loading}
         />
       )}
@@ -298,4 +289,10 @@ const ManageUsersPage: React.FC = () => {
   );
 };
 
-export default ManageUsersPage;
+export default function ManageUsersPage() {
+  return (
+    <App>
+      <ManageUsersPageContent />
+    </App>
+  );
+}
