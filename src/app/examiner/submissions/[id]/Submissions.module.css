@@ -21,7 +21,3 @@
     border-radius: 8px;
     overflow: hidden;
 }
-
-.clickableRow:hover {
-    cursor: pointer;
-}

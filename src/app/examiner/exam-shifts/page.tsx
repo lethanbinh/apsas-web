@@ -21,6 +21,7 @@ import {
   Typography,
 } from "antd";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import styles from "./ExamShifts.module.css";
 
@@ -60,6 +61,7 @@ const ExamShiftPageContent = () => {
   const [filterCourse, setFilterCourse] = useState<string>("all");
 
   const { modal } = App.useApp();
+  const router = useRouter();
 
   const handleOpenCreate = () => {
     setEditingShift(null);
@@ -180,13 +182,19 @@ const ExamShiftPageContent = () => {
           <Button
             type="text"
             icon={<EditOutlined />}
-            onClick={() => handleOpenEdit(record)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenEdit(record);
+            }}
           />
           <Button
             type="text"
             danger
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(record.id);
+            }}
           />
         </Space>
       ),
@@ -255,6 +263,14 @@ const ExamShiftPageContent = () => {
           rowKey="id"
           pagination={{ pageSize: 10 }}
           className={styles.table}
+          onRow={(record) => {
+            return {
+              onClick: () => {
+                router.push(`/examiner/submissions/${record.id}`);
+              },
+              className: styles.clickableRow,
+            };
+          }}
         />
       )}
 
