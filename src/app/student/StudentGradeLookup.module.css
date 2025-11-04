@@ -1,0 +1,204 @@
+.wrapper {
+  width: 100%;
+  padding: 40px 60px;
+  background-color: #ffffff;
+  min-height: 100vh;
+}
+
+/* Header Section */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2F327D;
+  margin: 0 !important;
+}
+
+.branding {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  height: auto;
+  object-fit: contain;
+}
+
+.logoutButton {
+  height: 40px;
+  border-radius: 4px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.logoutButton:hover {
+  border-color: #FF4D4F;
+  color: #FF4D4F;
+}
+
+/* Search/Filter Section */
+.searchSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.searchItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.label {
+  color: #2F327D;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 100px;
+}
+
+.selectInput {
+  flex: 1;
+  max-width: 400px;
+}
+
+.courseInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.selectInput :global(.ant-select-selector) {
+  border-radius: 4px !important;
+  border: 1px solid #e0e0e0 !important;
+  height: 40px !important;
+  padding: 0 12px !important;
+}
+
+.selectInput :global(.ant-select-selection-item) {
+  line-height: 38px !important;
+}
+
+.selectInput :global(.ant-select-selection-placeholder) {
+  line-height: 38px !important;
+}
+
+.dropdownIcon {
+  color: #888;
+  font-size: 12px;
+}
+
+.courseInput {
+  flex: 1;
+  max-width: 400px;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+}
+
+.courseInput:focus,
+.courseInput:hover {
+  border-color: #4A90E2;
+}
+
+.searchButton {
+  background-color: #4A90E2;
+  border: none;
+  height: 40px;
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 0 24px;
+  margin-left: 12px;
+}
+
+.searchButton:hover {
+  background-color: #357ABD;
+}
+
+/* Table Section */
+.tableWrapper {
+  width: 100%;
+}
+
+.gradeTable :global(.ant-table) {
+  background: transparent;
+}
+
+.gradeTable :global(.ant-table-thead > tr > th) {
+  background: #2F327D !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: none !important;
+  padding: 16px !important;
+  text-align: left;
+}
+
+.gradeTable :global(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px !important;
+  color: #2F327D;
+}
+
+.gradeTable :global(.ant-table-container) {
+  border: none;
+}
+
+.tableRowEven {
+  background-color: #ffffff !important;
+}
+
+.tableRowOdd {
+  background-color: #f5f5f5 !important;
+}
+
+.gradeTable :global(.ant-table-tbody > tr:hover > td) {
+  background-color: #f0f8ff !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 20px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .searchSection {
+    width: 100%;
+  }
+
+  .searchItem {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .label {
+    min-width: auto;
+  }
+
+  .selectInput,
+  .courseInput {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .searchButton {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
