@@ -79,7 +79,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/dashboard", // Admin
         1: "/classes/my-classes/lecturer", // Lecturer
-        2: "/classes/my-classes/student", // Student
+        2: "/student", // Student
         3: "/hod/semester-plans", // HOD
         4: "/examiner/exam-shifts", // examiner
       };
@@ -132,7 +132,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             const roleRedirects: { [key: number]: string } = {
               0: "/admin/dashboard", // Admin
               1: "/classes/my-classes/lecturer", // Lecturer
-              2: "/classes/my-classes/student", // Student
+              2: "/student", // Student
               3: "/hod/semester-plans", // HOD
               4: "/examiner/exam-shifts", // examiner
             };

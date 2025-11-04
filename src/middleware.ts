@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const publicRoutes = ["/", "/login", "/reset-password"];
+  const publicRoutes = ["/", "/login", "/reset-password", "/pe"];
 
   const roleRoutes = {
     0: ["/admin/dashboard", "/admin/manage-users"], // Admin

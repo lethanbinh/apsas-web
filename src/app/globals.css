@@ -1696,3 +1696,13 @@ a {
   /* This is if we keep the .reset-password-form class, but we will change it to .login-form */
   max-width: none;
 }
+
+/* PEA Login Page */
+.pea-login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  padding: 20px;
+}

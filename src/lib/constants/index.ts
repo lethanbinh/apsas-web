@@ -64,6 +64,9 @@ export const ROUTES = {
   REGISTER: "/register",
   PROFILE: "/profile",
   DASHBOARD: "/dashboard",
+  STUDENT_GRADE_LOOKUP: "/student",
+  PE_LOGIN: "/pe",
+  PE_SUBMISSION: "/pe/submission",
 } as const;
 
 export const ROLES = {
@@ -95,6 +98,11 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       key: "all-classes",
       label: "All Classes",
       href: "/search-classes/student",
+    },
+    {
+      key: "grade-lookup",
+      label: "Grade Lookup",
+      href: "/student",
     },
   ],
   [ROLES.LECTURER]: [
