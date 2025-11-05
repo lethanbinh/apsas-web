@@ -2,19 +2,28 @@
 
 import { Alert, App, DatePicker, Form, Input, Modal, Select, Spin } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 import {
   AssessmentTemplate,
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
-import { StudentInClass } from "@/services/classService";
 import {
   ExamSession,
   examSessionService,
   UpdateExamSessionPayload,
 } from "@/services/examSessionService";
-import { studentManagementService } from "@/services/studentManagementService";
+import {
+  studentManagementService,
+  StudentDetail,
+} from "@/services/studentManagementService";
+import {
+  semesterService,
+  SemesterPlanDetail,
+  SemesterCourse,
+  Student,
+} from "@/services/semesterService";
+import { classService } from "@/services/classService";
 import { Dayjs } from "dayjs";
 
 const { Option } = Select;
@@ -42,8 +51,12 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [students, setStudents] = useState<StudentInClass[]>([]);
+  const [allStudents, setAllStudents] = useState<StudentDetail[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
+  const [semesterCourses, setSemesterCourses] = useState<SemesterCourse[]>([]);
+  const [currentSemesterCourseId, setCurrentSemesterCourseId] = useState<
+    number | null
+  >(null);
 
   const { notification } = App.useApp();
 
@@ -54,24 +67,46 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
       setIsFetching(true);
       setError(null);
       try {
-        const [templateData, studentData] = await Promise.all([
+        const [templateData, studentData, classData] = await Promise.all([
           assessmentTemplateService.getAssessmentTemplates({
             pageNumber: 1,
             pageSize: 1000,
           }),
-          studentManagementService.getStudentsInClass(initialData.classId),
+          studentManagementService.getStudentList(),
+          classService.getClassById(initialData.classId),
         ]);
 
         setTemplates(templateData.items);
-        setStudents(studentData);
+        setAllStudents(studentData);
+
+        const semesterCode = classData.semesterName.split(" - ")[0];
+        const semesterDetail = await semesterService.getSemesterPlanDetail(
+          semesterCode
+        );
+
+        const matchingCourse = semesterDetail.semesterCourses.find((sc) =>
+          sc.classes.some((c) => c.id === initialData.classId)
+        );
+
+        if (matchingCourse) {
+          setCurrentSemesterCourseId(matchingCourse.id);
+          setSemesterCourses(semesterDetail.semesterCourses);
+        }
+
+        const currentClassStudents =
+          await studentManagementService.getStudentsInClass(
+            initialData.classId
+          );
+        const currentStudentIds = currentClassStudents.map((s) => s.studentId);
 
         form.setFieldsValue({
           ...initialData,
-          classId: initialData.classId,
+          courseInfo: `${initialData.courseName} (${initialData.classCode}) / ${classData.semesterName}`,
+          semesterCourseId: matchingCourse?.id,
           assessmentTemplateId: initialData.assessmentTemplateId,
           startAt: parseUtcDate(initialData.startAt),
           endAt: parseUtcDate(initialData.endAt),
-          studentIds: studentData.map((s) => s.studentId),
+          studentIds: currentStudentIds,
         });
       } catch (err) {
         console.error("Failed to load modal data:", err);
@@ -83,6 +118,41 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
 
     fetchDependencies();
   }, [open, initialData, form]);
+
+  const studentOptions = useMemo(() => {
+    if (!currentSemesterCourseId) {
+      return allStudents.map((s) => ({
+        label: `${s.fullName} (${s.accountCode})`,
+        value: Number(s.studentId),
+      }));
+    }
+
+    const semesterCourse = semesterCourses.find(
+      (sc) => sc.id === currentSemesterCourseId
+    );
+    if (!semesterCourse) return [];
+
+    const allStudentsInCourse = new Map<number, Student>();
+    semesterCourse.classes.forEach((cls) => {
+      cls.students.forEach((student) => {
+        if (!allStudentsInCourse.has(student.account.id)) {
+          allStudentsInCourse.set(student.account.id, student);
+        }
+      });
+    });
+
+    return allStudents
+      .filter((s) => allStudentsInCourse.has(Number(s.accountId)))
+      .map((s) => ({
+        label: `${s.fullName} (${s.accountCode})`,
+        value: Number(s.studentId),
+      }));
+  }, [currentSemesterCourseId, semesterCourses, allStudents]);
+
+  const handleCourseChange = (value: number) => {
+    setCurrentSemesterCourseId(value);
+    form.setFieldsValue({ studentIds: [] });
+  };
 
   const handleFinish = async (values: any) => {
     setIsLoading(true);
@@ -130,8 +200,23 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
             />
           )}
 
-          <Form.Item name="classId" label="Class">
+          <Form.Item name="courseInfo" label="Course / Class / Semester">
             <Input disabled={true} />
+          </Form.Item>
+
+          <Form.Item
+            name="semesterCourseId"
+            label="Change Course (from same semester)"
+            rules={[{ required: true, message: "Please select a course" }]}
+          >
+            <Select
+              placeholder="Select a new course if needed"
+              options={semesterCourses.map((sc) => ({
+                label: `${sc.course.name} (${sc.course.code})`,
+                value: sc.id,
+              }))}
+              onChange={handleCourseChange}
+            />
           </Form.Item>
 
           <Form.Item
@@ -156,11 +241,8 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
             <Select
               mode="multiple"
               allowClear
-              placeholder="Select students"
-              options={students.map((s) => ({
-                label: `${s.studentName} (${s.studentCode})`,
-                value: s.studentId,
-              }))}
+              placeholder="Select students for this course"
+              options={studentOptions}
             />
           </Form.Item>
 

@@ -2,14 +2,10 @@
 
 import { Typography } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
-// BỎ FreeMode và thêm Navigation (nếu muốn) hoặc để Pagination
 import { Pagination, Navigation } from "swiper/modules";
-
-// Import CSS của Swiper
 import "swiper/css";
 import "swiper/css/pagination";
-import "swiper/css/navigation"; // Thêm CSS cho nút
-
+import "swiper/css/navigation";
 import { CategoryCard } from "./CategoryCard";
 import styles from "./CategorySlider.module.css";
 
@@ -23,8 +19,6 @@ import {
 import React from "react";
 
 const { Title } = Typography;
-
-// --- Dữ liệu mẫu (Giữ nguyên, không thay đổi) ---
 interface CategoryDataItem {
   id: number;
   title: string;
@@ -80,8 +74,6 @@ const categoryData: CategoryDataItem[] = [
     iconColor: "#E8D182",
   },
 ];
-// --- Hết dữ liệu mẫu ---
-
 export default function CategorySlider() {
   return (
     <div className={styles.sliderSection}>
@@ -90,28 +82,20 @@ export default function CategorySlider() {
       </Title>
 
       <Swiper
-        // CẬP NHẬT MODULES
-        modules={[Pagination, Navigation]} // Thêm Navigation (nút)
+        modules={[Pagination, Navigation]}
         spaceBetween={30}
-        // Bỏ slidesPerView="auto" và freeMode
-
         pagination={{ clickable: true }}
         className={styles.swiperContainer}
-        // THÊM BREAKPOINTS ĐỂ RESPONSIVE
         breakpoints={{
-          // Khi màn hình >= 640px
           640: {
             slidesPerView: 2,
             spaceBetween: 20,
           },
-          // Khi màn hình >= 1024px
           1024: {
-            slidesPerView: 3, // 3 slide trên màn lớn
+            slidesPerView: 3,
             spaceBetween: 30,
           },
         }}
-        // slidesPerView={1.2} // Số slide mặc định trên mobile (dưới 640px)
-        // centeredSlides={true} // Căn giữa slide trên mobile nếu slidesPerView là 1.2
       >
         {categoryData.map((category) => (
           <SwiperSlide key={category.id} className={styles.swiperSlide}>

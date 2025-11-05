@@ -5,7 +5,28 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix bugs examiner role">
+      <change afterPath="$PROJECT_DIR$/src/components/examiner/ViewStudentsModal.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/examiner/exam-shifts/ExamShifts.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/exam-shifts/ExamShifts.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-management/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/home/lecturer/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/lecturer/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/home/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/home/student/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/student/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/DetailAsm.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/DetailAsm.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/grading-history/GradingHistory.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/grading-history/GradingHistory.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/tasks/Tasks.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/tasks/Tasks.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/tasks/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/tasks/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/profile/Profile.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/profile/Profile.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/CategorySlider.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/CategorySlider.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/JoinClassSection.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/JoinClassSection.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/classes/MyCoursesGrid.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/classes/MyCoursesGrid.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/AddExamShiftModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AddExamShiftModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/EditExamShiftModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/EditExamShiftModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/SemesterPlans.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/SemesterPlans.module.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,6 +108,9 @@
       <workItem from="1762178816952" duration="4000" />
       <workItem from="1762229919429" duration="69000" />
       <workItem from="1762230322334" duration="5000" />
+      <workItem from="1762270379353" duration="165000" />
+      <workItem from="1762310394294" duration="3220000" />
+      <workItem from="1762319614010" duration="389000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -117,6 +141,29 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Optimize speed and fix deploy" />

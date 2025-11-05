@@ -1,9 +1,7 @@
 "use client";
 
-import DatePickerModal from "@/components/features/DatePickerModal";
 import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
 import { Collapse, Spin } from "antd";
-import { format } from "date-fns";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import styles from "./DetailAsm.module.css";
@@ -20,10 +18,6 @@ import {
   assessmentFileService,
   AssessmentFile,
 } from "@/services/assessmentFileService";
-import {
-  classAssessmentService,
-  ClassAssessment,
-} from "@/services/classAssessmentService";
 
 const { Panel } = Collapse;
 
@@ -38,27 +32,11 @@ const convertToDate = (dateString?: string): Date | null => {
 const AssignmentDetailItem = ({
   assignment,
   template,
-  classAssessment,
-  selectedClassId,
-  onDeadlineUpdate,
 }: {
   assignment: CourseElement;
   template?: AssessmentTemplate;
-  classAssessment?: ClassAssessment;
-  selectedClassId: string;
-  onDeadlineUpdate: () => void;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
-  const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
-
-  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(
-    convertToDate(classAssessment?.startAt)
-  );
-  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(
-    convertToDate(classAssessment?.endAt)
-  );
-
   const [assessmentFiles, setAssessmentFiles] = useState<AssessmentFile[]>([]);
   const [isFilesLoading, setIsFilesLoading] = useState(false);
 
@@ -67,10 +45,12 @@ const AssignmentDetailItem = ({
       const fetchFiles = async () => {
         setIsFilesLoading(true);
         try {
-          const files = await assessmentFileService.getFilesForTemplate(
-            template.id
-          );
-          setAssessmentFiles(files);
+          const response = await assessmentFileService.getFilesForTemplate({
+            assessmentTemplateId: template.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          setAssessmentFiles(response.items);
         } catch (error) {
           console.error("Failed to fetch assessment files:", error);
           setAssessmentFiles([]);
@@ -82,96 +62,8 @@ const AssignmentDetailItem = ({
     }
   }, [template]);
 
-  useEffect(() => {
-    setSelectedStartDate(convertToDate(classAssessment?.startAt));
-    setSelectedEndDate(convertToDate(classAssessment?.endAt));
-  }, [classAssessment]);
-
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
-
-  const openStartDatePicker = () => setIsStartDatePickerOpen(true);
-  const closeStartDatePicker = () => setIsStartDatePickerOpen(false);
-  const openEndDatePicker = () => setIsEndDatePickerOpen(true);
-  const closeEndDatePicker = () => setIsEndDatePickerOpen(false);
-
-  const handleSetDeadline = async (
-    newStart: Date | null,
-    newEnd: Date | null
-  ) => {
-    const now = new Date();
-    const fiveSecondsFromNow = new Date(now.getTime() + 5000);
-
-    let startAt: string;
-    let endAt: string;
-
-    if (classAssessment) {
-      startAt = newStart ? newStart.toISOString() : classAssessment.startAt;
-      endAt = newEnd ? newEnd.toISOString() : classAssessment.endAt;
-    } else {
-      startAt = newStart
-        ? newStart.toISOString()
-        : fiveSecondsFromNow.toISOString();
-      if (newEnd) {
-        endAt = newEnd.toISOString();
-      } else {
-        const defaultEndDate = new Date(
-          new Date(startAt).getTime() + 24 * 3600 * 1000
-        );
-        endAt = defaultEndDate.toISOString();
-      }
-    }
-
-    const localStartDate = new Date(startAt);
-    if (localStartDate < now && !classAssessment) {
-      alert("Start date cannot be in the past.");
-      return;
-    }
-
-    if (new Date(endAt) <= new Date(startAt)) {
-      alert("End date must be after the start date.");
-      return;
-    }
-
-    try {
-      if (!template) {
-        alert("No assessment template found to create a deadline.");
-        return;
-      }
-
-      const payload = {
-        classId: Number(selectedClassId),
-        assessmentTemplateId: template.id,
-        startAt,
-        endAt,
-      };
-
-      if (classAssessment) {
-        await classAssessmentService.updateClassAssessment(
-          classAssessment.id,
-          payload
-        );
-      } else {
-        await classAssessmentService.createClassAssessment(payload);
-      }
-      onDeadlineUpdate();
-    } catch (error: any) {
-      console.error("Failed to set deadline:", error);
-      alert(`Error: ${error.message || "Failed to update deadline."}`);
-    }
-  };
-
-  const handleStartDateSelect = (date: Date) => {
-    setSelectedStartDate(date);
-    handleSetDeadline(date, selectedEndDate);
-    closeStartDatePicker();
-  };
-
-  const handleEndDateSelect = (date: Date) => {
-    setSelectedEndDate(date);
-    handleSetDeadline(selectedStartDate, date);
-    closeEndDatePicker();
-  };
 
   return (
     <>
@@ -183,6 +75,7 @@ const AssignmentDetailItem = ({
         >
           {assignment.name}
         </h2>
+
         <div className={styles["requirement-link-container"]}>
           {isFilesLoading ? (
             <Spin size="small" />
@@ -284,23 +177,6 @@ const AssignmentDetailItem = ({
         onClose={closeModal}
         template={template}
       />
-      <DatePickerModal
-        isOpen={isStartDatePickerOpen}
-        onClose={closeStartDatePicker}
-        onDateSelect={handleStartDateSelect}
-        selectedDate={selectedStartDate}
-        minDate={new Date()}
-        maxDate={selectedEndDate || undefined}
-        showTimeSelect
-      />
-      <DatePickerModal
-        isOpen={isEndDatePickerOpen}
-        onClose={closeEndDatePicker}
-        onDateSelect={handleEndDateSelect}
-        selectedDate={selectedEndDate}
-        minDate={selectedStartDate || new Date()}
-        showTimeSelect
-      />
     </>
   );
 };
@@ -308,9 +184,6 @@ const AssignmentDetailItem = ({
 const DetailAssignmentPage = () => {
   const [assignments, setAssignments] = useState<CourseElement[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
-  const [classAssessments, setClassAssessments] = useState<ClassAssessment[]>(
-    []
-  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -390,19 +263,11 @@ const DetailAssignmentPage = () => {
                 const matchingTemplate = templates.find(
                   (t) => t.courseElementId === assignment.id
                 );
-                const matchingClassAssessment = matchingTemplate
-                  ? classAssessments.find(
-                      (ca) => ca.assessmentTemplateId === matchingTemplate.id
-                    )
-                  : undefined;
                 return (
                   <Panel header={assignment.name} key={assignment.id}>
                     <AssignmentDetailItem
                       assignment={assignment}
                       template={matchingTemplate}
-                      classAssessment={matchingClassAssessment}
-                      selectedClassId={selectedClassId}
-                      onDeadlineUpdate={fetchData}
                     />
                   </Panel>
                 );

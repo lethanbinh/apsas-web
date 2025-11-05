@@ -40,15 +40,6 @@ export default function JoinClassSection() {
               feedback and smart assessments.
             </Text>
           </Paragraph>
-
-          <Button
-            variant="primary"
-            size="large"
-            // Dùng CSS Module cho component tùy chỉnh
-            className={styles.joinButton}
-          >
-            Join class
-          </Button>
         </Col>
 
         <Col xs={24} lg={10}>

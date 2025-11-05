@@ -33,7 +33,7 @@ export default function AssignmentList() {
         level={2}
         style={{
           fontWeight: 700,
-          color: "#2F327D",
+          color: "#2F327D !important",
           marginBottom: "20px",
         }}
       >

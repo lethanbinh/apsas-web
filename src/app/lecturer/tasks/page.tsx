@@ -207,8 +207,8 @@ const TasksPage = () => {
                           <polyline points="6 9 12 15 18 9" />
                         </svg>
                         {task.courseElementName}
+                        {getStatusTag(task.status)}
                       </div>
-                      {getStatusTag(task.status)}
                       <svg
                         className={`${styles["question-dropdown-arrow"]} ${
                           openAssignments[task.id.toString()]

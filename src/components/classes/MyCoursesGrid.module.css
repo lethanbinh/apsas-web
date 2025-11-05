@@ -1,12 +1,10 @@
-/* Tên file: components/MyCoursesGrid/MyCoursesGrid.module.css */
-
 .sectionWrapper {
     width: 100%;
     padding: 60px 10%;
+    min-height: 100vh;
     background-color: #f0f7ff;
 }
 
-/* Style cho SimpleCourseCard */
 .courseCard {
     background: #ffffff;
     border-radius: 20px;
@@ -15,9 +13,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    /* Giới hạn chiều rộng để giống trong ảnh */
     max-width: 400px;
-    /* Không dùng margin: auto để nó căn trái trong Col */
 }
 
 .paddedImageWrapper {
@@ -51,12 +47,14 @@
 
 
 .gridContainer {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
 }
 
 .courseCardLink {
-  text-decoration: none; /* Bỏ gạch chân của link */
-  color: inherit; /* Kế thừa màu chữ */
+    text-decoration: none;
+    /* Bỏ gạch chân của link */
+    color: inherit;
+    /* Kế thừa màu chữ */
 }

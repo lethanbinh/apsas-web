@@ -1,9 +1,8 @@
 /* src/app/profile/Profile.module.css */
 
 .profileContainer {
-  max-width: 1400px;
   margin: 0 auto;
-  padding: 40px 20px;
+  padding: 40px 10rem;
   background: linear-gradient(135deg, #87ceeb 0%, #b0e0e6 100%);
   min-height: 100vh;
 }

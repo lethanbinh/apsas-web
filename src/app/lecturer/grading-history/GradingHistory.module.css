@@ -1,20 +1,20 @@
 .container {
-  max-width: 1200px; /* mx-auto */
   margin-left: auto;
   margin-right: auto;
-  padding: 1.5rem; /* p-6 */
+  padding: 2rem;
+  background-color: #fff;
 }
 
 .title {
-  font-size: 1.875rem; /* text-3xl */
-  font-weight: 700; /* font-bold */
-  color: #333333; /* text-gray-800 */
-  margin-bottom: 2rem; /* mb-8 */
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: rgb(47, 50, 125);
+  margin-bottom: 2rem;
 }
 
 .table-card {
   background-color: #ffffff;
-  border-radius: 0.75rem; /* rounded-xl */
+  border-radius: 0.75rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
 }
@@ -25,16 +25,17 @@
 }
 
 .table-header {
-  background-color: #f8f8f8; /* light gray background */
+  background-color: #f8f8f8;
 }
 
 .table-header th {
-  padding: 1rem 1.5rem; /* px-6 py-4 */
+  padding: 1rem 1.5rem;
   text-align: left;
-  font-weight: 600; /* font-semibold */
-  color: #6b7280; /* text-gray-700 */
-  font-size: 0.875rem; /* text-sm */
-  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
 }
 
 .table-header th:first-child {
@@ -46,7 +47,7 @@
 }
 
 .table-row {
-  border-bottom: 1px solid #e5e7eb; /* border-b border-gray-200 */
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .table-row:last-child {
@@ -54,18 +55,18 @@
 }
 
 .table-row:nth-child(odd) {
-  background-color: #f9fafb; /* odd:bg-gray-50 */
+  background-color: #f9fafb;
 }
 
 .table-row td {
-  padding: 1rem 1.5rem; /* px-6 py-4 */
-  font-size: 0.875rem; /* text-sm */
-  color: #4b5563; /* text-gray-900 */
+  padding: 1rem 1.5rem;
+  font-size: 0.875rem;
+  color: #4b5563;
   white-space: nowrap;
 }
 
 .file-link {
-  color: #2563eb; /* text-blue-600 */
+  color: #2563eb;
   text-decoration: none;
 }
 
@@ -77,25 +78,25 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px; /* rounded-full */
-  font-size: 0.75rem; /* text-xs */
-  font-weight: 500; /* font-medium */
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .status-tag.on-time {
-  background-color: #D1FAE5; /* bg-green-100 */
-  color: #059669; /* text-green-800 */
+  background-color: #D1FAE5;
+  color: #059669;
 }
 
 .status-tag.late {
-  background-color: #FEE2E2; /* bg-red-100 */
-  color: #DC2626; /* text-red-800 */
+  background-color: #FEE2E2;
+  color: #DC2626;
 }
 
 .action-button {
   background-color: transparent;
   border: none;
-  color: #6b7280; /* text-gray-500 */
+  color: #6b7280;
   cursor: pointer;
   display: flex;
   align-items: center;

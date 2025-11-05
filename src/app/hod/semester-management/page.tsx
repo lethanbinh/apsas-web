@@ -147,7 +147,7 @@ const SemesterManagementPageContent = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "2rem", background: "#f0f7ff", minHeight: "100vh" }}>
       <Space
         style={{
           display: "flex",
@@ -155,7 +155,12 @@ const SemesterManagementPageContent = () => {
           marginBottom: 16,
         }}
       >
-        <Title level={2}>Semester Management</Title>
+        <Title
+          style={{ color: "rgb(47, 50, 125)", fontWeight: "bold" }}
+          level={2}
+        >
+          Semester Management
+        </Title>
         <Button
           type="primary"
           icon={<PlusOutlined />}

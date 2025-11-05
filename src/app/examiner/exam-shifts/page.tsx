@@ -13,9 +13,19 @@ import {
   Tag,
 } from "antd";
 import type { TableProps } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { format } from "date-fns";
+import { AddExamShiftModal } from "@/components/examiner/AddExamShiftModal";
+import { EditExamShiftModal } from "@/components/examiner/EditExamShiftModal";
+import { ViewStudentsModal } from "@/components/examiner/ViewStudentsModal";
 import { ExamSession, examSessionService } from "@/services/examSessionService";
+import { Course, courseService } from "@/services/courseManagementService";
+import { Semester, semesterService } from "@/services/semesterService";
 import { classService, ClassInfo } from "@/services/classService";
 import {
   AssessmentTemplate,
@@ -23,8 +33,6 @@ import {
 } from "@/services/assessmentTemplateService";
 import { useRouter } from "next/navigation";
 import styles from "./ExamShifts.module.css";
-import { AddExamShiftModal } from "@/components/examiner/AddExamShiftModal";
-import { EditExamShiftModal } from "@/components/examiner/EditExamShiftModal";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -54,13 +62,19 @@ const ExamShiftPageContent = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewStudentsModalOpen, setIsViewStudentsModalOpen] = useState(false);
+
   const [editingShift, setEditingShift] = useState<ExamSession | null>(null);
+  const [viewingShift, setViewingShift] = useState<ExamSession | null>(null);
 
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
 
-  const [filterClass, setFilterClass] = useState<number | undefined>(undefined);
-  const [filterTemplate, setFilterTemplate] = useState<number | undefined>(
+  const [filterSemester, setFilterSemester] = useState<string | undefined>(
+    undefined
+  );
+  const [filterCourse, setFilterCourse] = useState<number | undefined>(
     undefined
   );
 
@@ -72,10 +86,8 @@ const ExamShiftPageContent = () => {
       setLoading(true);
       setError(null);
       const response = await examSessionService.getExamSessions({
-        classId: filterClass,
-        assessmentTemplateId: filterTemplate,
         pageNumber: 1,
-        pageSize: 100,
+        pageSize: 1000,
       });
       setShifts(response.items);
     } catch (err: any) {
@@ -83,28 +95,29 @@ const ExamShiftPageContent = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterClass, filterTemplate]);
+  }, []);
+
+  const classIdToSemesterNameMap = useMemo(() => {
+    return new Map(classes.map((cls) => [Number(cls.id), cls.semesterName]));
+  }, [classes]);
 
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [classResponse, templateResponse] = await Promise.all([
-          classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
-          assessmentTemplateService.getAssessmentTemplates({
-            pageNumber: 1,
-            pageSize: 1000,
-          }),
-        ]);
+        const [courseResponse, semesterResponse, classResponse] =
+          await Promise.all([
+            courseService.getCourseList({ pageNumber: 1, pageSize: 1000 }),
+            semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+            classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
+          ]);
+        setCourses(courseResponse);
+        setSemesters(semesterResponse);
         setClasses(classResponse.classes);
-        setTemplates(templateResponse.items);
       } catch (err) {
         console.error("Failed to fetch filters:", err);
       }
     };
     fetchFilters();
-  }, []);
-
-  useEffect(() => {
     fetchShifts();
   }, [fetchShifts]);
 
@@ -118,10 +131,17 @@ const ExamShiftPageContent = () => {
     setIsEditModalOpen(true);
   };
 
+  const handleOpenViewStudents = (record: ExamSession) => {
+    setViewingShift(record);
+    setIsViewStudentsModalOpen(true);
+  };
+
   const handleModalCancel = () => {
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
+    setIsViewStudentsModalOpen(false);
     setEditingShift(null);
+    setViewingShift(null);
   };
 
   const handleModalOk = () => {
@@ -152,6 +172,20 @@ const ExamShiftPageContent = () => {
     });
   };
 
+  const filteredData = useMemo(() => {
+    const courseName = courses.find((c) => c.id === filterCourse)?.name;
+
+    return shifts.filter((shift) => {
+      const semesterName = classIdToSemesterNameMap.get(shift.classId);
+
+      console.log(semesterName, filterSemester);
+      const semesterMatch =
+        !filterSemester || semesterName?.includes(filterSemester || "");
+      const courseMatch = !filterCourse || shift.courseName === courseName;
+      return semesterMatch && courseMatch;
+    });
+  }, [shifts, filterSemester, filterCourse, classIdToSemesterNameMap, courses]);
+
   const columns: TableProps<ExamSession>["columns"] = [
     {
       title: "ID",
@@ -163,11 +197,6 @@ const ExamShiftPageContent = () => {
       title: "Paper",
       dataIndex: "assessmentTemplateName",
       key: "paper",
-    },
-    {
-      title: "Class",
-      dataIndex: "classCode",
-      key: "classCode",
     },
     {
       title: "Start date",
@@ -189,6 +218,12 @@ const ExamShiftPageContent = () => {
       key: "course",
     },
     {
+      title: "Semester",
+      key: "semester",
+      render: (_, record) =>
+        classIdToSemesterNameMap.get(record.classId) || "N/A",
+    },
+    {
       title: "Examiner",
       dataIndex: "lecturerName",
       key: "examiner",
@@ -206,6 +241,14 @@ const ExamShiftPageContent = () => {
         const isEditable = record.status !== "ENDED";
         return (
           <Space size="middle">
+            <Button
+              type="text"
+              icon={<TeamOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenViewStudents(record);
+              }}
+            />
             <Button
               type="text"
               icon={<EditOutlined />}
@@ -233,37 +276,40 @@ const ExamShiftPageContent = () => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <Title level={2} style={{ margin: 0 }}>
+        <Title
+          level={2}
+          style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
+        >
           Exam shifts
         </Title>
         <Space>
           <Select
             allowClear
-            value={filterClass}
-            onChange={setFilterClass}
+            value={filterSemester}
+            onChange={setFilterSemester}
             style={{ width: 240 }}
-            placeholder="Filter by Class"
+            placeholder="Filter by Semester"
             showSearch
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
-            options={classes.map((cls) => ({
-              label: `${cls.classCode} (${cls.courseName})`,
-              value: Number(cls.id),
+            options={semesters.map((sem) => ({
+              label: `${sem.semesterCode} (${sem.academicYear})`,
+              value: sem.semesterCode,
             }))}
           />
           <Select
             allowClear
-            value={filterTemplate}
-            onChange={setFilterTemplate}
+            value={filterCourse}
+            onChange={setFilterCourse}
             style={{ width: 240 }}
-            placeholder="Filter by Paper"
+            placeholder="Filter by Course"
             showSearch
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
-            options={templates.map((t) => ({
-              label: t.name,
+            options={courses.map((t) => ({
+              label: `${t.name} (${t.code})`,
               value: t.id,
             }))}
           />
@@ -294,7 +340,7 @@ const ExamShiftPageContent = () => {
       {!loading && !error && (
         <Table
           columns={columns}
-          dataSource={shifts}
+          dataSource={filteredData}
           rowKey="id"
           pagination={{ pageSize: 10 }}
           className={styles.table}
@@ -323,6 +369,14 @@ const ExamShiftPageContent = () => {
           initialData={editingShift}
           onCancel={handleModalCancel}
           onOk={handleModalOk}
+        />
+      )}
+
+      {isViewStudentsModalOpen && viewingShift && (
+        <ViewStudentsModal
+          open={isViewStudentsModalOpen}
+          session={viewingShift}
+          onCancel={handleModalCancel}
         />
       )}
     </div>

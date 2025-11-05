@@ -1,5 +1,7 @@
 .wrapper {
-    padding: 24px;
+    padding: 2rem;
+    background-color: #f5f7ff;
+    min-height: 100vh;
 }
 
 .header {

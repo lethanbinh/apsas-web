@@ -131,7 +131,13 @@ const CourseManagementPageContent = () => {
   ];
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div
+      style={{
+        background: "#f0f7ff",
+        minHeight: "100vh",
+        padding: "2rem",
+      }}
+    >
       <Space
         style={{
           display: "flex",
@@ -139,7 +145,15 @@ const CourseManagementPageContent = () => {
           marginBottom: 16,
         }}
       >
-        <Title level={2}>Course Management</Title>
+        <Title
+          level={2}
+          style={{
+            fontWeight: 700,
+            color: "#2F327D",
+          }}
+        >
+          Course Management
+        </Title>
         <Button
           type="primary"
           icon={<PlusOutlined />}
