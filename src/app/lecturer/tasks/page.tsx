@@ -7,7 +7,7 @@ import {
   assignRequestService,
   AssignRequestItem,
 } from "@/services/assignRequestService";
-import { Spin, Select } from "antd";
+import { Spin, Select, App } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
 
 const getStatusTag = (status: number) => {
@@ -27,7 +27,7 @@ const getStatusTag = (status: number) => {
   }
 };
 
-const TasksPage = () => {
+const TasksPageContent = () => {
   const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({});
   const [openAssignments, setOpenAssignments] = useState<
     Record<string, boolean>
@@ -245,4 +245,10 @@ const TasksPage = () => {
   );
 };
 
-export default TasksPage;
+export default function TasksPage() {
+  return (
+    <App>
+      <TasksPageContent />
+    </App>
+  );
+}

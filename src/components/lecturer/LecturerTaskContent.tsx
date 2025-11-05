@@ -1097,11 +1097,3 @@ export const LecturerTaskContent = ({
     </div>
   );
 };
-
-export default function LecturerTaskContentWrapper(props: any) {
-  return (
-    <App>
-      <LecturerTaskContent {...props} />
-    </App>
-  );
-}
