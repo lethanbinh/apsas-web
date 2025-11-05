@@ -11,11 +11,12 @@ import {
   Col,
   Space,
   Spin,
-  Alert
+  Alert,
 } from "antd";
 import styles from "./ApprovalDetail.module.css";
-import { ApiAssessmentQuestion, ApiRubricItem } from "@/types"; 
+import { ApiAssessmentQuestion, ApiRubricItem } from "@/types";
 import { adminService } from "@/services/adminService";
+import { rubricItemService } from "@/services/rubricItemService";
 
 const { Title, Text, Paragraph } = Typography;
 const { Panel } = Collapse;
@@ -35,21 +36,32 @@ const RubricList: React.FC<RubricListProps> = ({ questionId }) => {
       setRubrics([]);
       return;
     }
-    
+
     setLoading(true);
-    adminService.getRubricItemsByQuestionId(questionId)
-      .then(data => {
-        setRubrics(data);
+    rubricItemService
+      .getRubricsForQuestion({
+        assessmentQuestionId: questionId,
+        pageNumber: 1,
+        pageSize: 100,
       })
-      .catch(err => {
+      .then((response) => {
+        setRubrics(response.items);
+      })
+      .catch((err) => {
         console.error(`Error fetching rubrics for Q_ID ${questionId}:`, err);
         setError("Failed to load criteria.");
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+      });
   }, [questionId]);
 
   if (loading) {
-    return <div style={{textAlign: 'center', padding: '20px'}}><Spin size="small" /></div>;
+    return (
+      <div style={{ textAlign: "center", padding: "20px" }}>
+        <Spin size="small" />
+      </div>
+    );
   }
 
   if (error) {
@@ -91,9 +103,13 @@ interface ApprovalItemProps {
 
 export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
   if (!questions || questions.length === 0) {
-    return <Text type="secondary" style={{padding: "16px"}}>This paper has no questions.</Text>
+    return (
+      <Text type="secondary" style={{ padding: "16px" }}>
+        This paper has no questions.
+      </Text>
+    );
   }
-  
+
   return (
     <div className={styles.itemWrapper}>
       <Collapse
@@ -105,34 +121,49 @@ export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
       >
         {questions.map((question) => (
           <Panel
-            header={<Title level={5}>{question.questionText || "Question"}</Title>}
+            header={
+              <Title level={5}>{question.questionText || "Question"}</Title>
+            }
             key={`question-${question.id}`}
             className={styles.innerPanel}
           >
             <Row gutter={[24, 16]}>
-              <Col xs={24} md={24}> 
+              <Col xs={24} md={24}>
                 <div className={styles.formGroup}>
                   <Text strong>Question Text</Text>
                   <Paragraph>{question.questionText}</Paragraph>
                 </div>
                 <div className={styles.formGroup}>
                   <Text strong>Sample Input</Text>
-                  <Input.TextArea value={question.questionSampleInput} readOnly autoSize />
+                  <Input.TextArea
+                    value={question.questionSampleInput}
+                    readOnly
+                    autoSize
+                  />
                 </div>
-                 <div className={styles.formGroup}>
+                <div className={styles.formGroup}>
                   <Text strong>Sample Output</Text>
-                  <Input.TextArea value={question.questionSampleOutput} readOnly autoSize />
+                  <Input.TextArea
+                    value={question.questionSampleOutput}
+                    readOnly
+                    autoSize
+                  />
                 </div>
-                 <div className={styles.formGroup}>
+                <div className={styles.formGroup}>
                   <Text strong>Score</Text>
-                  <Input value={question.score} readOnly style={{width: "100px"}} />
+                  <Input
+                    value={question.score}
+                    readOnly
+                    style={{ width: "100px" }}
+                  />
                 </div>
               </Col>
             </Row>
 
-            <Title level={5} style={{marginTop: "20px"}}>Criteria ({question.rubricCount})</Title>
+            <Title level={5} style={{ marginTop: "20px" }}>
+              Criteria ({question.rubricCount})
+            </Title>
             <RubricList questionId={question.id} />
-            
           </Panel>
         ))}
       </Collapse>

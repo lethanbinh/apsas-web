@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
-import { Spin, Alert } from "antd";
 import ApprovalDetail from "@/components/hod/ApprovalDetail";
 import { adminService } from "@/services/adminService";
-import { ApiAssessmentTemplate, ApiApprovalItem } from "@/types";
+import { ApiApprovalItem, ApiAssessmentTemplate } from "@/types";
+import { Alert, Spin } from "antd";
+import { useParams } from "next/navigation";
+import React, { useState } from "react";
 
 export default function ApprovalDetailPage() {
   const params = useParams();

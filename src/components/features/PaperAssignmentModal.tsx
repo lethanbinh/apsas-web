@@ -128,9 +128,13 @@ const QuestionItem = ({
     if (isOpen && question.id) {
       setIsLoading(true);
       rubricItemService
-        .getRubricsForQuestion(question.id)
-        .then((data) => {
-          setRubrics(data);
+        .getRubricsForQuestion({
+          assessmentQuestionId: question.id,
+          pageNumber: 1,
+          pageSize: 100,
+        })
+        .then((response) => {
+          setRubrics(response.items);
         })
         .catch((err) => {
           console.error("Failed to fetch rubrics", err);

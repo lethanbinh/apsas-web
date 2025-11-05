@@ -184,8 +184,12 @@ const QuestionItemComponent = ({
   const fetchRubrics = async () => {
     setIsLoading(true);
     try {
-      const data = await rubricItemService.getRubricsForQuestion(question.id);
-      setRubrics(data);
+      const response = await rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: question.id,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setRubrics(response.items);
     } catch (error) {
       console.error("Failed to fetch rubrics:", error);
     } finally {

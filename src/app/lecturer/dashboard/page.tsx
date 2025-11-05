@@ -26,7 +26,6 @@ const LecturerDashboardPage = () => {
       <h1 className={styles.title}>Dashboard</h1>
 
       <div className={styles["stats-grid"]}>
-        {/* Stat Card 1: Students Submit (Purple) */}
         <div className={`${styles["stat-card"]} ${styles.purple}`}>
           <div>
             <div className={`${styles["stat-value"]}`}>20</div>

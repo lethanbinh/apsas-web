@@ -1,28 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
-// 1. Import 'App', 'message', 'Alert'
-import {
-  App,
-  Collapse,
-  Typography,
-  Tag,
-  Input,
-  Space,
-  message,
-  Alert,
-} from "antd";
+import { useState } from "react";
 import type { CollapseProps } from "antd";
+import { Alert, App, Collapse, Input, Space, Tag, Typography } from "antd";
 import { Button } from "../ui/Button";
-import { ApprovalItem } from "./ApprovalItem";
 import styles from "./ApprovalDetail.module.css";
-// Import các types và service cần thiết
+import { ApprovalItem } from "./ApprovalItem";
+import { adminService } from "@/services/adminService";
 import {
-  ApiAssessmentTemplate,
   ApiApprovalItem,
+  ApiAssessmentTemplate,
   ApiAssignRequestUpdatePayload,
 } from "@/types";
-import { adminService } from "@/services/adminService";
 import { useRouter } from "next/navigation";
 
 const { Title, Text } = Typography;
@@ -56,7 +45,6 @@ export default function ApprovalDetail({
   approvalItem,
 }: ApprovalDetailProps) {
   const router = useRouter();
-  // 2. Lấy 'antMessage' từ hook 'App.useApp()'
   const { message: antMessage } = App.useApp();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +58,6 @@ export default function ApprovalDetail({
     template.papers.length > 0 ? [`paper-${template.papers[0].id}`] : []
   );
 
-  // Hàm helper để tạo payload
   const createPayload = (
     status: number,
     message: string
@@ -155,7 +142,7 @@ export default function ApprovalDetail({
         </div>
       ),
       children: (
-        <>
+        <div style={{ padding: "0 24px" }}>
           <ApprovalItem questions={paper.questions} />
 
           <div className={styles.actionArea}>
@@ -196,7 +183,7 @@ export default function ApprovalDetail({
               </Button>
             </Space>
           </div>
-        </>
+        </div>
       ),
       className: styles.mainPanel,
     },

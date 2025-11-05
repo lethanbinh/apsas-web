@@ -11,11 +11,19 @@ export interface RubricItem {
   updatedAt: string;
 }
 
+export interface RubricItemListResult {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  items: RubricItem[];
+}
+
 export interface RubricItemListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
-  result: RubricItem[];
+  result: RubricItemListResult;
 }
 
 export interface RubricItemApiResponse {
@@ -23,6 +31,17 @@ export interface RubricItemApiResponse {
   isSuccess: boolean;
   errorMessages: any[];
   result: RubricItem;
+}
+
+export interface GetRubricsParams {
+  assessmentQuestionId?: number;
+  pageNumber: number;
+  pageSize: number;
+}
+
+export interface GetRubricsResponse {
+  items: RubricItem[];
+  total: number;
 }
 
 export interface CreateRubricItemPayload {
@@ -42,12 +61,16 @@ export interface UpdateRubricItemPayload {
 
 export class RubricItemService {
   async getRubricsForQuestion(
-    questionId: string | number
-  ): Promise<RubricItem[]> {
+    params: GetRubricsParams
+  ): Promise<GetRubricsResponse> {
     const response = await apiService.get<RubricItemListApiResponse>(
-      `/RubricItem/question/${questionId}`
+      "/RubricItem/page",
+      { params: params }
     );
-    return response.result;
+    return {
+      items: response.result.items,
+      total: response.result.totalCount,
+    };
   }
 
   async createRubricItem(

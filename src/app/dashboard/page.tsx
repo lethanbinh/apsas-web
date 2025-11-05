@@ -1,7 +1,3 @@
-/**
- * Dashboard home page
- */
-
 'use client';
 
 import { Card, Row, Col, Statistic, Typography, Space } from 'antd';
