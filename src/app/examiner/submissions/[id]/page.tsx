@@ -133,11 +133,12 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
 export default function SubmissionsPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const resolvedParams = params as unknown as { id: string };
   return (
     <App>
-      <SubmissionsPageContent shiftId={params.id} />
+      <SubmissionsPageContent shiftId={resolvedParams.id} />
     </App>
   );
 }

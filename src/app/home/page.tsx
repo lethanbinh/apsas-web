@@ -1,10 +1,10 @@
-import { Metadata } from 'next';
-import Image from 'next/image';
-import { Layout } from '@/components/layout/Layout';
+import { Metadata } from "next";
+import Image from "next/image";
+import { Layout } from "@/components/layout/Layout";
 
 export const metadata: Metadata = {
-  title: 'Home - APSAS Web',
-  description: 'Programming Assessment is now effortless',
+  title: "Home - APSAS Web",
+  description: "Programming Assessment is now effortless",
 };
 
 export default function HomePage() {
@@ -24,20 +24,22 @@ export default function HomePage() {
                   now effortless.
                 </h1>
                 <p className="hero-description">
-                  Effortless coding assessment for instructors, instant feedback for students.
+                  Effortless coding assessment for instructors, instant feedback
+                  for students.
                 </p>
               </div>
 
               <div className="hero-image-wrapper">
                 <div className="hero-image-inner-wrapper">
                   <Image
-                    src="https://png.pngtree.com/png-vector/20250121/ourmid/pngtree-a-cheerful-young-student-with-long-wavy-brown-hair-png-image_15291628.png"
+                    src="https://assets.setmore.com/website/v2/images/industry-pages/teachers/setmore-customer-teacher.png"
                     alt="Hero Illustration"
                     width={700}
-                    height={600}
+                    height={700}
                     className="hero-image"
                     priority
                     unoptimized
+                    style={{ objectFit: "cover" }}
                   />
 
                   {/* Floating badges */}
@@ -46,7 +48,9 @@ export default function HomePage() {
                       <div className="hero-badge-icon-wrapper">📅</div>
                       <div className="hero-badge-text-content">
                         <div className="hero-badge-title">250k</div>
-                        <div className="hero-badge-subtitle">Assisted Student</div>
+                        <div className="hero-badge-subtitle">
+                          Assisted Student
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -57,8 +61,12 @@ export default function HomePage() {
 
                   <div className="hero-badge-middle-right">
                     <div className="hero-badge-card-small">
-                      <div className="hero-badge-card-title">Congratulations</div>
-                      <div className="hero-badge-card-subtitle">Your admission completed</div>
+                      <div className="hero-badge-card-title">
+                        Congratulations
+                      </div>
+                      <div className="hero-badge-card-subtitle">
+                        Your admission completed
+                      </div>
                     </div>
                   </div>
 
@@ -67,9 +75,13 @@ export default function HomePage() {
                       <div className="hero-badge-avatar" />
                       <div className="hero-badge-long-card-text-content">
                         <div className="hero-badge-long-card-title">SangNM</div>
-                        <div className="hero-badge-long-card-subtitle">Today at 12.00 PM</div>
+                        <div className="hero-badge-long-card-subtitle">
+                          Today at 12.00 PM
+                        </div>
                       </div>
-                      <button className="hero-badge-join-button">Join Now</button>
+                      <button className="hero-badge-join-button">
+                        Join Now
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -79,7 +91,11 @@ export default function HomePage() {
 
           {/* Decorative bottom curve */}
           <div className="decorative-bottom-curve">
-            <svg viewBox="0 0 1440 120" className="w-full h-[120px] -mb-[1px]" preserveAspectRatio="none">
+            <svg
+              viewBox="0 0 1440 120"
+              className="w-full h-[120px] -mb-[1px]"
+              preserveAspectRatio="none"
+            >
               <path d="M0,96L1440,32L1440,160L0,160Z" fill="#cde8fb" />
             </svg>
           </div>
@@ -89,9 +105,7 @@ export default function HomePage() {
       {/* New Section: Our Success */}
       <section className="our-success-section">
         <div className="our-success-container">
-          <h2 className="our-success-title">
-            Our Success
-          </h2>
+          <h2 className="our-success-title">Our Success</h2>
 
           {/* Statistics Grid */}
           <div className="our-success-stats-grid">
@@ -116,11 +130,15 @@ export default function HomePage() {
           {/* Description Section */}
           <div className="our-success-description-section">
             <h3 className="our-success-description-title">
-              Programming Assessment <span className="our-success-description-highlight">Software.</span>
+              Programming Assessment{" "}
+              <span className="our-success-description-highlight">
+                Software.
+              </span>
             </h3>
             <p className="our-success-description-text">
-              APSAS is an innovative platform that helps instructors easily assess
-              programming skills and provide instant feedback to students.
+              APSAS is an innovative platform that helps instructors easily
+              assess programming skills and provide instant feedback to
+              students.
             </p>
           </div>
         </div>
@@ -129,52 +147,56 @@ export default function HomePage() {
       {/* New Section: Three Feature Cards */}
       <section className="feature-cards-section">
         <div className="feature-cards-container">
-            {/* Card 1 */}
-            <div className="feature-card">
-              <div className="feature-card-icon-wrapper feature-card-icon-wrapper-1">
-                <span className="feature-card-icon feature-card-icon-1">📄</span> {/* Placeholder icon for document */}
-              </div>
-              <h3 className="feature-card-title">
-                Automate the assessment
-                <br />process
-              </h3>
-              <p className="feature-card-description">
-                by integrating static code analysis, dynamic code execution, and test case
-                evaluation through APIs such as Judge0 or Piston.
-              </p>
+          {/* Card 1 */}
+          <div className="feature-card">
+            <div className="feature-card-icon-wrapper feature-card-icon-wrapper-1">
+              <span className="feature-card-icon feature-card-icon-1">📄</span>{" "}
+              {/* Placeholder icon for document */}
             </div>
+            <h3 className="feature-card-title">
+              Automate the assessment
+              <br />
+              process
+            </h3>
+            <p className="feature-card-description">
+              by integrating static code analysis, dynamic code execution, and
+              test case evaluation through APIs such as Judge0 or Piston.
+            </p>
+          </div>
 
-            {/* Card 2 */}
-            <div className="feature-card">
-              <div className="feature-card-icon-wrapper feature-card-icon-wrapper-2">
-                <span className="feature-card-icon feature-card-icon-2">📅</span> {/* Placeholder icon for calendar */}
-              </div>
-              <h3 className="feature-card-title">
-                Provide immediate
-                <br />and informative feedback
-              </h3>
-              <p className="feature-card-description">
-                by using AI-powered feedback generation (e.g., via GPT/OpenAI),
-                helping students quickly understand their mistakes and improve.
-              </p>
+          {/* Card 2 */}
+          <div className="feature-card">
+            <div className="feature-card-icon-wrapper feature-card-icon-wrapper-2">
+              <span className="feature-card-icon feature-card-icon-2">📅</span>{" "}
+              {/* Placeholder icon for calendar */}
             </div>
+            <h3 className="feature-card-title">
+              Provide immediate
+              <br />
+              and informative feedback
+            </h3>
+            <p className="feature-card-description">
+              by using AI-powered feedback generation (e.g., via GPT/OpenAI),
+              helping students quickly understand their mistakes and improve.
+            </p>
+          </div>
 
-            {/* Card 3 */}
-            <div className="feature-card">
-              <div className="feature-card-icon-wrapper feature-card-icon-wrapper-3">
-                <span className="feature-card-icon feature-card-icon-3">👥</span> {/* Placeholder icon for users */}
-              </div>
-              <h3 className="feature-card-title">
-                Support student
-                <br />learning and skill progression
-              </h3>
-              <p className="feature-card-description">
-                with dashboards showing progress over time,
-                upcoming assignments, and access to learning resources
-                and tutorials.
-              </p>
+          {/* Card 3 */}
+          <div className="feature-card">
+            <div className="feature-card-icon-wrapper feature-card-icon-wrapper-3">
+              <span className="feature-card-icon feature-card-icon-3">👥</span>{" "}
+              {/* Placeholder icon for users */}
             </div>
-
+            <h3 className="feature-card-title">
+              Support student
+              <br />
+              learning and skill progression
+            </h3>
+            <p className="feature-card-description">
+              with dashboards showing progress over time, upcoming assignments,
+              and access to learning resources and tutorials.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -185,9 +207,10 @@ export default function HomePage() {
             What is <span className="what-is-apsas-highlight">APSAS?</span>
           </h2>
           <p className="what-is-apsas-description">
-            APSAS aims to provide an advanced solution leveraging modern technologies to
-            automate code evaluation, skill assessment, and personalized feedback, enhancing
-            learning experiences for students and reducing instructors' workload.
+            APSAS aims to provide an advanced solution leveraging modern
+            technologies to automate code evaluation, skill assessment, and
+            personalized feedback, enhancing learning experiences for students
+            and reducing instructors' workload.
           </p>
         </div>
       </section>
@@ -223,5 +246,3 @@ export default function HomePage() {
     </Layout>
   );
 }
-
-

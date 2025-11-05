@@ -13,7 +13,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { ROLE_NAVIGATION, Role } from "@/lib/constants";
 import styles from "./Header.module.css";
 
-// Avatar icon
 const AvatarPlaceholder = () => (
   <div className={styles.avatarContainer}>
     <UserOutlined className={styles.avatarIcon} />
