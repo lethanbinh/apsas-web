@@ -83,7 +83,8 @@ const ProfilePage = () => {
       { name: 'Admin', color: 'volcano' },
       { name: 'Lecturer', color: 'cyan' },
       { name: 'Student', color: 'green' },
-      { name: 'HOD', color: 'blue' }
+      { name: 'HOD', color: 'blue' },
+      { name: 'Examiner', color: 'purple' }
     ];
     return roles[role] || { name: 'Unknown', color: 'default' };
   };
