@@ -40,6 +40,9 @@ export const API_ENDPOINTS = {
     ASSESSMENT_TEMPLATE_DETAIL: "/AssessmentTemplate",
     RUBRIC_ITEM_BY_QUESTION: "/RubricItem/question",
   },
+  FILE: {
+    UPLOAD: "/File/upload",
+  },
 } as const;
 
 export const HTTP_STATUS = {

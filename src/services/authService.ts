@@ -101,6 +101,33 @@ export class AuthService {
     }
     return response as User;
   }
+
+  async uploadAvatar(file: File): Promise<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiService.post<{
+      statusCode: number;
+      isSuccess: boolean;
+      errorMessages: string[];
+      result: {
+        fileName: string;
+        fileUrl: string;
+        fileSize: number;
+        contentType: string;
+        uploadedAt: string;
+      };
+    }>(API_ENDPOINTS.FILE.UPLOAD, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (response.isSuccess && response.result) {
+      return response.result.fileUrl;
+    }
+    throw new Error(response.errorMessages?.join(', ') || 'Failed to upload avatar');
+  }
 }
 
 export const authService = new AuthService();

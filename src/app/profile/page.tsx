@@ -16,7 +16,7 @@ import {
   Input,
   Select,
   DatePicker,
-  message
+  App
 } from 'antd';
 import { 
   UserOutlined, 
@@ -38,12 +38,15 @@ const { Option } = Select;
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { message } = App.useApp();
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [updating, setUpdating] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -152,6 +155,68 @@ const ProfilePage = () => {
     form.resetFields();
   };
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      message.error('Please upload a valid image file (JPG, PNG, or GIF)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      message.error('File size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      
+      // Upload file
+      const fileUrl = await authService.uploadAvatar(file);
+      
+      // Update profile with new avatar URL
+      if (!profile?.id) {
+        message.error('Profile ID not found');
+        return;
+      }
+
+      const updateData = {
+        phoneNumber: profile.phoneNumber,
+        fullName: profile.fullName,
+        avatar: fileUrl,
+        address: profile.address,
+        gender: profile.gender,
+        dateOfBirth: profile.dateOfBirth,
+      };
+
+      const updatedProfile = await authService.updateProfile(profile.id, updateData);
+      setProfile(updatedProfile);
+      message.success('Avatar updated successfully');
+      
+      // Refresh profile data
+      const freshProfile = await authService.getProfile();
+      setProfile(freshProfile);
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      message.error(err.message || 'Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -183,11 +248,36 @@ const ProfilePage = () => {
           <Col xs={24} md={8}>
             <Card className={styles.profileCard}>
               <div className={styles.avatarSection}>
-                <Avatar 
-                  size={120} 
-                  src={profile.avatar} 
-                  icon={<UserOutlined />}
-                  className={styles.avatar}
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <Avatar 
+                    size={120} 
+                    src={profile.avatar} 
+                    icon={<UserOutlined />}
+                    className={styles.avatar}
+                    style={{ 
+                      cursor: 'pointer',
+                      opacity: uploadingAvatar ? 0.6 : 1,
+                    }}
+                    onClick={handleAvatarClick}
+                  />
+                  {uploadingAvatar && (
+                    <Spin 
+                      size="small" 
+                      style={{ 
+                        position: 'absolute', 
+                        top: '50%', 
+                        left: '50%', 
+                        transform: 'translate(-50%, -50%)' 
+                      }} 
+                    />
+                  )}
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif"
+                  style={{ display: 'none' }}
+                  onChange={handleFileChange}
                 />
                 <h1 className={styles.userName}>{profile.fullName}</h1>
                 <Tag color={roleInfo.color} style={{ fontSize: '14px', padding: '4px 12px' }}>
