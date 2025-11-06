@@ -372,3 +372,12 @@
   font-size: 0.85rem;
   font-weight: 500;
 }
+
+.menuLabel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.menuActions {
+  display: inline-flex;
+}

@@ -1,17 +1,27 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import { Table, Spin, App, Space, Typography, Input, Tag, Button } from "antd";
-import type { TableProps } from "antd";
+import { Submission, submissionService } from "@/services/submissionService";
 import {
+  ArrowLeftOutlined,
   DownloadOutlined,
   SearchOutlined,
-  ArrowLeftOutlined,
 } from "@ant-design/icons";
+import type { TableProps } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Input,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
 import { format } from "date-fns";
-import styles from "./Submissions.module.css";
-import { mockSubmissions, Submission } from "../../mockData";
 import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import styles from "./Submissions.module.css";
 
 const { Title } = Typography;
 
@@ -23,18 +33,43 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-const getStatusTag = (status: string) => {
-  if (status === "Late") {
-    return <Tag color="red">Late</Tag>;
+const getStatusTag = (status: number) => {
+  if (status === 0) {
+    return <Tag color="green">On time</Tag>;
   }
-  return <Tag color="green">On time</Tag>;
+  return <Tag color="red">Late</Tag>;
 };
 
 const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
-  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
-  const [loading, setLoading] = useState(false);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      if (!shiftId) {
+        setLoading(false);
+        setError("No Exam Session ID provided.");
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await submissionService.getSubmissionList({
+          examSessionId: Number(shiftId),
+        });
+        setSubmissions(response);
+      } catch (err: any) {
+        console.error("Failed to fetch submissions:", err);
+        setError(err.message || "Failed to load data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubmissions();
+  }, [shiftId]);
 
   const handleBack = () => {
     router.back();
@@ -43,39 +78,50 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
   const filteredData = useMemo(() => {
     return submissions.filter(
       (sub) =>
-        sub.student.toLowerCase().includes(searchText.toLowerCase()) ||
-        sub.fileSubmit.toLowerCase().includes(searchText.toLowerCase())
+        sub.studentName.toLowerCase().includes(searchText.toLowerCase()) ||
+        sub.studentCode.toLowerCase().includes(searchText.toLowerCase()) ||
+        sub.submissionFile?.name
+          .toLowerCase()
+          .includes(searchText.toLowerCase())
     );
   }, [submissions, searchText]);
 
   const columns: TableProps<Submission>["columns"] = [
     {
-      title: "No",
+      title: "ID",
       dataIndex: "id",
       key: "id",
       sorter: (a, b) => a.id - b.id,
     },
     {
-      title: "File submit",
-      dataIndex: "fileSubmit",
+      title: "File Submit",
+      dataIndex: "submissionFile",
       key: "fileSubmit",
+      render: (file: Submission["submissionFile"]) => file?.name || "N/A",
     },
     {
       title: "Student",
-      dataIndex: "student",
+      dataIndex: "studentName",
       key: "student",
+      render: (name, record) => (
+        <span>
+          {name} ({record.studentCode})
+        </span>
+      ),
     },
     {
-      title: "Date",
-      dataIndex: "date",
-      key: "date",
-      render: (date) => formatUtcDate(date, "dd/MM/yyyy"),
-      sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+      title: "Submitted At",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
+      render: (date) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
+      sorter: (a, b) =>
+        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
     },
     {
       title: "Score",
-      dataIndex: "score",
-      key: "score",
+      dataIndex: "lastGrade",
+      key: "lastGrade",
+      render: (score) => `${score}/100`,
     },
     {
       title: "Status",
@@ -84,9 +130,22 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
       render: (status) => getStatusTag(status),
     },
     {
+      title: "Grader",
+      dataIndex: "lecturerName",
+      key: "lecturerName",
+    },
+    {
       title: "Action",
       key: "action",
-      render: () => <Button type="text" icon={<DownloadOutlined />} />,
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<DownloadOutlined />}
+          disabled={!record.submissionFile}
+          href={record.submissionFile?.submissionUrl}
+          target="_blank"
+        />
+      ),
     },
   ];
 
@@ -106,7 +165,7 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
           </Title>
         </Space>
         <Input
-          placeholder="Search..."
+          placeholder="Search by student, code, or filename..."
           prefix={<SearchOutlined />}
           style={{ width: 300 }}
           onChange={(e) => setSearchText(e.target.value)}
@@ -117,6 +176,14 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
         <div className={styles.spinner}>
           <Spin size="large" />
         </div>
+      ) : error ? (
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
       ) : (
         <Table
           columns={columns}
@@ -133,12 +200,11 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
 export default function SubmissionsPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const resolvedParams = params as unknown as { id: string };
   return (
     <App>
-      <SubmissionsPageContent shiftId={resolvedParams.id} />
+      <SubmissionsPageContent shiftId={params.id} />
     </App>
   );
 }

@@ -126,5 +126,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
 };
 
 export const CourseCrudModal: React.FC<CourseCrudModalProps> = (props) => (
-  <CourseCrudModalContent {...props} />
+  <App>
+    <CourseCrudModalContent {...props} />
+  </App>
 );

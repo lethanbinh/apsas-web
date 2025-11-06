@@ -130,4 +130,8 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
 
 export const CourseElementCrudModal: React.FC<CourseElementCrudModalProps> = (
   props
-) => <CourseElementCrudModalContent {...props} />;
+) => (
+  <App>
+    <CourseElementCrudModalContent {...props} />
+  </App>
+);

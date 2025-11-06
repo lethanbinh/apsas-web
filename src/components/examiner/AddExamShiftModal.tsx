@@ -1,31 +1,23 @@
 "use client";
 
-import { Alert, App, DatePicker, Form, Modal, Select, Spin } from "antd";
-import dayjs, { Dayjs } from "dayjs";
-import { useEffect, useState, useMemo } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   AssessmentTemplate,
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
-import {
-  semesterService,
-  SemesterPlanDetail,
-  SemesterCourse,
-  Semester,
-  Student,
-} from "@/services/semesterService";
-import { Examiner, examinerService } from "@/services/examinerService";
+import { examinerService } from "@/services/examinerService";
 import {
   CreateExamSessionPayload,
   examSessionService,
 } from "@/services/examSessionService";
 import {
-  studentManagementService,
-  StudentDetail,
-} from "@/services/studentManagementService";
-import { ClassInfo, classService } from "@/services/classService";
-
-const { Option } = Select;
+  SemesterCourse,
+  SemesterPlanDetail,
+  semesterService,
+} from "@/services/semesterService";
+import { Alert, App, DatePicker, Form, Modal, Select, Spin } from "antd";
+import dayjs, { Dayjs } from "dayjs";
+import { useEffect, useMemo, useState } from "react";
 
 interface AddExamShiftModalProps {
   open: boolean;
@@ -43,11 +35,12 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [allStudents, setAllStudents] = useState<StudentDetail[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
-  const [examiners, setExaminers] = useState<Examiner[]>([]);
   const [semesters, setSemesters] = useState<SemesterPlanDetail[]>([]);
   const [semesterCourses, setSemesterCourses] = useState<SemesterCourse[]>([]);
+  const [currentExaminerId, setCurrentExaminerId] = useState<number | null>(
+    null
+  );
 
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(
     null
@@ -55,6 +48,7 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
 
   const { notification } = App.useApp();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!open) return;
@@ -63,20 +57,23 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
       setIsFetching(true);
       setError(null);
       try {
-        const [templateData, examinerData, studentData, semesterList] =
-          await Promise.all([
-            assessmentTemplateService.getAssessmentTemplates({
-              pageNumber: 1,
-              pageSize: 1000,
-            }),
-            examinerService.getExaminerList(),
-            studentManagementService.getStudentList(),
-            semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
-          ]);
-
-        setTemplates(templateData.items);
-        setExaminers(examinerData);
-        setAllStudents(studentData);
+        const [examinerData, semesterList] = await Promise.all([
+          examinerService.getExaminerList(),
+          semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+        ]);
+        if (user) {
+          const loggedInExaminer = examinerData.find(
+            (e) => e.accountId === user.id.toString()
+          );
+          if (loggedInExaminer) {
+            setCurrentExaminerId(Number(loggedInExaminer.examinerId));
+          } else {
+            console.warn("Logged in user is not a registered examiner.");
+            setError("Tài khoản của bạn không phải là Examiner.");
+          }
+        } else {
+          setError("Không thể xác thực người dùng.");
+        }
 
         const semesterDetails = await Promise.all(
           semesterList.map((sem) =>
@@ -94,7 +91,21 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
 
     fetchDependencies();
     form.resetFields();
-  }, [open, form]);
+  }, [open, form, user]);
+
+  const fetchTemplatesForSemester = async (semesterId: number) => {
+    try {
+      const templateData =
+        await assessmentTemplateService.getAssessmentTemplates({
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+      setTemplates(templateData.items);
+    } catch (err) {
+      console.error("Failed to fetch templates for semester:", err);
+      setTemplates([]);
+    }
+  };
 
   const semesterCourseOptions = useMemo(() => {
     if (!selectedSemesterId) return [];
@@ -108,54 +119,58 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
     );
   }, [selectedSemesterId, semesters]);
 
-  const studentOptions = useMemo(() => {
+  const templateOptions = useMemo(() => {
     if (!selectedCourseId) return [];
-
-    const semesterCourse = semesterCourses.find(
-      (sc) => sc.id === selectedCourseId
-    );
-    if (!semesterCourse) return [];
-
-    const studentMap = new Map<string, { id: number; name: string }>();
-
-    semesterCourse.classes.forEach((cls) => {
-      cls.students.forEach((student) => {
-        if (!studentMap.has(student.account.accountCode)) {
-          studentMap.set(student.account.accountCode, {
-            id: student.id,
-            name: student.account.fullName,
-          });
-        }
-      });
-    });
-
-    return Array.from(studentMap.entries()).map(([accountCode, data]) => ({
-      label: `${data.name} (${accountCode})`,
-      value: data.id,
-    }));
-  }, [selectedCourseId, semesterCourses]);
-
+    const courseElementIds =
+      semesterCourses
+        .find((sc) => sc.id === selectedCourseId)
+        ?.courseElements.map((el) => el.id) || [];
+    console.log(courseElementIds, templates);
+    return templates
+      .filter((t) => {
+        console.log(t.courseElementId);
+        return courseElementIds.includes(t.courseElementId);
+      })
+      .map((t) => ({
+        label: t.name,
+        value: t.id,
+      }));
+  }, [selectedCourseId, templates, semesterCourses]);
   const handleSemesterChange = (value: number) => {
     setSelectedSemesterId(value);
     setSelectedCourseId(null);
-    form.setFieldsValue({ semesterCourseId: null, studentIds: [] });
+    form.setFieldsValue({
+      semesterCourseId: null,
+      assessmentTemplateId: null,
+      studentIds: [],
+    });
+    if (value) {
+      fetchTemplatesForSemester(value);
+    } else {
+      setTemplates([]);
+    }
   };
 
   const handleCourseChange = (value: number) => {
     setSelectedCourseId(value);
-    form.setFieldsValue({ studentIds: [] });
+    form.setFieldsValue({ assessmentTemplateId: null, studentIds: [] });
   };
 
   const handleFinish = async (values: any) => {
     setIsLoading(true);
     setError(null);
 
+    if (!currentExaminerId) {
+      setError("Không thể xác định Examiner ID. Vui lòng thử lại.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const payload: CreateExamSessionPayload = {
-        studentIds: values.studentIds,
         semesterCourseId: values.semesterCourseId,
         assessmentTemplateId: values.assessmentTemplateId,
-        examinerId: values.examinerId,
+        examinerId: currentExaminerId,
         startAt: values.startAt.toISOString(),
         endAt: values.endAt.toISOString(),
       };
@@ -235,41 +250,10 @@ export const AddExamShiftModal: React.FC<AddExamShiftModalProps> = ({
           >
             <Select
               placeholder="Select paper"
-              options={templates.map((t) => ({
-                label: t.name,
-                value: t.id,
-              }))}
+              disabled={!selectedCourseId || !selectedCourseId}
+              options={templateOptions}
             />
           </Form.Item>
-
-          <Form.Item
-            name="studentIds"
-            label="Students"
-            rules={[{ required: true, message: "Please select students" }]}
-          >
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="Select students in this course"
-              disabled={!selectedCourseId}
-              options={studentOptions}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="examinerId"
-            label="Examiner"
-            rules={[{ required: true, message: "Please select an examiner" }]}
-          >
-            <Select
-              placeholder="Select examiner"
-              options={examiners.map((l) => ({
-                label: `${l.fullName} (${l.accountCode})`,
-                value: Number(l.examinerId),
-              }))}
-            />
-          </Form.Item>
-
           <Form.Item
             name="startAt"
             label="Start Date & Time"

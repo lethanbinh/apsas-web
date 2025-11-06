@@ -23,7 +23,7 @@ import {
   SemesterCourse,
   Student,
 } from "@/services/semesterService";
-import { classService } from "@/services/classService";
+import { classService, StudentInClass } from "@/services/classService";
 import { Dayjs } from "dayjs";
 
 const { Option } = Select;
@@ -57,6 +57,9 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
   const [currentSemesterCourseId, setCurrentSemesterCourseId] = useState<
     number | null
   >(null);
+  const [currentStudentsInCourse, setCurrentStudentsInCourse] = useState<
+    Student[]
+  >([]);
 
   const { notification } = App.useApp();
 
@@ -91,6 +94,16 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
         if (matchingCourse) {
           setCurrentSemesterCourseId(matchingCourse.id);
           setSemesterCourses(semesterDetail.semesterCourses);
+
+          const studentMap = new Map<number, Student>();
+          matchingCourse.classes.forEach((cls) => {
+            cls.students.forEach((student) => {
+              if (!studentMap.has(student.id)) {
+                studentMap.set(student.id, student);
+              }
+            });
+          });
+          setCurrentStudentsInCourse(Array.from(studentMap.values()));
         }
 
         const currentClassStudents =
@@ -120,34 +133,37 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
   }, [open, initialData, form]);
 
   const studentOptions = useMemo(() => {
-    if (!currentSemesterCourseId) {
-      return allStudents.map((s) => ({
-        label: `${s.fullName} (${s.accountCode})`,
-        value: Number(s.studentId),
-      }));
+    if (!currentSemesterCourseId) return [];
+
+    const studentMap = new Map<
+      number,
+      { id: number; name: string; code: string }
+    >();
+
+    if (currentSemesterCourseId) {
+      const semesterCourse = semesterCourses.find(
+        (sc) => sc.id === currentSemesterCourseId
+      );
+      if (semesterCourse) {
+        semesterCourse.classes.forEach((cls) => {
+          cls.students.forEach((student) => {
+            if (!studentMap.has(student.id)) {
+              studentMap.set(student.id, {
+                id: student.id,
+                name: student.account.fullName,
+                code: student.account.accountCode,
+              });
+            }
+          });
+        });
+      }
     }
 
-    const semesterCourse = semesterCourses.find(
-      (sc) => sc.id === currentSemesterCourseId
-    );
-    if (!semesterCourse) return [];
-
-    const allStudentsInCourse = new Map<number, Student>();
-    semesterCourse.classes.forEach((cls) => {
-      cls.students.forEach((student) => {
-        if (!allStudentsInCourse.has(student.account.id)) {
-          allStudentsInCourse.set(student.account.id, student);
-        }
-      });
-    });
-
-    return allStudents
-      .filter((s) => allStudentsInCourse.has(Number(s.accountId)))
-      .map((s) => ({
-        label: `${s.fullName} (${s.accountCode})`,
-        value: Number(s.studentId),
-      }));
-  }, [currentSemesterCourseId, semesterCourses, allStudents]);
+    return Array.from(studentMap.values()).map((s) => ({
+      label: `${s.name} (${s.code})`,
+      value: s.id,
+    }));
+  }, [currentSemesterCourseId, semesterCourses]);
 
   const handleCourseChange = (value: number) => {
     setCurrentSemesterCourseId(value);

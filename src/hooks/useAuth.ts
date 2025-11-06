@@ -11,11 +11,15 @@ export const useAuth = () => {
     (state: RootState) => state.auth
   );
   const [isInitialized, setIsInitialized] = useState(false);
-
-  // Check for existing token on mount
   useEffect(() => {
-    // Only run on client-side to prevent hydration mismatch
     if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      const isLoginPage = currentPath === '/login';
+      if (isLoginPage) {
+        setIsInitialized(true);
+        return;
+      }
+      
       const token = localStorage.getItem('auth_token');
       const userDataStr = localStorage.getItem('user_data');
       

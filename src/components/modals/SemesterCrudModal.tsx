@@ -102,9 +102,17 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
 
   useEffect(() => {
     if (open) {
-      if (isEditMode) {
+      if (isEditMode && initialData) {
+        // Tự tính toán 'season'
+        const season =
+          initialData.semesterCode.replace(
+            initialData.academicYear.toString(),
+            ""
+          ) || null;
+
         form.setFieldsValue({
           ...initialData,
+          season: season, // Thêm dòng này
           startDate: moment(
             initialData.startDate.endsWith("Z")
               ? initialData.startDate
@@ -216,7 +224,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
         >
           <Select
             placeholder="Select season"
-            options={seasonOptions}
+            options={isEditMode ? allSeasons : seasonOptions}
             disabled={isEditMode || !selectedYear}
           />
         </Form.Item>
@@ -232,14 +240,22 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
           label="Start Date"
           rules={[{ required: true, message: "Please select a start date" }]}
         >
-          <DatePicker showTime style={{ width: "100%" }} disabled />
+          <DatePicker
+            showTime
+            style={{ width: "100%" }}
+            disabled={!isEditMode}
+          />
         </Form.Item>
         <Form.Item
           name="endDate"
           label="End Date"
           rules={[{ required: true, message: "Please select an end date" }]}
         >
-          <DatePicker showTime style={{ width: "100%" }} disabled />
+          <DatePicker
+            showTime
+            style={{ width: "100%" }}
+            disabled={!isEditMode}
+          />
         </Form.Item>
         <Form.Item
           name="note"
@@ -254,5 +270,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
 };
 
 export const SemesterCrudModal: React.FC<SemesterCrudModalProps> = (props) => (
-  <SemesterCrudModalContent {...props} />
+  <App>
+    <SemesterCrudModalContent {...props} />
+  </App>
 );

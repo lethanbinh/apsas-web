@@ -5,8 +5,9 @@ import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
 import { RootState } from "@/store/store";
+import { logout } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
-import { Button, Checkbox, Form, Input } from "antd";
+import { Button, Checkbox, Form, Input, message } from "antd";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
@@ -58,6 +59,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   let app;
   if (getApps().length === 0) {
@@ -70,9 +72,29 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   useEffect(() => {}, []);
 
   const handleSubmit = async (values: LoginCredentials) => {
+    if (isLoggingIn) return;
+    
     try {
+      setIsLoggingIn(true);
       setErrors({});
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('user_id');
+      }
+      
+      dispatch(logout());
+      
       const result = await login(values);
+
+      if (!result) {
+        throw new Error("Login failed: No response received");
+      }
+
+      if (!result.token) {
+        throw new Error("Login failed: Invalid response from server");
+      }
 
       console.log("Login successful!");
 
@@ -86,14 +108,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       let userRole: Role = 2;
 
-      if (result && result.token) {
+      try {
         const decoded = decodeJWT(result.token);
+        if (!decoded) {
+          throw new Error("Failed to decode authentication token");
+        }
         userRole = mapRoleToNumber(decoded?.role || 2);
-      } else {
-        const state = (dispatch as any).getState?.() || null;
-        const currentUser = state ? state.auth?.user : user;
-        const userInfo = currentUser || result?.user;
-        userRole = mapRoleToNumber(userInfo?.role || 2);
+      } catch (decodeError: any) {
+        console.error("Token decode error:", decodeError);
+        throw new Error("Failed to process authentication token");
       }
 
       const redirectPath = roleRedirects[userRole] || "/home/student";
@@ -105,57 +128,111 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       onSuccess?.();
     } catch (error: any) {
       console.error("Login error:", error);
-      const errorMessage = error.message || "Login failed";
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('user_id');
+      }
+      
+      dispatch(logout());
+      
+      const errorMessage =
+        "Login failed. Please check your credentials and try again.";
       setErrors({ general: errorMessage });
+      message.error(errorMessage);
       onError?.(errorMessage);
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
+      setErrors({});
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('user_id');
+      }
+      
       const result = await signInWithPopup(auth, provider);
       console.log("result:", result);
-      if (result && result.user) {
-        const idToken = await result.user.getIdToken();
-        console.log("Google ID Token:", idToken);
-        if (idToken) {
-          console.log("Sending ID Token to backend:", idToken);
-          const response = await authService.googleLogin({ idToken });
-          console.log("Backend response for Google Login:", response);
-          if (response.result.token) {
-            localStorage.setItem("auth_token", response.result.token);
 
-            const token = response.result.token;
-            const decoded = decodeJWT(token);
-
-            const roleRedirects: { [key: number]: string } = {
-              0: "/admin/dashboard", // Admin
-              1: "/classes/my-classes/lecturer", // Lecturer
-              2: "/student", // Student
-              3: "/hod/semester-plans", // HOD
-              4: "/examiner/exam-shifts", // examiner
-            };
-
-            const userRole = mapRoleToNumber(decoded?.role || 2);
-            console.log(
-              "Decoded role from JWT:",
-              decoded?.role,
-              "Mapped to:",
-              userRole
-            );
-
-            const redirectPath = roleRedirects[userRole] || "/home/student";
-            console.log("Redirecting to:", redirectPath);
-            router.push(redirectPath);
-            onSuccess?.();
-          }
-        }
+      if (!result || !result.user) {
+        throw new Error(
+          "Google authentication failed: No user information received"
+        );
       }
+
+      const idToken = await result.user.getIdToken();
+      console.log("Google ID Token:", idToken);
+
+      if (!idToken) {
+        throw new Error("Google authentication failed: No ID token received");
+      }
+
+      console.log("Sending ID Token to backend:", idToken);
+      const response = await authService.googleLogin({ idToken });
+      console.log("Backend response for Google Login:", response);
+
+      if (!response || !response.result || !response.result.token) {
+        throw new Error("Google login failed: Invalid response from server");
+      }
+
+      localStorage.setItem("auth_token", response.result.token);
+
+      const token = response.result.token;
+
+      let decoded;
+      try {
+        decoded = decodeJWT(token);
+        if (!decoded) {
+          throw new Error("Failed to decode authentication token");
+        }
+      } catch (decodeError: any) {
+        console.error("Token decode error:", decodeError);
+        throw new Error("Failed to process authentication token");
+      }
+
+      const roleRedirects: { [key: number]: string } = {
+        0: "/admin/dashboard", // Admin
+        1: "/classes/my-classes/lecturer", // Lecturer
+        2: "/student", // Student
+        3: "/hod/semester-plans", // HOD
+        4: "/examiner/exam-shifts", // examiner
+      };
+
+      const userRole = mapRoleToNumber(decoded?.role || 2);
+      console.log(
+        "Decoded role from JWT:",
+        decoded?.role,
+        "Mapped to:",
+        userRole
+      );
+
+      const redirectPath = roleRedirects[userRole] || "/home/student";
+      console.log("Redirecting to:", redirectPath);
+      router.push(redirectPath);
+      onSuccess?.();
     } catch (error: any) {
       console.error("Google login failed:", error);
-      setErrors({ general: error.message || "Google login failed" });
-      onError?.(error.message || "Google login failed");
+      
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        localStorage.removeItem('user_id');
+      }
+      
+      dispatch(logout());
+      
+      const errorMessage =
+        "Account is not registered or an error occurred during Google login.";
+      setErrors({ general: errorMessage });
+      message.error(errorMessage);
+      onError?.(errorMessage);
     }
   };
 
@@ -169,6 +246,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
+        onFinishFailed={() => {}}
         autoComplete="off"
         className="login-form"
       >

@@ -1,16 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  Table,
-  Spin,
-  Alert,
-  App,
-  Button,
-  Space,
-  Typography,
-  TableProps,
-} from "antd";
+import { Table, Spin, Alert, App, Button, Space, Typography } from "antd";
+import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { courseService, Course } from "@/services/courseManagementService";
 import { CourseOnlyCrudModal } from "@/components/modals/CourseOnlyCrudModal";
@@ -23,7 +15,7 @@ const CourseManagementPageContent = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const { modal } = App.useApp();
+  const { modal, notification } = App.useApp();
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -36,10 +28,14 @@ const CourseManagementPageContent = () => {
     } catch (err: any) {
       console.error("Failed to fetch courses:", err);
       setError(err.message || "Failed to load data.");
+      notification.error({
+        message: "Failed to load courses",
+        description: err.message || "An unknown error occurred.",
+      });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [notification]);
 
   useEffect(() => {
     fetchCourses();
@@ -81,9 +77,14 @@ const CourseManagementPageContent = () => {
       onOk: async () => {
         try {
           await courseService.deleteCourse(id);
+          notification.success({ message: "Course deleted successfully!" });
           fetchCourses();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to delete course:", err);
+          notification.error({
+            message: "Failed to delete course",
+            description: err.message || "An unknown error occurred.",
+          });
         }
       },
     });
@@ -198,5 +199,9 @@ const CourseManagementPageContent = () => {
 };
 
 export default function CourseManagementPage() {
-  return <CourseManagementPageContent />;
+  return (
+    <App>
+      <CourseManagementPageContent />
+    </App>
+  );
 }

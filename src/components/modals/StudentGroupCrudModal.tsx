@@ -115,4 +115,8 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
 
 export const StudentGroupCrudModal: React.FC<StudentGroupCrudModalProps> = (
   props
-) => <StudentGroupCrudModalContent {...props} />;
+) => (
+  <App>
+    <StudentGroupCrudModalContent {...props} />
+  </App>
+);

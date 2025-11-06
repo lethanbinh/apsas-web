@@ -41,9 +41,14 @@ class ApiService {
       (error) => {
         console.error('❌ API Error:', error.response?.status, error.config?.url, error.response?.data);
         if (error.response?.status === 401) {
-          // Handle unauthorized access
-          localStorage.removeItem('auth_token');
-          window.location.href = '/login';
+          const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
+          const requestUrl = error.config?.url?.toLowerCase() || '';
+          const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
+          
+          if (!isLoginPage && !isLoginRequest) {
+            localStorage.removeItem('auth_token');
+            window.location.href = '/login';
+          }
         }
         return Promise.reject(error);
       }

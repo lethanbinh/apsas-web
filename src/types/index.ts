@@ -66,6 +66,7 @@ export interface GoogleLoginRequest {
     token: string;
     refreshToken: string;
     expiresAt: string;
+    message: string;
   }
  }
 export interface ApiResponse<T = any> {

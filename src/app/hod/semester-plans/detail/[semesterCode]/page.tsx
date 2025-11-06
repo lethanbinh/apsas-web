@@ -926,8 +926,10 @@ export default function SemesterDetailPage({
 }: {
   params: Promise<{ semesterCode: string }>;
 }) {
-  // For Next.js 15, params is a Promise - but since we're using "use client",
-  // we need to use it synchronously. This will be resolved by Next.js 15.
   const resolvedParams = params as unknown as { semesterCode: string };
-  return <SemesterDetailPageContent params={resolvedParams} />;
+  return (
+    <App>
+      <SemesterDetailPageContent params={resolvedParams} />
+    </App>
+  );
 }

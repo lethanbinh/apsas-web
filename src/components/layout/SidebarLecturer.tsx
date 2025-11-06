@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  BarChartOutlined,
   BookOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
@@ -43,18 +42,18 @@ export default function SidebarLecturer() {
       },
       {
         key: "/lecturer/assignments",
-        icon: <BarChartOutlined />,
-        label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
-      },
-      {
-        key: "/lecturer/grading-history",
-        icon: <BookOutlined />,
-        label: <Link href="/lecturer/grading-history">Grading history</Link>,
+        icon: <FileTextOutlined />,
+        label: <Link href="/lecturer/detail-assignment">Practical Exams</Link>,
       },
       {
         key: "/lecturer/tasks",
         icon: <FileTextOutlined />,
         label: <Link href="/lecturer/tasks">Tasks</Link>,
+      },
+      {
+        key: "/lecturer/my-grading-group",
+        icon: <FileTextOutlined />,
+        label: <Link href="/lecturer/my-grading-group">Grading</Link>,
       },
       {
         key: "/lecturer/members",
@@ -64,10 +63,11 @@ export default function SidebarLecturer() {
     ];
   }, [selectedClassId]);
 
-  // ✅ Helper: Lấy tất cả key để xác định menu đang active
-  const allKeys = useMemo(() => menuItems.map((item) => String(item?.key)), [menuItems]);
+  const allKeys = useMemo(
+    () => menuItems.map((item) => String(item?.key)),
+    [menuItems]
+  );
 
-  // ✅ Tính toán selectedKey dựa trên pathname hiện tại
   const selectedKey = useMemo(() => {
     const sortedKeys = [...allKeys].sort((a, b) => b.length - a.length);
     const matched = sortedKeys.find((key) => pathname.startsWith(key));
@@ -77,7 +77,6 @@ export default function SidebarLecturer() {
   const onThemeChange = (checked: boolean) => {
     setTheme(checked ? "dark" : "light");
   };
-
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>

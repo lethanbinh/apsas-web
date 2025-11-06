@@ -1,4 +1,10 @@
 import { apiService } from "./api";
+export interface ExamSessionStudent {
+  studentId: number;
+  studentName: string;
+  studentCode: string;
+}
+
 export interface ExamSession {
   id: number;
   classId: number;
@@ -11,11 +17,13 @@ export interface ExamSession {
   endAt: string;
   createdAt: string;
   updatedAt: string;
+  enrollmentCode: string;
   classCode: string;
   courseName: string;
   lecturerName: string;
+  students: ExamSessionStudent[];
   submissionCount: string;
-  status: string;
+  status: number;
 }
 
 export interface ExamSessionApiResponse {
@@ -56,7 +64,6 @@ export interface GetExamSessionsResponse {
 }
 
 export interface CreateExamSessionPayload {
-  studentIds: number[];
   semesterCourseId: number;
   assessmentTemplateId: number;
   examinerId: number;
@@ -69,6 +76,18 @@ export interface UpdateExamSessionPayload {
   assessmentTemplateId: number;
   startAt: string;
   endAt: string;
+}
+
+export interface EnrollExamSessionPayload {
+  studentId: number;
+  enrollmentCode: string;
+}
+
+export interface EnrollExamSessionResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: any; // Hoặc định nghĩa type cụ thể nếu API trả về data
 }
 
 export class ExamSessionService {
@@ -108,6 +127,14 @@ export class ExamSessionService {
 
   async deleteExamSession(examSessionId: string | number): Promise<void> {
     await apiService.delete(`/ExamSession/${examSessionId}`);
+  }
+
+  async enrollExamSession(payload: EnrollExamSessionPayload): Promise<any> {
+    const response = await apiService.post<EnrollExamSessionResponse>(
+      "/ExamSession/enroll",
+      payload
+    );
+    return response.result;
   }
 }
 
