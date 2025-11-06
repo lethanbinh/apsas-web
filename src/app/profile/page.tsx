@@ -410,13 +410,6 @@ const ProfilePage = () => {
             </Form.Item>
 
             <Form.Item
-              name="avatar"
-              label="Avatar URL"
-            >
-              <Input placeholder="Enter avatar URL (optional)" />
-            </Form.Item>
-
-            <Form.Item
               name="address"
               label="Address"
               rules={[{ required: true, message: 'Please input your address!' }]}
