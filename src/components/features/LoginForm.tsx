@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
-import { RootState } from "@/store/store";
 import { logout } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
 import { Button, Checkbox, Form, Input, message } from "antd";
@@ -13,7 +12,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -56,7 +55,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -69,23 +67,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   }
   const auth = getAuth(app);
 
-  useEffect(() => {}, []);
+  useEffect(() => { }, []);
 
   const handleSubmit = async (values: LoginCredentials) => {
     if (isLoggingIn) return;
-    
+
     try {
       setIsLoggingIn(true);
       setErrors({});
-      
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('user_id');
       }
-      
+
       dispatch(logout());
-      
+
       const result = await login(values);
 
       if (!result) {
@@ -101,7 +99,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/dashboard", // Admin
         1: "/classes/my-classes/lecturer", // Lecturer
-        2: "/student", // Student
+        2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
         4: "/examiner/exam-shifts", // examiner
       };
@@ -128,15 +126,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       onSuccess?.();
     } catch (error: any) {
       console.error("Login error:", error);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('user_id');
       }
-      
+
       dispatch(logout());
-      
+
       const errorMessage =
         "Login failed. Please check your credentials and try again.";
       setErrors({ general: errorMessage });
@@ -151,13 +149,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
     const provider = new GoogleAuthProvider();
     try {
       setErrors({});
-      
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('user_id');
       }
-      
+
       const result = await signInWithPopup(auth, provider);
       console.log("result:", result);
 
@@ -200,7 +198,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/dashboard", // Admin
         1: "/classes/my-classes/lecturer", // Lecturer
-        2: "/student", // Student
+        2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
         4: "/examiner/exam-shifts", // examiner
       };
@@ -219,15 +217,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       onSuccess?.();
     } catch (error: any) {
       console.error("Google login failed:", error);
-      
+
       if (typeof window !== 'undefined') {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         localStorage.removeItem('user_id');
       }
-      
+
       dispatch(logout());
-      
+
       const errorMessage =
         "Account is not registered or an error occurred during Google login.";
       setErrors({ general: errorMessage });
@@ -246,7 +244,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         form={form}
         layout="vertical"
         onFinish={handleSubmit}
-        onFinishFailed={() => {}}
+        onFinishFailed={() => { }}
         autoComplete="off"
         className="login-form"
       >

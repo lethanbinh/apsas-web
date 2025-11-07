@@ -139,6 +139,42 @@ export class ClassService {
     );
     return response.result;
   }
+
+  async getClassesByStudentId(
+    studentId: number
+  ): Promise<StudentInClass[]> {
+    try {
+      // Try endpoint for getting classes by student ID
+      const response = await apiService.get<StudentGroupApiResponse>(
+        `/StudentGroup/student/${studentId}`
+      );
+      return response.result;
+    } catch (error) {
+      // Fallback: Get all classes and filter by student
+      console.warn("Direct endpoint not available, using fallback method");
+      const { classes } = await this.getClassList({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      
+      const studentClasses: StudentInClass[] = [];
+      for (const cls of classes) {
+        try {
+          const students = await this.getStudentsInClass(cls.id);
+          const studentInClass = students.find(
+            (s) => s.studentId === studentId
+          );
+          if (studentInClass) {
+            studentClasses.push(studentInClass);
+          }
+        } catch (err) {
+          // Skip this class if error
+          console.warn(`Failed to get students for class ${cls.id}:`, err);
+        }
+      }
+      return studentClasses;
+    }
+  }
 }
 
 export const classService = new ClassService();

@@ -194,6 +194,11 @@ const ExamShiftPageContent = () => {
       key: "paper",
     },
     {
+      title: "Enroll Code",
+      dataIndex: "enrollmentCode",
+      key: "enrollmentCode",
+    },
+    {
       title: "Start date",
       dataIndex: "startAt",
       key: "startAt",
