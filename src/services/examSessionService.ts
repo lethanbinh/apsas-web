@@ -72,7 +72,6 @@ export interface CreateExamSessionPayload {
 }
 
 export interface UpdateExamSessionPayload {
-  studentIds: number[];
   assessmentTemplateId: number;
   startAt: string;
   endAt: string;
@@ -87,7 +86,30 @@ export interface EnrollExamSessionResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
-  result: any; // Hoặc định nghĩa type cụ thể nếu API trả về data
+  result: any;
+}
+
+export interface ExamSessionStudentPayload {
+  studentIds: number[];
+}
+
+export interface GetExamSessionStudentsResponse {
+  examSessionId: number;
+  students: ExamSessionStudent[];
+}
+
+export interface GetExamSessionStudentsApiReponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: GetExamSessionStudentsResponse;
+}
+
+export interface ExamSessionStudentApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: GetExamSessionStudentsResponse;
 }
 
 export class ExamSessionService {
@@ -133,6 +155,37 @@ export class ExamSessionService {
     const response = await apiService.post<EnrollExamSessionResponse>(
       "/ExamSession/enroll",
       payload
+    );
+    return response.result;
+  }
+
+  async getExamSessionStudents(
+    examSessionId: string | number
+  ): Promise<GetExamSessionStudentsResponse> {
+    const response = await apiService.get<GetExamSessionStudentsApiReponse>(
+      `/ExamSessionStudent/${examSessionId}/students`
+    );
+    return response.result;
+  }
+
+  async addStudentsToExamSession(
+    examSessionId: string | number,
+    payload: ExamSessionStudentPayload
+  ): Promise<any> {
+    const response = await apiService.post<ExamSessionStudentApiResponse>(
+      `/ExamSessionStudent/${examSessionId}/students`,
+      payload
+    );
+    return response.result;
+  }
+
+  async removeStudentsFromExamSession(
+    examSessionId: string | number,
+    payload: ExamSessionStudentPayload
+  ): Promise<any> {
+    const response = await apiService.delete<ExamSessionStudentApiResponse>(
+      `/ExamSessionStudent/${examSessionId}/students`,
+      { data: payload }
     );
     return response.result;
   }

@@ -19,7 +19,7 @@ import {
   Typography,
 } from "antd";
 import { format } from "date-fns";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./Submissions.module.css";
 
@@ -197,14 +197,13 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
   );
 };
 
-export default function SubmissionsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function SubmissionsPage() {
+  const params = useParams();
+  const shiftId = params.id as string;
+  
   return (
     <App>
-      <SubmissionsPageContent shiftId={params.id} />
+      <SubmissionsPageContent shiftId={shiftId} />
     </App>
   );
 }

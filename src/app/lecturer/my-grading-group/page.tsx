@@ -107,7 +107,7 @@ const MySubmissionsPageContent = () => {
 
   const classIdToSemesterNameMap = useMemo(() => {
     return new Map(
-      classes.map((cls) => [cls.id, cls.semesterName.split(" - ")[0]])
+      classes.map((cls) => [cls.id.toString(), cls.semesterName.split(" - ")[0]])
     );
   }, [classes]);
 

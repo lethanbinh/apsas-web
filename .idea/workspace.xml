@@ -4,36 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix UI admin">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/submissions/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/submissions/[id]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/layout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/assets/Logo.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/assets/Logo.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/auth/AuthGuard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/auth/AuthGuard.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/AddExamShiftModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AddExamShiftModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/EditExamShiftModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/EditExamShiftModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/ViewStudentsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/ViewStudentsModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/lecturer/Tasks.module.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/Tasks.module.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/SemesterCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/SemesterCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/hooks/useAuth.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/hooks/useAuth.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/api.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/assessmentTemplateService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/assessmentTemplateService.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/examSessionService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/examSessionService.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/store/slices/authSlice.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/store/slices/authSlice.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/types/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/types/index.ts" afterDir="false" />
-    </list>
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix UI admin" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -120,6 +91,7 @@
       <workItem from="1762326987903" duration="676000" />
       <workItem from="1762393639073" duration="2551000" />
       <workItem from="1762433359344" duration="1424000" />
+      <workItem from="1762444379590" duration="73000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />

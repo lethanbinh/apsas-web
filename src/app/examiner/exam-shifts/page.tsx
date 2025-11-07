@@ -31,7 +31,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./ExamShifts.module.css";
 
 const { Title } = Typography;
-const { Option } = Select;
 
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";

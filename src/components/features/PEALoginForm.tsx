@@ -4,6 +4,9 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Input, Typography, message } from "antd";
 import { FileTextOutlined, CloseOutlined } from "@ant-design/icons";
+import { authService } from "@/services/authService";
+import { examSessionService } from "@/services/examSessionService";
+import { ExamSession } from "@/services/examSessionService";
 import styles from "./PEALoginForm.module.css";
 
 const { Text } = Typography;
@@ -38,21 +41,117 @@ export const PEALoginForm: React.FC = () => {
 
     setLoading(true);
     try {
-      // TODO: Implement actual login API call
-      // For now, simulate login
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Store test session info
+      // Step 1: Login to get student information
+      message.loading({ content: "Logging in...", key: "login" });
+      const loginResponse = await authService.login({
+        email: formData.userName,
+        password: formData.password,
+      });
+
+      // Extract token and user info
+      let token: string;
+      if (loginResponse.result?.token) {
+        token = loginResponse.result.token;
+      } else if (loginResponse.token) {
+        token = loginResponse.token;
+      } else {
+        throw new Error("No token in login response");
+      }
+
+      // Save token
       if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", token);
+      }
+
+      // Decode JWT to get user ID
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const decoded = JSON.parse(jsonPayload);
+      const studentId = parseInt(decoded.nameid || decoded.sub);
+
+      if (!studentId) {
+        throw new Error("Could not extract student ID from token");
+      }
+
+      // Step 2: Enroll in exam session
+      message.loading({
+        content: "Enrolling in exam session...",
+        key: "enroll",
+      });
+      await examSessionService.enrollExamSession({
+        studentId: studentId,
+        enrollmentCode: formData.testName,
+      });
+
+      // Step 3: Get exam session details
+      // Retry logic: sometimes the exam session might not appear immediately after enrollment
+      message.loading({
+        content: "Loading exam session...",
+        key: "loadSession",
+      });
+      
+      let examSession: ExamSession | undefined;
+      const maxRetries = 3;
+      let retryCount = 0;
+      
+      while (!examSession && retryCount < maxRetries) {
+        if (retryCount > 0) {
+          // Wait a bit before retrying
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+        
+        const examSessionsResponse = await examSessionService.getExamSessions({
+          studentId: studentId,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+
+        // Find the exam session with matching enrollment code
+        examSession = examSessionsResponse.items.find(
+          (session: ExamSession) => session.enrollmentCode === formData.testName
+        );
+        
+        retryCount++;
+      }
+
+      if (!examSession) {
+        throw new Error("Could not find exam session after enrollment. Please try again.");
+      }
+
+      // Store exam session info
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pea_exam_session_id", examSession.id.toString());
+        localStorage.setItem(
+          "pea_exam_session",
+          JSON.stringify(examSession)
+        );
+        localStorage.setItem("pea_student_id", studentId.toString());
         localStorage.setItem("pea_test_name", formData.testName);
         localStorage.setItem("pea_user_name", formData.userName);
       }
 
-      message.success("Login successful! Redirecting to submission...");
+      message.success({
+        content: "Login and enrollment successful! Redirecting...",
+        key: "loadSession",
+      });
       router.push("/pe/submission");
-    } catch (error) {
-      message.error("Login failed. Please check your credentials.");
-      console.error("Login error:", error);
+    } catch (error: any) {
+      console.error("Login/Enroll error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Login or enrollment failed. Please check your credentials and enrollment code.";
+      message.error({
+        content: errorMessage,
+        key: "login",
+        duration: 5,
+      });
     } finally {
       setLoading(false);
     }

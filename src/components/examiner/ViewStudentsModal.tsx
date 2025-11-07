@@ -1,6 +1,10 @@
 "use client";
 
-import { ExamSession, ExamSessionStudent } from "@/services/examSessionService";
+import {
+  ExamSession,
+  ExamSessionStudent,
+  examSessionService,
+} from "@/services/examSessionService";
 import type { TableProps } from "antd";
 import { Button, Modal, Spin, Table } from "antd";
 import { useEffect, useState } from "react";
@@ -21,11 +25,22 @@ export const ViewStudentsModal: React.FC<ViewStudentsModalProps> = ({
 
   useEffect(() => {
     if (open) {
-      setLoading(true);
-      setStudents(session.students || []);
-      setLoading(false);
+      const fetchStudents = async () => {
+        setLoading(true);
+        try {
+          const response =
+            await examSessionService.getExamSessionStudents(session.id);
+          setStudents(response.students || []);
+        } catch (err) {
+          console.error("Failed to fetch exam session students:", err);
+          setStudents([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchStudents();
     }
-  }, [open, session.students]);
+  }, [open, session.id]);
 
   const columns: TableProps<ExamSessionStudent>["columns"] = [
     {
