@@ -1,10 +1,10 @@
 "use client";
 
-import { StudentInClass } from "@/services/classService";
-import { ExamSession } from "@/services/examSessionService";
 import {
-    studentManagementService,
-} from "@/services/studentManagementService";
+  ExamSession,
+  ExamSessionStudent,
+  examSessionService,
+} from "@/services/examSessionService";
 import type { TableProps } from "antd";
 import { Button, Modal, Spin, Table } from "antd";
 import { useEffect, useState } from "react";
@@ -20,29 +20,29 @@ export const ViewStudentsModal: React.FC<ViewStudentsModalProps> = ({
   session,
   onCancel,
 }) => {
-  const [students, setStudents] = useState<StudentInClass[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState<ExamSessionStudent[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open) {
       const fetchStudents = async () => {
         setLoading(true);
         try {
-          const data = await studentManagementService.getStudentsInClass(
-            session.classId
-          );
-          setStudents(data);
+          const response =
+            await examSessionService.getExamSessionStudents(session.id);
+          setStudents(response.students || []);
         } catch (err) {
-          console.error("Failed to fetch students:", err);
+          console.error("Failed to fetch exam session students:", err);
+          setStudents([]);
         } finally {
           setLoading(false);
         }
       };
       fetchStudents();
     }
-  }, [open, session.classId]);
+  }, [open, session.id]);
 
-  const columns: TableProps<StudentInClass>["columns"] = [
+  const columns: TableProps<ExamSessionStudent>["columns"] = [
     {
       title: "Student Code",
       dataIndex: "studentCode",
@@ -52,11 +52,6 @@ export const ViewStudentsModal: React.FC<ViewStudentsModalProps> = ({
       title: "Student Name",
       dataIndex: "studentName",
       key: "studentName",
-    },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
     },
   ];
 
@@ -80,7 +75,7 @@ export const ViewStudentsModal: React.FC<ViewStudentsModalProps> = ({
         <Table
           columns={columns}
           dataSource={students}
-          rowKey="id"
+          rowKey="studentId"
           pagination={false}
           size="small"
         />

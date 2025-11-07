@@ -158,5 +158,7 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
 };
 
 export const ClassCrudModal: React.FC<ClassCrudModalProps> = (props) => (
-  <ClassCrudModalContent {...props} />
+  <App>
+    <ClassCrudModalContent {...props} />
+  </App>
 );

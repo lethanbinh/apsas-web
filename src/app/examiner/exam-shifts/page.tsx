@@ -1,41 +1,36 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
-import {
-  Table,
-  Spin,
-  Alert,
-  App,
-  Button,
-  Space,
-  Typography,
-  Select,
-  Tag,
-} from "antd";
-import type { TableProps } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
-import { format } from "date-fns";
 import { AddExamShiftModal } from "@/components/examiner/AddExamShiftModal";
 import { EditExamShiftModal } from "@/components/examiner/EditExamShiftModal";
 import { ViewStudentsModal } from "@/components/examiner/ViewStudentsModal";
-import { ExamSession, examSessionService } from "@/services/examSessionService";
+import { ClassInfo, classService } from "@/services/classService";
 import { Course, courseService } from "@/services/courseManagementService";
+import { ExamSession, examSessionService } from "@/services/examSessionService";
 import { Semester, semesterService } from "@/services/semesterService";
-import { classService, ClassInfo } from "@/services/classService";
 import {
-  AssessmentTemplate,
-  assessmentTemplateService,
-} from "@/services/assessmentTemplateService";
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
+import type { TableProps } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from "antd";
+import { format } from "date-fns";
 import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./ExamShifts.module.css";
 
 const { Title } = Typography;
-const { Option } = Select;
 
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -45,14 +40,14 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-const getStatusTag = (status: string) => {
-  if (status === "ENDED") {
+const getStatusTag = (status: number) => {
+  if (status === 2) {
     return <Tag color="green">Finished</Tag>;
   }
-  if (status === "ACTIVE") {
+  if (status === 1) {
     return <Tag color="processing">In Progress</Tag>;
   }
-  return <Tag color="blue">{status}</Tag>;
+  return <Tag color="blue">Upcoming</Tag>;
 };
 
 const ExamShiftPageContent = () => {
@@ -199,6 +194,11 @@ const ExamShiftPageContent = () => {
       key: "paper",
     },
     {
+      title: "Enroll Code",
+      dataIndex: "enrollmentCode",
+      key: "enrollmentCode",
+    },
+    {
       title: "Start date",
       dataIndex: "startAt",
       key: "startAt",
@@ -238,7 +238,7 @@ const ExamShiftPageContent = () => {
       title: "Actions",
       key: "actions",
       render: (_, record) => {
-        const isEditable = record.status !== "ENDED";
+        const isEditable = record.status !== 2;
         return (
           <Space size="middle">
             <Button

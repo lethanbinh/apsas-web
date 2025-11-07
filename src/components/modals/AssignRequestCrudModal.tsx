@@ -182,4 +182,8 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
 
 export const AssignRequestCrudModal: React.FC<AssignRequestCrudModalProps> = (
   props
-) => <AssignRequestCrudModalContent {...props} />;
+) => (
+  <App>
+    <AssignRequestCrudModalContent {...props} />
+  </App>
+);

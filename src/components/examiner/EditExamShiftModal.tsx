@@ -2,31 +2,24 @@
 
 import { Alert, App, DatePicker, Form, Input, Modal, Select, Spin } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   AssessmentTemplate,
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
+import { classService } from "@/services/classService";
 import {
   ExamSession,
   examSessionService,
+  ExamSessionStudent,
   UpdateExamSessionPayload,
 } from "@/services/examSessionService";
 import {
-  studentManagementService,
-  StudentDetail,
-} from "@/services/studentManagementService";
-import {
-  semesterService,
-  SemesterPlanDetail,
   SemesterCourse,
-  Student,
+  semesterService
 } from "@/services/semesterService";
-import { classService } from "@/services/classService";
 import { Dayjs } from "dayjs";
-
-const { Option } = Select;
 
 interface EditExamShiftModalProps {
   open: boolean;
@@ -51,12 +44,14 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
   const [isFetching, setIsFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [allStudents, setAllStudents] = useState<StudentDetail[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [semesterCourses, setSemesterCourses] = useState<SemesterCourse[]>([]);
   const [currentSemesterCourseId, setCurrentSemesterCourseId] = useState<
     number | null
   >(null);
+  const [currentExamSessionStudents, setCurrentExamSessionStudents] = useState<
+    ExamSessionStudent[]
+  >([]);
 
   const { notification } = App.useApp();
 
@@ -67,17 +62,18 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
       setIsFetching(true);
       setError(null);
       try {
-        const [templateData, studentData, classData] = await Promise.all([
-          assessmentTemplateService.getAssessmentTemplates({
-            pageNumber: 1,
-            pageSize: 1000,
-          }),
-          studentManagementService.getStudentList(),
-          classService.getClassById(initialData.classId),
-        ]);
+        const [templateData, examSessionStudentsData, classData] =
+          await Promise.all([
+            assessmentTemplateService.getAssessmentTemplates({
+              pageNumber: 1,
+              pageSize: 1000,
+            }),
+            examSessionService.getExamSessionStudents(initialData.id),
+            classService.getClassById(initialData.classId),
+          ]);
 
         setTemplates(templateData.items);
-        setAllStudents(studentData);
+        setCurrentExamSessionStudents(examSessionStudentsData.students);
 
         const semesterCode = classData.semesterName.split(" - ")[0];
         const semesterDetail = await semesterService.getSemesterPlanDetail(
@@ -93,11 +89,9 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
           setSemesterCourses(semesterDetail.semesterCourses);
         }
 
-        const currentClassStudents =
-          await studentManagementService.getStudentsInClass(
-            initialData.classId
-          );
-        const currentStudentIds = currentClassStudents.map((s) => s.studentId);
+        const currentStudentIds = examSessionStudentsData.students.map(
+          (s) => s.studentId
+        );
 
         form.setFieldsValue({
           ...initialData,
@@ -120,34 +114,45 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
   }, [open, initialData, form]);
 
   const studentOptions = useMemo(() => {
-    if (!currentSemesterCourseId) {
-      return allStudents.map((s) => ({
-        label: `${s.fullName} (${s.accountCode})`,
-        value: Number(s.studentId),
-      }));
-    }
+    const studentMap = new Map<
+      number,
+      { id: number; name: string; code: string }
+    >();
 
-    const semesterCourse = semesterCourses.find(
-      (sc) => sc.id === currentSemesterCourseId
-    );
-    if (!semesterCourse) return [];
-
-    const allStudentsInCourse = new Map<number, Student>();
-    semesterCourse.classes.forEach((cls) => {
-      cls.students.forEach((student) => {
-        if (!allStudentsInCourse.has(student.account.id)) {
-          allStudentsInCourse.set(student.account.id, student);
-        }
+    // First, add current exam session students to ensure they're always available
+    currentExamSessionStudents.forEach((student) => {
+      studentMap.set(student.studentId, {
+        id: student.studentId,
+        name: student.studentName,
+        code: student.studentCode,
       });
     });
 
-    return allStudents
-      .filter((s) => allStudentsInCourse.has(Number(s.accountId)))
-      .map((s) => ({
-        label: `${s.fullName} (${s.accountCode})`,
-        value: Number(s.studentId),
-      }));
-  }, [currentSemesterCourseId, semesterCourses, allStudents]);
+    // Then, add students from the selected semester course (if any)
+    if (currentSemesterCourseId) {
+      const semesterCourse = semesterCourses.find(
+        (sc) => sc.id === currentSemesterCourseId
+      );
+      if (semesterCourse) {
+        semesterCourse.classes.forEach((cls) => {
+          cls.students.forEach((student) => {
+            if (!studentMap.has(student.id)) {
+              studentMap.set(student.id, {
+                id: student.id,
+                name: student.account.fullName,
+                code: student.account.accountCode,
+              });
+            }
+          });
+        });
+      }
+    }
+
+    return Array.from(studentMap.values()).map((s) => ({
+      label: `${s.name} (${s.code})`,
+      value: s.id,
+    }));
+  }, [currentSemesterCourseId, semesterCourses, currentExamSessionStudents]);
 
   const handleCourseChange = (value: number) => {
     setCurrentSemesterCourseId(value);
@@ -160,12 +165,41 @@ export const EditExamShiftModal: React.FC<EditExamShiftModalProps> = ({
 
     try {
       const payload: UpdateExamSessionPayload = {
-        studentIds: values.studentIds,
         assessmentTemplateId: values.assessmentTemplateId,
         startAt: values.startAt.toISOString(),
         endAt: values.endAt.toISOString(),
       };
       await examSessionService.updateExamSession(initialData.id, payload);
+
+      const oldStudentIds = new Set(
+        currentExamSessionStudents.map((s) => s.studentId)
+      );
+      const newStudentIdsArray = (values.studentIds || []) as number[];
+      const newStudentIds = new Set(newStudentIdsArray);
+
+      const studentsToAdd = Array.from(newStudentIds).filter(
+        (id) => !oldStudentIds.has(id)
+      ) as number[];
+
+      const studentsToRemove = Array.from(oldStudentIds).filter(
+        (id) => !newStudentIds.has(id)
+      ) as number[];
+
+      if (studentsToAdd.length > 0) {
+        await examSessionService.addStudentsToExamSession(initialData.id, {
+          studentIds: studentsToAdd,
+        });
+      }
+
+      if (studentsToRemove.length > 0) {
+        await examSessionService.removeStudentsFromExamSession(
+          initialData.id,
+          {
+            studentIds: studentsToRemove,
+          }
+        );
+      }
+
       notification.success({ message: "Exam shift updated successfully!" });
       onOk();
     } catch (err: any) {

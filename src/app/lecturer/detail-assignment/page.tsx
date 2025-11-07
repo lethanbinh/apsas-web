@@ -1,7 +1,17 @@
 "use client";
 
 import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
-import { Collapse, Spin } from "antd";
+import {
+  Collapse,
+  Spin,
+  Card,
+  Button,
+  List,
+  Typography,
+  Descriptions,
+  Space,
+  Alert,
+} from "antd";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
 import styles from "./DetailAsm.module.css";
@@ -18,8 +28,14 @@ import {
   assessmentFileService,
   AssessmentFile,
 } from "@/services/assessmentFileService";
+import {
+  PaperClipOutlined,
+  DownloadOutlined,
+  FolderOutlined,
+} from "@ant-design/icons";
 
 const { Panel } = Collapse;
+const { Text, Paragraph } = Typography;
 
 const convertToDate = (dateString?: string): Date | null => {
   if (!dateString) return null;
@@ -67,111 +83,72 @@ const AssignmentDetailItem = ({
 
   return (
     <>
-      <div className={styles["content-card"]}>
-        <h2
-          className={styles["assignment-title"]}
-          onClick={openModal}
-          style={{ cursor: "pointer", fontSize: "1.2rem", margin: 0 }}
-        >
-          {assignment.name}
-        </h2>
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Card bordered={false}>
+          <Descriptions column={1} layout="vertical" title="Assignment Details">
+            <Descriptions.Item label="Description">
+              <Paragraph>{assignment.description}</Paragraph>
+            </Descriptions.Item>
 
-        <div className={styles["requirement-link-container"]}>
-          {isFilesLoading ? (
-            <Spin size="small" />
-          ) : (
-            <div className={styles["requirement-file-list"]}>
-              {assessmentFiles.length > 0 ? (
-                assessmentFiles.map((file) => (
-                  <a
-                    key={file.id}
-                    href={file.fileUrl}
-                    download
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles["requirement-link"]}
-                  >
-                    <svg
-                      className={styles["link-icon"]}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                      ></path>
-                    </svg>
-                    {file.name}
-                  </a>
-                ))
+            <Descriptions.Item label="Requirement Files">
+              {isFilesLoading ? (
+                <Spin />
               ) : (
-                <span className={styles["requirement-link"]}>
-                  No requirement files.
-                </span>
+                <>
+                  {assessmentFiles.length > 0 ? (
+                    <List
+                      dataSource={assessmentFiles}
+                      renderItem={(file) => (
+                        <List.Item>
+                          <a
+                            key={file.id}
+                            href={file.fileUrl}
+                            download
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <PaperClipOutlined style={{ marginRight: 8 }} />
+                            {file.name}
+                          </a>
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <Text type="secondary">No requirement files.</Text>
+                  )}
+                </>
               )}
-            </div>
-          )}
-        </div>
+            </Descriptions.Item>
+          </Descriptions>
 
-        <div className={styles["description-text-background"]}>
-          <p className={styles["description-text"]}>{assignment.description}</p>
-        </div>
+          <Button type="primary" onClick={openModal} style={{ marginTop: 16 }}>
+            View Assignment Paper
+          </Button>
+        </Card>
 
-        <div className={styles["submissions-section"]}>
-          <h2 className={styles["submissions-title"]}>Submissions</h2>
-          <div className={styles["submission-item"]}>
-            <div className={styles["submission-info"]}>
-              <div className={styles["file-icon-wrapper"]}>
-                <svg
-                  className={styles["file-icon"]}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-                  ></path>
-                </svg>
-              </div>
-              <div className={styles["submission-details"]}>
-                <span className={styles["student-name"]}>
-                  <Link
-                    href="/lecturer/assignment-grading"
-                    className={styles["student-name-link"]}
-                  >
-                    Lethanhbinh
-                  </Link>
-                </span>
-                <span className={styles["file-name"]}>lethanhbinh-asm.zip</span>
-              </div>
-            </div>
-            <svg
-              className={styles["download-icon"]}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
+        <Card title="Submissions">
+          <List>
+            <List.Item
+              actions={[
+                <Button
+                  type="text"
+                  icon={<DownloadOutlined />}
+                  key="download"
+                />,
+              ]}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              ></path>
-            </svg>
-          </div>
-        </div>
-      </div>
+              <List.Item.Meta
+                avatar={<FolderOutlined />}
+                title={
+                  <Link href="/lecturer/assignment-grading">Lethanhbinh</Link>
+                }
+                description="lethanhbinh-asm.zip"
+              />
+            </List.Item>
+          </List>
+        </Card>
+      </Space>
+
       <PaperAssignmentModal
         isOpen={isModalOpen}
         onClose={closeModal}
@@ -240,7 +217,7 @@ const DetailAssignmentPage = () => {
     <div>
       <div className={styles.container}>
         <div className={styles["header-section"]}>
-          <h1 className={styles.title}>Assignments</h1>
+          <h1 className={styles.title}>Practical Exams</h1>
           <Link href="/lecturer/dashboard" className={styles["dashboard-link"]}>
             Dashboard
           </Link>
@@ -252,9 +229,7 @@ const DetailAssignmentPage = () => {
           </div>
         )}
 
-        {!isLoading && error && (
-          <div className={styles["error-message"]}>{error}</div>
-        )}
+        {!isLoading && error && <Alert message={error} type="error" showIcon />}
 
         {!isLoading && !error && selectedClassId && (
           <Collapse accordion>
@@ -273,9 +248,10 @@ const DetailAssignmentPage = () => {
                 );
               })
             ) : (
-              <div className={styles["no-assignments-message"]}>
-                No assignments found for this class.
-              </div>
+              <Alert
+                message="No assignments found for this class."
+                type="info"
+              />
             )}
           </Collapse>
         )}

@@ -1,6 +1,23 @@
 "use client";
 
-import { Spin, Button, Input, Radio, Space, Upload, App, Modal } from "antd";
+import {
+  Spin,
+  Button,
+  Input,
+  Radio,
+  Space,
+  Upload,
+  App,
+  Modal,
+  Form,
+  Card,
+  List,
+  Typography,
+  Alert,
+  Layout,
+  Menu,
+  Descriptions,
+} from "antd";
 import { useState, useEffect } from "react";
 import styles from "./Tasks.module.css";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
@@ -26,6 +43,11 @@ import {
   DeleteOutlined,
   PaperClipOutlined,
   DownloadOutlined,
+  PlusOutlined,
+  EditOutlined,
+  BookOutlined,
+  FileTextOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadChangeParam } from "antd/es/upload/interface";
 import {
@@ -39,147 +61,287 @@ import {
 import { saveAs } from "file-saver";
 
 const { TextArea } = Input;
+const { Sider, Content } = Layout;
+const { Title, Text } = Typography;
 
-const RubricItemComponent = ({
-  rubric,
-  onDelete,
-  onUpdate,
+// --- Component Form Modal cho Rubric ---
+const RubricFormModal = ({
+  open,
+  onCancel,
+  onFinish,
   isEditable,
+  initialData,
+  questionId,
 }: {
-  rubric: RubricItem;
-  onDelete: (id: number) => void;
-  onUpdate: (id: number, payload: any) => void;
+  open: boolean;
+  onCancel: () => void;
+  onFinish: () => void;
   isEditable: boolean;
+  initialData?: RubricItem;
+  questionId?: number;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [description, setDescription] = useState(rubric.description);
-  const [input, setInput] = useState(rubric.input);
-  const [output, setOutput] = useState(rubric.output);
-  const [score, setScore] = useState(rubric.score);
+  const [form] = Form.useForm();
+  const { notification } = App.useApp();
+  const isEditing = !!initialData;
+  const title = isEditing ? "Edit Rubric" : "Add New Rubric";
 
-  const handleUpdate = () => {
-    onUpdate(rubric.id, { description, input, output, score });
-    setIsEditing(false);
+  useEffect(() => {
+    if (initialData) {
+      form.setFieldsValue(initialData);
+    } else {
+      form.resetFields();
+    }
+  }, [initialData, form, open]);
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (isEditing) {
+        await rubricItemService.updateRubricItem(initialData!.id, values);
+      } else {
+        await rubricItemService.createRubricItem({
+          ...values,
+          assessmentQuestionId: questionId,
+        });
+      }
+      notification.success({
+        message: `Rubric ${isEditing ? "updated" : "created"} successfully`,
+      });
+      onFinish();
+    } catch (error) {
+      console.error("Failed to save rubric:", error);
+      notification.error({ message: "Failed to save rubric" });
+    }
   };
 
   return (
-    <div className={styles["criteria-sub-section"]}>
-      <div
-        className={styles["criteria-header"]}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <h4 className={styles["criteria-title-text"]}>{rubric.description}</h4>
-        <Space>
-          {isEditable && (
-            <Button
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(!isEditing);
-              }}
-            >
-              {isEditing ? "Cancel" : "Edit"}
-            </Button>
-          )}
-          {isEditable && (
-            <Button
-              size="small"
-              danger
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(rubric.id);
-              }}
-            >
-              Delete
-            </Button>
-          )}
-          <svg
-            className={`${styles["question-dropdown-arrow"]} ${
-              isOpen ? styles.rotate : ""
-            }`}
-            viewBox="0 0 24 24"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </Space>
-      </div>
-      {isOpen && (
-        <div className={styles["criteria-content"]}>
-          <div className={styles["input-group"]}>
-            <label className={styles.label}>Description</label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={!isEditing}
-            />
-          </div>
-          <div className={styles["input-group"]}>
-            <label className={styles.label}>Input</label>
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              disabled={!isEditing}
-            />
-          </div>
-          <div className={styles["input-group"]}>
-            <label className={styles.label}>Output</label>
-            <Input
-              value={output}
-              onChange={(e) => setOutput(e.target.value)}
-              disabled={!isEditing}
-            />
-          </div>
-          <div className={styles["input-group"]}>
-            <label className={styles.label}>Score</label>
-            <Input
-              type="number"
-              value={score}
-              onChange={(e) => setScore(Number(e.target.value))}
-              disabled={!isEditing}
-            />
-          </div>
-          {isEditing && (
-            <Button type="primary" onClick={handleUpdate}>
-              Save Changes
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onCancel}
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        isEditable ? (
+          <Button key="submit" type="primary" onClick={() => form.submit()}>
+            {isEditing ? "Save Changes" : "Add Rubric"}
+          </Button>
+        ) : null,
+      ]}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="description"
+          label="Description"
+          rules={[{ required: true }]}
+        >
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="input" label="Input">
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="output" label="Output">
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="score" label="Score" rules={[{ required: true }]}>
+          <Input type="number" disabled={!isEditable} />
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 };
 
-const QuestionItemComponent = ({
-  question,
-  onDelete,
-  onUpdate,
-  onRubricChange,
+// --- Component Form Modal cho Question ---
+const QuestionFormModal = ({
+  open,
+  onCancel,
+  onFinish,
   isEditable,
+  initialData,
+  paperId,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onFinish: () => void;
+  isEditable: boolean;
+  initialData?: AssessmentQuestion;
+  paperId?: number;
+}) => {
+  const [form] = Form.useForm();
+  const { notification } = App.useApp();
+  const isEditing = !!initialData;
+  const title = isEditing ? "Edit Question" : "Add New Question";
+
+  useEffect(() => {
+    if (initialData) {
+      form.setFieldsValue(initialData);
+    } else {
+      form.resetFields();
+    }
+  }, [initialData, form, open]);
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (isEditing) {
+        await assessmentQuestionService.updateAssessmentQuestion(
+          initialData!.id,
+          values
+        );
+      } else {
+        await assessmentQuestionService.createAssessmentQuestion({
+          ...values,
+          assessmentPaperId: paperId,
+        });
+      }
+      notification.success({
+        message: `Question ${isEditing ? "updated" : "created"} successfully`,
+      });
+      onFinish();
+    } catch (error) {
+      console.error("Failed to save question:", error);
+      notification.error({ message: "Failed to save question" });
+    }
+  };
+
+  return (
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onCancel}
+      width={700}
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        isEditable ? (
+          <Button key="submit" type="primary" onClick={() => form.submit()}>
+            {isEditing ? "Save Changes" : "Add Question"}
+          </Button>
+        ) : null,
+      ]}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="questionText"
+          label="Question Text"
+          rules={[{ required: true }]}
+        >
+          <TextArea rows={4} disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="questionSampleInput" label="Sample Input">
+          <TextArea rows={4} disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="questionSampleOutput" label="Sample Output">
+          <TextArea rows={4} disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="score" label="Score" rules={[{ required: true }]}>
+          <Input type="number" disabled={!isEditable} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+// --- Component Form Modal cho Paper ---
+const PaperFormModal = ({
+  open,
+  onCancel,
+  onFinish,
+  isEditable,
+  initialData,
+  templateId,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onFinish: () => void;
+  isEditable: boolean;
+  initialData?: AssessmentPaper;
+  templateId?: number;
+}) => {
+  const [form] = Form.useForm();
+  const { notification } = App.useApp();
+  const isEditing = !!initialData;
+  const title = isEditing ? "Edit Paper" : "Add New Paper";
+
+  useEffect(() => {
+    if (initialData) {
+      form.setFieldsValue(initialData);
+    } else {
+      form.resetFields();
+    }
+  }, [initialData, form, open]);
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (isEditing) {
+        await assessmentPaperService.updateAssessmentPaper(
+          initialData!.id,
+          values
+        );
+      } else {
+        await assessmentPaperService.createAssessmentPaper({
+          ...values,
+          assessmentTemplateId: templateId,
+        });
+      }
+      notification.success({
+        message: `Paper ${isEditing ? "updated" : "created"} successfully`,
+      });
+      onFinish();
+    } catch (error) {
+      console.error("Failed to save paper:", error);
+      notification.error({ message: "Failed to save paper" });
+    }
+  };
+
+  return (
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onCancel}
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        isEditable ? (
+          <Button key="submit" type="primary" onClick={() => form.submit()}>
+            {isEditing ? "Save Changes" : "Add Paper"}
+          </Button>
+        ) : null,
+      ]}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item name="name" label="Paper Name" rules={[{ required: true }]}>
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="description" label="Paper Description">
+          <Input disabled={!isEditable} />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+// --- Component hiển thị chi tiết Question (cột bên phải) ---
+const QuestionDetailView = ({
+  question,
+  isEditable,
+  onRubricChange,
+  onQuestionChange,
 }: {
   question: AssessmentQuestion;
-  onDelete: (id: number) => void;
-  onUpdate: (id: number, payload: any) => void;
-  onRubricChange: () => void;
   isEditable: boolean;
+  onRubricChange: () => void;
+  onQuestionChange: () => void;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [rubrics, setRubrics] = useState<RubricItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAddingRubric, setIsAddingRubric] = useState(false);
-
-  const [questionText, setQuestionText] = useState(question.questionText);
-  const [sampleInput, setSampleInput] = useState(question.questionSampleInput);
-  const [sampleOutput, setSampleOutput] = useState(
-    question.questionSampleOutput
+  const [isRubricModalOpen, setIsRubricModalOpen] = useState(false);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [selectedRubric, setSelectedRubric] = useState<RubricItem | undefined>(
+    undefined
   );
-  const [score, setScore] = useState(question.score);
-
-  const [newRubricDesc, setNewRubricDesc] = useState("");
-  const [newRubricInput, setNewRubricInput] = useState("");
-  const [newRubricOutput, setNewRubricOutput] = useState("");
-  const [newRubricScore, setNewRubricScore] = useState(0);
+  const { modal, notification } = App.useApp();
 
   const fetchRubrics = async () => {
     setIsLoading(true);
@@ -198,481 +360,371 @@ const QuestionItemComponent = ({
   };
 
   useEffect(() => {
-    if (isOpen) {
-      fetchRubrics();
-    }
-  }, [isOpen]);
+    fetchRubrics();
+  }, [question.id]);
 
-  const handleUpdate = () => {
-    onUpdate(question.id, {
-      questionText: questionText,
-      questionSampleInput: sampleInput,
-      questionSampleOutput: sampleOutput,
-      score: score,
+  const openRubricModal = (rubric?: RubricItem) => {
+    setSelectedRubric(rubric);
+    setIsRubricModalOpen(true);
+  };
+
+  const closeRubricModal = () => {
+    setIsRubricModalOpen(false);
+    setSelectedRubric(undefined);
+  };
+
+  const handleRubricFinish = () => {
+    closeRubricModal();
+    fetchRubrics();
+    onRubricChange(); // Báo cho component cha biết
+  };
+
+  const handleDeleteRubric = (id: number) => {
+    modal.confirm({
+      title: "Delete this rubric?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await rubricItemService.deleteRubricItem(id);
+          notification.success({ message: "Rubric deleted" });
+          handleRubricFinish();
+        } catch (error) {
+          notification.error({ message: "Failed to delete rubric" });
+        }
+      },
     });
-    setIsEditing(false);
-  };
-
-  const handleCreateRubric = async () => {
-    try {
-      await rubricItemService.createRubricItem({
-        description: newRubricDesc,
-        input: newRubricInput,
-        output: newRubricOutput,
-        score: newRubricScore,
-        assessmentQuestionId: question.id,
-      });
-      setNewRubricDesc("");
-      setNewRubricInput("");
-      setNewRubricOutput("");
-      setNewRubricScore(0);
-      fetchRubrics();
-      onRubricChange();
-      setIsAddingRubric(false);
-    } catch (error) {
-      console.error("Failed to create rubric:", error);
-    }
-  };
-
-  const handleDeleteRubric = async (id: number) => {
-    try {
-      await rubricItemService.deleteRubricItem(id);
-      fetchRubrics();
-      onRubricChange();
-    } catch (error) {
-      console.error("Failed to delete rubric:", error);
-    }
-  };
-
-  const handleUpdateRubric = async (id: number, payload: any) => {
-    try {
-      await rubricItemService.updateRubricItem(id, payload);
-      fetchRubrics();
-    } catch (error) {
-      console.error("Failed to update rubric:", error);
-    }
   };
 
   return (
-    <div className={styles["question-card"]}>
-      <div
-        className={styles["question-header"]}
-        onClick={() => setIsOpen(!isOpen)}
+    <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <Card
+        title={<Title level={4}>Question Details</Title>}
+        extra={
+          isEditable && (
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => setIsQuestionModalOpen(true)}
+            >
+              Edit Question
+            </Button>
+          )
+        }
       >
-        <h3 className={styles["question-title-text"]}>{questionText}</h3>
-        <Space>
-          {isEditable && (
-            <Button
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(!isEditing);
-              }}
-            >
-              {isEditing ? "Cancel" : "Edit"}
-            </Button>
-          )}
-          {isEditable && (
-            <Button
-              size="small"
-              danger
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(question.id);
-              }}
-            >
-              Delete
-            </Button>
-          )}
-          <svg
-            className={`${styles["question-dropdown-arrow"]} ${
-              isOpen ? styles.rotate : ""
-            }`}
-            viewBox="0 0 24 24"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </Space>
-      </div>
-      {isOpen && (
-        <div className={styles["question-content-wrapper"]}>
-          <div className={styles["question-details-grid"]}>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Question Text</label>
-              <TextArea
-                value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
-                disabled={!isEditing}
-                rows={4}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Sample Input</label>
-              <TextArea
-                value={sampleInput}
-                onChange={(e) => setSampleInput(e.target.value)}
-                disabled={!isEditing}
-                rows={4}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Sample Output</label>
-              <TextArea
-                value={sampleOutput}
-                onChange={(e) => setSampleOutput(e.target.value)}
-                disabled={!isEditing}
-                rows={4}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Score</label>
-              <Input
-                type="number"
-                value={score}
-                onChange={(e) => setScore(Number(e.target.value))}
-                disabled={!isEditing}
-              />
-            </div>
-          </div>
-          {isEditing && (
-            <Button
-              type="primary"
-              onClick={handleUpdate}
-              style={{ marginTop: 10, marginBottom: 20 }}
-            >
-              Save Question
-            </Button>
-          )}
+        <Descriptions bordered column={1}>
+          <Descriptions.Item label="Question Text">
+            <Text style={{ whiteSpace: "pre-wrap" }}>
+              {question.questionText}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Sample Input">
+            <Text style={{ whiteSpace: "pre-wrap" }}>
+              {question.questionSampleInput}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Sample Output">
+            <Text style={{ whiteSpace: "pre-wrap" }}>
+              {question.questionSampleOutput}
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Score">
+            <Text strong>{question.score}</Text>
+          </Descriptions.Item>
+        </Descriptions>
+      </Card>
 
-          <h4 className={styles["criteria-title-text"]}>Rubrics</h4>
-          {isLoading ? (
-            <Spin />
-          ) : (
-            rubrics.map((rubric) => (
-              <RubricItemComponent
-                key={rubric.id}
-                rubric={rubric}
-                onDelete={handleDeleteRubric}
-                onUpdate={handleUpdateRubric}
-                isEditable={isEditable}
-              />
-            ))
-          )}
-          {isEditable && !isAddingRubric && (
+      <Card
+        title={<Title level={5}>Grading Rubrics</Title>}
+        extra={
+          isEditable && (
             <Button
+              icon={<PlusOutlined />}
               type="dashed"
-              onClick={() => setIsAddingRubric(true)}
-              style={{ marginTop: 15, width: "100%" }}
+              onClick={() => openRubricModal()}
             >
-              Add New Rubric
+              Add Rubric
             </Button>
-          )}
-          {isEditable && isAddingRubric && (
-            <div
-              className={styles["criteria-sub-section"]}
-              style={{
-                border: "1px solid #d9d9d9",
-                padding: "10px",
-                borderRadius: "8px",
-                marginTop: "15px",
-              }}
-            >
-              <h4 className={styles["criteria-title-text"]}>Add New Rubric</h4>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Description</label>
-                <Input
-                  value={newRubricDesc}
-                  onChange={(e) => setNewRubricDesc(e.target.value)}
+          )
+        }
+      >
+        {isLoading ? (
+          <Spin />
+        ) : (
+          <List
+            itemLayout="horizontal"
+            dataSource={rubrics}
+            renderItem={(rubric) => (
+              <List.Item
+                actions={
+                  isEditable
+                    ? [
+                        <Button
+                          type="link"
+                          onClick={() => openRubricModal(rubric)}
+                        >
+                          Edit
+                        </Button>,
+                        <Button
+                          type="link"
+                          danger
+                          onClick={() => handleDeleteRubric(rubric.id)}
+                        >
+                          Delete
+                        </Button>,
+                      ]
+                    : []
+                }
+              >
+                <List.Item.Meta
+                  title={rubric.description}
+                  description={`Input: ${rubric.input || "N/A"} | Output: ${
+                    rubric.output || "N/A"
+                  }`}
                 />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Input</label>
-                <Input
-                  value={newRubricInput}
-                  onChange={(e) => setNewRubricInput(e.target.value)}
-                />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Output</label>
-                <Input
-                  value={newRubricOutput}
-                  onChange={(e) => setNewRubricOutput(e.target.value)}
-                />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Score</label>
-                <Input
-                  type="number"
-                  value={newRubricScore}
-                  onChange={(e) => setNewRubricScore(Number(e.target.value))}
-                />
-              </div>
-              <Space style={{ marginTop: 10 }}>
-                <Button type="primary" onClick={handleCreateRubric}>
-                  Add Rubric
-                </Button>
-                <Button onClick={() => setIsAddingRubric(false)}>Cancel</Button>
-              </Space>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                <div>
+                  <Text strong>{rubric.score} points</Text>
+                </div>
+              </List.Item>
+            )}
+          />
+        )}
+      </Card>
+
+      <RubricFormModal
+        open={isRubricModalOpen}
+        onCancel={closeRubricModal}
+        onFinish={handleRubricFinish}
+        isEditable={isEditable}
+        initialData={selectedRubric}
+        questionId={question.id}
+      />
+
+      <QuestionFormModal
+        open={isQuestionModalOpen}
+        onCancel={() => setIsQuestionModalOpen(false)}
+        onFinish={() => {
+          setIsQuestionModalOpen(false);
+          onQuestionChange(); // Báo cho component cha biết để refresh
+        }}
+        isEditable={isEditable}
+        initialData={question}
+      />
+    </Space>
   );
 };
 
-const PaperItemComponent = ({
+// --- Component hiển thị chi tiết Paper (cột bên phải) ---
+const PaperDetailView = ({
   paper,
-  onDelete,
-  onUpdate,
-  onQuestionChange,
   isEditable,
+  onPaperChange,
 }: {
   paper: AssessmentPaper;
-  onDelete: (id: number) => void;
-  onUpdate: (id: number, payload: any) => void;
-  onQuestionChange: () => void;
   isEditable: boolean;
+  onPaperChange: () => void;
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [questions, setQuestions] = useState<AssessmentQuestion[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
-
-  const [name, setName] = useState(paper.name);
-  const [description, setDescription] = useState(paper.description);
-
-  const [newQuestionText, setNewQuestionText] = useState("");
-  const [newSampleInput, setNewSampleInput] = useState("");
-  const [newSampleOutput, setNewSampleOutput] = useState("");
-  const [newScore, setNewScore] = useState(0);
-
-  const fetchQuestions = async () => {
-    setIsLoading(true);
-    try {
-      const data = await assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 100,
-      });
-      setQuestions(data.items);
-    } catch (error) {
-      console.error("Failed to fetch questions:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchQuestions();
-    }
-  }, [isOpen]);
-
-  const handleUpdate = () => {
-    onUpdate(paper.id, { name, description });
-    setIsEditing(false);
-  };
-
-  const handleCreateQuestion = async () => {
-    try {
-      await assessmentQuestionService.createAssessmentQuestion({
-        questionText: newQuestionText,
-        questionSampleInput: newSampleInput,
-        questionSampleOutput: newSampleOutput,
-        score: newScore,
-        assessmentPaperId: paper.id,
-      });
-      setNewQuestionText("");
-      setNewSampleInput("");
-      setNewSampleOutput("");
-      setNewScore(0);
-      fetchQuestions();
-      onQuestionChange();
-      setIsAddingQuestion(false);
-    } catch (error) {
-      console.error("Failed to create question:", error);
-    }
-  };
-
-  const handleDeleteQuestion = async (id: number) => {
-    try {
-      await assessmentQuestionService.deleteAssessmentQuestion(id);
-      fetchQuestions();
-      onQuestionChange();
-    } catch (error) {
-      console.error("Failed to delete question:", error);
-    }
-  };
-
-  const handleUpdateQuestion = async (id: number, payload: any) => {
-    try {
-      await assessmentQuestionService.updateAssessmentQuestion(id, payload);
-      fetchQuestions();
-    } catch (error) {
-      console.error("Failed to update question:", error);
-    }
-  };
+  const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
 
   return (
-    <div className={styles["basic-assignment-section"]}>
-      <div
-        className={styles["basic-assignment-header"]}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className={styles["basic-assignment-title"]}>
-          <svg viewBox="0 0 24 24">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          {name}
-        </div>
-        <Space>
-          {isEditable && (
-            <Button
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditing(!isEditing);
-              }}
-            >
-              {isEditing ? "Cancel" : "Edit Paper"}
-            </Button>
-          )}
-          {isEditable && (
-            <Button
-              size="small"
-              danger
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(paper.id);
-              }}
-            >
-              Delete Paper
-            </Button>
-          )}
-          <svg
-            className={`${styles["question-dropdown-arrow"]} ${
-              isOpen ? styles.rotate : ""
-            }`}
-            viewBox="0 0 24 24"
+    <Card
+      title={<Title level={4}>Paper Details</Title>}
+      extra={
+        isEditable && (
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => setIsPaperModalOpen(true)}
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </Space>
-      </div>
-      {isOpen && (
-        <div style={{ paddingLeft: "20px" }}>
-          {isEditing && (
-            <div
-              className={styles["criteria-content"]}
-              style={{ marginBottom: 20 }}
-            >
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Paper Name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Paper Description</label>
-                <Input
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </div>
-              <Button type="primary" onClick={handleUpdate}>
-                Save Paper
-              </Button>
-            </div>
-          )}
+            Edit Paper
+          </Button>
+        )
+      }
+    >
+      <Descriptions bordered column={1}>
+        <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
+        <Descriptions.Item label="Description">
+          {paper.description}
+        </Descriptions.Item>
+      </Descriptions>
 
-          {isLoading ? (
-            <Spin />
-          ) : (
-            questions.map((q) => (
-              <QuestionItemComponent
-                key={q.id}
-                question={q}
-                onDelete={handleDeleteQuestion}
-                onUpdate={handleUpdateQuestion}
-                onRubricChange={onQuestionChange}
-                isEditable={isEditable}
-              />
-            ))
-          )}
-
-          {isEditable && !isAddingQuestion && (
-            <Button
-              type="dashed"
-              onClick={() => setIsAddingQuestion(true)}
-              style={{ marginTop: 15, width: "100%" }}
-            >
-              Add New Question
-            </Button>
-          )}
-
-          {isEditable && isAddingQuestion && (
-            <div
-              className={styles["question-card"]}
-              style={{
-                border: "1px solid #1890ff",
-                padding: "10px",
-                borderRadius: "8px",
-                marginTop: "15px",
-              }}
-            >
-              <h3 className={styles["question-title-text"]}>
-                Add New Question
-              </h3>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Question Text</label>
-                <TextArea
-                  value={newQuestionText}
-                  onChange={(e) => setNewQuestionText(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Sample Input</label>
-                <TextArea
-                  value={newSampleInput}
-                  onChange={(e) => setNewSampleInput(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Sample Output</label>
-                <TextArea
-                  value={newSampleOutput}
-                  onChange={(e) => setNewSampleOutput(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Score</label>
-                <Input
-                  type="number"
-                  value={newScore}
-                  onChange={(e) => setNewScore(Number(e.target.value))}
-                />
-              </div>
-              <Space style={{ marginTop: 10 }}>
-                <Button type="primary" onClick={handleCreateQuestion}>
-                  Add Question
-                </Button>
-                <Button onClick={() => setIsAddingQuestion(false)}>
-                  Cancel
-                </Button>
-              </Space>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      <PaperFormModal
+        open={isPaperModalOpen}
+        onCancel={() => setIsPaperModalOpen(false)}
+        onFinish={() => {
+          setIsPaperModalOpen(false);
+          onPaperChange();
+        }}
+        isEditable={isEditable}
+        initialData={paper}
+      />
+    </Card>
   );
 };
 
+// --- Component hiển thị chi tiết Template (cột bên phải) ---
+const TemplateDetailView = ({
+  template,
+  papers,
+  files,
+  isEditable,
+  onFileChange,
+  onExport,
+  onTemplateDelete,
+}: {
+  template: AssessmentTemplate;
+  papers: AssessmentPaper[];
+  files: AssessmentFile[];
+  isEditable: boolean;
+  onFileChange: () => void;
+  onExport: () => void;
+  onTemplateDelete: () => void;
+}) => {
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const { modal, notification } = App.useApp();
+
+  const handleUploadFile = async () => {
+    if (fileList.length === 0) return;
+    const uploadPromises = fileList.map((file) => {
+      const nativeFile = file.originFileObj as File;
+      return assessmentFileService.createAssessmentFile({
+        File: nativeFile,
+        Name: nativeFile.name,
+        FileTemplate: 0,
+        AssessmentTemplateId: template.id,
+      });
+    });
+
+    try {
+      await Promise.all(uploadPromises);
+      setFileList([]);
+      onFileChange();
+      notification.success({ message: "Files uploaded successfully" });
+    } catch (error: any) {
+      notification.error({
+        message: "File upload failed",
+        description: error.message || "Unknown error",
+      });
+    }
+  };
+
+  const handleDeleteFile = (fileId: number) => {
+    modal.confirm({
+      title: "Delete this file?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await assessmentFileService.deleteAssessmentFile(fileId);
+          onFileChange();
+          notification.success({ message: "File deleted" });
+        } catch (error: any) {
+          notification.error({ message: "Failed to delete file" });
+        }
+      },
+    });
+  };
+
+  const confirmTemplateDelete = () => {
+    modal.confirm({
+      title: "Delete this template?",
+      content: "This action cannot be undone.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: onTemplateDelete,
+    });
+  };
+
+  return (
+    <Space direction="vertical" style={{ width: "100%" }} size="large">
+      <Card
+        title={<Title level={4}>{template.name}</Title>}
+        extra={
+          <Space>
+            {isEditable && (
+              <Button danger onClick={confirmTemplateDelete}>
+                Delete Template
+              </Button>
+            )}
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={onExport}
+            >
+              Export to .docx
+            </Button>
+          </Space>
+        }
+      >
+        <Descriptions bordered column={1}>
+          <Descriptions.Item label="Description">
+            {template.description}
+          </Descriptions.Item>
+          <Descriptions.Item label="Type">
+            {template.templateType === 0 ? "DSA" : "WEBAPI"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Papers">{papers.length}</Descriptions.Item>
+        </Descriptions>
+      </Card>
+
+      <Card title="Attached Files">
+        <List
+          dataSource={files}
+          renderItem={(file) => (
+            <List.Item
+              actions={
+                isEditable
+                  ? [
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => handleDeleteFile(file.id)}
+                      />,
+                    ]
+                  : []
+              }
+            >
+              <List.Item.Meta
+                title={
+                  <a
+                    href={file.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <PaperClipOutlined /> {file.name}
+                  </a>
+                }
+              />
+            </List.Item>
+          )}
+        />
+        {isEditable && (
+          <Space.Compact style={{ width: "100%", marginTop: "16px" }}>
+            <Upload
+              fileList={fileList}
+              onChange={(info) => setFileList(info.fileList)}
+              beforeUpload={() => false}
+              multiple={true}
+              style={{ flex: 1 }}
+            >
+              <Button icon={<UploadOutlined />}>Select Files</Button>
+            </Upload>
+            <Button
+              type="primary"
+              onClick={handleUploadFile}
+              disabled={fileList.length === 0}
+            >
+              Upload ({fileList.length})
+            </Button>
+          </Space.Compact>
+        )}
+      </Card>
+    </Space>
+  );
+};
+
+// --- Component Chính: LecturerTaskContent ---
 export const LecturerTaskContent = ({
   task,
   lecturerId,
@@ -682,20 +734,60 @@ export const LecturerTaskContent = ({
 }) => {
   const [template, setTemplate] = useState<AssessmentTemplate | null>(null);
   const [papers, setPapers] = useState<AssessmentPaper[]>([]);
+  const [allQuestions, setAllQuestions] = useState<{
+    [paperId: number]: AssessmentQuestion[];
+  }>({});
   const [files, setFiles] = useState<AssessmentFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAddingPaper, setIsAddingPaper] = useState(false);
-  const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const { modal } = App.useApp();
+  const [selectedKey, setSelectedKey] = useState<string>("template-details");
+
+  const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
+  const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
+  const [paperForNewQuestion, setPaperForNewQuestion] = useState<
+    number | undefined
+  >(undefined);
+
+  const { modal, notification } = App.useApp();
 
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateType, setNewTemplateType] = useState(0);
 
-  const [newPaperName, setNewPaperName] = useState("");
-  const [newPaperDesc, setNewPaperDesc] = useState("");
+  const isEditable = [1, 4].includes(Number(task.status));
 
-  const isEditable = task.status !== 2 && task.status !== 3;
+  // --- Logic Fetch Data ---
+
+  const fetchAllData = async (templateId: number) => {
+    try {
+      const paperResponse = await assessmentPaperService.getAssessmentPapers({
+        assessmentTemplateId: templateId,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setPapers(paperResponse.items);
+
+      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+      for (const paper of paperResponse.items) {
+        const questionResponse =
+          await assessmentQuestionService.getAssessmentQuestions({
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+        questionsMap[paper.id] = questionResponse.items;
+      }
+      setAllQuestions(questionsMap);
+
+      const fileResponse = await assessmentFileService.getFilesForTemplate({
+        assessmentTemplateId: templateId,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setFiles(fileResponse.items);
+    } catch (error) {
+      console.error("Failed to fetch all data:", error);
+    }
+  };
 
   const fetchTemplate = async () => {
     setIsLoading(true);
@@ -706,9 +798,9 @@ export const LecturerTaskContent = ({
         pageSize: 10,
       });
       if (response.items.length > 0) {
-        setTemplate(response.items[0]);
-        fetchPapers(response.items[0].id);
-        fetchFiles(response.items[0].id);
+        const tpl = response.items[0];
+        setTemplate(tpl);
+        await fetchAllData(tpl.id);
       } else {
         setTemplate(null);
       }
@@ -719,35 +811,64 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const fetchPapers = async (templateId: number) => {
+  const refreshPapers = async () => {
+    if (!template) return;
     try {
-      const response = await assessmentPaperService.getAssessmentPapers({
-        assessmentTemplateId: templateId,
+      const paperResponse = await assessmentPaperService.getAssessmentPapers({
+        assessmentTemplateId: template.id,
         pageNumber: 1,
         pageSize: 100,
       });
-      setPapers(response.items);
+      setPapers(paperResponse.items);
+      // Giữ cho questionsMap đồng bộ
+      const newQuestionsMap = { ...allQuestions };
+      paperResponse.items.forEach((p) => {
+        if (!newQuestionsMap[p.id]) {
+          newQuestionsMap[p.id] = [];
+        }
+      });
+      setAllQuestions(newQuestionsMap);
     } catch (error) {
-      console.error("Failed to fetch papers:", error);
+      console.error("Failed to refresh papers:", error);
     }
   };
 
-  const fetchFiles = async (templateId: number) => {
+  const refreshQuestions = async (paperId: number) => {
     try {
-      const response = await assessmentFileService.getFilesForTemplate({
-        assessmentTemplateId: templateId,
+      const questionResponse =
+        await assessmentQuestionService.getAssessmentQuestions({
+          assessmentPaperId: paperId,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+      setAllQuestions((prev) => ({
+        ...prev,
+        [paperId]: questionResponse.items,
+      }));
+    } catch (error) {
+      console.error("Failed to refresh questions:", error);
+    }
+  };
+
+  const refreshFiles = async () => {
+    if (!template) return;
+    try {
+      const fileResponse = await assessmentFileService.getFilesForTemplate({
+        assessmentTemplateId: template.id,
         pageNumber: 1,
         pageSize: 100,
       });
-      setFiles(response.items);
+      setFiles(fileResponse.items);
     } catch (error) {
-      console.error("Failed to fetch files:", error);
+      console.error("Failed to refresh files:", error);
     }
   };
 
   useEffect(() => {
     fetchTemplate();
   }, [task.id]);
+
+  // --- Logic Xử lý sự kiện ---
 
   const handleCreateTemplate = async () => {
     try {
@@ -767,134 +888,56 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const handleCreatePaper = async () => {
+  const handleDeleteTemplate = async () => {
     if (!template) return;
     try {
-      await assessmentPaperService.createAssessmentPaper({
-        name: newPaperName,
-        description: newPaperDesc,
-        assessmentTemplateId: template.id,
-      });
-      setNewPaperName("");
-      setNewPaperDesc("");
-      fetchPapers(template.id);
-      setIsAddingPaper(false);
-    } catch (error) {
-      console.error("Failed to create paper:", error);
-    }
-  };
-
-  const handleDeletePaper = async (id: number) => {
-    if (!template) return;
-    try {
-      await assessmentPaperService.deleteAssessmentPaper(id);
-      fetchPapers(template.id);
-    } catch (error) {
-      console.error("Failed to delete paper:", error);
-    }
-  };
-
-  const handleUpdatePaper = async (id: number, payload: any) => {
-    if (!template) return;
-    try {
-      await assessmentPaperService.updateAssessmentPaper(id, payload);
-      fetchPapers(template.id);
-    } catch (error) {
-      console.error("Failed to update paper:", error);
-    }
-  };
-
-  const handleUploadFile = async () => {
-    if (fileList.length === 0 || !template) {
-      console.error("Please select files to upload.");
-      return;
-    }
-
-    const uploadPromises = fileList.map((file) => {
-      const nativeFile = file.originFileObj as File;
-      return assessmentFileService.createAssessmentFile({
-        File: nativeFile,
-        Name: nativeFile.name,
-        FileTemplate: 0,
-        AssessmentTemplateId: template.id,
-      });
-    });
-
-    try {
-      await Promise.all(uploadPromises);
-      setFileList([]);
-      fetchFiles(template.id);
+      await assessmentTemplateService.deleteAssessmentTemplate(template.id);
+      setTemplate(null);
+      setPapers([]);
+      setFiles([]);
+      notification.success({ message: "Template deleted" });
     } catch (error: any) {
-      console.error("File upload error:", error);
+      notification.error({
+        message: "Failed to delete template",
+        description: error.message || "An unknown error occurred.",
+      });
     }
-  };
-
-  const handleDeleteFile = (fileId: number) => {
-    if (!template) return;
-    modal.confirm({
-      title: "Delete this file?",
-      content: "This action cannot be undone.",
-      okText: "Delete",
-      okType: "danger",
-      onOk: async () => {
-        try {
-          await assessmentFileService.deleteAssessmentFile(fileId);
-          fetchFiles(template.id);
-        } catch (error: any) {
-          console.error("Failed to delete file:", error);
-        }
-      },
-    });
-  };
-
-  const handleFileChange = (info: UploadChangeParam) => {
-    setFileList(info.fileList);
   };
 
   const handleExport = async () => {
-    if (!template) {
-      console.error("No template data to export.");
-      return;
-    }
-
-    const sections = [];
-
-    sections.push(
+    if (!template) return;
+    const docSections = [];
+    docSections.push(
       new Paragraph({
         text: template.name,
         heading: HeadingLevel.TITLE,
         alignment: AlignmentType.CENTER,
       })
     );
-    sections.push(
+    docSections.push(
       new Paragraph({ text: template.description, style: "italic" })
     );
-    sections.push(new Paragraph({ text: " " }));
+    docSections.push(new Paragraph({ text: " " }));
 
     for (const paper of papers) {
-      sections.push(
+      docSections.push(
         new Paragraph({
           text: paper.name,
           heading: HeadingLevel.HEADING_1,
         })
       );
-      sections.push(new Paragraph({ text: paper.description }));
-      sections.push(new Paragraph({ text: " " }));
+      docSections.push(new Paragraph({ text: paper.description }));
+      docSections.push(new Paragraph({ text: " " }));
 
-      const questions = await assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-
-      for (const [index, question] of questions.items.entries()) {
-        sections.push(
+      const questions = allQuestions[paper.id] || [];
+      for (const [index, question] of questions.entries()) {
+        docSections.push(
           new Paragraph({
             text: `Question ${index + 1}: ${question.questionText}`,
             heading: HeadingLevel.HEADING_2,
           })
         );
-        sections.push(
+        docSections.push(
           new Paragraph({
             children: [
               new TextRun({ text: "Score: ", bold: true }),
@@ -902,33 +945,29 @@ export const LecturerTaskContent = ({
             ],
           })
         );
-        sections.push(new Paragraph({ text: " " }));
-        sections.push(
+        docSections.push(new Paragraph({ text: " " }));
+        docSections.push(
           new Paragraph({
             children: [new TextRun({ text: "Sample Input: ", bold: true })],
           })
         );
-        sections.push(new Paragraph({ text: question.questionSampleInput }));
-        sections.push(new Paragraph({ text: " " }));
-        sections.push(
+        docSections.push(new Paragraph({ text: question.questionSampleInput }));
+        docSections.push(new Paragraph({ text: " " }));
+        docSections.push(
           new Paragraph({
             children: [new TextRun({ text: "Sample Output: ", bold: true })],
           })
         );
-        sections.push(new Paragraph({ text: question.questionSampleOutput }));
-        sections.push(new Paragraph({ text: " " }));
+        docSections.push(
+          new Paragraph({ text: question.questionSampleOutput })
+        );
+        docSections.push(new Paragraph({ text: " " }));
       }
     }
 
     const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: sections,
-        },
-      ],
+      sections: [{ properties: {}, children: docSections }],
     });
-
     try {
       const blob = await Packer.toBlob(doc);
       saveAs(blob, `${template.name || "exam"}.docx`);
@@ -937,10 +976,189 @@ export const LecturerTaskContent = ({
     }
   };
 
+  const openAddQuestionModal = (paperId: number) => {
+    setPaperForNewQuestion(paperId);
+    setIsQuestionModalOpen(true);
+  };
+
+  const handleDeletePaper = (paper: AssessmentPaper) => {
+    modal.confirm({
+      title: `Delete paper: ${paper.name}?`,
+      content: "All questions and rubrics inside will also be deleted.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await assessmentPaperService.deleteAssessmentPaper(paper.id);
+          notification.success({ message: "Paper deleted" });
+          refreshPapers();
+          setSelectedKey("template-details"); // Chuyển về view template
+        } catch (error) {
+          notification.error({ message: "Failed to delete paper" });
+        }
+      },
+    });
+  };
+
+  const handleDeleteQuestion = (question: AssessmentQuestion) => {
+    modal.confirm({
+      title: `Delete this question?`,
+      content: "All rubrics inside will also be deleted.",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await assessmentQuestionService.deleteAssessmentQuestion(question.id);
+          notification.success({ message: "Question deleted" });
+          refreshQuestions(question.assessmentPaperId);
+          setSelectedKey(`paper-${question.assessmentPaperId}`); // Chuyển về view paper
+        } catch (error) {
+          notification.error({ message: "Failed to delete question" });
+        }
+      },
+    });
+  };
+
+  const renderSiderMenu = () => {
+    const menuItems = papers.map((paper) => {
+      const questions = allQuestions[paper.id] || [];
+      return {
+        key: `paper-${paper.id}`,
+        icon: <BookOutlined />,
+        label: (
+          <span className={styles.menuLabel}>
+            {paper.name}
+            {isEditable && (
+              <Space className={styles.menuActions}>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openAddQuestionModal(paper.id);
+                  }}
+                />
+                <Button
+                  type="text"
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeletePaper(paper);
+                  }}
+                />
+              </Space>
+            )}
+          </span>
+        ),
+        children: questions.map((q) => ({
+          key: `question-${q.id}`,
+          icon: <FileTextOutlined />,
+          label: (
+            <span className={styles.menuLabel}>
+              {q.questionText.substring(0, 30)}...
+              {isEditable && (
+                <Space className={styles.menuActions}>
+                  <Button
+                    type="text"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteQuestion(q);
+                    }}
+                  />
+                </Space>
+              )}
+            </span>
+          ),
+        })),
+      };
+    });
+
+    return (
+      <Menu
+        mode="inline"
+        selectedKeys={[selectedKey]}
+        onSelect={({ key }) => setSelectedKey(key)}
+        items={[
+          {
+            key: "template-details",
+            icon: <InboxOutlined />,
+            label: "Template Overview",
+          },
+          ...menuItems,
+        ]}
+        // **THAY ĐỔI: Bỏ `height: "100%"`**
+        style={{ borderRight: 0 }}
+      />
+    );
+  };
+
+  const renderContent = () => {
+    if (selectedKey === "template-details") {
+      return (
+        <TemplateDetailView
+          template={template!}
+          papers={papers}
+          files={files}
+          isEditable={isEditable}
+          onFileChange={refreshFiles}
+          onExport={handleExport}
+          onTemplateDelete={handleDeleteTemplate}
+        />
+      );
+    }
+
+    if (selectedKey.startsWith("paper-")) {
+      const paperId = Number(selectedKey.split("-")[1]);
+      const paper = papers.find((p) => p.id === paperId);
+      if (paper) {
+        return (
+          <PaperDetailView
+            paper={paper}
+            isEditable={isEditable}
+            onPaperChange={refreshPapers}
+          />
+        );
+      }
+    }
+
+    if (selectedKey.startsWith("question-")) {
+      const questionId = Number(selectedKey.split("-")[1]);
+      let question: AssessmentQuestion | undefined;
+      let paperId: number | undefined;
+
+      for (const pId in allQuestions) {
+        const found = allQuestions[pId].find((q) => q.id === questionId);
+        if (found) {
+          question = found;
+          paperId = Number(pId);
+          break;
+        }
+      }
+
+      if (question && paperId) {
+        return (
+          <QuestionDetailView
+            question={question}
+            isEditable={isEditable}
+            onRubricChange={() => {}} // Có thể refresh tổng điểm sau
+            onQuestionChange={() => refreshQuestions(paperId!)}
+          />
+        );
+      }
+    }
+    return <Alert message="Please select an item from the menu." />;
+  };
+
   if (isLoading) {
     return (
-      <div style={{ padding: 20, textAlign: "center" }}>
-        <Spin />
+      <div style={{ padding: 40, textAlign: "center" }}>
+        <Spin size="large" />
       </div>
     );
   }
@@ -949,153 +1167,125 @@ export const LecturerTaskContent = ({
     <div className={`${styles["task-content"]} ${styles["nested-content"]}`}>
       {!template ? (
         isEditable ? (
-          <div className={styles["basic-assignment-section"]}>
-            <h3>No Template Found. Create one.</h3>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Template Name</label>
-              <Input
-                value={newTemplateName}
-                onChange={(e) => setNewTemplateName(e.target.value)}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Template Description</label>
-              <Input
-                value={newTemplateDesc}
-                onChange={(e) => setNewTemplateDesc(e.target.value)}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label className={styles.label}>Template Type</label>
-              <Radio.Group
-                onChange={(e) => setNewTemplateType(e.target.value)}
-                value={newTemplateType}
-              >
-                <Radio value={0}>DSA</Radio>
-                <Radio value={1}>WEBAPI</Radio>
-              </Radio.Group>
-            </div>
-            <Button type="primary" onClick={handleCreateTemplate}>
-              Create Template
-            </Button>
-          </div>
+          <Card title="No Template Found. Create one.">
+            <Form layout="vertical">
+              <Form.Item label="Template Name" required>
+                <Input
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                />
+              </Form.Item>
+              <Form.Item label="Template Description">
+                <Input
+                  value={newTemplateDesc}
+                  onChange={(e) => setNewTemplateDesc(e.target.value)}
+                />
+              </Form.Item>
+              <Form.Item label="Template Type">
+                <Radio.Group
+                  onChange={(e) => setNewTemplateType(e.target.value)}
+                  value={newTemplateType}
+                >
+                  <Radio value={0}>DSA</Radio>
+                  <Radio value={1}>WEBAPI</Radio>
+                </Radio.Group>
+              </Form.Item>
+              <Button type="primary" onClick={handleCreateTemplate}>
+                Create Template
+              </Button>
+            </Form>
+          </Card>
         ) : (
-          <div className={styles["basic-assignment-section"]}>
-            <h3>No template created for this task.</h3>
-          </div>
+          <Alert
+            message="No template created for this task."
+            type="info"
+            showIcon
+          />
         )
       ) : (
         <>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleExport}
-            style={{ marginBottom: 16 }}
+          <Layout
+            style={{
+              background: "#f5f5f5",
+              padding: "16px 0",
+              minHeight: "70vh",
+            }}
           >
-            Export to .docx
-          </Button>
-          <div className={styles["basic-assignment-section"]}>
-            <h3 className={styles["question-title-text"]}>Attached Files</h3>
-            <Space direction="vertical" style={{ width: "100%" }}>
-              {files.map((file) => (
-                <Space
-                  key={file.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <a
-                    href={file.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <PaperClipOutlined /> {file.name}
-                  </a>
-                  {isEditable && (
-                    <Button
-                      type="text"
-                      danger
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDeleteFile(file.id)}
-                    />
-                  )}
-                </Space>
-              ))}
-              {isEditable && (
-                <Space.Compact style={{ width: "100%", marginTop: "10px" }}>
-                  <Upload
-                    fileList={fileList}
-                    onChange={handleFileChange}
-                    beforeUpload={() => false}
-                    multiple={true}
-                  >
-                    <Button icon={<UploadOutlined />}>Select Files</Button>
-                  </Upload>
-                  <Button
-                    type="primary"
-                    onClick={handleUploadFile}
-                    disabled={fileList.length === 0}
-                  >
-                    Upload ({fileList.length})
-                  </Button>
-                </Space.Compact>
-              )}
-            </Space>
-          </div>
-
-          {papers.map((paper) => (
-            <PaperItemComponent
-              key={paper.id}
-              paper={paper}
-              onDelete={handleDeletePaper}
-              onUpdate={handleUpdatePaper}
-              onQuestionChange={() => fetchPapers(template.id)}
-              isEditable={isEditable}
-            />
-          ))}
-          {isEditable && !isAddingPaper && (
-            <Button
-              type="primary"
-              onClick={() => setIsAddingPaper(true)}
-              style={{ marginTop: 15, width: "100%" }}
-            >
-              Add New Paper
-            </Button>
-          )}
-          {isEditable && isAddingPaper && (
-            <div
-              className={styles["basic-assignment-section"]}
+            <Sider
+              width={300}
               style={{
-                border: "1px solid #1890ff",
-                padding: "10px",
-                borderRadius: "8px",
-                marginTop: "15px",
+                background: "#fff",
+                marginRight: 16,
+                display: "flex",
+                flexDirection: "column",
+                maxHeight: "70vh",
               }}
             >
-              <h3 className={styles["question-title-text"]}>Add New Paper</h3>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Paper Name</label>
-                <Input
-                  value={newPaperName}
-                  onChange={(e) => setNewPaperName(e.target.value)}
-                />
+              <div
+                style={{
+                  padding: "16px",
+                  borderBottom: "1px solid #f0f0f0",
+                  flexShrink: 0,
+                }}
+              >
+                <Title level={5} style={{ margin: 0 }}>
+                  {template.name}
+                </Title>
+                <Text type="secondary">Exam Structure</Text>
+                {isEditable && (
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => setIsPaperModalOpen(true)}
+                    style={{ width: "100%", marginTop: 16 }}
+                  >
+                    Add New Paper
+                  </Button>
+                )}
               </div>
-              <div className={styles["input-group"]}>
-                <label className={styles.label}>Paper Description</label>
-                <Input
-                  value={newPaperDesc}
-                  onChange={(e) => setNewPaperDesc(e.target.value)}
-                />
+
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                {renderSiderMenu()}
               </div>
-              <Space style={{ marginTop: 10 }}>
-                <Button type="primary" onClick={handleCreatePaper}>
-                  Add Paper
-                </Button>
-                <Button onClick={() => setIsAddingPaper(false)}>Cancel</Button>
-              </Space>
-            </div>
-          )}
+            </Sider>
+
+            <Content
+              style={{
+                background: "#fff",
+                padding: 24,
+                overflowY: "auto",
+                maxHeight: "70vh",
+              }}
+            >
+              {renderContent()}
+            </Content>
+          </Layout>
+
+          {/* Modals */}
+          <PaperFormModal
+            open={isPaperModalOpen}
+            onCancel={() => setIsPaperModalOpen(false)}
+            onFinish={() => {
+              setIsPaperModalOpen(false);
+              refreshPapers();
+            }}
+            isEditable={isEditable}
+            templateId={template.id}
+          />
+          <QuestionFormModal
+            open={isQuestionModalOpen}
+            onCancel={() => {
+              setIsQuestionModalOpen(false);
+              setPaperForNewQuestion(undefined);
+            }}
+            onFinish={() => {
+              setIsQuestionModalOpen(false);
+              refreshQuestions(paperForNewQuestion!);
+              setPaperForNewQuestion(undefined);
+            }}
+            isEditable={isEditable}
+            paperId={paperForNewQuestion}
+          />
         </>
       )}
     </div>

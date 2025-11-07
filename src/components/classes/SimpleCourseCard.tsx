@@ -66,12 +66,18 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
     </div>
   );
   const handleCardClick = () => {
-    localStorage.setItem("selectedClassId", id ? id.toString() : "");
-    router.push(`/lecturer/info/${id}`);
+    if (id) {
+      localStorage.setItem("selectedClassId", id.toString());
+    }
+    if (href) {
+      router.push(href);
+    } else if (id) {
+      router.push(`/lecturer/info/${id}`);
+    }
   };
 
-  if (href) {
-    return <div onClick={handleCardClick}>{cardContent}</div>;
+  if (href || id) {
+    return <div onClick={handleCardClick} style={{ cursor: "pointer" }}>{cardContent}</div>;
   }
 
   return cardContent;

@@ -130,6 +130,12 @@ export class AssessmentTemplateService {
     );
     return response.result;
   }
+
+  async deleteAssessmentTemplate(
+    assessmentTemplateId: string | number
+  ): Promise<void> {
+    await apiService.delete(`/AssessmentTemplate/${assessmentTemplateId}`);
+  }
 }
 
 export const assessmentTemplateService = new AssessmentTemplateService();
