@@ -35,10 +35,11 @@ export const Header: React.FC = () => {
   };
 
   const navigation = useMemo(() => {
-    if (!user?.role) return [];
+    // Only compute navigation after mount to prevent hydration mismatch
+    if (!mounted || !user?.role) return [];
     const userRole = user.role as Role;
     return ROLE_NAVIGATION[userRole] || [];
-  }, [user?.role]);
+  }, [user?.role, mounted]);
 
   const activeKey = useMemo(() => {
     const sortedKeys = [...navigation].sort(
@@ -66,16 +67,18 @@ export const Header: React.FC = () => {
       <div className={styles.leftGroup}>
         <Link
           href={
-            !mounted
-              ? "/home/students"
-              : user?.role === 0
+            !mounted || !user?.role
+              ? "/home"
+              : user.role === 0
               ? "/admin/dashboard"
-              : user?.role === 1
+              : user.role === 1
               ? "/home/lecturer"
-              : user?.role === 2
+              : user.role === 2
               ? "/home/student"
-              : user?.role === 3
+              : user.role === 3
               ? "/hod/semester-plans"
+              : user.role === 4
+              ? "/examiner/exam-shifts"
               : "/home"
           }
           className={styles.logoLink}
@@ -83,29 +86,31 @@ export const Header: React.FC = () => {
           <LogoComponent />
         </Link>
 
-        <nav className={styles.navGroup}>
-          {navigation.map((item) => {
-            const isActive = activeKey === item.key;
-            const isHover = hoverKey === item.key;
-            const linkClass = `${styles.navLink} ${
-              isActive ? styles.navActive : ""
-            } ${isHover && !isActive ? styles.navHover : ""} ${
-              isHover && isActive ? styles.navActiveHover : ""
-            }`;
+        {mounted && (
+          <nav className={styles.navGroup}>
+            {navigation.map((item) => {
+              const isActive = activeKey === item.key;
+              const isHover = hoverKey === item.key;
+              const linkClass = `${styles.navLink} ${
+                isActive ? styles.navActive : ""
+              } ${isHover && !isActive ? styles.navHover : ""} ${
+                isHover && isActive ? styles.navActiveHover : ""
+              }`;
 
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={linkClass}
-                onMouseEnter={() => setHoverKey(item.key)}
-                onMouseLeave={() => setHoverKey(null)}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={linkClass}
+                  onMouseEnter={() => setHoverKey(item.key)}
+                  onMouseLeave={() => setHoverKey(null)}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
       </div>
 
       <Dropdown

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Provider } from 'react-redux';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, App as AntdApp } from 'antd';
 import { store } from '@/store/store';
 interface ProvidersProps {
   children: React.ReactNode;
@@ -19,7 +19,9 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
           },
         }}
       >
-        {children}
+        <AntdApp>
+          {children}
+        </AntdApp>
       </ConfigProvider>
     </Provider>
   );
