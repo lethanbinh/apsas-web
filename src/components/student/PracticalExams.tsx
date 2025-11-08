@@ -6,55 +6,94 @@ import { LinkOutlined } from "@ant-design/icons";
 import styles from "./AssignmentList.module.css";
 import dayjs from "dayjs";
 import { AssignmentData } from "./data";
-import { DeadlinePopover } from "./DeadlinePopover";
 import { AssignmentItem } from "./AssignmentItem";
+import { classService } from "@/services/classService";
+import { courseElementService, CourseElement } from "@/services/courseElementService";
 import { examSessionService, ExamSession } from "@/services/examSessionService";
-import { useStudent } from "@/hooks/useStudent";
+import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
-function mapExamSessionToAssignmentData(
-  exam: ExamSession
+function mapCourseElementToExamData(
+  element: CourseElement,
+  sessionMap: Map<number, ExamSession[]>,
+  classAssessmentMap: Map<number, ClassAssessment>
 ): AssignmentData {
+  const sessions = sessionMap.get(element.id) || [];
+  const classAssessment = classAssessmentMap.get(element.id);
   const now = dayjs();
-  const endDate = dayjs(exam.endAt);
-  const startDate = dayjs(exam.startAt);
   let status = "Upcoming Exam";
-  
-  if (now.isBefore(startDate)) {
-    status = "Upcoming Exam";
-  } else if (now.isAfter(endDate)) {
-    status = "Completed Exam";
-  } else {
-    status = "Active Exam";
+  let deadline: string | undefined = undefined;
+  let startAt = dayjs().toISOString();
+  let examSessionId: number | undefined;
+  let assessmentTemplateId: number | undefined;
+
+  // Get deadline from classAssessment only (last set deadline)
+  // If no classAssessment, there is no deadline
+  try {
+    if (classAssessment?.endAt) {
+      deadline = classAssessment.endAt;
+      startAt = classAssessment.startAt || dayjs().toISOString();
+    }
+  } catch (error) {
+    console.error("Error parsing deadline:", error);
+    // Continue without deadline
   }
-  
+
+  // Get examSessionId and assessmentTemplateId from first session if available
+  if (sessions.length > 0) {
+    const session = sessions[0];
+    examSessionId = session.id;
+    assessmentTemplateId = session.assessmentTemplateId;
+  }
+
+  // Determine status based on deadline
+  if (deadline) {
+    const endDate = dayjs(deadline);
+    const startDate = dayjs(startAt);
+    
+    if (now.isBefore(startDate)) {
+      status = "Upcoming Exam";
+    } else if (now.isAfter(endDate)) {
+      status = "Completed Exam";
+    } else {
+      status = "Active Exam";
+    }
+  }
+
   return {
-    id: exam.id.toString(),
+    id: element.id.toString(),
     status: status,
-    title: exam.assessmentTemplateName || exam.courseElementName || "Practical Exam",
-    date: exam.endAt,
-    description: exam.assessmentTemplateDescription || exam.courseElementName || "No description available",
+    title: element.name || "Practical Exam",
+    date: deadline,
+    description: element.description || "No description available",
     requirementContent: [
-      { type: "heading", content: exam.assessmentTemplateName || "Exam Details" },
-      { type: "paragraph", content: exam.assessmentTemplateDescription || "" },
+      { type: "heading", content: element.name || "Exam Details" },
+      { type: "paragraph", content: element.description || "" },
     ],
     requirementFile: "",
+    requirementFileUrl: "",
+    databaseFile: undefined,
+    databaseFileUrl: "",
     totalScore: "N/A",
     overallFeedback: "",
     gradeCriteria: [],
     suggestionsAvoid: "",
     suggestionsImprove: "",
     submissions: [],
+    examSessionId: examSessionId,
+    assessmentTemplateId: assessmentTemplateId,
+    startAt: startAt,
+    classAssessmentId: classAssessment?.id,
   };
 }
 
 export default function PracticalExams() {
+  const { message } = App.useApp();
   const [exams, setExams] = useState<AssignmentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { studentId, isLoading: isStudentLoading } = useStudent();
 
   useEffect(() => {
     const fetchExams = async () => {
@@ -66,25 +105,66 @@ export default function PracticalExams() {
         return;
       }
 
-      if (!studentId) {
-        if (!isStudentLoading) {
-          setError("Student information not found.");
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
         setIsLoading(true);
         setError(null);
-        const response = await examSessionService.getExamSessions({
-          classId: parseInt(classId, 10),
-          studentId: studentId,
+
+        // 1) Get class info to find semesterCourseId
+        const cls = await classService.getClassById(classId);
+        const semesterCourseId = parseInt(cls.semesterCourseId, 10);
+
+        // 2) Get all course elements and filter by this class's semesterCourseId
+        const allElements = await courseElementService.getCourseElements({
           pageNumber: 1,
           pageSize: 1000,
         });
+        const classElements = allElements.filter(
+          (el) => el.semesterCourseId === semesterCourseId
+        );
+
+        // 3) Load exam sessions for this class to attach deadlines
+        let sessionsByCourseElement = new Map<number, ExamSession[]>();
         
-        const mappedExams = response.items.map(mapExamSessionToAssignmentData);
+        try {
+          const sessionRes = await examSessionService.getExamSessions({
+            classId: Number(cls.id),
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          
+          for (const s of sessionRes.items) {
+            const arr = sessionsByCourseElement.get(s.courseElementId) || [];
+            arr.push(s);
+            sessionsByCourseElement.set(s.courseElementId, arr);
+          }
+        } catch (err) {
+          console.error("Failed to fetch exam sessions:", err);
+          // Continue without exam sessions
+        }
+
+        // 4) Fetch class assessments for this class to get last set deadline
+        let classAssessmentMap = new Map<number, ClassAssessment>();
+        try {
+          const classAssessmentRes = await classAssessmentService.getClassAssessments({
+            classId: Number(cls.id),
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          for (const assessment of classAssessmentRes.items) {
+            if (assessment.courseElementId) {
+              classAssessmentMap.set(assessment.courseElementId, assessment);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch class assessments:", err);
+          // Continue without class assessments
+        }
+
+        // 5) Map to AssignmentData
+        const mappedExams = classElements.map((el) =>
+          mapCourseElementToExamData(el, sessionsByCourseElement, classAssessmentMap)
+        );
+
         setExams(mappedExams);
       } catch (err: any) {
         console.error("Failed to fetch exams:", err);
@@ -95,18 +175,10 @@ export default function PracticalExams() {
     };
 
     fetchExams();
-  }, [studentId, isStudentLoading]);
+  }, []);
 
-  const handleDeadlineSave = (id: string, newDate: dayjs.Dayjs | null) => {
-    if (!newDate) return;
-    setExams((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, date: newDate.toISOString() } : item
-      )
-    );
-  };
 
-  if (isLoading || isStudentLoading) {
+  if (isLoading) {
     return (
       <div className={styles.wrapper}>
         <Spin size="large" style={{ display: "block", textAlign: "center", padding: "50px" }} />
@@ -159,15 +231,10 @@ export default function PracticalExams() {
                       {item.title}
                     </Title>
                   </div>
-                  <DeadlinePopover
-                    id={item.id}
-                    date={item.date}
-                    onSave={handleDeadlineSave}
-                  />
                 </div>
               }
             >
-              <AssignmentItem data={item} />
+              <AssignmentItem data={item} isExam={true} />
             </Panel>
           ))}
         </Collapse>

@@ -125,7 +125,7 @@ const GradingGroupsPageContent = () => {
 
   const enrichedSubmissions: EnrichedSubmission[] = useMemo(() => {
     return allSubmissions.map((sub) => {
-      const session = allSessions.get(sub.examSessionId);
+      const session = sub.examSessionId ? allSessions.get(sub.examSessionId) : undefined;
       const cls = session ? allClasses.get(session.classId) : undefined;
       const group = submissionToGroupMap.get(sub.id);
 
@@ -178,6 +178,7 @@ const GradingGroupsPageContent = () => {
   const submissionLecturerIdMap = useMemo(() => {
     const map = new Map<number, number>();
     allSubmissions.forEach((sub) => {
+      if (!sub.examSessionId) return;
       const session = allSessions.get(sub.examSessionId);
       if (!session) return;
       const cls = allClasses.get(session.classId);

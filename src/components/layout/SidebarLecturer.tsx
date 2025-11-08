@@ -8,6 +8,9 @@ import {
   SearchOutlined,
   SunOutlined,
   UserOutlined,
+  BarChartOutlined,
+  CheckSquareOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Input, Layout, Menu, Switch } from "antd";
@@ -41,23 +44,28 @@ export default function SidebarLecturer() {
         label: <Link href={`/lecturer/info/${id}`}>Info</Link>,
       },
       {
-        key: "/lecturer/assignments",
+        key: "/lecturer/detail-assignment",
+        icon: <BarChartOutlined />,
+        label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
+      },
+      {
+        key: "/lecturer/practical-exams",
         icon: <FileTextOutlined />,
-        label: <Link href="/lecturer/detail-assignment">Practical Exams</Link>,
+        label: <Link href="/lecturer/practical-exams">Practical Exams</Link>,
       },
       {
         key: "/lecturer/tasks",
-        icon: <FileTextOutlined />,
+        icon: <CheckSquareOutlined />,
         label: <Link href="/lecturer/tasks">Tasks</Link>,
       },
       {
         key: "/lecturer/my-grading-group",
-        icon: <FileTextOutlined />,
+        icon: <BookOutlined />,
         label: <Link href="/lecturer/my-grading-group">Grading</Link>,
       },
       {
         key: "/lecturer/members",
-        icon: <UserOutlined />,
+        icon: <TeamOutlined />,
         label: <Link href="/lecturer/members">Members</Link>,
       },
     ];

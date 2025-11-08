@@ -162,7 +162,7 @@ const MySubmissionsPageContent = () => {
 
   const enrichedSubmissions: EnrichedSubmission[] = useMemo(() => {
     return submissions.map((sub) => {
-      const session = examSessions.get(sub.examSessionId);
+      const session = sub.examSessionId ? examSessions.get(sub.examSessionId) : undefined;
       const semesterName = session
         ? classIdToSemesterNameMap.get(session.classId.toString())
         : "N/A";

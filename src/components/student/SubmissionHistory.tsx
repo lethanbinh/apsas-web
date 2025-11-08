@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Input, Table, Tag, Typography, Select, Spin, Alert } from "antd";
+import { Card, Input, Table, Tag, Typography, Spin, Alert } from "antd";
 import type { TableProps } from "antd";
 import { SearchOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Button } from "../ui/Button";
@@ -11,6 +11,7 @@ import { useStudent } from "@/hooks/useStudent";
 import { classService, ClassInfo } from "@/services/classService";
 import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { submissionService, Submission } from "@/services/submissionService";
+import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 
 const { Title, Text } = Typography;
 
@@ -93,19 +94,16 @@ export default function SubmissionHistory() {
   const [submissions, setSubmissions] = useState<Submission[] | null>(null);
   const [allExamSessions, setAllExamSessions] = useState<Map<number, ExamSession>>(new Map());
   const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(new Map());
-
-  // Filters and options
-  const [semesterOptions, setSemesterOptions] = useState<{ label: string; value: string }[]>([]);
-  const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
-  const [classOptions, setClassOptions] = useState<{ label: string; value: number }[]>([]);
-  const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
+  const [allClassAssessments, setAllClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
+  // Map submission id to classAssessment id
+  const [submissionToClassAssessment, setSubmissionToClassAssessment] = useState<Map<number, number>>(new Map());
 
   // UI state
   const [rows, setRows] = useState<SubmissionRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load base data: student's submissions, exam sessions, and classes
+  // Load base data: student's submissions via classAssessments and examSessions
   useEffect(() => {
     const loadBaseData = async () => {
       if (!studentId) {
@@ -115,25 +113,91 @@ export default function SubmissionHistory() {
       try {
         setLoading(true);
         setError(null);
-        const [submissionList, sessionRes, classRes] = await Promise.all([
-          submissionService.getSubmissionList({ studentId }),
-          examSessionService.getExamSessions({ pageNumber: 1, pageSize: 1000 }),
-          classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
-        ]);
-
-        setSubmissions(submissionList);
-        setAllExamSessions(new Map(sessionRes.items.map((s) => [s.id, s])));
+        
+        // Fetch all classes first to get classIds
+        const classRes = await classService.getClassList({ pageNumber: 1, pageSize: 1000 });
         setAllClasses(new Map(classRes.classes.map((c) => [c.id, c])));
+        
+        // Fetch class assessments for all classes that student might be in
+        // We'll fetch by classId for each class, or try fetching by studentId
+        const classIds = classRes.classes.map((c) => c.id);
+        const classAssessmentPromises = classIds.map((classId) =>
+          classAssessmentService.getClassAssessments({
+            classId: classId,
+            pageNumber: 1,
+            pageSize: 1000,
+          }).catch(() => ({ items: [] }))
+        );
+        
+        // Also try fetching by studentId
+        const studentClassAssessmentRes = await classAssessmentService.getClassAssessments({
+          studentId: studentId,
+          pageNumber: 1,
+          pageSize: 1000,
+        }).catch(() => ({ items: [] }));
+        
+        // Combine all class assessments
+        const allClassAssessmentResults = await Promise.all(classAssessmentPromises);
+        const allClassAssessmentsList = [
+          ...studentClassAssessmentRes.items,
+          ...allClassAssessmentResults.flatMap((r) => r.items),
+        ];
+        
+        // Remove duplicates by id
+        const uniqueClassAssessments = Array.from(
+          new Map(allClassAssessmentsList.map((ca) => [ca.id, ca])).values()
+        );
+        
+        setAllClassAssessments(new Map(uniqueClassAssessments.map((ca) => [ca.id, ca])));
+        
+        // Fetch exam sessions
+        const sessionRes = await examSessionService.getExamSessions({ pageNumber: 1, pageSize: 1000 });
+        setAllExamSessions(new Map(sessionRes.items.map((s) => [s.id, s])));
 
-        // Derive semesters from student's submissions via sessions -> classes
-        const semesters = new Set<string>();
-        for (const sub of submissionList) {
-          const ses = sessionRes.items.find((s) => s.id === sub.examSessionId);
-          if (!ses) continue;
-          const cls = classRes.classes.find((c) => c.id === ses.classId);
-          if (cls && cls.semesterName) semesters.add(cls.semesterName);
+        // Fetch submissions via classAssessmentIds
+        const classAssessmentIds = uniqueClassAssessments.map((ca) => ca.id);
+        const submissionPromises = classAssessmentIds.map(async (id) => {
+          const subs = await submissionService.getSubmissionList({ 
+            studentId: studentId,
+            classAssessmentId: id 
+          }).catch(() => []);
+          return { classAssessmentId: id, submissions: subs };
+        });
+        
+        // Also fetch submissions via examSessionIds for exams
+        const examSessionIds = sessionRes.items.map((s) => s.id);
+        const examSubmissionPromises = examSessionIds.map((id) =>
+          submissionService.getSubmissionList({ 
+            studentId: studentId,
+            examSessionId: id 
+          }).catch(() => [])
+        );
+        
+        const [classAssessmentResults, examSubmissions] = await Promise.all([
+          Promise.all(submissionPromises),
+          Promise.all(examSubmissionPromises),
+        ]);
+        
+        // Create map from submission id to classAssessment id
+        const submissionToClassAssessmentMap = new Map<number, number>();
+        for (const result of classAssessmentResults) {
+          for (const sub of result.submissions) {
+            submissionToClassAssessmentMap.set(sub.id, result.classAssessmentId);
+          }
         }
-        setSemesterOptions(Array.from(semesters).map((s) => ({ label: s, value: s })));
+        setSubmissionToClassAssessment(submissionToClassAssessmentMap);
+        
+        // Combine all submissions and remove duplicates by id
+        const classAssessmentSubmissions = classAssessmentResults.flatMap(r => r.submissions);
+        const allSubmissions = [
+          ...classAssessmentSubmissions,
+          ...examSubmissions.flat(),
+        ];
+        const uniqueSubmissions = Array.from(
+          new Map(allSubmissions.map((s) => [s.id, s])).values()
+        );
+        
+        setSubmissions(uniqueSubmissions);
       } catch (err: any) {
         console.error("Failed to load base data:", err);
         setError(err.message || "Failed to load submissions data");
@@ -145,47 +209,36 @@ export default function SubmissionHistory() {
     loadBaseData();
   }, [studentId, isStudentLoading]);
 
-  // Update class options based on selected semester and student's submissions
+  // Build rows from all submissions
   useEffect(() => {
-    if (!selectedSemester || !submissions) {
-      setClassOptions([]);
-      setSelectedClassId(undefined);
-      return;
-    }
-
-    const optionsSet = new Map<number, string>();
-    for (const sub of submissions) {
-      const ses = allExamSessions.get(sub.examSessionId);
-      if (!ses) continue;
-      const cls = allClasses.get(ses.classId);
-      if (cls && cls.semesterName === selectedSemester) {
-        const label = `${cls.courseName} (${cls.classCode})`;
-        optionsSet.set(cls.id, label);
-      }
-    }
-    const opts = Array.from(optionsSet.entries()).map(([id, label]) => ({ label, value: id }));
-    setClassOptions(opts);
-    setSelectedClassId(undefined);
-  }, [selectedSemester, submissions, allExamSessions, allClasses]);
-
-  // Build rows based on selected class
-  useEffect(() => {
-    if (!submissions || !selectedClassId) {
+    if (!submissions) {
       setRows([]);
       return;
     }
 
-    const filteredSubs = submissions.filter((sub) => {
-      const ses = allExamSessions.get(sub.examSessionId);
-      return ses?.classId === selectedClassId;
-    });
-
-    // For lateness calculation we need session end time
-    const mapped: SubmissionRow[] = filteredSubs
-      .sort((a, b) => dayjs(a.submittedAt).valueOf() - dayjs(b.submittedAt).valueOf())
+    // For lateness calculation we need classAssessment endAt or session endAt
+    const mapped: SubmissionRow[] = submissions
+      .sort((a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf())
       .map((sub, idx) => {
-        const ses = allExamSessions.get(sub.examSessionId);
-        const endAt = ses ? dayjs(ses.endAt) : null;
+        let endAt: dayjs.Dayjs | null = null;
+        
+        // Try to get endAt from classAssessment first
+        const classAssessmentId = submissionToClassAssessment.get(sub.id);
+        if (classAssessmentId) {
+          const ca = allClassAssessments.get(classAssessmentId);
+          if (ca?.endAt) {
+            endAt = dayjs(ca.endAt);
+          }
+        }
+        
+        // Fallback to examSession endAt
+        if (!endAt && sub.examSessionId) {
+          const ses = allExamSessions.get(sub.examSessionId);
+          if (ses?.endAt) {
+            endAt = dayjs(ses.endAt);
+          }
+        }
+        
         const submittedAt = dayjs(sub.submittedAt);
         const onTime = endAt ? submittedAt.isBefore(endAt) || submittedAt.isSame(endAt) : true;
 
@@ -201,7 +254,7 @@ export default function SubmissionHistory() {
       });
 
     setRows(mapped);
-  }, [submissions, selectedClassId, allExamSessions]);
+  }, [submissions, allExamSessions, allClassAssessments, submissionToClassAssessment]);
 
   const filteredRows = useMemo(() => {
     const q = searchText.toLowerCase();
@@ -228,26 +281,6 @@ export default function SubmissionHistory() {
           onChange={(e) => setSearchText(e.target.value)}
           className={styles.searchBar}
           prefix={<SearchOutlined />}
-        />
-      </div>
-
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <Select
-          placeholder="Select semester"
-          options={semesterOptions}
-          value={selectedSemester}
-          onChange={setSelectedSemester}
-          style={{ width: 220 }}
-          allowClear
-        />
-        <Select
-          placeholder="Select class"
-          options={classOptions}
-          value={selectedClassId}
-          onChange={setSelectedClassId}
-          style={{ width: 320 }}
-          disabled={!selectedSemester}
-          allowClear
         />
       </div>
 

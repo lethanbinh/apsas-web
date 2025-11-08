@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix exam session. Do exam functions">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/exam-shifts/page.tsx" afterDir="false" />
-    </list>
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix exam session. Do exam functions" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -96,6 +93,7 @@
       <workItem from="1762433359344" duration="1424000" />
       <workItem from="1762444379590" duration="73000" />
       <workItem from="1762482682788" duration="1499000" />
+      <workItem from="1762511425191" duration="101000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />

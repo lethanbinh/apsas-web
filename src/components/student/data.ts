@@ -26,17 +26,26 @@ export interface AssignmentData {
   id: string;
   status: string;
   title: string;
-  date: string;
+  date?: string;
   description: string;
   requirementContent: RequirementContent[];
   requirementFile: string;
+  requirementFileUrl?: string;
   databaseFile?: string;
+  databaseFileUrl?: string;
   totalScore: string;
   overallFeedback: string;
   gradeCriteria: GradeCriterion[];
   suggestionsAvoid: string;
   suggestionsImprove: string;
   submissions: SubmissionItem[];
+  // For deadline update
+  classAssessmentId?: number;
+  examSessionId?: number;
+  courseElementId?: number;
+  classId?: number;
+  assessmentTemplateId?: number;
+  startAt?: string;
 }
 
 export const initialAssignmentData: AssignmentData[] = [

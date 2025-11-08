@@ -103,6 +103,21 @@
     color: #3daaaC !important;
 }
 
+.viewScoreButtonExam {
+    border-radius: 20px !important;
+    font-weight: 500;
+    border-color: #49BBBD !important;
+    color: #49BBBD !important;
+    padding: 8px 24px;
+    height: auto;
+}
+
+.viewScoreButtonExam:hover {
+    border-color: #3daaaC !important;
+    color: #3daaaC !important;
+    background-color: #f0f7ff;
+}
+
 .submitButton {
     margin-top: 20px;
     background-color: #49BBBD;

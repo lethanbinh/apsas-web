@@ -7,7 +7,8 @@ export interface SubmissionFile {
 
 export interface Submission {
   id: number;
-  examSessionId: number;
+  examSessionId?: number;
+  classAssessmentId?: number;
   studentId: number;
   studentName: string;
   studentCode: string;
@@ -30,6 +31,7 @@ export interface SubmissionListApiResponse {
 
 export interface GetSubmissionsParams {
   examSessionId?: number;
+  classAssessmentId?: number;
   excludeLecturerId?: number;
   studentId?: number;
   gradingGroupId?: number;
@@ -37,7 +39,8 @@ export interface GetSubmissionsParams {
 }
 
 export interface CreateSubmissionPayload {
-  ExamSessionId: number;
+  ExamSessionId?: number;
+  ClassAssessmentId?: number;
   StudentId: number;
   file: File;
 }
@@ -62,7 +65,15 @@ export class SubmissionService {
     payload: CreateSubmissionPayload
   ): Promise<Submission> {
     const formData = new FormData();
-    formData.append("ExamSessionId", payload.ExamSessionId.toString());
+    
+    if (payload.ExamSessionId !== undefined) {
+      formData.append("ExamSessionId", payload.ExamSessionId.toString());
+    }
+    
+    if (payload.ClassAssessmentId !== undefined) {
+      formData.append("ClassAssessmentId", payload.ClassAssessmentId.toString());
+    }
+    
     formData.append("StudentId", payload.StudentId.toString());
     formData.append("file", payload.file);
 

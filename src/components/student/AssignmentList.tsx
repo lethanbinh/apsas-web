@@ -1,31 +1,57 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { App, Typography, Collapse, Spin, Alert } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import styles from "./AssignmentList.module.css";
+import { Alert, App, Collapse, Spin, Typography } from "antd";
 import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import styles from "./AssignmentList.module.css";
 
-import { AssignmentData } from "./data";
-import { DeadlinePopover } from "./DeadlinePopover";
-import { AssignmentItem } from "./AssignmentItem";
+import { AssessmentFile, assessmentFileService } from "@/services/assessmentFileService";
+import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
 import { classService } from "@/services/classService";
-import { courseElementService, CourseElement } from "@/services/courseElementService";
-import { examSessionService, ExamSession } from "@/services/examSessionService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { ExamSession, examSessionService } from "@/services/examSessionService";
+import { AssignmentItem } from "./AssignmentItem";
+import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
 function mapCourseElementToAssignmentData(
   element: CourseElement,
-  sessionMap: Map<number, ExamSession[]>
+  sessionMap: Map<number, ExamSession[]>,
+  filesMap: Map<number, AssessmentFile[]>,
+  classAssessmentMap: Map<number, ClassAssessment>,
+  classId: number
 ): AssignmentData {
   const sessions = sessionMap.get(element.id) || [];
-  const deadline = sessions.length > 0 ? sessions[0].endAt : dayjs().add(7, "day").toISOString();
+  const classAssessment = classAssessmentMap.get(element.id);
+  let deadline: string | undefined = undefined;
+  let startAt = dayjs().toISOString();
+  
+  // Get deadline from classAssessment only (last set deadline)
+  // If no classAssessment, there is no deadline
+  try {
+    if (classAssessment?.endAt) {
+      deadline = classAssessment.endAt;
+      startAt = classAssessment.startAt || dayjs().toISOString();
+    }
+  } catch (error) {
+    console.error("Error parsing deadline:", error);
+    // Continue without deadline
+  }
+  
+  const files = filesMap.get(element.id) || [];
+  
+  // Get requirement file and database file if available
+  const requirementFileObj = files.find(f => f.fileTemplate === 0);
+  const databaseFileObj = files.find(f => f.fileTemplate === 1);
+  const requirementFile = requirementFileObj?.name || "";
+  const databaseFile = databaseFileObj?.name || "";
 
   return {
     id: element.id.toString(),
-    status: sessions.length > 0 ? "Active Assignment" : "Basic Assignment",
+    status: classAssessment || sessions.length > 0 ? "Active Assignment" : "Basic Assignment",
     title: element.name || "Assignment",
     date: deadline,
     description: element.description || "No description available",
@@ -33,17 +59,26 @@ function mapCourseElementToAssignmentData(
       { type: "heading", content: element.name || "Assignment Details" },
       { type: "paragraph", content: element.description || "" },
     ],
-    requirementFile: "",
+    requirementFile: requirementFile,
+    requirementFileUrl: requirementFileObj?.fileUrl || "",
+    databaseFile: databaseFile || undefined,
+    databaseFileUrl: databaseFileObj?.fileUrl || "",
     totalScore: "N/A",
     overallFeedback: "",
     gradeCriteria: [],
     suggestionsAvoid: "",
     suggestionsImprove: "",
     submissions: [],
+    classAssessmentId: classAssessment?.id,
+    courseElementId: element.id,
+    classId: classId,
+    assessmentTemplateId: classAssessment?.assessmentTemplateId,
+    startAt: startAt,
   };
 }
 
 export default function AssignmentList() {
+  const { message } = App.useApp();
   const [assignments, setAssignments] = useState<AssignmentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,22 +110,90 @@ export default function AssignmentList() {
           (el) => el.semesterCourseId === semesterCourseId
         );
 
-        // 3) Optionally load exam sessions for this class to attach deadlines if any
-        const sessionRes = await examSessionService.getExamSessions({
-          classId: Number(cls.id),
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        const sessionsByCourseElement = new Map<number, ExamSession[]>();
-        for (const s of sessionRes.items) {
-          const arr = sessionsByCourseElement.get(s.courseElementId) || [];
-          arr.push(s);
-          sessionsByCourseElement.set(s.courseElementId, arr);
+        // 3) Load exam sessions for this class to attach deadlines and get assessmentTemplateIds
+        let sessionsByCourseElement = new Map<number, ExamSession[]>();
+        let assessmentTemplateIds = new Set<number>();
+        
+        try {
+          const sessionRes = await examSessionService.getExamSessions({
+            classId: Number(cls.id),
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          
+          for (const s of sessionRes.items) {
+            const arr = sessionsByCourseElement.get(s.courseElementId) || [];
+            arr.push(s);
+            sessionsByCourseElement.set(s.courseElementId, arr);
+            if (s.assessmentTemplateId) {
+              assessmentTemplateIds.add(s.assessmentTemplateId);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch exam sessions:", err);
+          // Continue without exam sessions
         }
 
-        // 4) Map to AssignmentData
+        // 4) Fetch assessment files for all assessment templates
+        const filesByCourseElement = new Map<number, AssessmentFile[]>();
+        const filesPromises = Array.from(assessmentTemplateIds).map(async (templateId) => {
+          try {
+            const filesRes = await assessmentFileService.getFilesForTemplate({
+              assessmentTemplateId: templateId,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+            return { templateId, files: filesRes.items };
+          } catch (err) {
+            console.error(`Failed to fetch files for template ${templateId}:`, err);
+            return { templateId, files: [] };
+          }
+        });
+        
+        const filesResults = await Promise.all(filesPromises);
+        const templateToFilesMap = new Map<number, AssessmentFile[]>();
+        filesResults.forEach(({ templateId, files }) => {
+          templateToFilesMap.set(templateId, files);
+        });
+
+        // 5) Fetch class assessments for this class (wrap in try-catch to not block other data)
+        let classAssessmentMap = new Map<number, ClassAssessment>();
+        try {
+          const classAssessmentRes = await classAssessmentService.getClassAssessments({
+            classId: Number(cls.id),
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          for (const assessment of classAssessmentRes.items) {
+            if (assessment.courseElementId) {
+              classAssessmentMap.set(assessment.courseElementId, assessment);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch class assessments:", err);
+          // Continue without class assessments - still show course elements
+        }
+
+        // 6) Map files to course elements via exam sessions
+        for (const element of classElements) {
+          const sessions = sessionsByCourseElement.get(element.id) || [];
+          const allFiles: AssessmentFile[] = [];
+          for (const session of sessions) {
+            if (session.assessmentTemplateId) {
+              const files = templateToFilesMap.get(session.assessmentTemplateId) || [];
+              allFiles.push(...files);
+            }
+          }
+          // Remove duplicates by id
+          const uniqueFiles = Array.from(
+            new Map(allFiles.map(f => [f.id, f])).values()
+          );
+          filesByCourseElement.set(element.id, uniqueFiles);
+        }
+
+        // 7) Map to AssignmentData
         const mappedAssignments = classElements.map((el) =>
-          mapCourseElementToAssignmentData(el, sessionsByCourseElement)
+          mapCourseElementToAssignmentData(el, sessionsByCourseElement, filesByCourseElement, classAssessmentMap, Number(cls.id))
         );
 
         setAssignments(mappedAssignments);
@@ -105,14 +208,6 @@ export default function AssignmentList() {
     fetchAssignments();
   }, []);
 
-  const handleDeadlineSave = (id: string, newDate: dayjs.Dayjs | null) => {
-    if (!newDate) return;
-    setAssignments((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, date: newDate.toISOString() } : item
-      )
-    );
-  };
 
   if (isLoading) {
     return (
@@ -167,11 +262,6 @@ export default function AssignmentList() {
                       {item.title}
                     </Title>
                   </div>
-                  <DeadlinePopover
-                    id={item.id}
-                    date={item.date}
-                    onSave={handleDeadlineSave}
-                  />
                 </div>
               }
             >

@@ -1,36 +1,4 @@
 import { apiService } from "./api";
-export interface CreateClassAssessmentPayload {
-  classId: number;
-  assessmentTemplateId: number;
-  startAt: string;
-  endAt: string;
-}
-
-export interface ClassAssessment {
-  id: number;
-  classId: number;
-  assessmentTemplateId: number;
-  assessmentTemplateName: string;
-  assessmentTemplateDescription: string;
-  courseElementId: number;
-  courseElementName: string;
-  startAt: string;
-  endAt: string;
-  createdAt: string;
-  updatedAt: string;
-  classCode: string;
-  courseName: string;
-  lecturerName: string;
-  submissionCount: string;
-  status: string;
-}
-
-export interface ClassAssessmentApiResponse {
-  statusCode: number;
-  isSuccess: boolean;
-  errorMessages: any[];
-  result: ClassAssessment;
-}
 
 export interface CreateClassAssessmentPayload {
   classId: number;
@@ -51,11 +19,13 @@ export interface ClassAssessment {
   endAt: string;
   createdAt: string;
   updatedAt: string;
+  enrollmentCode: string;
   classCode: string;
   courseName: string;
   lecturerName: string;
+  students: any[];
   submissionCount: string;
-  status: string;
+  status: number;
 }
 
 export interface ClassAssessmentApiResponse {

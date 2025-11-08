@@ -11,7 +11,6 @@ import {
   Descriptions,
   Space,
   Alert,
-  App,
 } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
 import { useEffect, useState, useCallback } from "react";
@@ -37,45 +36,29 @@ import {
 import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 import { submissionService, Submission } from "@/services/submissionService";
-import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
 
-const convertToDate = (dateString?: string): Date | null => {
-  if (!dateString) return null;
-  if (dateString.endsWith("Z")) {
-    return new Date(dateString);
-  }
-  return new Date(dateString + "Z");
-};
-
-const AssignmentDetailItem = ({
-  assignment,
+const ExamDetailItem = ({
+  exam,
   template,
   classAssessment,
   examSession,
   submissions,
-  onDeadlineSave,
 }: {
-  assignment: CourseElement;
+  exam: CourseElement;
   template?: AssessmentTemplate;
   classAssessment?: ClassAssessment;
   examSession?: ExamSession;
   submissions: Submission[];
-  onDeadlineSave?: (courseElementId: number, newDate: dayjs.Dayjs | null) => void;
 }) => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assessmentFiles, setAssessmentFiles] = useState<AssessmentFile[]>([]);
   const [isFilesLoading, setIsFilesLoading] = useState(false);
-
-  const handleSubmissionClick = (submission: Submission) => {
-    localStorage.setItem("selectedSubmissionId", submission.id.toString());
-    router.push("/lecturer/assignment-grading");
-  };
 
   useEffect(() => {
     if (template?.id) {
@@ -102,66 +85,22 @@ const AssignmentDetailItem = ({
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  const deadline = classAssessment?.endAt;
+  const handleSubmissionClick = (submission: Submission) => {
+    // Save submissionId to localStorage for the grading page
+    localStorage.setItem("selectedSubmissionId", submission.id.toString());
+    router.push("/lecturer/assignment-grading");
+  };
 
   return (
     <>
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Card bordered={false}>
-          <Descriptions column={1} layout="vertical" title="Assignment Details">
+          <Descriptions column={1} layout="vertical" title="Exam Details">
             <Descriptions.Item label="Description">
-              <Paragraph>{assignment.description}</Paragraph>
-            </Descriptions.Item>
-
-            <Descriptions.Item label="Requirement Files">
-              {isFilesLoading ? (
-                <Spin />
-              ) : (
-                <>
-                  {assessmentFiles.length > 0 ? (
-                    <List
-                      dataSource={assessmentFiles}
-                      renderItem={(file) => (
-                        <List.Item>
-                          <a
-                            key={file.id}
-                            href={file.fileUrl}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <PaperClipOutlined style={{ marginRight: 8 }} />
-                            {file.name}
-                          </a>
-                        </List.Item>
-                      )}
-                    />
-                  ) : (
-                    <Text type="secondary">No requirement files.</Text>
-                  )}
-                </>
-              )}
+              <Paragraph>{exam.description}</Paragraph>
             </Descriptions.Item>
           </Descriptions>
-
-          <Button type="primary" onClick={openModal} style={{ marginTop: 16 }}>
-            View Assignment Paper
-          </Button>
         </Card>
-
-        {onDeadlineSave && deadline && (
-          <Card bordered={false}>
-            <Descriptions column={1} layout="vertical">
-              <Descriptions.Item label="Deadline">
-                <DeadlinePopover
-                  id={assignment.id.toString()}
-                  date={deadline}
-                  onSave={(id, newDate) => onDeadlineSave(assignment.id, newDate)}
-                />
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        )}
 
         <Card title="Submissions">
           {submissions.length === 0 ? (
@@ -217,9 +156,8 @@ const AssignmentDetailItem = ({
   );
 };
 
-const DetailAssignmentPage = () => {
-  const { message } = App.useApp();
-  const [assignments, setAssignments] = useState<CourseElement[]>([]);
+const PracticalExamsPage = () => {
+  const [exams, setExams] = useState<CourseElement[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [classAssessments, setClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
   const [examSessions, setExamSessions] = useState<Map<number, ExamSession>>(new Map());
@@ -268,7 +206,7 @@ const DetailAssignmentPage = () => {
         }).catch(() => ({ items: [] })),
       ]);
 
-      const filteredAssignments = allElements.filter(
+      const filteredExams = allElements.filter(
         (el) => el.semesterCourseId.toString() === classData.semesterCourseId
       );
 
@@ -288,80 +226,60 @@ const DetailAssignmentPage = () => {
         }
       }
 
-      // Fetch submissions for class assessments and exam sessions
-      const classAssessmentIds = Array.from(assessmentMap.values()).map(ca => ca.id);
+      // Fetch submissions for exam sessions of this class
       const examSessionIds = Array.from(sessionMap.values()).map(s => s.id);
       const submissionsByCourseElement = new Map<number, Submission[]>();
       
-      try {
-        // Fetch submissions via classAssessmentIds (for assignments)
-        const classAssessmentSubmissionPromises = classAssessmentIds.map(classAssessmentId =>
-          submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
-        );
-        
-        // Fetch submissions via examSessionIds (for exams)
-        const examSessionSubmissionPromises = examSessionIds.map(sessionId =>
-          submissionService.getSubmissionList({ examSessionId: sessionId }).catch(() => [])
-        );
-        
-        const [classAssessmentSubmissions, examSessionSubmissions] = await Promise.all([
-          Promise.all(classAssessmentSubmissionPromises),
-          Promise.all(examSessionSubmissionPromises),
-        ]);
-        
-        const allClassAssessmentSubs = classAssessmentSubmissions.flat();
-        const allExamSessionSubs = examSessionSubmissions.flat();
-        
-        // Map submissions by course element via class assessment
-        for (const submission of allClassAssessmentSubs) {
-          const classAssessment = Array.from(assessmentMap.values()).find(ca => ca.id === submission.classAssessmentId);
-          if (classAssessment && classAssessment.courseElementId) {
-            const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
-            existing.push(submission);
-            submissionsByCourseElement.set(classAssessment.courseElementId, existing);
-          }
-        }
-        
-        // Map submissions by course element via exam session
-        for (const submission of allExamSessionSubs) {
-          if (!submission.examSessionId) continue;
-          const session = Array.from(sessionMap.values()).find(s => s.id === submission.examSessionId);
-          if (session && session.courseElementId) {
-            const existing = submissionsByCourseElement.get(session.courseElementId) || [];
-            existing.push(submission);
-            submissionsByCourseElement.set(session.courseElementId, existing);
-          }
-        }
-        
-        // Sort submissions by submittedAt (most recent first) and get latest per student
-        for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
-          // Group by studentId and get latest submission for each student
-          const studentSubmissions = new Map<number, Submission>();
-          for (const sub of subs) {
-            const existing = studentSubmissions.get(sub.studentId);
-            if (!existing || new Date(sub.submittedAt) > new Date(existing.submittedAt)) {
-              studentSubmissions.set(sub.studentId, sub);
+      if (examSessionIds.length > 0) {
+        try {
+          // Fetch submissions for each exam session
+          const submissionPromises = examSessionIds.map(sessionId =>
+            submissionService.getSubmissionList({ examSessionId: sessionId }).catch(() => [])
+          );
+          const submissionArrays = await Promise.all(submissionPromises);
+          const allSubmissions = submissionArrays.flat();
+          
+          // Map submissions by course element via exam session
+          for (const submission of allSubmissions) {
+            if (!submission.examSessionId) continue;
+            const session = Array.from(sessionMap.values()).find(s => s.id === submission.examSessionId);
+            if (session && session.courseElementId) {
+              const existing = submissionsByCourseElement.get(session.courseElementId) || [];
+              existing.push(submission);
+              submissionsByCourseElement.set(session.courseElementId, existing);
             }
           }
-          // Convert back to array and sort by submittedAt
-          const latestSubs = Array.from(studentSubmissions.values()).sort(
-            (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-          );
-          submissionsByCourseElement.set(courseElementId, latestSubs);
+          
+          // Sort submissions by submittedAt (most recent first) and get latest per student
+          for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
+            // Group by studentId and get latest submission for each student
+            const studentSubmissions = new Map<number, Submission>();
+            for (const sub of subs) {
+              const existing = studentSubmissions.get(sub.studentId);
+              if (!existing || new Date(sub.submittedAt) > new Date(existing.submittedAt)) {
+                studentSubmissions.set(sub.studentId, sub);
+              }
+            }
+            // Convert back to array and sort by submittedAt
+            const latestSubs = Array.from(studentSubmissions.values()).sort(
+              (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+            );
+            submissionsByCourseElement.set(courseElementId, latestSubs);
+          }
+        } catch (err) {
+          console.error("Failed to fetch submissions:", err);
+          // Continue without submissions
         }
-      } catch (err) {
-        console.error("Failed to fetch submissions:", err);
-        // Continue without submissions
       }
 
-      setAssignments(filteredAssignments);
+      setExams(filteredExams);
       setTemplates(templateResponse.items);
       setClassAssessments(assessmentMap);
       setExamSessions(sessionMap);
       setSubmissions(submissionsByCourseElement);
     } catch (err: any) {
       console.error("Failed to fetch data:", err);
-      setError(err.message || "Failed to load assignments.");
+      setError(err.message || "Failed to load practical exams.");
     } finally {
       setIsLoading(false);
     }
@@ -370,37 +288,6 @@ const DetailAssignmentPage = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  const handleDeadlineSave = async (courseElementId: number, newDate: dayjs.Dayjs | null) => {
-    if (!newDate || !selectedClassId) return;
-
-    const classAssessment = classAssessments.get(courseElementId);
-    if (!classAssessment) {
-      message.error("Class assessment not found. Cannot update deadline.");
-      return;
-    }
-
-    try {
-      await classAssessmentService.updateClassAssessment(classAssessment.id, {
-        classId: Number(selectedClassId),
-        assessmentTemplateId: classAssessment.assessmentTemplateId,
-        startAt: classAssessment.startAt,
-        endAt: newDate.toISOString(),
-      });
-
-      // Update local state
-      const updated = new Map(classAssessments);
-      updated.set(courseElementId, {
-        ...classAssessment,
-        endAt: newDate.toISOString(),
-      });
-      setClassAssessments(updated);
-      message.success("Deadline updated successfully!");
-    } catch (err: any) {
-      console.error("Failed to update deadline:", err);
-      message.error(err.message || "Failed to update deadline");
-    }
-  };
 
   if (isLoading) {
     return (
@@ -428,28 +315,28 @@ const DetailAssignmentPage = () => {
           marginBottom: "20px",
         }}
       >
-        Assignments
+        Practical Exams
       </Title>
-      {assignments.length === 0 ? (
-        <Alert message="No assignments found" description="There are no assignments for this class." type="info" />
+      {exams.length === 0 ? (
+        <Alert message="No exams found" description="There are no practical exams for this class." type="info" />
       ) : (
         <Collapse
           accordion
           bordered={false}
           className={styles.collapse}
-          defaultActiveKey={assignments.length > 0 ? [assignments[0].id.toString()] : []}
+          defaultActiveKey={exams.length > 0 ? [exams[0].id.toString()] : []}
         >
-          {assignments.map((assignment) => {
+          {exams.map((exam) => {
             const matchingTemplate = templates.find(
-              (t) => t.courseElementId === assignment.id
+              (t) => t.courseElementId === exam.id
             );
-            const classAssessment = classAssessments.get(assignment.id);
-            const examSession = examSessions.get(assignment.id);
-            const assignmentSubmissions = submissions.get(assignment.id) || [];
+            const classAssessment = classAssessments.get(exam.id);
+            const examSession = examSessions.get(exam.id);
+            const examSubmissions = submissions.get(exam.id) || [];
             
             return (
               <Panel
-                key={assignment.id}
+                key={exam.id}
                 header={
                   <div className={styles.panelHeader}>
                     <div>
@@ -457,22 +344,21 @@ const DetailAssignmentPage = () => {
                         type="secondary"
                         style={{ fontSize: "0.9rem", color: "#E86A92" }}
                       >
-                        <LinkOutlined /> Active Assignment
+                        <LinkOutlined /> Active Exam
                       </Text>
                       <Title level={4} style={{ margin: "4px 0 0 0" }}>
-                        {assignment.name}
+                        {exam.name}
                       </Title>
                     </div>
                   </div>
                 }
               >
-                <AssignmentDetailItem
-                  assignment={assignment}
+                <ExamDetailItem 
+                  exam={exam} 
                   template={matchingTemplate}
                   classAssessment={classAssessment}
                   examSession={examSession}
-                  submissions={assignmentSubmissions}
-                  onDeadlineSave={handleDeadlineSave}
+                  submissions={examSubmissions}
                 />
               </Panel>
             );
@@ -483,4 +369,5 @@ const DetailAssignmentPage = () => {
   );
 };
 
-export default DetailAssignmentPage;
+export default PracticalExamsPage;
+
