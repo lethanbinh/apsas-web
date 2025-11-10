@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Image from "next/image";
 import { Layout } from "@/components/layout/Layout";
+import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 
 export const metadata: Metadata = {
   title: "Home - APSAS Web",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
 export default function HomePage() {
   return (
     <Layout>
+      <QueryParamsHandler />
       <section className="bg-white">
         <div className="hero-section-bg">
           <div className="hero-section-content-container">

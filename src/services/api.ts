@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '@/lib/config';
+import { getStorageItem, removeStorageItem } from '@/lib/utils/storage';
+import { deleteCookie } from '@/lib/utils/cookie';
 
 class ApiService {
   private api: AxiosInstance;
@@ -20,7 +22,7 @@ class ApiService {
     // Request interceptor
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('auth_token');
+        const token = getStorageItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -54,7 +56,8 @@ class ApiService {
           
           // Only redirect if it's not a login request and not already on login page
           if (!isLoginPage && !isLoginRequest) {
-            localStorage.removeItem('auth_token');
+            removeStorageItem('auth_token');
+            deleteCookie('auth_token');
             window.location.href = '/login';
           }
         }

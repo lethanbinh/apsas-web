@@ -13,6 +13,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
+import { setCookie, deleteCookie } from "@/lib/utils/cookie";
+import { setStorageItem, removeStorageItem } from "@/lib/utils/storage";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -114,9 +116,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setErrors({});
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());
@@ -163,9 +166,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       onSuccess?.();
     } catch (error: any) {
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());
@@ -278,7 +282,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         throw new Error("Google login failed: Invalid response from server");
       }
 
-      localStorage.setItem("auth_token", response.result.token);
+      setStorageItem("auth_token", response.result.token);
+      setCookie("auth_token", response.result.token); // Session cookie
 
       const token = response.result.token;
 
@@ -317,9 +322,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       console.error("Google login failed:", error);
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());

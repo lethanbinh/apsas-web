@@ -2,6 +2,7 @@
 
 import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
 import { CreateGradingGroupModal } from "@/components/examiner/CreateGradingGroupModal";
+import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import {
   GradingGroup,
   gradingGroupService,
@@ -386,9 +387,11 @@ const GradingGroupsPageContent = () => {
   }
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.header}>
-        <div>
+    <>
+      <QueryParamsHandler />
+      <div className={styles.wrapper}>
+        <div className={styles.header}>
+          <div>
           <Title
             level={2}
             style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
@@ -525,7 +528,8 @@ const GradingGroupsPageContent = () => {
           allGroups={allGroups}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
