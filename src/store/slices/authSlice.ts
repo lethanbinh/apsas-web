@@ -143,8 +143,56 @@ export const loginUser = createAsyncThunk(
       // Fallback: return token only
       return { user: null, token };
     } catch (error: any) {
-      console.error('Login error:', error);
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      // Extract error message from API response
+      let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
+      
+      if (error?.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        // Handle specific status codes FIRST - always use Vietnamese for 401
+        if (status === 401) {
+          // For 401, always return Vietnamese message regardless of API response
+          errorMessage = 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
+          
+          // Only override if API provides a meaningful Vietnamese message
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              const apiMessage = errorData.errorMessages[0];
+              // Only use API message if it's not in English (simple check)
+              if (apiMessage && !/^[a-zA-Z\s]+$/.test(apiMessage)) {
+                errorMessage = apiMessage;
+              }
+            }
+          }
+        } else if (status === 403) {
+          errorMessage = 'Bạn không có quyền truy cập.';
+        } else if (status === 404) {
+          errorMessage = 'Không tìm thấy tài khoản.';
+        } else if (status >= 500) {
+          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+        } else {
+          // For other status codes, check API response
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              errorMessage = errorData.errorMessages[0];
+            } 
+            else if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+            else if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          }
+        }
+      } 
+      // Check for error message directly (shouldn't happen for API errors, but just in case)
+      else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Always return Vietnamese message for consistency
+      return rejectWithValue(errorMessage);
     }
   }
 );

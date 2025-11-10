@@ -59,7 +59,8 @@ export const useAuth = () => {
       
       return result;
     } catch (error) {
-      console.error('❌ Login failed:', error);
+      // Error is already handled and displayed in LoginForm
+      // Just rethrow to let LoginForm handle the UI feedback
       throw error;
     }
   };

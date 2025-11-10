@@ -39,12 +39,20 @@ class ApiService {
         return response;
       },
       (error) => {
-        console.error('❌ API Error:', error.response?.status, error.config?.url, error.response?.data);
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const requestUrl = error.config?.url?.toLowerCase() || '';
+        const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
+        
+        // Don't log 401 errors for login requests (expected behavior - user entered wrong credentials)
+        const shouldLogError = status !== 401 || !isLoginRequest;
+        if (shouldLogError) {
+          console.error('❌ API Error:', status, requestUrl, error.response?.data);
+        }
+        
+        if (status === 401) {
           const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
-          const requestUrl = error.config?.url?.toLowerCase() || '';
-          const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
           
+          // Only redirect if it's not a login request and not already on login page
           if (!isLoginPage && !isLoginRequest) {
             localStorage.removeItem('auth_token');
             window.location.href = '/login';
