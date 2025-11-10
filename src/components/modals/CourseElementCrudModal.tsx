@@ -13,6 +13,7 @@ interface CourseElementCrudModalProps {
   open: boolean;
   semesterCourseId: number;
   initialData: CourseElement | null;
+  existingElements?: CourseElement[]; // Existing course elements for validation
   onCancel: () => void;
   onOk: () => void;
 }
@@ -21,6 +22,7 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
   open,
   semesterCourseId,
   initialData,
+  existingElements = [],
   onCancel,
   onOk,
 }) => {
@@ -48,10 +50,33 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
     setIsLoading(true);
     setError(null);
 
+    const newWeight = Number(values.weight / 100); // Convert percentage to decimal
+
+    // Validate total weight
+    const currentTotalWeight = existingElements.reduce((sum, el) => {
+      // If editing, exclude the current element's weight
+      if (isEditMode && el.id === initialData!.id) {
+        return sum;
+      }
+      return sum + el.weight;
+    }, 0);
+
+    const newTotalWeight = currentTotalWeight + newWeight;
+
+    if (newTotalWeight > 1) {
+      const currentTotalPercent = (currentTotalWeight * 100).toFixed(1);
+      const remainingPercent = ((1 - currentTotalWeight) * 100).toFixed(1);
+      setError(
+        `Total weight cannot exceed 100%. Current total: ${currentTotalPercent}%, Remaining: ${remainingPercent}%`
+      );
+      setIsLoading(false);
+      return;
+    }
+
     const payload = {
       name: values.name,
       description: values.description,
-      weight: Number(values.weight / 100),
+      weight: newWeight,
     };
 
     try {
@@ -119,9 +144,43 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
         <Form.Item
           name="weight"
           label="Weight (%)"
-          rules={[{ required: true, message: "Please enter the weight" }]}
+          rules={[
+            { required: true, message: "Please enter the weight" },
+            {
+              validator: (_, value) => {
+                if (value === undefined || value === null) {
+                  return Promise.resolve();
+                }
+                const newWeight = Number(value / 100);
+                const currentTotalWeight = existingElements.reduce((sum, el) => {
+                  // If editing, exclude the current element's weight
+                  if (isEditMode && el.id === initialData!.id) {
+                    return sum;
+                  }
+                  return sum + el.weight;
+                }, 0);
+                const newTotalWeight = currentTotalWeight + newWeight;
+                if (newTotalWeight > 1) {
+                  const currentTotalPercent = (currentTotalWeight * 100).toFixed(1);
+                  const remainingPercent = ((1 - currentTotalWeight) * 100).toFixed(1);
+                  return Promise.reject(
+                    new Error(
+                      `Total weight cannot exceed 100%. Current total: ${currentTotalPercent}%, Remaining: ${remainingPercent}%`
+                    )
+                  );
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
-          <InputNumber min={0} max={100} style={{ width: "100%" }} />
+          <InputNumber 
+            min={0} 
+            max={100} 
+            style={{ width: "100%" }}
+            precision={1}
+            step={0.1}
+          />
         </Form.Item>
       </Form>
     </Modal>

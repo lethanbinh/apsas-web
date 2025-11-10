@@ -39,7 +39,17 @@ import { classAssessmentService, ClassAssessment } from "@/services/classAssessm
 import { submissionService, Submission } from "@/services/submissionService";
 import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useRouter } from "next/navigation";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
 
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
@@ -196,7 +206,7 @@ const AssignmentDetailItem = ({
                       <div>
                         <div>{submission.submissionFile?.name || "No file"}</div>
                         <Text type="secondary" style={{ fontSize: "0.85rem" }}>
-                          Submitted: {dayjs(submission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                          Submitted: {toVietnamTime(submission.submittedAt).format("DD MMM YYYY, HH:mm")}
                         </Text>
                       </div>
                     }

@@ -7,11 +7,20 @@ import { SearchOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Button } from "../ui/Button";
 import styles from "./SubmissionHistory.module.css";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useStudent } from "@/hooks/useStudent";
-import { classService, ClassInfo } from "@/services/classService";
-import { examSessionService, ExamSession } from "@/services/examSessionService";
+import { classService, ClassInfo, StudentInClass } from "@/services/classService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
 
 const { Title, Text } = Typography;
 
@@ -23,6 +32,8 @@ interface SubmissionRow {
   date: string;
   score: string;
   status: "On time" | "Late";
+  submissionUrl?: string;
+  fileName?: string;
 }
 
 const columns: TableProps<SubmissionRow>["columns"] = [
@@ -73,16 +84,33 @@ const columns: TableProps<SubmissionRow>["columns"] = [
     title: "Action",
     key: "action",
     align: "center",
-    render: () => (
-      <Button
-        variant="ghost"
-        size="small"
-        icon={<DownloadOutlined />}
-        style={{ border: "none" }}
-      >
-        {""}
-      </Button>
-    ),
+    render: (_, record: SubmissionRow) => {
+      const handleDownload = () => {
+        if (record.submissionUrl) {
+          // Create a temporary anchor element to trigger download
+          const link = document.createElement("a");
+          link.href = record.submissionUrl;
+          link.download = record.fileName || "submission.zip";
+          link.target = "_blank";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      };
+
+      return (
+        <Button
+          variant="ghost"
+          size="small"
+          icon={<DownloadOutlined />}
+          style={{ border: "none" }}
+          onClick={handleDownload}
+          disabled={!record.submissionUrl}
+        >
+          {""}
+        </Button>
+      );
+    },
   },
 ];
 
@@ -92,7 +120,6 @@ export default function SubmissionHistory() {
 
   // Data sources used to derive filters
   const [submissions, setSubmissions] = useState<Submission[] | null>(null);
-  const [allExamSessions, setAllExamSessions] = useState<Map<number, ExamSession>>(new Map());
   const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(new Map());
   const [allClassAssessments, setAllClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
   // Map submission id to classAssessment id
@@ -103,101 +130,94 @@ export default function SubmissionHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load base data: student's submissions via classAssessments and examSessions
+  // Load base data: student's submissions via classAssessments in their classes
   useEffect(() => {
     const loadBaseData = async () => {
       if (!studentId) {
         if (!isStudentLoading) setLoading(false);
         return;
       }
+      
+      // Get selected class ID from localStorage
+      const selectedClassId = localStorage.getItem("selectedClassId");
+      if (!selectedClassId) {
+        setError("No class selected. Please select a class first.");
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
         setError(null);
         
-        // Fetch all classes first to get classIds
-        const classRes = await classService.getClassList({ pageNumber: 1, pageSize: 1000 });
-        setAllClasses(new Map(classRes.classes.map((c) => [c.id, c])));
+        // Use only the selected class ID
+        const currentClassId = parseInt(selectedClassId, 10);
         
-        // Fetch class assessments for all classes that student might be in
-        // We'll fetch by classId for each class, or try fetching by studentId
-        const classIds = classRes.classes.map((c) => c.id);
-        const classAssessmentPromises = classIds.map((classId) =>
-          classAssessmentService.getClassAssessments({
-            classId: classId,
-            pageNumber: 1,
-            pageSize: 1000,
-          }).catch(() => ({ items: [] }))
-        );
+        // Fetch classes that student is enrolled in (for validation)
+        const studentClasses = await classService.getClassesByStudentId(studentId);
+        const classIds = studentClasses.map((sc) => sc.classId);
         
-        // Also try fetching by studentId
-        const studentClassAssessmentRes = await classAssessmentService.getClassAssessments({
-          studentId: studentId,
+        // Verify that the selected class is one of the student's classes
+        if (!classIds.includes(currentClassId)) {
+          setError("You are not enrolled in the selected class.");
+          setLoading(false);
+          return;
+        }
+        
+        // Store class info for reference
+        const classInfoMap = new Map<number, ClassInfo>();
+        for (const sc of studentClasses) {
+          classInfoMap.set(sc.classId, {
+            id: sc.classId,
+            classCode: sc.classCode,
+            totalStudent: "",
+            description: sc.classDescription || "",
+            lecturerId: "",
+            semesterCourseId: "",
+            createdAt: "",
+            updatedAt: "",
+            lecturerName: sc.lecturerName,
+            lecturerCode: sc.lecturerCode,
+            courseName: sc.courseName,
+            courseCode: sc.courseCode,
+            semesterName: sc.semesterName,
+            studentCount: "",
+          });
+        }
+        setAllClasses(classInfoMap);
+        
+        // Fetch class assessments only for the selected class
+        const classAssessmentRes = await classAssessmentService.getClassAssessments({
+          classId: currentClassId,
           pageNumber: 1,
           pageSize: 1000,
         }).catch(() => ({ items: [] }));
         
-        // Combine all class assessments
-        const allClassAssessmentResults = await Promise.all(classAssessmentPromises);
-        const allClassAssessmentsList = [
-          ...studentClassAssessmentRes.items,
-          ...allClassAssessmentResults.flatMap((r) => r.items),
-        ];
-        
-        // Remove duplicates by id
-        const uniqueClassAssessments = Array.from(
-          new Map(allClassAssessmentsList.map((ca) => [ca.id, ca])).values()
+        // Filter to only include assessments from the selected class
+        const uniqueClassAssessments = classAssessmentRes.items.filter(
+          (ca) => ca.classId === currentClassId
         );
         
         setAllClassAssessments(new Map(uniqueClassAssessments.map((ca) => [ca.id, ca])));
-        
-        // Fetch exam sessions
-        const sessionRes = await examSessionService.getExamSessions({ pageNumber: 1, pageSize: 1000 });
-        setAllExamSessions(new Map(sessionRes.items.map((s) => [s.id, s])));
 
-        // Fetch submissions via classAssessmentIds
-        const classAssessmentIds = uniqueClassAssessments.map((ca) => ca.id);
-        const submissionPromises = classAssessmentIds.map(async (id) => {
-          const subs = await submissionService.getSubmissionList({ 
-            studentId: studentId,
-            classAssessmentId: id 
-          }).catch(() => []);
-          return { classAssessmentId: id, submissions: subs };
-        });
-        
-        // Also fetch submissions via examSessionIds for exams
-        const examSessionIds = sessionRes.items.map((s) => s.id);
-        const examSubmissionPromises = examSessionIds.map((id) =>
-          submissionService.getSubmissionList({ 
-            studentId: studentId,
-            examSessionId: id 
-          }).catch(() => [])
-        );
-        
-        const [classAssessmentResults, examSubmissions] = await Promise.all([
-          Promise.all(submissionPromises),
-          Promise.all(examSubmissionPromises),
-        ]);
+        // Fetch submissions only for the selected class
+        // This is necessary because API requires both studentId and classId
+        const submissions = await submissionService.getSubmissionList({ 
+          studentId: studentId,
+          classId: currentClassId
+        }).catch(() => []);
         
         // Create map from submission id to classAssessment id
         const submissionToClassAssessmentMap = new Map<number, number>();
-        for (const result of classAssessmentResults) {
-          for (const sub of result.submissions) {
-            submissionToClassAssessmentMap.set(sub.id, result.classAssessmentId);
+        for (const sub of submissions) {
+          // Map submission to classAssessment if it has one
+          if (sub.classAssessmentId) {
+            submissionToClassAssessmentMap.set(sub.id, sub.classAssessmentId);
           }
         }
+        
         setSubmissionToClassAssessment(submissionToClassAssessmentMap);
-        
-        // Combine all submissions and remove duplicates by id
-        const classAssessmentSubmissions = classAssessmentResults.flatMap(r => r.submissions);
-        const allSubmissions = [
-          ...classAssessmentSubmissions,
-          ...examSubmissions.flat(),
-        ];
-        const uniqueSubmissions = Array.from(
-          new Map(allSubmissions.map((s) => [s.id, s])).values()
-        );
-        
-        setSubmissions(uniqueSubmissions);
+        setSubmissions(submissions);
       } catch (err: any) {
         console.error("Failed to load base data:", err);
         setError(err.message || "Failed to load submissions data");
@@ -216,30 +236,22 @@ export default function SubmissionHistory() {
       return;
     }
 
-    // For lateness calculation we need classAssessment endAt or session endAt
+    // For lateness calculation we need classAssessment endAt (using Vietnam time)
     const mapped: SubmissionRow[] = submissions
-      .sort((a, b) => dayjs(b.submittedAt).valueOf() - dayjs(a.submittedAt).valueOf())
+      .sort((a, b) => toVietnamTime(b.submittedAt).valueOf() - toVietnamTime(a.submittedAt).valueOf())
       .map((sub, idx) => {
         let endAt: dayjs.Dayjs | null = null;
         
-        // Try to get endAt from classAssessment first
-        const classAssessmentId = submissionToClassAssessment.get(sub.id);
+        // Get endAt from classAssessment and convert to Vietnam time
+        const classAssessmentId = submissionToClassAssessment.get(sub.id) || sub.classAssessmentId;
         if (classAssessmentId) {
           const ca = allClassAssessments.get(classAssessmentId);
           if (ca?.endAt) {
-            endAt = dayjs(ca.endAt);
+            endAt = toVietnamTime(ca.endAt);
           }
         }
         
-        // Fallback to examSession endAt
-        if (!endAt && sub.examSessionId) {
-          const ses = allExamSessions.get(sub.examSessionId);
-          if (ses?.endAt) {
-            endAt = dayjs(ses.endAt);
-          }
-        }
-        
-        const submittedAt = dayjs(sub.submittedAt);
+        const submittedAt = toVietnamTime(sub.submittedAt);
         const onTime = endAt ? submittedAt.isBefore(endAt) || submittedAt.isSame(endAt) : true;
 
         return {
@@ -250,11 +262,13 @@ export default function SubmissionHistory() {
           date: submittedAt.format("YYYY-MM-DD HH:mm"),
           score: typeof sub.lastGrade === "number" ? `${sub.lastGrade}` : "N/A",
           status: onTime ? "On time" : "Late",
+          submissionUrl: sub.submissionFile?.submissionUrl,
+          fileName: sub.submissionFile?.name,
         };
       });
 
     setRows(mapped);
-  }, [submissions, allExamSessions, allClassAssessments, submissionToClassAssessment]);
+  }, [submissions, allClassAssessments, submissionToClassAssessment]);
 
   const filteredRows = useMemo(() => {
     const q = searchText.toLowerCase();

@@ -2,194 +2,264 @@
 
 import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
 import { CreateGradingGroupModal } from "@/components/examiner/CreateGradingGroupModal";
-import { ClassInfo, classService } from "@/services/classService";
-import { Course, courseService } from "@/services/courseManagementService";
-import { ExamSession, examSessionService } from "@/services/examSessionService";
 import {
-    GradingGroup,
-    gradingGroupService,
+  GradingGroup,
+  gradingGroupService,
 } from "@/services/gradingGroupService";
 import { Lecturer, lecturerService } from "@/services/lecturerService";
-import { Semester, semesterService } from "@/services/semesterService";
-import { Submission, submissionService } from "@/services/submissionService";
+import { submissionService, Submission } from "@/services/submissionService";
+import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
+import { classService, ClassInfo } from "@/services/classService";
+import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { courseElementService, CourseElement } from "@/services/courseElementService";
+import { semesterService, Semester } from "@/services/semesterService";
 import {
-    CheckCircleOutlined,
-    ClockCircleOutlined,
-    PlusOutlined,
-    UserAddOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  PlusOutlined,
+  UserAddOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import {
-    Alert,
-    App,
-    Button,
-    Collapse,
-    Select,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Typography
+  Alert,
+  App,
+  Button,
+  Card,
+  Col,
+  Row,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+  Empty,
+  Statistic,
+  Select,
 } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./GradingGroups.module.css";
 
-const { Title } = Typography;
-
-type EnrichedSubmission = Omit<Submission, "gradingGroupId" | "lecturerName"> & {
-  courseName: string;
-  semesterName: string;
-  lecturerName?: string;
-  gradingGroupId?: number;
-};
+const { Title, Text } = Typography;
 
 const GradingGroupsPageContent = () => {
-  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
   const [allGroups, setAllGroups] = useState<GradingGroup[]>([]);
-  const [allSessions, setAllSessions] = useState<Map<number, ExamSession>>(
-    new Map()
-  );
-  const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(
-    new Map()
-  );
   const [allLecturers, setAllLecturers] = useState<Lecturer[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
+  const [allClassAssessments, setAllClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
+  const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(new Map());
+  const [allAssessmentTemplates, setAllAssessmentTemplates] = useState<Map<number, AssessmentTemplate>>(new Map());
+  const [allCourseElements, setAllCourseElements] = useState<Map<number, CourseElement>>(new Map());
+  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
+  const [gradingGroupToSemesterMap, setGradingGroupToSemesterMap] = useState<Map<number, string>>(new Map());
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [filterSemester, setFilterSemester] = useState<string | undefined>(
-    undefined
-  );
-  const [filterCourse, setFilterCourse] = useState<number | undefined>(
-    undefined
-  );
+  const [selectedSemester, setSelectedSemester] = useState<string>("all");
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<GradingGroup | null>(null);
 
-  const { modal, notification } = App.useApp();
+  const { message } = App.useApp();
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const [
-        submissionRes,
-        groupRes,
-        sessionRes,
-        classRes,
-        lecturerRes,
-        courseRes,
-        semesterRes,
-      ] = await Promise.all([
-        submissionService.getSubmissionList({}),
+      const [groupRes, lecturerRes, semesterList] = await Promise.all([
         gradingGroupService.getGradingGroups({}),
-        examSessionService.getExamSessions({ pageNumber: 1, pageSize: 1000 }),
-        classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
         lecturerService.getLecturerList(),
-        courseService.getCourseList({ pageNumber: 1, pageSize: 1000 }),
-        semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+        semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }).catch(() => []),
       ]);
+      
+      setAllSemesters(semesterList);
 
-      setAllSubmissions(submissionRes);
       setAllGroups(groupRes);
       setAllLecturers(lecturerRes);
-      setCourses(courseRes);
-      setSemesters(semesterRes);
 
-      setAllSessions(new Map(sessionRes.items.map((s) => [s.id, s])));
-      setAllClasses(new Map(classRes.classes.map((c) => [Number(c.id), c])));
+      // Fetch all submissions for all grading groups
+      const allSubmissionPromises = groupRes.map(group =>
+        submissionService.getSubmissionList({ gradingGroupId: group.id }).catch(() => [])
+      );
+      const allSubmissionResults = await Promise.all(allSubmissionPromises);
+      const submissions = allSubmissionResults.flat();
+      setAllSubmissions(submissions);
+
+      // Get unique classAssessmentIds from submissions
+      const classAssessmentIds = Array.from(
+        new Set(submissions.filter(s => s.classAssessmentId).map(s => s.classAssessmentId!))
+      );
+
+      // Fetch all class assessments (we'll filter by IDs we need)
+      const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
+        pageNumber: 1,
+        pageSize: 1000,
+      }).catch(() => ({ items: [] }));
+      
+      const classAssessmentMap = new Map<number, ClassAssessment>();
+      allClassAssessmentsRes.items.forEach(ca => {
+        if (classAssessmentIds.includes(ca.id)) {
+          classAssessmentMap.set(ca.id, ca);
+        }
+      });
+      setAllClassAssessments(classAssessmentMap);
+
+      // Get unique assessmentTemplateIds from class assessments AND grading groups
+      const assessmentTemplateIdsFromClassAssessments = Array.from(
+        new Set(Array.from(classAssessmentMap.values()).map(ca => ca.assessmentTemplateId))
+      );
+      const assessmentTemplateIdsFromGroups = Array.from(
+        new Set(groupRes.filter(g => g.assessmentTemplateId !== null).map(g => g.assessmentTemplateId!))
+      );
+      const allAssessmentTemplateIds = Array.from(
+        new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
+      );
+
+      // Fetch all assessment templates
+      const allAssessmentTemplatesRes = await assessmentTemplateService.getAssessmentTemplates({
+        pageNumber: 1,
+        pageSize: 1000,
+      }).catch(() => ({ items: [] }));
+
+      const assessmentTemplateMap = new Map<number, AssessmentTemplate>();
+      allAssessmentTemplatesRes.items.forEach(template => {
+        if (allAssessmentTemplateIds.includes(template.id)) {
+          assessmentTemplateMap.set(template.id, template);
+        }
+      });
+      setAllAssessmentTemplates(assessmentTemplateMap);
+
+      // Get unique courseElementIds from all assessment templates (not just filtered ones)
+      const courseElementIds = Array.from(
+        new Set(Array.from(assessmentTemplateMap.values()).map(t => t.courseElementId))
+      );
+
+      // Fetch all course elements
+      const allCourseElementsRes = await courseElementService.getCourseElements({
+        pageNumber: 1,
+        pageSize: 1000,
+      }).catch(() => []);
+
+      const courseElementMap = new Map<number, CourseElement>();
+      allCourseElementsRes.forEach(element => {
+        if (courseElementIds.includes(element.id)) {
+          courseElementMap.set(element.id, element);
+        }
+      });
+      setAllCourseElements(courseElementMap);
+
+      // Map grading groups to semester codes using assessmentTemplateId
+      const groupToSemesterMap = new Map<number, string>();
+      groupRes.forEach(group => {
+        if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
+          const assessmentTemplate = assessmentTemplateMap.get(Number(group.assessmentTemplateId));
+          if (assessmentTemplate) {
+            const courseElement = courseElementMap.get(Number(assessmentTemplate.courseElementId));
+            if (courseElement && courseElement.semesterCourse && courseElement.semesterCourse.semester) {
+              const semesterCode = courseElement.semesterCourse.semester.semesterCode;
+              groupToSemesterMap.set(Number(group.id), semesterCode);
+            }
+          }
+        }
+      });
+      setGradingGroupToSemesterMap(groupToSemesterMap);
+
+      // Get unique classIds from class assessments
+      const classIds = Array.from(new Set(Array.from(classAssessmentMap.values()).map(ca => ca.classId)));
+
+      // Fetch classes
+      const classPromises = classIds.map(classId =>
+        classService.getClassById(classId).catch(() => null)
+      );
+      const classResults = await Promise.all(classPromises);
+      const classMap = new Map<number, ClassInfo>();
+      classResults.forEach(cls => {
+        if (cls) classMap.set(cls.id, cls);
+      });
+      setAllClasses(classMap);
     } catch (err: any) {
       setError(err.message || "Failed to load data.");
+      message.error(err.message || "Failed to load data.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  const submissionToGroupMap = useMemo(() => {
-    const map = new Map<number, GradingGroup>();
-    allGroups.forEach((group) => {
-      group.submissions.forEach((sub) => {
-        map.set(sub.id, group);
+  // Map submission to enriched data with submission URL
+  const enrichedSubmissionsMap = useMemo(() => {
+    const map = new Map<number, Submission & { submissionUrl?: string; fileName?: string }>();
+    
+    allSubmissions.forEach(sub => {
+      map.set(sub.id, {
+        ...sub,
+        submissionUrl: sub.submissionFile?.submissionUrl,
+        fileName: sub.submissionFile?.name,
       });
     });
+
     return map;
-  }, [allGroups]);
+  }, [allSubmissions]);
 
-  const enrichedSubmissions: EnrichedSubmission[] = useMemo(() => {
-    return allSubmissions.map((sub) => {
-      const session = sub.examSessionId ? allSessions.get(sub.examSessionId) : undefined;
-      const cls = session ? allClasses.get(session.classId) : undefined;
-      const group = submissionToGroupMap.get(sub.id);
-
-      return {
-        ...sub,
-        courseName: session?.courseName || "N/A",
-        semesterName: cls ? cls.semesterName.split(" - ")[0] : "N/A",
-        lecturerName: group?.lecturerName || undefined,
-        gradingGroupId: group?.id || undefined,
-      };
-    });
-  }, [allSubmissions, allSessions, allClasses, submissionToGroupMap]);
-
-  const filteredSubmissions = useMemo(() => {
-    const courseName = courses.find((c) => c.id === filterCourse)?.name;
-    return enrichedSubmissions.filter((sub) => {
-      const semesterMatch =
-        !filterSemester || sub.semesterName === filterSemester;
-      const courseMatch = !filterCourse || sub.courseName === courseName;
-      return semesterMatch && courseMatch;
-    });
-  }, [enrichedSubmissions, filterSemester, filterCourse, courses]);
-
-  const unassignedSubmissions = useMemo(() => {
-    return filteredSubmissions.filter((sub) => !sub.gradingGroupId);
-  }, [filteredSubmissions]);
+  // Get available semesters from semesterService
+  const availableSemesters = useMemo(() => {
+    return allSemesters.map(sem => sem.semesterCode).sort();
+  }, [allSemesters]);
 
   const assignedGroups = useMemo(() => {
-    const groupsMap = new Map<number, GradingGroup & { subs: EnrichedSubmission[] }>();
+    const groupsMap = new Map<number, GradingGroup & { subs: any[] }>();
 
     allLecturers.forEach((lecturer) => {
       const group = allGroups.find(
         (g) => g.lecturerId === Number(lecturer.lecturerId)
       );
       if (group) {
-        groupsMap.set(group.id, { ...group, subs: [] });
-      }
-    });
+        // Get enriched submissions for this group
+        const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
+        
+        // Convert to enriched format
+        const subs = groupSubmissions.map((sub) => {
+          const enriched = enrichedSubmissionsMap.get(sub.id);
+          return {
+            id: sub.id,
+            studentId: sub.studentId,
+            studentName: sub.studentName,
+            studentCode: sub.studentCode,
+            gradingGroupId: group.id,
+            lecturerName: group.lecturerName || undefined,
+            submittedAt: sub.submittedAt || "",
+            status: sub.status,
+            lastGrade: sub.lastGrade,
+            submissionFile: {
+              ...sub.submissionFile,
+              submissionUrl: enriched?.submissionUrl || sub.submissionFile?.submissionUrl,
+              name: enriched?.fileName || sub.submissionFile?.name,
+            },
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+          };
+        });
 
-    filteredSubmissions.forEach((sub) => {
-      if (sub.gradingGroupId && groupsMap.has(sub.gradingGroupId)) {
-        groupsMap.get(sub.gradingGroupId)!.subs.push(sub);
+        // Filter by selected semester - check if group's semester matches
+        const groupSemester = gradingGroupToSemesterMap.get(Number(group.id));
+        if (selectedSemester !== "all") {
+          if (!groupSemester || groupSemester !== selectedSemester) {
+            // Skip this group if semester doesn't match
+            return;
+          }
+        }
+
+        groupsMap.set(group.id, { ...group, subs });
       }
     });
 
     return Array.from(groupsMap.values());
-  }, [filteredSubmissions, allGroups, allLecturers]);
-
-  // Map submissionId -> class lecturerId to validate cross-grading
-  const submissionLecturerIdMap = useMemo(() => {
-    const map = new Map<number, number>();
-    allSubmissions.forEach((sub) => {
-      if (!sub.examSessionId) return;
-      const session = allSessions.get(sub.examSessionId);
-      if (!session) return;
-      const cls = allClasses.get(session.classId);
-      if (!cls) return;
-      const lecturerId = Number(cls.lecturerId);
-      if (!Number.isNaN(lecturerId)) {
-        map.set(sub.id, lecturerId);
-      }
-    });
-    return map;
-  }, [allSubmissions, allSessions, allClasses]);
+  }, [allGroups, allLecturers, allSubmissions, enrichedSubmissionsMap, selectedSemester, gradingGroupToSemesterMap]);
 
   const handleOpenAssign = (group: GradingGroup) => {
     setSelectedGroup(group);
@@ -209,28 +279,38 @@ const GradingGroupsPageContent = () => {
     fetchData();
   };
 
-  const submissionColumns: TableProps<EnrichedSubmission>["columns"] = [
+  const submissionColumns: TableProps<any>["columns"] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
+      width: 80,
     },
     {
       title: "Student",
       dataIndex: "studentName",
       key: "student",
-      render: (name, record) => `${name} (${record.studentCode})`,
+      render: (name, record) => (
+        <div>
+          <Text strong>{name}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.studentCode}
+          </Text>
+        </div>
+      ),
     },
     {
-      title: "File",
-      dataIndex: "submissionFile",
-      key: "file",
-      render: (file) => file?.name || "N/A",
+      title: "Submitted At",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
+      render: (date) => date ? new Date(date).toLocaleString() : "N/A",
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
+      width: 120,
       render: (status) =>
         status === 0 ? (
           <Tag icon={<CheckCircleOutlined />} color="success">
@@ -241,6 +321,41 @@ const GradingGroupsPageContent = () => {
             Late
           </Tag>
         ),
+    },
+    {
+      title: "Score",
+      dataIndex: "lastGrade",
+      key: "score",
+      width: 100,
+      render: (grade) => <Text>{grade !== null && grade !== undefined ? `${grade}/100` : "N/A"}</Text>,
+    },
+    {
+      title: "Action",
+      key: "action",
+      width: 100,
+      render: (_, record) => {
+        const handleDownload = () => {
+          if (record.submissionFile?.submissionUrl) {
+            const link = document.createElement("a");
+            link.href = record.submissionFile.submissionUrl;
+            link.download = record.submissionFile.name || "submission.zip";
+            link.target = "_blank";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        };
+
+        return (
+          <Button
+            type="link"
+            icon={<DownloadOutlined />}
+            onClick={handleDownload}
+            disabled={!record.submissionFile?.submissionUrl}
+            size="small"
+          />
+        );
+      },
     },
   ];
 
@@ -255,7 +370,17 @@ const GradingGroupsPageContent = () => {
   if (error) {
     return (
       <div className={styles.wrapper}>
-        <Alert message="Error" description={error} type="error" showIcon />
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <Button size="small" onClick={fetchData}>
+              Retry
+            </Button>
+          }
+        />
       </div>
     );
   }
@@ -263,94 +388,124 @@ const GradingGroupsPageContent = () => {
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <Title
-          level={2}
-          style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
-        >
-          Grading Groups
-        </Title>
+        <div>
+          <Title
+            level={2}
+            style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
+          >
+            Teacher Assignment
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            Assign submissions to teachers for grading
+          </Text>
+        </div>
         <Space>
           <Select
-            allowClear
-            value={filterSemester}
-            onChange={setFilterSemester}
-            style={{ width: 240 }}
+            style={{ width: 200 }}
             placeholder="Filter by Semester"
-            options={semesters.map((sem) => ({
-              label: `${sem.semesterCode} (${sem.academicYear})`,
-              value: sem.semesterCode,
-            }))}
+            value={selectedSemester}
+            onChange={setSelectedSemester}
+            options={[
+              { label: "All Semesters", value: "all" },
+              ...availableSemesters.map(sem => ({ label: sem, value: sem }))
+            ]}
           />
-          <Select
-            allowClear
-            value={filterCourse}
-            onChange={setFilterCourse}
-            style={{ width: 240 }}
-            placeholder="Filter by Course"
-            options={courses.map((t) => ({
-              label: `${t.name} (${t.code})`,
-              value: t.id,
-            }))}
-          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchData}
+            loading={loading}
+          >
+            Refresh
+          </Button>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setIsCreateModalOpen(true)}
+            size="large"
           >
-            Create Group
+            Assign Teacher
           </Button>
         </Space>
       </div>
 
-      <div className={styles.kanban}>
-        {/* Column 1: Unassigned */}
-        <div className={styles.column}>
-          <Title level={4} className={styles.columnTitle}>
-            Unassigned ({unassignedSubmissions.length})
-          </Title>
-          <div className={styles.columnContent}>
-            <Table<EnrichedSubmission>
-              dataSource={unassignedSubmissions}
-              columns={submissionColumns}
-              rowKey="id"
-              pagination={{ pageSize: 5 }}
-              size="small"
+      {/* Statistics */}
+      <Row gutter={16} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <Card>
+            <Statistic
+              title="Total Teachers"
+              value={assignedGroups.length}
+              valueStyle={{ color: "#1890ff" }}
             />
-          </div>
-        </div>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card>
+            <Statistic
+              title="Total Submissions"
+              value={assignedGroups.reduce((sum, group) => sum + group.subs.length, 0)}
+              valueStyle={{ color: "#52c41a" }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-        {/* Column 2: Assigned Groups (stacked panels) */}
-        <div className={styles.column}>
-          <Title level={4} className={styles.columnTitle}>
-            Assigned Groups ({assignedGroups.length})
-          </Title>
-          <div className={styles.columnContent}>
-            <Collapse accordion>
-              {assignedGroups.map((group) => (
-                <Collapse.Panel
-                  header={`${group.lecturerName} (${group.subs.length})`}
-                  key={group.id}
-                >
-                  <Table<EnrichedSubmission>
-                    dataSource={group.subs}
-                    columns={submissionColumns}
-                    rowKey="id"
-                    pagination={{ pageSize: 5 }}
+      {/* Main Content */}
+      <Row>
+        <Col span={24}>
+          <Card
+            title={
+              <Space>
+                <Text strong>Assigned Teachers</Text>
+                <Tag color="green">{assignedGroups.length}</Tag>
+              </Space>
+            }
+            className={styles.card}
+          >
+            {assignedGroups.length === 0 ? (
+              <Empty
+                description="No assigned teachers"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : (
+              <div className={styles.groupsList}>
+                {assignedGroups.map((group) => (
+                  <Card
+                    key={group.id}
                     size="small"
-                  />
-                  <Button
-                    icon={<UserAddOutlined />}
-                    style={{ marginTop: 12, width: "100%" }}
-                    onClick={() => handleOpenAssign(group)}
+                    style={{ marginBottom: 12 }}
+                    title={
+                      <Space>
+                        <Text strong>{group.lecturerName}</Text>
+                        <Tag>{group.subs.length} submissions</Tag>
+                      </Space>
+                    }
+                    extra={
+                      <Button
+                        type="link"
+                        icon={<UserAddOutlined />}
+                        onClick={() => handleOpenAssign(group)}
+                        size="small"
+                      >
+                        Manage
+                      </Button>
+                    }
                   >
-                    Assign/Remove
-                  </Button>
-                </Collapse.Panel>
-              ))}
-            </Collapse>
-          </div>
-        </div>
-      </div>
+                    <Table
+                      dataSource={group.subs}
+                      columns={submissionColumns}
+                      rowKey="id"
+                      pagination={false}
+                      size="small"
+                      scroll={{ y: 200 }}
+                    />
+                  </Card>
+                ))}
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
 
       {isCreateModalOpen && (
         <CreateGradingGroupModal
@@ -358,8 +513,6 @@ const GradingGroupsPageContent = () => {
           onCancel={handleModalCancel}
           onOk={handleModalOk}
           allLecturers={allLecturers}
-          unassignedSubmissions={unassignedSubmissions}
-          submissionLecturerIdMap={Object.fromEntries(submissionLecturerIdMap)}
         />
       )}
 
@@ -369,8 +522,6 @@ const GradingGroupsPageContent = () => {
           onCancel={handleModalCancel}
           onOk={handleModalOk}
           group={selectedGroup}
-          unassignedSubmissions={unassignedSubmissions}
-          submissionLecturerIdMap={Object.fromEntries(submissionLecturerIdMap)}
           allGroups={allGroups}
         />
       )}

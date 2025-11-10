@@ -78,7 +78,7 @@ export const Header: React.FC = () => {
               : user.role === 3
               ? "/hod/semester-plans"
               : user.role === 4
-              ? "/examiner/exam-shifts"
+              ? "/examiner/grading-groups"
               : "/home"
           }
           className={styles.logoLink}

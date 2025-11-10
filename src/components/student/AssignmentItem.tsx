@@ -19,8 +19,25 @@ import { RequirementModal } from "./RequirementModal";
 import { ScoreFeedbackModal } from "./ScoreFeedbackModal";
 import { DeadlineDisplay } from "./DeadlineDisplay";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useStudent } from "@/hooks/useStudent";
+import { useAuth } from "@/hooks/useAuth";
+import { studentManagementService } from "@/services/studentManagementService";
 import { submissionService, Submission } from "@/services/submissionService";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
+
+// Helper function to get current Vietnam time
+const getCurrentVietnamTime = () => {
+  return dayjs().tz("Asia/Ho_Chi_Minh");
+};
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -40,6 +57,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
   const { message } = App.useApp();
   const { studentId } = useStudent();
+  const { user } = useAuth();
 
   // Fetch last submission
   useEffect(() => {
@@ -87,14 +105,21 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
     fetchLastSubmission();
   }, [studentId, data.classAssessmentId, data.examSessionId]);
 
-  // Check if deadline has passed
+  // Check if deadline exists
+  const hasDeadline = () => {
+    return !!data.date;
+  };
+
+  // Check if deadline has passed (using Vietnam time)
   const isDeadlinePassed = () => {
     if (!data.date) return false;
-    return dayjs().isAfter(dayjs(data.date));
+    const currentTime = getCurrentVietnamTime();
+    const deadlineTime = toVietnamTime(data.date);
+    return currentTime.isAfter(deadlineTime);
   };
 
   const canSubmit = () => {
-    return !isDeadlinePassed();
+    return hasDeadline() && !isDeadlinePassed();
   };
 
   const handleSubmit = async () => {
@@ -104,13 +129,25 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
     }
 
     const file = fileList[0].originFileObj as File;
-    console.log(file)
     if (!file) {
       message.warning("Please select a valid file");
       return;
     }
 
+    // Validate file type - must be zip
+    const isZip = file.type === "application/zip" || 
+                  file.type === "application/x-zip-compressed" ||
+                  file.name.toLowerCase().endsWith(".zip");
+    if (!isZip) {
+      message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
+      return;
+    }
+
     // Check deadline
+    if (!hasDeadline()) {
+      message.error("This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting.");
+      return;
+    }
     if (!canSubmit()) {
       message.error("The deadline has passed. You can no longer submit.");
       return;
@@ -119,11 +156,32 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
     try {
       setIsSubmitting(true);
       
+      // Get studentCode
+      let studentCode = user?.accountCode || "";
+      if (!studentCode) {
+        try {
+          const students = await studentManagementService.getStudentList();
+          const currentUserAccountId = String(user?.id);
+          const matchingStudent = students.find(
+            (stu) => stu.accountId === currentUserAccountId
+          );
+          if (matchingStudent) {
+            studentCode = matchingStudent.accountCode;
+          }
+        } catch (err) {
+          console.error("Failed to fetch student code:", err);
+        }
+      }
+
+      // Rename file to studentCode.zip
+      const newFileName = studentCode ? `${studentCode}.zip` : file.name;
+      const renamedFile = new File([file], newFileName, { type: file.type });
+
       const newSubmission = await submissionService.createSubmission({
         StudentId: studentId,
         ClassAssessmentId: data.classAssessmentId,
         ExamSessionId: data.examSessionId,
-        file: file,
+        file: renamedFile,
       });
 
       setFileList([]);
@@ -169,6 +227,15 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
       setFileList((prevList) => prevList.filter((f) => f.uid !== file.uid));
     },
     beforeUpload: (file: File) => {
+      // Validate file type - must be zip
+      const isZip = file.type === "application/zip" || 
+                    file.type === "application/x-zip-compressed" ||
+                    file.name.toLowerCase().endsWith(".zip");
+      if (!isZip) {
+        message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
+        return false;
+      }
+
       // Create UploadFile object with originFileObj
       const uploadFile: UploadFile = {
         uid: `${Date.now()}-${file.name}`,
@@ -268,7 +335,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
                 description={
                   <div>
                     <Text>
-                      Submitted on: {dayjs(lastSubmission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                      Submitted on: {toVietnamTime(lastSubmission.submittedAt).format("DD MMM YYYY, HH:mm")}
                     </Text>
                     {lastSubmission.submissionFile && (
                       <div style={{ marginTop: "8px" }}>
@@ -291,7 +358,15 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
               />
             )}
 
-            {isDeadlinePassed() ? (
+            {!hasDeadline() ? (
+              <Alert
+                message="No Deadline Set"
+                description="This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting."
+                type="info"
+                showIcon
+                icon={<ClockCircleOutlined />}
+              />
+            ) : isDeadlinePassed() ? (
               <Alert
                 message="Deadline Passed"
                 description="The submission deadline has passed. You can no longer submit."
@@ -301,12 +376,15 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
               />
             ) : (
               <>
-                <Dragger {...uploadProps} className={styles.uploadDragger}>
+                <Dragger {...uploadProps} className={styles.uploadDragger} accept=".zip" disabled={!canSubmit()}>
                   <p className="ant-upload-drag-icon">
                     <UploadOutlined />
                   </p>
                   <p className="ant-upload-text">
-                    Drag & drop your file here, or click to browse
+                    Drag & drop your ZIP file here, or click to browse
+                  </p>
+                  <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
+                    Chỉ chấp nhận file ZIP
                   </p>
                   {lastSubmission && (
                     <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
@@ -319,7 +397,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
                   size="large"
                   onClick={handleSubmit}
                   loading={isSubmitting}
-                  disabled={fileList.length === 0}
+                  disabled={fileList.length === 0 || !canSubmit()}
                   className={styles.submitButton}
                 >
                   {lastSubmission ? "Resubmit Assignment" : "Submit Assignment"}

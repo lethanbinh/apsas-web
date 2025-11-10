@@ -12,8 +12,8 @@ export interface Submission {
   studentId: number;
   studentName: string;
   studentCode: string;
-  gradingGroupId: number;
-  lecturerName: string;
+  gradingGroupId?: number;
+  lecturerName?: string;
   submittedAt: string;
   status: number;
   lastGrade: number;
@@ -32,6 +32,7 @@ export interface SubmissionListApiResponse {
 export interface GetSubmissionsParams {
   examSessionId?: number;
   classAssessmentId?: number;
+  classId?: number;
   excludeLecturerId?: number;
   studentId?: number;
   gradingGroupId?: number;
@@ -50,6 +51,13 @@ export interface SubmissionApiResponse {
   isSuccess: boolean;
   errorMessages: any[];
   result: Submission;
+}
+
+export interface DeleteSubmissionApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: string;
 }
 
 export class SubmissionService {
@@ -87,6 +95,18 @@ export class SubmissionService {
       }
     );
     return response.result;
+  }
+
+  async deleteSubmission(submissionId: number): Promise<void> {
+    const response = await apiService.delete<DeleteSubmissionApiResponse>(
+      `/Submission/${submissionId}`
+    );
+    
+    if (!response.isSuccess) {
+      throw new Error(
+        response.errorMessages?.join(", ") || "Failed to delete submission"
+      );
+    }
   }
 }
 

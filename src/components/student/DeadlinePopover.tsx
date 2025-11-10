@@ -8,6 +8,16 @@ import { Button } from "../ui/Button";
 import { CalendarOutlined } from "@ant-design/icons";
 import styles from "./AssignmentList.module.css";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
 
 interface DeadlinePopoverProps {
   id: string;
@@ -22,17 +32,19 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [tempDeadline, setTempDeadline] = useState<dayjs.Dayjs | null>(
-    dayjs(date)
+    toVietnamTime(date)
   );
 
   const handleSave = () => {
-    onSave(id, tempDeadline);
+    // Convert Vietnam time back to UTC before saving
+    const utcDeadline = tempDeadline ? tempDeadline.utc() : null;
+    onSave(id, utcDeadline);
     setOpen(false);
   };
 
   const handleOpenChange = (visible: boolean) => {
     if (visible) {
-      setTempDeadline(dayjs(date));
+      setTempDeadline(toVietnamTime(date));
     }
     setOpen(visible);
   };
@@ -73,7 +85,7 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
         color="default"
         className={styles.deadlineTag}
       >
-        {dayjs(date).format("DD MMM YYYY, HH:mm")}
+        {toVietnamTime(date).format("DD MMM YYYY, HH:mm")}
       </Tag>
     </Popover>
   );

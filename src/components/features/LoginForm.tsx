@@ -101,7 +101,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         1: "/classes/my-classes/lecturer", // Lecturer
         2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
-        4: "/examiner/exam-shifts", // examiner
+        4: "/examiner/grading-groups", // examiner
       };
 
       let userRole: Role = 2;
@@ -200,7 +200,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         1: "/classes/my-classes/lecturer", // Lecturer
         2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
-        4: "/examiner/exam-shifts", // examiner
+        4: "/examiner/grading-groups", // examiner
       };
 
       const userRole = mapRoleToNumber(decoded?.role || 2);

@@ -237,7 +237,7 @@ const CourseElementsTable = ({
       title: "Weight",
       dataIndex: "weight",
       key: "weight",
-      render: (weight: number) => `${weight}%`,
+      render: (weight: number) => `${(weight * 100).toFixed(1)}%`,
     },
     {
       title: "Actions",
@@ -514,7 +514,7 @@ const SemesterDetailPageContent = ({
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { modal } = App.useApp();
+  const { modal, notification } = App.useApp();
 
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
@@ -598,7 +598,15 @@ const SemesterDetailPageContent = ({
 
   const handleCourseModalOk = () => {
     setIsCourseModalOpen(false);
+    const wasEditing = !!editingCourse;
     setEditingCourse(null);
+    notification.success({
+      message: wasEditing ? "Course Updated" : "Course Created",
+      description: wasEditing
+        ? "The course has been successfully updated."
+        : "The course has been successfully created.",
+      placement: "topRight",
+    });
     fetchDetail();
   };
 
@@ -613,9 +621,19 @@ const SemesterDetailPageContent = ({
       onOk: async () => {
         try {
           await semesterCourseService.deleteSemesterCourse(semesterCourseId);
+          notification.success({
+            message: "Course Unlinked",
+            description: "The course has been successfully unlinked from this semester.",
+            placement: "topRight",
+          });
           fetchDetail();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to delete semester course:", err);
+          notification.error({
+            message: "Failed to Unlink Course",
+            description: err.message || "An error occurred while unlinking the course.",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -646,8 +664,16 @@ const SemesterDetailPageContent = ({
 
   const handleClassModalOk = () => {
     setIsClassModalOpen(false);
+    const wasEditing = !!editingClass;
     setEditingClass(null);
     setCurrentSemesterCourseId(null);
+    notification.success({
+      message: wasEditing ? "Class Updated" : "Class Created",
+      description: wasEditing
+        ? "The class has been successfully updated."
+        : "The class has been successfully created.",
+      placement: "topRight",
+    });
     fetchDetail();
   };
 
@@ -661,9 +687,19 @@ const SemesterDetailPageContent = ({
       onOk: async () => {
         try {
           await classManagementService.deleteClass(classId);
+          notification.success({
+            message: "Class Deleted",
+            description: "The class has been successfully deleted.",
+            placement: "topRight",
+          });
           fetchDetail();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to delete class:", err);
+          notification.error({
+            message: "Failed to Delete Class",
+            description: err.message || "An error occurred while deleting the class.",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -694,8 +730,16 @@ const SemesterDetailPageContent = ({
 
   const handleElementModalOk = () => {
     setIsElementModalOpen(false);
+    const wasEditing = !!editingElement;
     setEditingElement(null);
     setCurrentSemesterCourseIdForElement(null);
+    notification.success({
+      message: wasEditing ? "Course Element Updated" : "Course Element Created",
+      description: wasEditing
+        ? "The course element has been successfully updated."
+        : "The course element has been successfully created.",
+      placement: "topRight",
+    });
     fetchDetail();
   };
 
@@ -709,9 +753,19 @@ const SemesterDetailPageContent = ({
       onOk: async () => {
         try {
           await courseElementManagementService.deleteCourseElement(elementId);
+          notification.success({
+            message: "Course Element Deleted",
+            description: "The course element has been successfully deleted.",
+            placement: "topRight",
+          });
           fetchDetail();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to delete course element:", err);
+          notification.error({
+            message: "Failed to Delete Course Element",
+            description: err.message || "An error occurred while deleting the course element.",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -742,8 +796,16 @@ const SemesterDetailPageContent = ({
 
   const handleAssignRequestModalOk = () => {
     setIsAssignRequestModalOpen(false);
+    const wasEditing = !!editingAssignRequest;
     setEditingAssignRequest(null);
     setCurrentCourseElements([]);
+    notification.success({
+      message: wasEditing ? "Assign Request Updated" : "Assign Request Created",
+      description: wasEditing
+        ? "The assign request has been successfully updated."
+        : "The assign request has been successfully created.",
+      placement: "topRight",
+    });
     fetchDetail();
   };
 
@@ -757,9 +819,19 @@ const SemesterDetailPageContent = ({
       onOk: async () => {
         try {
           await assignRequestService.deleteAssignRequest(requestId);
+          notification.success({
+            message: "Assign Request Deleted",
+            description: "The assign request has been successfully deleted.",
+            placement: "topRight",
+          });
           fetchDetail();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to delete assign request:", err);
+          notification.error({
+            message: "Failed to Delete Assign Request",
+            description: err.message || "An error occurred while deleting the assign request.",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -778,6 +850,11 @@ const SemesterDetailPageContent = ({
   const handleStudentGroupModalOk = () => {
     setIsStudentGroupModalOpen(false);
     setCurrentClassId(null);
+    notification.success({
+      message: "Student Added",
+      description: "The student has been successfully added to the class.",
+      placement: "topRight",
+    });
     fetchDetail();
   };
 
@@ -791,9 +868,19 @@ const SemesterDetailPageContent = ({
       onOk: async () => {
         try {
           await studentManagementService.deleteStudentGroup(studentGroupId);
+          notification.success({
+            message: "Student Removed",
+            description: "The student has been successfully removed from the class.",
+            placement: "topRight",
+          });
           fetchDetail();
-        } catch (err) {
+        } catch (err: any) {
           console.error("Failed to remove student:", err);
+          notification.error({
+            message: "Failed to Remove Student",
+            description: err.message || "An error occurred while removing the student.",
+            placement: "topRight",
+          });
         }
       },
     });
@@ -895,6 +982,11 @@ const SemesterDetailPageContent = ({
           open={isElementModalOpen}
           semesterCourseId={currentSemesterCourseIdForElement}
           initialData={editingElement}
+          existingElements={
+            semesterData?.semesterCourses.find(
+              (sc) => sc.id === currentSemesterCourseIdForElement
+            )?.courseElements || []
+          }
           onCancel={handleElementModalCancel}
           onOk={handleElementModalOk}
         />

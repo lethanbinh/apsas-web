@@ -220,14 +220,12 @@ export default function PESubmissionPage() {
         return false;
       }
 
-      // Check file type
-      const isValidType =
-        file.type === "application/pdf" ||
-        file.type === "image/jpeg" ||
-        file.type === "image/png" ||
-        file.type === "image/jpg";
-      if (!isValidType) {
-        message.error("You can only upload PDF, JPG, or PNG files!");
+      // Validate file type - must be zip
+      const isZip = file.type === "application/zip" || 
+                    file.type === "application/x-zip-compressed" ||
+                    file.name.toLowerCase().endsWith(".zip");
+      if (!isZip) {
+        message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
         return false;
       }
 
@@ -235,7 +233,7 @@ export default function PESubmissionPage() {
       return false; // Prevent auto upload
     },
     fileList,
-    accept: ".pdf,.jpg,.jpeg,.png",
+    accept: ".zip",
   };
 
   const handleDownloadDocuments = () => {
@@ -270,7 +268,23 @@ export default function PESubmissionPage() {
     setSubmitting(true);
     try {
       // Submit the first file (or handle multiple files if needed)
-      const fileToSubmit = fileList[0];
+      let fileToSubmit = fileList[0];
+      
+      // Validate file type - must be zip
+      const isZip = fileToSubmit.type === "application/zip" || 
+                    fileToSubmit.type === "application/x-zip-compressed" ||
+                    fileToSubmit.name.toLowerCase().endsWith(".zip");
+      if (!isZip) {
+        message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
+        setSubmitting(false);
+        return;
+      }
+
+      // Rename file to studentCode.zip
+      if (studentInfo?.studentId && studentInfo.studentId !== "N/A") {
+        const newFileName = `${studentInfo.studentId}.zip`;
+        fileToSubmit = new File([fileToSubmit], newFileName, { type: fileToSubmit.type });
+      }
       
       await submissionService.createSubmission({
         ExamSessionId: examSessionId,
@@ -453,7 +467,7 @@ export default function PESubmissionPage() {
           </Title>
         </div>
         <Text className={styles.stepDescription}>
-          Upload your completed exam as a PDF or image file (JPG, PNG)
+          Upload your completed exam as a ZIP file
         </Text>
         <div className={styles.uploadWrapper}>
           <Upload.Dragger {...uploadProps} className={styles.uploadArea}>
@@ -462,7 +476,7 @@ export default function PESubmissionPage() {
             </p>
             <p className={styles.uploadText}>Click to upload or drag and drop</p>
             <p className={styles.uploadHint}>
-              PDF, JPG, or PNG (max 20MB)
+              Chỉ chấp nhận file ZIP (max 20MB)
             </p>
           </Upload.Dragger>
         </div>

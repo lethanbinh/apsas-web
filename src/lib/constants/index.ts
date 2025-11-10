@@ -135,9 +135,9 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   ],
   [ROLES.EXAMINER]: [
     {
-      key: "exam-shifts",
-      label: "Exam Shifts",
-      href: "/examiner/exam-shifts",
+      key: "grading-groups",
+      label: "Grading Groups",
+      href: "/examiner/grading-groups",
     },
   ],
 };

@@ -18,14 +18,9 @@ const { Search } = Input;
 
 const menuItems = [
   {
-    key: "/examiner/exam-shifts",
-    icon: <FileTextOutlined />,
-    label: <Link href="/examiner/exam-shifts">Exam shifts</Link>,
-  },
-  {
     key: "/examiner/grading-groups",
     icon: <ApartmentOutlined />,
-    label: <Link href="/examiner/grading-groups">Grading Assign</Link>,
+    label: <Link href="/examiner/grading-groups">Grading Groups</Link>,
   },
 ];
 

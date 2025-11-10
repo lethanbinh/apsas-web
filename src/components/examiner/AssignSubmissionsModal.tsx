@@ -2,23 +2,36 @@
 
 import {
   GradingGroup,
+  GradingGroupSubmission,
   gradingGroupService,
 } from "@/services/gradingGroupService";
-import { Submission } from "@/services/submissionService";
-import { Alert, App, Modal, Transfer, Select, Typography, Space } from "antd";
-import { useEffect, useState } from "react";
-import type { Key } from "react";
+import { submissionService } from "@/services/submissionService";
+import { DeleteOutlined, FileZipOutlined, InboxOutlined } from "@ant-design/icons";
+import type { TableProps, UploadFile, UploadProps } from "antd";
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Typography,
+  Upload
+} from "antd";
+import Dragger from "antd/es/upload/Dragger";
+import { useCallback, useEffect, useState } from "react";
+
+const { Title, Text } = Typography;
 
 interface AssignSubmissionsModalProps {
   open: boolean;
   onCancel: () => void;
   onOk: () => void;
   group: GradingGroup;
-  unassignedSubmissions: Pick<
-    Submission,
-    "id" | "studentName" | "studentCode" | "submissionFile"
-  >[];
-  submissionLecturerIdMap: Record<number, number>;
   allGroups: GradingGroup[];
 }
 
@@ -27,130 +40,253 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   onCancel,
   onOk,
   group,
-  unassignedSubmissions,
-  submissionLecturerIdMap,
   allGroups,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [targetKeys, setTargetKeys] = useState<Key[]>([]);
-  const [targetGroupId, setTargetGroupId] = useState<number | null>(null);
-  const { notification } = App.useApp();
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [activeTab, setActiveTab] = useState<string>("list");
+  const [submissions, setSubmissions] = useState<GradingGroupSubmission[]>([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const { message: messageApi } = App.useApp();
 
-  const transferDataSource = [
-    ...unassignedSubmissions.map((s) => ({
-      key: s.id.toString(),
-      title: `${s.studentName} (${s.studentCode}) - File ID: ${s.id}`,
-      disabled:
-        submissionLecturerIdMap[s.id] !== undefined &&
-        submissionLecturerIdMap[s.id] === group.lecturerId,
-    })),
-    ...group.submissions.map((s) => ({
-      key: s.id.toString(),
-      title: `${s.studentName} (${s.studentCode}) - File ID: ${s.id}`,
-      disabled: false,
-    })),
-  ];
-
-  const originalAssignedKeys: Key[] = group.submissions.map((s) =>
-    s.id.toString()
-  );
+  const fetchSubmissions = useCallback(async () => {
+    if (!group?.id) return;
+    
+    setLoadingSubmissions(true);
+    try {
+      // Fetch grading group by ID to get updated submissions
+      const updatedGroup = await gradingGroupService.getGradingGroupById(group.id);
+      setSubmissions(updatedGroup.submissions || []);
+    } catch (err: any) {
+      console.error("Failed to fetch submissions:", err);
+      messageApi.error("Failed to load submissions");
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  }, [group?.id, messageApi]);
 
   useEffect(() => {
-    setTargetKeys(originalAssignedKeys);
-  }, [open, group]);
+    if (open && group?.id) {
+      fetchSubmissions();
+      setFileList([]);
+      setError(null);
+      setActiveTab("list");
+      setSelectedRowKeys([]);
+    }
+  }, [open, group?.id, fetchSubmissions]);
 
-  const handleSave = async () => {
+  // Validate file name format: STUXXXXXX.zip (X is digit)
+  const validateFileName = (fileName: string): boolean => {
+    // Pattern: STU + 6 digits + .zip (case insensitive)
+    const pattern = /^STU\d{6}\.zip$/i;
+    return pattern.test(fileName);
+  };
+
+  // Validate file is ZIP and has correct name format
+  const beforeUpload: UploadProps["beforeUpload"] = (file) => {
+    // Check file extension - must end with .zip
+    const fileName = file.name;
+    const isZipExtension = fileName.toLowerCase().endsWith(".zip");
+    
+    if (!isZipExtension) {
+      messageApi.error("Only ZIP files are accepted! Please select a file with .zip extension");
+      return Upload.LIST_IGNORE;
+    }
+    
+    // Validate file name format: STUXXXXXX.zip
+    if (!validateFileName(fileName)) {
+      messageApi.error(`Invalid file name format! File name must be in format STUXXXXXX.zip (e.g., STU123456.zip). Current: ${fileName}`);
+      return Upload.LIST_IGNORE;
+    }
+    
+    // Check file size (max 100MB)
+    const isLt100M = file.size / 1024 / 1024 < 100;
+    if (!isLt100M) {
+      messageApi.error("File must be smaller than 100MB!");
+      return Upload.LIST_IGNORE;
+    }
+    
+    return false; // Prevent auto upload
+  };
+
+  const handleFileChange: UploadProps["onChange"] = (info) => {
+    // Keep all files that pass validation
+    const validFiles = info.fileList.filter(file => {
+      if (file.status === 'error') return false;
+      if (!file.name.toLowerCase().endsWith('.zip')) return false;
+      return validateFileName(file.name);
+    });
+    
+    setFileList(validFiles);
+  };
+
+  const handleUploadZip = async () => {
+    if (fileList.length === 0) {
+      messageApi.error("Please select at least one ZIP file!");
+      return;
+    }
+
+    // Validate all files before upload
+    const files: File[] = [];
+    const invalidFiles: string[] = [];
+    
+    for (const fileItem of fileList) {
+      const file = fileItem.originFileObj;
+      if (!file) {
+        invalidFiles.push(fileItem.name || "Unknown file");
+        continue;
+      }
+      
+      // Double check validation
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        invalidFiles.push(file.name);
+        continue;
+      }
+      
+      if (!validateFileName(file.name)) {
+        invalidFiles.push(file.name);
+        continue;
+      }
+      
+      files.push(file);
+    }
+
+    if (invalidFiles.length > 0) {
+      messageApi.error(
+        `Invalid file(s): ${invalidFiles.join(', ')}. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip)`
+      );
+      return;
+    }
+
+    if (files.length === 0) {
+      messageApi.error("No valid files to upload!");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+
     try {
-      const newKeys = new Set(targetKeys.map(Number));
-      const oldKeys = new Set(originalAssignedKeys.map(Number));
+      const result = await gradingGroupService.addSubmissionsByFile(group.id, {
+        Files: files,
+      });
 
-      const addedIds = Array.from(newKeys).filter((id) => !oldKeys.has(id));
-      const removedIds = Array.from(oldKeys).filter((id) => !newKeys.has(id));
-
-      if (removedIds.length > 0 && !targetGroupId) {
-        setError(
-          "Please select a target grading group to move removed submissions."
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      if (removedIds.length > 0 && targetGroupId) {
-        const targetGroup = allGroups.find((g) => g.id === targetGroupId);
-        if (!targetGroup) {
-          setError("Invalid target grading group.");
-          setIsLoading(false);
-          return;
-        }
-        const invalidForTarget = removedIds.some(
-          (id) => submissionLecturerIdMap[id] === targetGroup.lecturerId
-        );
-        if (invalidForTarget) {
-          setError(
-            "Cannot move: Target group's lecturer matches the class lecturer."
-          );
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (addedIds.length > 0) {
-        await gradingGroupService.assignSubmissions(group.id, {
-          submissionIds: addedIds,
-        });
-      }
-
-      if (removedIds.length > 0) {
-        await gradingGroupService.removeSubmissions(group.id, {
-          submissionIds: removedIds,
-          targetGradingGroupId: targetGroupId ?? 0,
-        });
-      }
-
-      notification.success({ message: "Assignments updated successfully!" });
-      onOk();
+      messageApi.success(
+        `Added ${result.createdSubmissionsCount} submissions from ${files.length} file(s) successfully!`,
+        5
+      );
+      await fetchSubmissions();
+      setFileList([]);
+      onOk(); // Refresh parent component
     } catch (err: any) {
-      console.error("Failed to update assignments:", err);
-      setError(err.message || "Failed to update assignments.");
+      console.error("Failed to upload files:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to upload files. Please try again.";
+      setError(errorMsg);
+      messageApi.error(errorMsg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleChange = (
-    newTargetKeys: Key[],
-    direction: "left" | "right",
-    moveKeys: Key[]
-  ) => {
-    // Chặn thêm vào nhóm hiện tại nếu trùng giảng viên lớp
-    if (direction === "right") {
-      const hasConflict = moveKeys.some((k) => {
-        const id = Number(k);
-        return (
-          submissionLecturerIdMap[id] !== undefined &&
-          submissionLecturerIdMap[id] === group.lecturerId
-        );
-      });
-      if (hasConflict) {
-        setError("Cannot assign: Lecturer cannot grade their own class.");
-        return;
-      }
+  const handleDeleteSubmissions = async (submissionIds: number[]) => {
+    if (submissionIds.length === 0) {
+      messageApi.warning("Please select submissions to delete");
+      return;
     }
-    // Không chặn kéo ra; xác thực đích khi bấm Lưu
-    setTargetKeys(newTargetKeys);
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Delete each submission using the DELETE API
+      await Promise.all(
+        submissionIds.map((id) => submissionService.deleteSubmission(id))
+      );
+
+      messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
+      await fetchSubmissions();
+      setSelectedRowKeys([]);
+      onOk(); // Refresh parent component
+    } catch (err: any) {
+      console.error("Failed to delete submissions:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submissions.";
+      setError(errorMsg);
+      messageApi.error(errorMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const submissionColumns: TableProps<GradingGroupSubmission>["columns"] = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 80,
+    },
+    {
+      title: "Student",
+      dataIndex: "studentName",
+      key: "student",
+      render: (name, record) => (
+        <div>
+          <Text strong>{name}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.studentCode}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Submitted At",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
+      render: (date) => date ? new Date(date).toLocaleString() : "N/A",
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      render: (status) =>
+        status === 0 ? (
+          <Tag color="green">On Time</Tag>
+        ) : (
+          <Tag color="red">Late</Tag>
+        ),
+    },
+    {
+      title: "Score",
+      dataIndex: "lastGrade",
+      key: "score",
+      width: 100,
+      render: (grade) => <Text>{grade !== null && grade !== undefined ? `${grade}/100` : "N/A"}</Text>,
+    },
+  ];
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (selectedKeys: React.Key[]) => {
+      setSelectedRowKeys(selectedKeys);
+    },
   };
 
   return (
     <Modal
-      title={`Assign to ${group.lecturerName}`}
+      title={
+        <Space>
+          <Title level={4} style={{ margin: 0 }}>
+            Manage Submissions - {group.lecturerName}
+          </Title>
+        </Space>
+      }
       open={open}
       onCancel={onCancel}
-      onOk={handleSave}
-      confirmLoading={isLoading}
-      width={800}
+      footer={null}
+      width={1000}
       destroyOnClose
     >
       {error && (
@@ -159,35 +295,122 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
           type="error"
           showIcon
           style={{ marginBottom: 16 }}
+          closable
+          onClose={() => setError(null)}
         />
       )}
-      <Space direction="vertical" style={{ width: "100%", marginBottom: 12 }}>
-        <Typography.Text strong>Move assign to others teachers</Typography.Text>
-        <Select
-          allowClear
-          placeholder="Select target grading group"
-          value={targetGroupId ?? undefined}
-          onChange={(v) => setTargetGroupId(v ?? null)}
-          options={allGroups
-            .filter((g) => g.id !== group.id)
-            .map((g) => ({
-              label: g.lecturerName ?? `Group #${g.id}`,
-              value: g.id,
-            }))}
-          style={{ width: 360 }}
-        />
-      </Space>
-      <Transfer
-        dataSource={transferDataSource}
-        titles={["Pool", `Assigned to ${group.lecturerName}`]}
-        targetKeys={targetKeys}
-        onChange={handleChange}
-        render={(item) => item.title}
-        listStyle={{
-          width: 350,
-          height: 400,
-        }}
-        showSearch
+
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: "list",
+            label: "Submissions List",
+            children: (
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text strong>Total: {submissions.length} submissions</Text>
+                  {selectedRowKeys.length > 0 && (
+                    <Popconfirm
+                      title={`Delete ${selectedRowKeys.length} submission(s)`}
+                      description="Are you sure you want to delete these submissions?"
+                      onConfirm={() => handleDeleteSubmissions(selectedRowKeys.map(Number))}
+                      okText="Yes"
+                      cancelText="No"
+                    >
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        loading={isLoading}
+                      >
+                        Delete Selected ({selectedRowKeys.length})
+                      </Button>
+                    </Popconfirm>
+                  )}
+                </div>
+                <Table
+                  rowSelection={rowSelection}
+                  columns={submissionColumns}
+                  dataSource={submissions}
+                  rowKey="id"
+                  loading={loadingSubmissions}
+                  pagination={{ pageSize: 10 }}
+                  scroll={{ y: 400 }}
+                />
+              </Space>
+            ),
+          },
+          {
+            key: "upload",
+            label: (
+              <Space>
+                <FileZipOutlined />
+                <span>Upload ZIP File</span>
+              </Space>
+            ),
+            children: (
+              <Space direction="vertical" style={{ width: "100%" }} size="large">
+                <Card style={{ backgroundColor: "#f0f9ff" }}>
+                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                    <Text strong>Upload ZIP files containing submissions</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      ZIP files will be extracted and submissions will be created automatically. 
+                      Only ZIP files are accepted, maximum size 100MB per file.
+                      <br />
+                      <Text strong style={{ color: "#ff4d4f" }}>
+                        File name format: STUXXXXXX.zip (e.g., STU123456.zip) where X is a digit.
+                      </Text>
+                    </Text>
+                  </Space>
+                </Card>
+                <Dragger
+                  fileList={fileList}
+                  beforeUpload={beforeUpload}
+                  onChange={handleFileChange}
+                  accept=".zip,application/zip,application/x-zip-compressed"
+                  multiple
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
+                  </p>
+                  <p className="ant-upload-text">Click or drag ZIP files here</p>
+                  <p className="ant-upload-hint">
+                    You can select multiple files. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip).
+                    Files will be uploaded when you click "Upload".
+                  </p>
+                </Dragger>
+                {fileList.length > 0 && (
+                  <Card size="small">
+                    <Space direction="vertical" style={{ width: "100%" }} size="small">
+                      <Text strong>Selected files ({fileList.length}):</Text>
+                      {fileList.map((file, index) => (
+                        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <FileZipOutlined />
+                          <Text>{file.name}</Text>
+                          <Text type="secondary">
+                            ({(file.size! / 1024 / 1024).toFixed(2)} MB)
+                          </Text>
+                        </div>
+                      ))}
+                    </Space>
+                  </Card>
+                )}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <Button onClick={onCancel}>Cancel</Button>
+                  <Button
+                    type="primary"
+                    onClick={handleUploadZip}
+                    loading={isLoading}
+                    disabled={fileList.length === 0}
+                  >
+                    Upload
+                  </Button>
+                </div>
+              </Space>
+            ),
+          },
+        ]}
       />
     </Modal>
   );
