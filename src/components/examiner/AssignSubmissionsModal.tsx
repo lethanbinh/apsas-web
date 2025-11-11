@@ -287,7 +287,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       onCancel={onCancel}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
     >
       {error && (
         <Alert
