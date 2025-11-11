@@ -2,14 +2,14 @@
 
 import ClassInfo from "@/components/student/ClassInfo";
 import { ClassInfo as ClassInfoType, classService } from "@/services/classService";
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 
 export default function ClassDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const resolvedParams = params as unknown as { id: string };
+  const resolvedParams = use(params);
   const [classData, setClassData] = useState<ClassInfoType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

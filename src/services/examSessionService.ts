@@ -116,14 +116,24 @@ export class ExamSessionService {
   async getExamSessions(
     params: GetExamSessionsParams
   ): Promise<GetExamSessionsResponse> {
-    const response = await apiService.get<ExamSessionListApiResponse>(
-      "/ExamSession/list",
-      { params: params }
-    );
-    return {
-      items: response.result.items,
-      total: response.result.totalCount,
-    };
+    try {
+      const response = await apiService.get<ExamSessionListApiResponse>(
+        "/ExamSession/list",
+        { params: params }
+      );
+      return {
+        items: response.result?.items || [],
+        total: response.result?.totalCount || 0,
+      };
+    } catch (error: any) {
+      // Handle 404 gracefully - endpoint might not exist or no data available
+      if (error?.response?.status === 404) {
+        console.warn('ExamSession/list endpoint not found or no data available, returning empty list');
+        return { items: [], total: 0 };
+      }
+      // Re-throw other errors
+      throw error;
+    }
   }
 
   async createExamSession(

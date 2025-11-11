@@ -44,9 +44,11 @@ class ApiService {
         const status = error.response?.status;
         const requestUrl = error.config?.url?.toLowerCase() || '';
         const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
+        const isExamSessionList = requestUrl.includes('/examsession/list');
         
         // Don't log 401 errors for login requests (expected behavior - user entered wrong credentials)
-        const shouldLogError = status !== 401 || !isLoginRequest;
+        // Don't log 404 errors for ExamSession/list (handled gracefully in service layer)
+        const shouldLogError = (status !== 401 || !isLoginRequest) && (status !== 404 || !isExamSessionList);
         if (shouldLogError) {
           console.error('❌ API Error:', status, requestUrl, error.response?.data);
         }

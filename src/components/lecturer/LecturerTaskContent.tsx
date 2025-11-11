@@ -77,10 +77,12 @@ const RubricFormModal = ({
   const title = isEditing ? "Edit Rubric" : "Add New Rubric";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
     }
   }, [initialData, form, open]);
 
@@ -109,6 +111,7 @@ const RubricFormModal = ({
       title={title}
       open={open}
       onCancel={onCancel}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -164,10 +167,12 @@ const QuestionFormModal = ({
   const title = isEditing ? "Edit Question" : "Add New Question";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
     }
   }, [initialData, form, open]);
 
@@ -200,6 +205,7 @@ const QuestionFormModal = ({
       open={open}
       onCancel={onCancel}
       width={700}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -255,10 +261,12 @@ const PaperFormModal = ({
   const title = isEditing ? "Edit Paper" : "Add New Paper";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
     }
   }, [initialData, form, open]);
 
@@ -290,6 +298,7 @@ const PaperFormModal = ({
       title={title}
       open={open}
       onCancel={onCancel}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
