@@ -108,6 +108,17 @@ export class SubmissionService {
       );
     }
   }
+
+  async updateSubmissionGrade(
+    submissionId: number,
+    grade: number
+  ): Promise<Submission> {
+    const response = await apiService.put<SubmissionApiResponse>(
+      `/Submission/${submissionId}/grade`,
+      { grade }
+    );
+    return response.result;
+  }
 }
 
 export const submissionService = new SubmissionService();
