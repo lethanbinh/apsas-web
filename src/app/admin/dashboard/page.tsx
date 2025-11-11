@@ -2,6 +2,7 @@
 
 import React from "react";
 import LayoutAdmin from "@/components/layout/LayoutAdmin";
+import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import styles from "./DashboardAdmin.module.css";
 import {
   BarChart,
@@ -28,7 +29,9 @@ const coursesData = [
 
 const AdminDashboardPage = () => {
   return (
-    <div className={styles.container}>
+    <>
+      <QueryParamsHandler />
+      <div className={styles.container}>
       <h1 className={styles.title}>Dashboard</h1>
 
       <div className={styles["stats-grid"]}>
@@ -183,6 +186,7 @@ const AdminDashboardPage = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

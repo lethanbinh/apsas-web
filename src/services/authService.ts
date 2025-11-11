@@ -52,11 +52,11 @@ export class AuthService {
   }
 
   async getProfile(): Promise<User> {
-    // Get user ID from localStorage
-    const userId = localStorage.getItem('user_id');
+    // Get user ID from sessionStorage
+    const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
     
     if (!userId) {
-      console.error('❌ No user_id in localStorage');
+      console.error('❌ No user_id in sessionStorage');
       throw new Error('User ID not found in storage. Please login again.');
     }
     
@@ -76,10 +76,10 @@ export class AuthService {
       console.log('✅ Using response as user');
     }
     
-    // Save to localStorage
+    // Save to sessionStorage
     if (typeof window !== 'undefined') {
-      localStorage.setItem('user_data', JSON.stringify(userData));
-      console.log('✅ User data cached to localStorage');
+      sessionStorage.setItem('user_data', JSON.stringify(userData));
+      console.log('✅ User data cached to sessionStorage');
     }
     
     return userData;

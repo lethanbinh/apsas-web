@@ -1,5 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { config } from '@/lib/config';
+import { getStorageItem, removeStorageItem } from '@/lib/utils/storage';
+import { deleteCookie } from '@/lib/utils/cookie';
 
 class ApiService {
   private api: AxiosInstance;
@@ -20,7 +22,7 @@ class ApiService {
     // Request interceptor
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('auth_token');
+        const token = getStorageItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -39,14 +41,23 @@ class ApiService {
         return response;
       },
       (error) => {
-        console.error('❌ API Error:', error.response?.status, error.config?.url, error.response?.data);
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        const requestUrl = error.config?.url?.toLowerCase() || '';
+        const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
+        
+        // Don't log 401 errors for login requests (expected behavior - user entered wrong credentials)
+        const shouldLogError = status !== 401 || !isLoginRequest;
+        if (shouldLogError) {
+          console.error('❌ API Error:', status, requestUrl, error.response?.data);
+        }
+        
+        if (status === 401) {
           const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
-          const requestUrl = error.config?.url?.toLowerCase() || '';
-          const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
           
+          // Only redirect if it's not a login request and not already on login page
           if (!isLoginPage && !isLoginRequest) {
-            localStorage.removeItem('auth_token');
+            removeStorageItem('auth_token');
+            deleteCookie('auth_token');
             window.location.href = '/login';
           }
         }

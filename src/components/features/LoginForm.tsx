@@ -6,13 +6,15 @@ import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
 import { logout } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
-import { Button, Checkbox, Form, Input, message } from "antd";
+import { Button, Checkbox, Form, Input, App } from "antd";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
+import { setCookie, deleteCookie } from "@/lib/utils/cookie";
+import { setStorageItem, removeStorageItem } from "@/lib/utils/storage";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -51,11 +53,48 @@ const mapRoleToNumber = (role: string | number): Role => {
   return 2; // Default to Student
 };
 
+// Helper function to translate error messages to Vietnamese
+const translateErrorMessage = (errorMsg: string): string => {
+  if (!errorMsg) return "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
+  
+  const lowerMsg = errorMsg.toLowerCase().trim();
+  
+  // Common error message translations
+  const translations: { [key: string]: string } = {
+    "invalid email or password": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+    "invalid email": "Email không hợp lệ.",
+    "invalid password": "Mật khẩu không đúng.",
+    "email or password is incorrect": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+    "incorrect email or password": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+    "login failed": "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.",
+    "unauthorized": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
+    "forbidden": "Bạn không có quyền truy cập.",
+    "not found": "Không tìm thấy tài khoản.",
+    "account not found": "Không tìm thấy tài khoản.",
+    "user not found": "Không tìm thấy tài khoản.",
+    "server error": "Lỗi server. Vui lòng thử lại sau.",
+    "internal server error": "Lỗi server. Vui lòng thử lại sau.",
+    "network error": "Lỗi kết nối. Vui lòng kiểm tra kết nối mạng.",
+    "timeout": "Yêu cầu quá thời gian chờ. Vui lòng thử lại.",
+  };
+  
+  // Check for exact match or partial match
+  for (const [key, value] of Object.entries(translations)) {
+    if (lowerMsg.includes(key)) {
+      return value;
+    }
+  }
+  
+  // If message is already in Vietnamese or doesn't match, return as is
+  return errorMsg;
+};
+
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
   const dispatch = useDispatch();
   const router = useRouter();
+  const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -77,9 +116,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setErrors({});
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());
@@ -125,20 +165,82 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       router.push(redirectPath);
       onSuccess?.();
     } catch (error: any) {
-      console.error("Login error:", error);
-
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());
 
-      const errorMessage =
-        "Login failed. Please check your credentials and try again.";
+      // Extract error message from API response
+      let errorMessage = "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
+      
+      // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
+      // it throws the payload directly. So we need to check multiple possible structures:
+      
+      // 1. Error is a string (direct payload from rejectWithValue)
+      if (typeof error === 'string') {
+        errorMessage = translateErrorMessage(error);
+      }
+      // 2. Error is an object - check common properties
+      else if (error && typeof error === 'object') {
+        // Check for Redux SerializedError payload (when rejectWithValue is used)
+        if (error.payload !== undefined) {
+          if (typeof error.payload === 'string') {
+            errorMessage = translateErrorMessage(error.payload);
+          } else if (error.payload?.message) {
+            errorMessage = translateErrorMessage(error.payload.message);
+          }
+        }
+        // Check for Axios error response
+        else if (error.response) {
+          const status = error.response.status;
+          const errorData = error.response.data;
+          
+          // Handle specific status codes first
+          if (status === 401) {
+            errorMessage = "Email hoặc mật khẩu không đúng. Vui lòng thử lại.";
+          } else if (status === 403) {
+            errorMessage = "Bạn không có quyền truy cập.";
+          } else if (status === 404) {
+            errorMessage = "Không tìm thấy tài khoản.";
+          } else if (status >= 500) {
+            errorMessage = "Lỗi server. Vui lòng thử lại sau.";
+          }
+          
+          // Check for errorMessages array (common API format)
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              errorMessage = translateErrorMessage(errorData.errorMessages[0]);
+            } 
+            // Check for message string
+            else if (errorData.message) {
+              errorMessage = translateErrorMessage(errorData.message);
+            }
+            // Check for error string
+            else if (errorData.error) {
+              errorMessage = translateErrorMessage(errorData.error);
+            }
+          }
+        }
+        // Check for error message property
+        else if (error.message) {
+          errorMessage = translateErrorMessage(error.message);
+        }
+        // Check if error itself is the message (sometimes Redux throws the payload directly as error)
+        else if (error.toString && error.toString() !== '[object Object]') {
+          const errorStr = error.toString();
+          if (errorStr && errorStr !== '[object Object]') {
+            errorMessage = translateErrorMessage(errorStr);
+          }
+        }
+      }
+
+      // Ensure toast message is displayed
       setErrors({ general: errorMessage });
-      message.error(errorMessage);
+      message.error(errorMessage, 4); // Show for 4 seconds
       onError?.(errorMessage);
     } finally {
       setIsLoggingIn(false);
@@ -180,7 +282,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         throw new Error("Google login failed: Invalid response from server");
       }
 
-      localStorage.setItem("auth_token", response.result.token);
+      setStorageItem("auth_token", response.result.token);
+      setCookie("auth_token", response.result.token); // Session cookie
 
       const token = response.result.token;
 
@@ -219,17 +322,81 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       console.error("Google login failed:", error);
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
 
       dispatch(logout());
 
-      const errorMessage =
-        "Account is not registered or an error occurred during Google login.";
+      // Extract error message from API response
+      let errorMessage = "Đăng nhập bằng Google thất bại. Tài khoản chưa được đăng ký hoặc đã xảy ra lỗi.";
+      
+      // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
+      // it throws the payload directly. So we need to check multiple possible structures:
+      
+      // 1. Error is a string (direct payload from rejectWithValue)
+      if (typeof error === 'string') {
+        errorMessage = translateErrorMessage(error);
+      }
+      // 2. Error is an object - check common properties
+      else if (error && typeof error === 'object') {
+        // Check for Redux SerializedError payload (when rejectWithValue is used)
+        if (error.payload !== undefined) {
+          if (typeof error.payload === 'string') {
+            errorMessage = translateErrorMessage(error.payload);
+          } else if (error.payload?.message) {
+            errorMessage = translateErrorMessage(error.payload.message);
+          }
+        }
+        // Check for Axios error response
+        else if (error.response) {
+          const status = error.response.status;
+          const errorData = error.response.data;
+          
+          // Handle specific status codes first
+          if (status === 401) {
+            errorMessage = "Tài khoản Google chưa được đăng ký hoặc không hợp lệ.";
+          } else if (status === 403) {
+            errorMessage = "Bạn không có quyền truy cập.";
+          } else if (status === 404) {
+            errorMessage = "Không tìm thấy tài khoản.";
+          } else if (status >= 500) {
+            errorMessage = "Lỗi server. Vui lòng thử lại sau.";
+          }
+          
+          // Check for errorMessages array (common API format)
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              errorMessage = translateErrorMessage(errorData.errorMessages[0]);
+            } 
+            // Check for message string
+            else if (errorData.message) {
+              errorMessage = translateErrorMessage(errorData.message);
+            }
+            // Check for error string
+            else if (errorData.error) {
+              errorMessage = translateErrorMessage(errorData.error);
+            }
+          }
+        }
+        // Check for error message property
+        else if (error.message) {
+          errorMessage = translateErrorMessage(error.message);
+        }
+        // Check if error itself is the message (sometimes Redux throws the payload directly as error)
+        else if (error.toString && error.toString() !== '[object Object]') {
+          const errorStr = error.toString();
+          if (errorStr && errorStr !== '[object Object]') {
+            errorMessage = translateErrorMessage(errorStr);
+          }
+        }
+      }
+
+      // Ensure toast message is displayed
       setErrors({ general: errorMessage });
-      message.error(errorMessage);
+      message.error(errorMessage, 4); // Show for 4 seconds
       onError?.(errorMessage);
     }
   };

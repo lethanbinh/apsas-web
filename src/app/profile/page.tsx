@@ -53,8 +53,8 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         
-        // Get user ID from localStorage
-        const userId = localStorage.getItem('user_id');
+        // Get user ID from sessionStorage
+        const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
         
         if (!userId) {
           console.error('No user ID found');

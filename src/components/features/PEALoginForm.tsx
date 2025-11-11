@@ -60,7 +60,7 @@ export const PEALoginForm: React.FC = () => {
 
       // Save token
       if (typeof window !== "undefined") {
-        localStorage.setItem("auth_token", token);
+        sessionStorage.setItem("auth_token", token);
       }
 
       // Decode JWT to get user ID

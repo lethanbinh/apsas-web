@@ -5,6 +5,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginCredentials, RegisterData } from '@/types';
 import { authService } from '@/services/authService';
+import { setCookie, deleteCookie } from '@/lib/utils/cookie';
+import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/storage';
 
 interface AuthState {
   user: User | null;
@@ -14,7 +16,8 @@ interface AuthState {
   error: string | null;
 }
 
-// Helper to get initial state from localStorage
+// Helper to get initial state from sessionStorage
+// sessionStorage is automatically cleared when browser/tab closes
 const getInitialState = (): AuthState => {
   // Only run on client side
   if (typeof window === 'undefined') {
@@ -27,8 +30,9 @@ const getInitialState = (): AuthState => {
     };
   }
 
-  const token = localStorage.getItem('auth_token');
-  const userDataStr = localStorage.getItem('user_data');
+  // Check sessionStorage first (cleared when tab closes)
+  const token = getStorageItem('auth_token');
+  const userDataStr = getStorageItem('user_data');
   
   if (token && userDataStr) {
     try {
@@ -41,7 +45,7 @@ const getInitialState = (): AuthState => {
         error: null,
       };
     } catch (error) {
-      console.error('Failed to parse user data from localStorage:', error);
+      console.error('Failed to parse user data from sessionStorage:', error);
     }
   }
 
@@ -96,9 +100,12 @@ export const loginUser = createAsyncThunk(
         throw new Error('No token in response');
       }
       
-      // Save token
-      localStorage.setItem('auth_token', token);
-      console.log('Token saved to localStorage');
+      // Save token to sessionStorage (cleared when tab closes) and session cookie (cleared when browser closes)
+      if (typeof window !== 'undefined') {
+        setStorageItem('auth_token', token);
+        setCookie('auth_token', token); // Session cookie (no expiration, deleted when browser closes)
+      }
+      console.log('Token saved to sessionStorage and session cookie');
       
       // Decode JWT to get user info
       const decoded = decodeJWT(token);
@@ -133,7 +140,9 @@ export const loginUser = createAsyncThunk(
         console.log('👤 User role:', userInfo.role);
         
         // Save user ID for profile fetching
-        localStorage.setItem('user_id', String(userInfo.id));
+        if (typeof window !== 'undefined') {
+          setStorageItem('user_id', String(userInfo.id));
+        }
         console.log('User ID saved:', userInfo.id);
         
         // Return user object and token
@@ -143,8 +152,56 @@ export const loginUser = createAsyncThunk(
       // Fallback: return token only
       return { user: null, token };
     } catch (error: any) {
-      console.error('Login error:', error);
-      return rejectWithValue(error.response?.data?.message || 'Login failed');
+      // Extract error message from API response
+      let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
+      
+      if (error?.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        // Handle specific status codes FIRST - always use Vietnamese for 401
+        if (status === 401) {
+          // For 401, always return Vietnamese message regardless of API response
+          errorMessage = 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
+          
+          // Only override if API provides a meaningful Vietnamese message
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              const apiMessage = errorData.errorMessages[0];
+              // Only use API message if it's not in English (simple check)
+              if (apiMessage && !/^[a-zA-Z\s]+$/.test(apiMessage)) {
+                errorMessage = apiMessage;
+              }
+            }
+          }
+        } else if (status === 403) {
+          errorMessage = 'Bạn không có quyền truy cập.';
+        } else if (status === 404) {
+          errorMessage = 'Không tìm thấy tài khoản.';
+        } else if (status >= 500) {
+          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+        } else {
+          // For other status codes, check API response
+          if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
+            if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+              errorMessage = errorData.errorMessages[0];
+            } 
+            else if (errorData.message) {
+              errorMessage = errorData.message;
+            }
+            else if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          }
+        }
+      } 
+      // Check for error message directly (shouldn't happen for API errors, but just in case)
+      else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Always return Vietnamese message for consistency
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -154,7 +211,10 @@ export const registerUser = createAsyncThunk(
   async (data: RegisterData, { rejectWithValue }) => {
     try {
       const response = await authService.register(data);
-      localStorage.setItem('auth_token', response.token);
+      if (typeof window !== 'undefined') {
+        setStorageItem('auth_token', response.token);
+        setCookie('auth_token', response.token); // Session cookie
+      }
       return response;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Registration failed');
@@ -183,7 +243,12 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
-      localStorage.removeItem('auth_token');
+      if (typeof window !== 'undefined') {
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
+      }
     },
     clearError: (state) => {
       state.error = null;
@@ -203,11 +268,12 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.error = null;
         
-        // Save to localStorage
+        // Save to sessionStorage and session cookie
         if (typeof window !== 'undefined') {
-          localStorage.setItem('auth_token', action.payload.token);
-          localStorage.setItem('user_data', JSON.stringify(action.payload.user));
-          console.log('✅ User data saved to localStorage in loginUser.fulfilled');
+          setStorageItem('auth_token', action.payload.token);
+          setStorageItem('user_data', JSON.stringify(action.payload.user));
+          setCookie('auth_token', action.payload.token); // Session cookie (no expiration)
+          console.log('✅ User data saved to sessionStorage and session cookie in loginUser.fulfilled');
         }
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -218,9 +284,10 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('user_id');
+          removeStorageItem('auth_token');
+          removeStorageItem('user_data');
+          removeStorageItem('user_id');
+          deleteCookie('auth_token');
         }
       })
       // Register

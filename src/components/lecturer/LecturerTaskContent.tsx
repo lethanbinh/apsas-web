@@ -50,15 +50,6 @@ import {
   InboxOutlined,
 } from "@ant-design/icons";
 import type { UploadFile, UploadChangeParam } from "antd/es/upload/interface";
-import {
-  Document,
-  Packer,
-  Paragraph,
-  HeadingLevel,
-  TextRun,
-  AlignmentType,
-} from "docx";
-import { saveAs } from "file-saver";
 
 const { TextArea } = Input;
 const { Sider, Content } = Layout;
@@ -906,73 +897,113 @@ export const LecturerTaskContent = ({
 
   const handleExport = async () => {
     if (!template) return;
-    const docSections = [];
-    docSections.push(
-      new Paragraph({
-        text: template.name,
-        heading: HeadingLevel.TITLE,
-        alignment: AlignmentType.CENTER,
-      })
-    );
-    docSections.push(
-      new Paragraph({ text: template.description, style: "italic" })
-    );
-    docSections.push(new Paragraph({ text: " " }));
-
-    for (const paper of papers) {
+    
+    // Ensure this only runs on client-side
+    if (typeof window === 'undefined') {
+      notification.error({
+        message: "Export Failed",
+        description: "Export is only available in the browser.",
+      });
+      return;
+    }
+    
+    try {
+      // Dynamically import docx and file-saver to avoid build issues
+      // These modules are only loaded when user clicks export button (client-side only)
+      // Use dynamic import with proper error handling
+      let docxModule: any;
+      let fileSaverModule: any;
+      
+      try {
+        docxModule = await import("docx");
+        fileSaverModule = await import("file-saver");
+      } catch (importError) {
+        console.error("Failed to import docx or file-saver:", importError);
+        notification.error({
+          message: "Export Failed",
+          description: "Required libraries could not be loaded. Please refresh the page and try again.",
+        });
+        return;
+      }
+      
+      const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
+      const saveAs = fileSaverModule.default || fileSaverModule.saveAs;
+      
+      if (!Document || !Packer || !saveAs) {
+        throw new Error("Required exports not found in imported modules");
+      }
+      
+      const docSections = [];
       docSections.push(
         new Paragraph({
-          text: paper.name,
-          heading: HeadingLevel.HEADING_1,
+          text: template.name,
+          heading: HeadingLevel.TITLE,
+          alignment: AlignmentType.CENTER,
         })
       );
-      docSections.push(new Paragraph({ text: paper.description }));
+      docSections.push(
+        new Paragraph({ text: template.description, style: "italic" })
+      );
       docSections.push(new Paragraph({ text: " " }));
 
-      const questions = allQuestions[paper.id] || [];
-      for (const [index, question] of questions.entries()) {
+      for (const paper of papers) {
         docSections.push(
           new Paragraph({
-            text: `Question ${index + 1}: ${question.questionText}`,
-            heading: HeadingLevel.HEADING_2,
+            text: paper.name,
+            heading: HeadingLevel.HEADING_1,
           })
         );
-        docSections.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: "Score: ", bold: true }),
-              new TextRun(question.score.toString()),
-            ],
-          })
-        );
+        docSections.push(new Paragraph({ text: paper.description }));
         docSections.push(new Paragraph({ text: " " }));
-        docSections.push(
-          new Paragraph({
-            children: [new TextRun({ text: "Sample Input: ", bold: true })],
-          })
-        );
-        docSections.push(new Paragraph({ text: question.questionSampleInput }));
-        docSections.push(new Paragraph({ text: " " }));
-        docSections.push(
-          new Paragraph({
-            children: [new TextRun({ text: "Sample Output: ", bold: true })],
-          })
-        );
-        docSections.push(
-          new Paragraph({ text: question.questionSampleOutput })
-        );
-        docSections.push(new Paragraph({ text: " " }));
-      }
-    }
 
-    const doc = new Document({
-      sections: [{ properties: {}, children: docSections }],
-    });
-    try {
+        const questions = allQuestions[paper.id] || [];
+        for (const [index, question] of questions.entries()) {
+          docSections.push(
+            new Paragraph({
+              text: `Question ${index + 1}: ${question.questionText}`,
+              heading: HeadingLevel.HEADING_2,
+            })
+          );
+          docSections.push(
+            new Paragraph({
+              children: [
+                new TextRun({ text: "Score: ", bold: true }),
+                new TextRun(question.score.toString()),
+              ],
+            })
+          );
+          docSections.push(new Paragraph({ text: " " }));
+          docSections.push(
+            new Paragraph({
+              children: [new TextRun({ text: "Sample Input: ", bold: true })],
+            })
+          );
+          docSections.push(new Paragraph({ text: question.questionSampleInput }));
+          docSections.push(new Paragraph({ text: " " }));
+          docSections.push(
+            new Paragraph({
+              children: [new TextRun({ text: "Sample Output: ", bold: true })],
+            })
+          );
+          docSections.push(
+            new Paragraph({ text: question.questionSampleOutput })
+          );
+          docSections.push(new Paragraph({ text: " " }));
+        }
+      }
+
+      const doc = new Document({
+        sections: [{ properties: {}, children: docSections }],
+      });
+      
       const blob = await Packer.toBlob(doc);
       saveAs(blob, `${template.name || "exam"}.docx`);
     } catch (err) {
       console.error("Error generating docx:", err);
+      notification.error({
+        message: "Export Failed",
+        description: "Failed to export document. Please try again.",
+      });
     }
   };
 

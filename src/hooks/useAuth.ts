@@ -4,6 +4,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useEffect, useState } from 'react';
 import { RootState, AppDispatch } from '@/store/store';
 import { loginUser, logout, registerUser, fetchUserProfile } from '@/store/slices/authSlice';
+import { getStorageItem } from '@/lib/utils/storage';
+import { removeStorageItem } from '@/lib/utils/storage';
+import { deleteCookie } from '@/lib/utils/cookie';
 
 export const useAuth = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -20,8 +23,8 @@ export const useAuth = () => {
         return;
       }
       
-      const token = localStorage.getItem('auth_token');
-      const userDataStr = localStorage.getItem('user_data');
+      const token = getStorageItem('auth_token');
+      const userDataStr = getStorageItem('user_data');
       
       console.log('🔍 useAuth - Token exists:', !!token);
       console.log('🔍 useAuth - UserData exists:', !!userDataStr);
@@ -59,7 +62,8 @@ export const useAuth = () => {
       
       return result;
     } catch (error) {
-      console.error('❌ Login failed:', error);
+      // Error is already handled and displayed in LoginForm
+      // Just rethrow to let LoginForm handle the UI feedback
       throw error;
     }
   };
@@ -74,7 +78,10 @@ export const useAuth = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('auth_token');
+    removeStorageItem('auth_token');
+    removeStorageItem('user_data');
+    removeStorageItem('user_id');
+    deleteCookie('auth_token');
     dispatch(logout());
   };
 

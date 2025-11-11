@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/Button";
 import { CreatePlanModal } from "./CreatePlanModal";
 import { PlanCard } from "./PlanCard";
+import { QueryParamsHandler } from "../common/QueryParamsHandler";
 import styles from "./SemesterPlans.module.css";
 
 const { Title, Text } = Typography;
@@ -141,8 +142,10 @@ export default function SemesterPlans() {
     },
   ];
   return (
-    <div>
-      <div className={styles.wrapper}>
+    <>
+      <QueryParamsHandler />
+      <div>
+        <div className={styles.wrapper}>
         <div className={styles.header}>
           <Title
             level={2}
@@ -175,6 +178,7 @@ export default function SemesterPlans() {
         onCancel={() => setIsModalOpen(false)}
         onCreate={handleCreatePlan}
       />
-    </div>
+      </div>
+    </>
   );
 }
