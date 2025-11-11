@@ -171,7 +171,20 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
         <Form.Item
           name="message"
           label="Message"
-          rules={[{ required: true, message: "Please enter a message" }]}
+          rules={[
+            { required: true, message: "Please enter a message" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Message cannot be empty!"));
+                }
+                if (value.trim().length < 5) {
+                  return Promise.reject(new Error("Message must be at least 5 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input.TextArea rows={4} />
         </Form.Item>

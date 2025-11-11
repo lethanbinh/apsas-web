@@ -118,7 +118,28 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
         <Form.Item
           name="classCode"
           label="Class Code"
-          rules={[{ required: true, message: "Please enter the class code" }]}
+          rules={[
+            { required: true, message: "Please enter the class code" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Class code cannot be empty!"));
+                }
+                if (value.trim().length < 2) {
+                  return Promise.reject(new Error("Class code must be at least 2 characters!"));
+                }
+                // Check for whitespace
+                if (/\s/.test(value)) {
+                  return Promise.reject(new Error("Class code cannot contain spaces!"));
+                }
+                // Only allow alphanumeric characters, underscore, and hyphen
+                if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+                  return Promise.reject(new Error("Class code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input />
         </Form.Item>
@@ -141,14 +162,42 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
           label="Total Students"
           rules={[
             { required: true, message: "Please enter the total students" },
+            {
+              validator: (_, value) => {
+                if (value === undefined || value === null || value === '') {
+                  return Promise.reject(new Error("Total students cannot be empty!"));
+                }
+                const numValue = Number(value);
+                if (isNaN(numValue) || numValue < 1) {
+                  return Promise.reject(new Error("Total students must be at least 1!"));
+                }
+                if (numValue > 1000) {
+                  return Promise.reject(new Error("Total students cannot exceed 1000!"));
+                }
+                return Promise.resolve();
+              },
+            },
           ]}
         >
-          <Input type="number" />
+          <Input type="number" min={1} max={1000} />
         </Form.Item>
         <Form.Item
           name="description"
           label="Description"
-          rules={[{ required: true, message: "Please enter a description" }]}
+          rules={[
+            { required: true, message: "Please enter a description" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Description cannot be empty!"));
+                }
+                if (value.trim().length < 5) {
+                  return Promise.reject(new Error("Description must be at least 5 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input.TextArea rows={4} />
         </Form.Item>

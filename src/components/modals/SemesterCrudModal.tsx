@@ -8,7 +8,7 @@ import {
 import { Semester } from "@/types";
 import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
 import moment from "moment";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface SemesterCrudModalProps {
   open: boolean;
@@ -66,6 +66,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
+  const isUpdatingRef = useRef(false);
 
   const isEditMode = !!initialData;
   const selectedYear = Form.useWatch("academicYear", form);
@@ -135,16 +136,33 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
     allValues: { academicYear: number; season: string }
   ) => {
     if (isEditMode) return;
+    
+    // Tránh circular reference bằng cách kiểm tra flag
+    if (isUpdatingRef.current) {
+      return;
+    }
 
     if (changedValues.academicYear || changedValues.season) {
       const { academicYear, season } = allValues;
-      if (academicYear && season) {
-        form.setFieldValue("semesterCode", `${season}${academicYear}`);
-        const { start, end } = getDatesForSeason(season, academicYear);
-        form.setFieldsValue({ startDate: start, endDate: end });
-      }
+      
+      // Nếu academicYear thay đổi, reset season (sử dụng setTimeout để tránh circular update)
       if (changedValues.academicYear) {
-        form.setFieldValue("season", null);
+        isUpdatingRef.current = true;
+        setTimeout(() => {
+          form.setFieldValue("season", null);
+          isUpdatingRef.current = false;
+        }, 0);
+      }
+      
+      // Chỉ update semesterCode và dates nếu cả hai đều có giá trị
+      if (academicYear && season) {
+        isUpdatingRef.current = true;
+        setTimeout(() => {
+          form.setFieldValue("semesterCode", `${season}${academicYear}`);
+          const { start, end } = getDatesForSeason(season, academicYear);
+          form.setFieldsValue({ startDate: start, endDate: end });
+          isUpdatingRef.current = false;
+        }, 0);
       }
     }
   };

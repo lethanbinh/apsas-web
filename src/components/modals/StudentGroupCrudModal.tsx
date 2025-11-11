@@ -105,7 +105,23 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
             }
           />
         </Form.Item>
-        <Form.Item name="description" label="Description">
+        <Form.Item 
+          name="description" 
+          label="Description"
+          rules={[
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.resolve(); // Optional field
+                }
+                if (value.trim().length < 5) {
+                  return Promise.reject(new Error("Description must be at least 5 characters if provided!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+        >
           <Input.TextArea rows={4} placeholder="Enrollment description..." />
         </Form.Item>
       </Form>

@@ -43,7 +43,7 @@ import {
   Typography,
 } from "antd";
 import { format } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState } from "react";
 
 const { Title, Text } = Typography;
 
@@ -1018,7 +1018,7 @@ export default function SemesterDetailPage({
 }: {
   params: Promise<{ semesterCode: string }>;
 }) {
-  const resolvedParams = params as unknown as { semesterCode: string };
+  const resolvedParams = use(params);
   return (
     <App>
       <SemesterDetailPageContent params={resolvedParams} />

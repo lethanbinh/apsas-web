@@ -130,14 +130,40 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
         <Form.Item
           name="name"
           label="Element Name"
-          rules={[{ required: true, message: "Please enter the name" }]}
+          rules={[
+            { required: true, message: "Please enter the name" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Element name cannot be empty!"));
+                }
+                if (value.trim().length < 2) {
+                  return Promise.reject(new Error("Element name must be at least 2 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input />
         </Form.Item>
         <Form.Item
           name="description"
           label="Description"
-          rules={[{ required: true, message: "Please enter a description" }]}
+          rules={[
+            { required: true, message: "Please enter a description" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Description cannot be empty!"));
+                }
+                if (value.trim().length < 5) {
+                  return Promise.reject(new Error("Description must be at least 5 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input.TextArea rows={4} />
         </Form.Item>

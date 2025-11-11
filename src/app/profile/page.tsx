@@ -144,34 +144,67 @@ const ProfilePage = () => {
       }
     } catch (err: any) {
       console.error('Error updating profile:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error stringified:', JSON.stringify(err, null, 2));
       console.error('Error details:', {
         message: err?.message,
         response: err?.response,
         responseData: err?.response?.data,
+        responseStatus: err?.response?.status,
+        responseStatusText: err?.response?.statusText,
         errorMessages: err?.response?.data?.errorMessages,
+        stack: err?.stack,
       });
       
       // Extract error message from various possible locations
       let errorMessage = 'Failed to update profile';
       
-      if (err?.response?.data) {
+      // Check if error is a string
+      if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      // Check for Axios error response
+      else if (err?.response) {
         const errorData = err.response.data;
+        const status = err.response.status;
+        
         // Check for errorMessages array
-        if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+        if (errorData?.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
           errorMessage = errorData.errorMessages.join(', ');
         }
         // Check for message string
-        else if (errorData.message) {
+        else if (errorData?.message) {
           errorMessage = errorData.message;
         }
         // Check for error string
-        else if (errorData.error) {
+        else if (errorData?.error) {
           errorMessage = errorData.error;
+        }
+        // Check for status-based messages
+        else if (status === 400) {
+          errorMessage = 'Invalid data. Please check your input.';
+        } else if (status === 401) {
+          errorMessage = 'Unauthorized. Please login again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to update this profile.';
+        } else if (status === 404) {
+          errorMessage = 'Profile not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (status) {
+          errorMessage = `Request failed with status ${status}.`;
         }
       }
       // Check for direct message
       else if (err?.message) {
         errorMessage = err.message;
+      }
+      // Check if error has toString method
+      else if (err?.toString && typeof err.toString === 'function') {
+        const errorString = err.toString();
+        if (errorString !== '[object Object]') {
+          errorMessage = errorString;
+        }
       }
       
       message.error(errorMessage);
