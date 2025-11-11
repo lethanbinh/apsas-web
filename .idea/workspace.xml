@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix exam session. Do exam functions" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix bugs and complete teacher assign" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -95,6 +95,7 @@
       <workItem from="1762482682788" duration="1499000" />
       <workItem from="1762511425191" duration="101000" />
       <workItem from="1762605144030" duration="136000" />
+      <workItem from="1762770321662" duration="69000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -168,7 +169,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762482761409</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="Fix bugs and complete teacher assign">
+      <option name="closed" value="true" />
+      <created>1762770351907</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1762770351907</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -207,6 +216,7 @@
     <MESSAGE value="Fix some UI bugs" />
     <MESSAGE value="Fix UI admin" />
     <MESSAGE value="Fix exam session. Do exam functions" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix exam session. Do exam functions" />
+    <MESSAGE value="Fix bugs and complete teacher assign" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix bugs and complete teacher assign" />
   </component>
 </project>

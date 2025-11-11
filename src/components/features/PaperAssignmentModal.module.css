@@ -1,51 +1,26 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent backdrop */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+.requirementModal :global(.ant-modal-content) {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.modal-content {
-  background-color: #ffffff;
-  padding: 2.5rem; /* p-10 */
-  border-radius: 0.75rem; /* rounded-xl */
-  width: 90%;
-  max-width: 800px;
-  max-height: 90vh;
+.requirementModal :global(.ant-modal-header) {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+.requirementModal :global(.ant-modal-footer) {
+  border-top: 1px solid #f0f0f0;
+  padding: 10px 16px;
+}
+
+.requirementModal :global(.ant-modal-body) {
+  padding: 24px;
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
-  position: relative;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
 }
 
-.modal-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
-
-.close-button {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #6b7280; /* text-gray-500 */
-}
-
-.modal-title {
-  font-size: 1.875rem; /* text-3xl */
-  font-weight: 700; /* font-bold */
-  color: #333333; /* text-gray-800 */
-  margin-bottom: 2rem; /* mb-8 */
-  text-align: center;
+.modalBody {
+  padding: 0;
 }
 
 .question-title {

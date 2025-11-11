@@ -151,6 +151,8 @@ const ExamDetailItem = ({
         isOpen={isModalOpen}
         onClose={closeModal}
         template={template}
+        classAssessmentId={classAssessment?.id}
+        classId={Number(localStorage.getItem("selectedClassId"))}
       />
     </>
   );

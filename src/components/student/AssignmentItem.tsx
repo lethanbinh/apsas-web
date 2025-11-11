@@ -448,6 +448,8 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
           onCancel={() => setIsRequirementModalVisible(false)}
           title={data.title}
           content={data.requirementContent}
+          classAssessmentId={data.classAssessmentId}
+          classId={data.classId}
         />
       )}
 

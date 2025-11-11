@@ -1,275 +1,312 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom";
+import React, { useState, useEffect } from "react";
+import { Modal, Typography, Spin, Collapse, Table, Tag, Space, Divider, List } from "antd";
+import { Button } from "../ui/Button";
 import styles from "./PaperAssignmentModal.module.css";
-import Image from "next/image";
-import { RubricItem, rubricItemService } from "@/services/rubricItemService";
-import { Spin } from "antd";
+import { classAssessmentService } from "@/services/classAssessmentService";
+import { assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
+import { assessmentQuestionService, AssessmentQuestion } from "@/services/assessmentQuestionService";
+import { rubricItemService, RubricItem } from "@/services/rubricItemService";
+import { assessmentFileService } from "@/services/assessmentFileService";
+import { PaperClipOutlined } from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
 import {
   AssessmentTemplate,
-  QuestionTemplate,
 } from "@/services/assessmentTemplateService";
+
+const { Title, Paragraph, Text } = Typography;
 
 interface PaperAssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   template?: AssessmentTemplate;
+  classAssessmentId?: number;
+  classId?: number;
 }
 
-const RubricCriteriaItem = ({
-  rubric,
-  index,
-}: {
-  rubric: RubricItem;
-  index: number;
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className={styles["criteria-section"]}>
-      <p
-        className={styles["criteria-title"]}
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        Criteria {index + 1}
-        <svg
-          className={`${styles["criteria-toggle-arrow"]} ${
-            isOpen ? styles.rotate : ""
-          }`}
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </p>
-      {isOpen && (
-        <div className={styles["criteria-content"]}>
-          <div className={styles["criteria-grid"]}>
-            <div className={styles["input-group"]}>
-              <label htmlFor={`criteria${index}Input`} className={styles.label}>
-                Input
-              </label>
-              <input
-                type="text"
-                id={`criteria${index}Input`}
-                value={rubric.input}
-                readOnly
-                className={styles["input-field"]}
-              />
-            </div>
-            <div className={styles["input-group"]}>
-              <label
-                htmlFor={`criteria${index}Output`}
-                className={styles.label}
-              >
-                Output
-              </label>
-              <input
-                type="text"
-                id={`criteria${index}Output`}
-                value={rubric.output}
-                readOnly
-                className={styles["input-field"]}
-              />
-            </div>
-          </div>
-
-          <div className={styles["input-group"]}>
-            <label htmlFor={`description_c${index}`} className={styles.label}>
-              Description
-            </label>
-            <textarea
-              id={`description_c${index}`}
-              value={rubric.description}
-              readOnly
-              className={styles["input-field"]}
-            ></textarea>
-          </div>
-
-          <div
-            className={`${styles["input-group"]} ${styles["score-input-group"]}`}
-          >
-            <label htmlFor={`score_c${index}`} className={styles.label}>
-              Score
-            </label>
-            <input
-              type="text"
-              id={`score_c${index}`}
-              value={rubric.score}
-              readOnly
-              className={styles["input-field"]}
-            />
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const QuestionItem = ({
-  question,
-  index,
-}: {
-  question: QuestionTemplate;
-  index: number;
-}) => {
-  const [isOpen, setIsOpen] = useState(index === 0);
-  const [rubrics, setRubrics] = useState<RubricItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && question.id) {
-      setIsLoading(true);
-      rubricItemService
-        .getRubricsForQuestion({
-          assessmentQuestionId: question.id,
-          pageNumber: 1,
-          pageSize: 100,
-        })
-        .then((response) => {
-          setRubrics(response.items);
-        })
-        .catch((err) => {
-          console.error("Failed to fetch rubrics", err);
-          setRubrics([]);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    }
-  }, [isOpen, question.id]);
-
-  return (
-    <li className={styles["question-list-item"]}>
-      <h3
-        className={styles["question-title"]}
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        Question {index + 1}: {question.questionText}
-        <svg
-          className={`${styles["question-toggle-arrow"]} ${
-            isOpen ? styles.rotate : ""
-          }`}
-          xmlns="http://www.w3.org/2000/svg"
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </h3>
-      {isOpen && (
-        <div className={styles["question-content"]}>
-          <p className={styles["description-text"]}>
-            Sample Input: {question.questionSampleInput}
-          </p>
-          <p className={styles["description-text"]}>
-            Sample Output: {question.questionSampleOutput}
-          </p>
-          <Image
-            src="https://polyflow.ch/wp-content/uploads/2020/10/Title_DataScience-380x152.jpg"
-            alt="Code Example"
-            width={700}
-            height={400}
-            className={styles["code-image"]}
-          />
-          {isLoading ? (
-            <div style={{ textAlign: "center", margin: "20px" }}>
-              <Spin />
-            </div>
-          ) : (
-            rubrics.map((rubric, i) => (
-              <RubricCriteriaItem key={rubric.id} rubric={rubric} index={i} />
-            ))
-          )}
-        </div>
-      )}
-    </li>
-  );
-};
-
-const PaperAssignmentModal: React.FC<PaperAssignmentModalProps> = ({
+export default function PaperAssignmentModal({
   isOpen,
   onClose,
   template,
-}) => {
-  const modalRef = useRef<HTMLDivElement | null>(null);
-  const [portalElement, setPortalElement] = useState<HTMLElement | null>(null);
+  classAssessmentId,
+  classId,
+}: PaperAssignmentModalProps) {
+  const [loading, setLoading] = useState(false);
+  const [papers, setPapers] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
+  const [rubrics, setRubrics] = useState<{ [questionId: number]: RubricItem[] }>({});
+  const [files, setFiles] = useState<any[]>([]);
+  const [templateDescription, setTemplateDescription] = useState<string>("");
+  const [assessmentTemplateId, setAssessmentTemplateId] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isOpen) {
-      if (portalElement && document.body.contains(portalElement)) {
-        document.body.removeChild(portalElement);
+    if (isOpen) {
+      if (template?.id) {
+        setAssessmentTemplateId(template.id);
+        fetchRequirementData(template.id);
+      } else if (classAssessmentId && classId) {
+        fetchRequirementDataFromClassAssessment();
       }
-      setPortalElement(null);
-      return;
     }
+  }, [isOpen, template, classAssessmentId, classId]);
 
-    if (!portalElement) {
-      const el = document.createElement("div");
-      document.body.appendChild(el);
-      setPortalElement(el);
+  const fetchRequirementDataFromClassAssessment = async () => {
+    try {
+      setLoading(true);
+
+      // Get assessmentTemplateId from classAssessment
+      const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+        classId: classId!,
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const classAssessment = classAssessmentsRes.items.find(
+        (ca) => ca.id === classAssessmentId
+      );
+
+      if (!classAssessment?.assessmentTemplateId) {
+        setLoading(false);
+        return;
+      }
+
+      const templateId = classAssessment.assessmentTemplateId;
+      setAssessmentTemplateId(templateId);
+      await fetchRequirementData(templateId);
+    } catch (err) {
+      console.error("Failed to fetch requirement data:", err);
+      setLoading(false);
     }
+  };
 
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
+  const fetchRequirementData = async (templateId: number) => {
+    try {
+      setLoading(true);
+
+      // Fetch template
+      const templates = await assessmentTemplateService.getAssessmentTemplates({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const templateData = templates.items.find((t) => t.id === templateId);
+      
+      if (templateData) {
+        setTemplateDescription(templateData.description || "");
       }
-    };
 
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("keydown", handleEscape);
-      if (portalElement && document.body.contains(portalElement)) {
-        document.body.removeChild(portalElement);
+      // Fetch files
+      try {
+        const filesRes = await assessmentFileService.getFilesForTemplate({
+          assessmentTemplateId: templateId,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+        setFiles(filesRes.items);
+      } catch (err) {
+        console.error("Failed to fetch files:", err);
       }
-    };
-  }, [isOpen, onClose, portalElement]);
 
-  if (!isOpen || !portalElement) return null;
+      // Fetch papers
+      const papersRes = await assessmentPaperService.getAssessmentPapers({
+        assessmentTemplateId: templateId,
+        pageNumber: 1,
+        pageSize: 100,
+      });
+      setPapers(papersRes.items);
 
-  return ReactDOM.createPortal(
-    <div className={styles["modal-overlay"]}>
-      <div className={styles["modal-content"]} ref={modalRef}>
-        <button onClick={onClose} className={styles["close-button"]}>
-          &times;
-        </button>
-        <h2 className={styles["modal-title"]}>
-          {template?.name || "Assignment Details"}
-        </h2>
+      // Fetch questions for each paper
+      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+      for (const paper of papersRes.items) {
+        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+          assessmentPaperId: paper.id,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+        questionsMap[paper.id] = questionsRes.items;
 
-        {!template ? (
-          <div>No assessment template found for this assignment.</div>
-        ) : (
-          <ul>
-            {template.papers.map((paper) =>
-              paper.questions.map((question, index) => (
-                <QuestionItem
-                  key={question.id}
-                  question={question}
-                  index={index}
-                />
-              ))
-            )}
-          </ul>
-        )}
-      </div>
-    </div>,
-    portalElement
+        // Fetch rubrics for each question (LECTURER CAN SEE RUBRICS)
+        const rubricsMap: { [questionId: number]: RubricItem[] } = {};
+        for (const question of questionsRes.items) {
+          const rubricsRes = await rubricItemService.getRubricsForQuestion({
+            assessmentQuestionId: question.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          rubricsMap[question.id] = rubricsRes.items;
+        }
+        setRubrics((prev) => ({ ...prev, ...rubricsMap }));
+      }
+      setQuestions(questionsMap);
+    } catch (err) {
+      console.error("Failed to fetch requirement data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getQuestionColumns = (question: AssessmentQuestion): ColumnsType<RubricItem> => [
+    {
+      title: "Criteria",
+      dataIndex: "description",
+      key: "description",
+      width: "40%",
+    },
+    {
+      title: "Input",
+      dataIndex: "input",
+      key: "input",
+      width: "25%",
+      render: (text: string) => (
+        <Text code style={{ fontSize: "12px" }}>
+          {text || "N/A"}
+        </Text>
+      ),
+    },
+    {
+      title: "Output",
+      dataIndex: "output",
+      key: "output",
+      width: "25%",
+      render: (text: string) => (
+        <Text code style={{ fontSize: "12px" }}>
+          {text || "N/A"}
+        </Text>
+      ),
+    },
+    {
+      title: "Max Score",
+      dataIndex: "score",
+      key: "maxScore",
+      width: "10%",
+      align: "center" as const,
+      render: (score: number) => <Tag color="blue">{score}</Tag>,
+    },
+  ];
+
+  return (
+    <Modal
+      title={
+        <Title level={4} style={{ margin: 0 }}>
+          {template?.name || "Assignment Paper"}
+        </Title>
+      }
+      open={isOpen}
+      onCancel={onClose}
+      footer={
+        <Button variant="primary" onClick={onClose}>
+          Close
+        </Button>
+      }
+      width={1000}
+      className={styles.requirementModal}
+      style={{ top: 20 }}
+    >
+      <Spin spinning={loading}>
+        <div className={styles.modalBody}>
+          {/* Template Description */}
+          {templateDescription && (
+            <>
+              <Title level={5}>Description</Title>
+              <Paragraph>{templateDescription}</Paragraph>
+              <Divider />
+            </>
+          )}
+
+          {/* Requirement Files */}
+          {files.length > 0 && (
+            <>
+              <Title level={5}>Requirement Files</Title>
+              <List
+                dataSource={files}
+                renderItem={(file) => (
+                  <List.Item>
+                    <a
+                      href={file.fileUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <PaperClipOutlined style={{ marginRight: 8 }} />
+                      {file.name}
+                    </a>
+                  </List.Item>
+                )}
+              />
+              <Divider />
+            </>
+          )}
+
+          {/* Papers, Questions, and Rubrics */}
+          {papers.length > 0 && (
+            <>
+              <Title level={5}>Exam Papers & Questions</Title>
+              <Collapse
+                items={papers.map((paper, paperIndex) => ({
+                  key: paper.id.toString(),
+                  label: (
+                    <div>
+                      <strong>Paper {paperIndex + 1}: {paper.name}</strong>
+                      {paper.description && (
+                        <Text type="secondary" style={{ marginLeft: 8 }}>
+                          - {paper.description}
+                        </Text>
+                      )}
+                    </div>
+                  ),
+                  children: (
+                    <div>
+                      {questions[paper.id]?.map((question, qIndex) => (
+                        <div key={question.id} style={{ marginBottom: 24 }}>
+                          <Title level={5}>
+                            Question {qIndex + 1} (Score: {question.score})
+                          </Title>
+                          <Paragraph>{question.questionText}</Paragraph>
+
+                          {question.questionSampleInput && (
+                            <div style={{ marginTop: 12 }}>
+                              <Text strong>Sample Input:</Text>
+                              <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                                {question.questionSampleInput}
+                              </pre>
+                            </div>
+                          )}
+
+                          {question.questionSampleOutput && (
+                            <div style={{ marginTop: 12 }}>
+                              <Text strong>Sample Output:</Text>
+                              <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                                {question.questionSampleOutput}
+                              </pre>
+                            </div>
+                          )}
+
+                          {/* LECTURER CAN SEE RUBRICS/CRITERIA */}
+                          {rubrics[question.id] && rubrics[question.id].length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <Text strong>Grading Criteria:</Text>
+                              <Table
+                                columns={getQuestionColumns(question)}
+                                dataSource={rubrics[question.id]}
+                                rowKey="id"
+                                pagination={false}
+                                size="small"
+                                style={{ marginTop: 8 }}
+                              />
+                            </div>
+                          )}
+
+                          <Divider />
+                        </div>
+                      ))}
+                    </div>
+                  ),
+                }))}
+              />
+            </>
+          )}
+        </div>
+      </Spin>
+    </Modal>
   );
-};
-
-export default PaperAssignmentModal;
+}
