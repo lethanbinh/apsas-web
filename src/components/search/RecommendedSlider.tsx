@@ -107,6 +107,7 @@ export default function RecommendedSlider() {
         spaceBetween={24}
         pagination={{ clickable: true }}
         className={styles.swiperContainer}
+        watchSlidesProgress={true}
         breakpoints={{
           640: {
             slidesPerView: 2,

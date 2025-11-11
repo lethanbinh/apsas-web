@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { memo } from "react";
 import Image from "next/image";
 import { Typography } from "antd";
 import { AppstoreOutlined } from "@ant-design/icons"; // Icon lưới
@@ -15,7 +15,7 @@ export interface CoachCardProps {
   name: string;
 }
 
-export const CoachCard: React.FC<CoachCardProps> = ({
+const CoachCardComponent: React.FC<CoachCardProps> = ({
   imageUrl,
   category,
   name,
@@ -27,8 +27,9 @@ export const CoachCard: React.FC<CoachCardProps> = ({
           <Image
             src={imageUrl}
             alt={name}
-            layout="fill"
+            fill
             className={styles.cardImage}
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
         </div>
       </div>
@@ -62,3 +63,7 @@ export const CoachCard: React.FC<CoachCardProps> = ({
     </div>
   );
 };
+
+CoachCardComponent.displayName = 'CoachCard';
+
+export const CoachCard = memo(CoachCardComponent);

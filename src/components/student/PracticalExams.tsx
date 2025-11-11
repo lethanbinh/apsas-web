@@ -13,7 +13,6 @@ import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
 
 function mapCourseElementToExamData(
   element: CourseElement,
@@ -214,30 +213,26 @@ export default function PracticalExams() {
           bordered={false}
           className={styles.collapse}
           defaultActiveKey={exams.length > 0 ? [exams[0].id] : []}
-        >
-          {exams.map((item) => (
-            <Panel
-              key={item.id}
-              header={
-                <div className={styles.panelHeader}>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{ fontSize: "0.9rem", color: "#E86A92" }}
-                    >
-                      <LinkOutlined /> {item.status}
-                    </Text>
-                    <Title level={4} style={{ margin: "4px 0 0 0" }}>
-                      {item.title}
-                    </Title>
-                  </div>
+          items={exams.map((item) => ({
+            key: item.id,
+            label: (
+              <div className={styles.panelHeader}>
+                <div>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: "0.9rem", color: "#E86A92" }}
+                  >
+                    <LinkOutlined /> {item.status}
+                  </Text>
+                  <Title level={4} style={{ margin: "4px 0 0 0" }}>
+                    {item.title}
+                  </Title>
                 </div>
-              }
-            >
-              <AssignmentItem data={item} isExam={true} />
-            </Panel>
-          ))}
-        </Collapse>
+              </div>
+            ),
+            children: <AssignmentItem data={item} isExam={true} />,
+          }))}
+        />
       )}
     </div>
   );

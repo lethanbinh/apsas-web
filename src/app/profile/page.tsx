@@ -143,17 +143,40 @@ const ProfilePage = () => {
         setProfile(freshProfile);
       }
     } catch (err: any) {
+      // Enhanced error logging
       console.error('Error updating profile:', err);
       console.error('Error type:', typeof err);
-      console.error('Error stringified:', JSON.stringify(err, null, 2));
+      console.error('Error constructor:', err?.constructor?.name);
+      
+      // Try to stringify error with error handling
+      try {
+        console.error('Error stringified:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      } catch (stringifyError) {
+        console.error('Could not stringify error:', stringifyError);
+        // Try to get error properties manually
+        const errorProps: any = {};
+        if (err) {
+          Object.getOwnPropertyNames(err).forEach(key => {
+            try {
+              errorProps[key] = err[key];
+            } catch (e) {
+              errorProps[key] = '[Unable to access]';
+            }
+          });
+        }
+        console.error('Error properties:', errorProps);
+      }
+      
       console.error('Error details:', {
         message: err?.message,
+        name: err?.name,
         response: err?.response,
         responseData: err?.response?.data,
         responseStatus: err?.response?.status,
         responseStatusText: err?.response?.statusText,
         errorMessages: err?.response?.data?.errorMessages,
         stack: err?.stack,
+        code: err?.code,
       });
       
       // Extract error message from various possible locations
@@ -180,6 +203,10 @@ const ProfilePage = () => {
         else if (errorData?.error) {
           errorMessage = errorData.error;
         }
+        // Check if errorData is a string
+        else if (typeof errorData === 'string' && errorData.trim().length > 0) {
+          errorMessage = errorData;
+        }
         // Check for status-based messages
         else if (status === 400) {
           errorMessage = 'Invalid data. Please check your input.';
@@ -202,9 +229,13 @@ const ProfilePage = () => {
       // Check if error has toString method
       else if (err?.toString && typeof err.toString === 'function') {
         const errorString = err.toString();
-        if (errorString !== '[object Object]') {
+        if (errorString !== '[object Object]' && errorString !== '{}') {
           errorMessage = errorString;
         }
+      }
+      // Check for error name
+      else if (err?.name) {
+        errorMessage = `${err.name}: Failed to update profile`;
       }
       
       message.error(errorMessage);

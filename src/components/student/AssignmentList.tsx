@@ -15,7 +15,6 @@ import { AssignmentItem } from "./AssignmentItem";
 import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
 
 function mapCourseElementToAssignmentData(
   element: CourseElement,
@@ -245,30 +244,26 @@ export default function AssignmentList() {
           bordered={false}
           className={styles.collapse}
           defaultActiveKey={assignments.length > 0 ? [assignments[0].id] : []}
-        >
-          {assignments.map((item) => (
-            <Panel
-              key={item.id}
-              header={
-                <div className={styles.panelHeader}>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{ fontSize: "0.9rem", color: "#E86A92" }}
-                    >
-                      <LinkOutlined /> {item.status}
-                    </Text>
-                    <Title level={4} style={{ margin: "4px 0 0 0" }}>
-                      {item.title}
-                    </Title>
-                  </div>
+          items={assignments.map((item) => ({
+            key: item.id,
+            label: (
+              <div className={styles.panelHeader}>
+                <div>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: "0.9rem", color: "#E86A92" }}
+                  >
+                    <LinkOutlined /> {item.status}
+                  </Text>
+                  <Title level={4} style={{ margin: "4px 0 0 0" }}>
+                    {item.title}
+                  </Title>
                 </div>
-              }
-            >
-              <AssignmentItem data={item} />
-            </Panel>
-          ))}
-        </Collapse>
+              </div>
+            ),
+            children: <AssignmentItem data={item} />,
+          }))}
+        />
       )}
     </div>
   );

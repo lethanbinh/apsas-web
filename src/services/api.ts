@@ -45,10 +45,12 @@ class ApiService {
         const requestUrl = error.config?.url?.toLowerCase() || '';
         const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
         const isExamSessionList = requestUrl.includes('/examsession/list');
+        const isStudentGroupEndpoint = requestUrl.includes('/studentgroup/student/');
         
         // Don't log 401 errors for login requests (expected behavior - user entered wrong credentials)
-        // Don't log 404 errors for ExamSession/list (handled gracefully in service layer)
-        const shouldLogError = (status !== 401 || !isLoginRequest) && (status !== 404 || !isExamSessionList);
+        // Don't log 404 errors for endpoints that have graceful fallback handling
+        const shouldLogError = (status !== 401 || !isLoginRequest) && 
+                               (status !== 404 || (!isExamSessionList && !isStudentGroupEndpoint));
         if (shouldLogError) {
           console.error('❌ API Error:', status, requestUrl, error.response?.data);
         }

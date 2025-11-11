@@ -93,13 +93,28 @@ export class AuthService {
     gender: number;
     dateOfBirth: string;
   }): Promise<User> {
-    const response = await apiService.put<any>(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}`, data);
-    
-    // Extract user from result
-    if (response.result) {
-      return response.result as User;
+    try {
+      const response = await apiService.put<any>(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}`, data);
+      
+      // Extract user from result
+      if (response?.result) {
+        return response.result as User;
+      }
+      if (response && typeof response === 'object' && 'id' in response) {
+        return response as User;
+      }
+      
+      // If response doesn't have expected structure, throw error
+      throw new Error('Invalid response format from update profile API');
+    } catch (error: any) {
+      // Re-throw with more context
+      if (error?.response) {
+        // Axios error - let it propagate with full error info
+        throw error;
+      }
+      // Other errors - wrap with more context
+      throw new Error(error?.message || 'Failed to update profile');
     }
-    return response as User;
   }
 
   async uploadAvatar(file: File): Promise<string> {

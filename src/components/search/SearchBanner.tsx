@@ -1,10 +1,8 @@
 "use client";
 
 import React from "react";
-// 1. Chỉ import Input từ 'antd'
 import { Input } from "antd";
-// 2. Import Button tùy chỉnh của bạn
-import { Button } from "../ui/Button"; // <-- Giả định đường dẫn
+import { Button } from "../ui/Button";
 import styles from "./SearchBanner.module.css";
 
 const { Search } = Input;
@@ -37,13 +35,7 @@ export const SearchBanner: React.FC<SearchBannerProps> = ({
       <div className={styles.contentWrapper}>
         <Search
           placeholder={placeholder}
-          enterButton={
-            <Button
-              className={styles.searchButton}
-            >
-              Search
-            </Button>
-          }
+          enterButton="Search"
           size="large"
           onSearch={onSearch}
           className={styles.searchBar}
