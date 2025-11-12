@@ -21,7 +21,7 @@ const toVietnamTime = (dateString: string) => {
 
 interface DeadlinePopoverProps {
   id: string;
-  date: string;
+  date?: string;
   onSave: (id: string, newDate: dayjs.Dayjs | null) => void;
 }
 
@@ -32,7 +32,7 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [tempDeadline, setTempDeadline] = useState<dayjs.Dayjs | null>(
-    toVietnamTime(date)
+    date ? toVietnamTime(date) : dayjs().add(7, 'days')
   );
 
   const handleSave = () => {
@@ -44,7 +44,7 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
 
   const handleOpenChange = (visible: boolean) => {
     if (visible) {
-      setTempDeadline(toVietnamTime(date));
+      setTempDeadline(date ? toVietnamTime(date) : dayjs().add(7, 'days'));
     }
     setOpen(visible);
   };
@@ -75,17 +75,21 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
   return (
     <Popover
       content={popoverContent}
-      title="Change Deadline"
+      title={date ? "Change Deadline" : "Set Deadline"}
       trigger="click"
       open={open}
       onOpenChange={handleOpenChange}
     >
       <Tag
         icon={<CalendarOutlined />}
-        color="default"
+        color={date ? "default" : "blue"}
         className={styles.deadlineTag}
+        style={{ cursor: "pointer" }}
       >
-        {toVietnamTime(date).format("DD MMM YYYY, HH:mm")}
+        {date 
+          ? toVietnamTime(date).format("DD MMM YYYY, HH:mm")
+          : "Click to set deadline"
+        }
       </Tag>
     </Popover>
   );

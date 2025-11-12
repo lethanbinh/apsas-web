@@ -123,7 +123,11 @@ export default function PaperAssignmentModal({
           pageNumber: 1,
           pageSize: 100,
         });
-        questionsMap[paper.id] = questionsRes.items;
+        // Sort questions by questionNumber
+        const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        questionsMap[paper.id] = sortedQuestions;
 
         // Fetch rubrics for each question (LECTURER CAN SEE RUBRICS)
         const rubricsMap: { [questionId: number]: RubricItem[] } = {};
@@ -256,7 +260,7 @@ export default function PaperAssignmentModal({
                   ),
                   children: (
                     <div>
-                      {questions[paper.id]?.map((question, qIndex) => (
+                      {questions[paper.id]?.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, qIndex) => (
                         <div key={question.id} style={{ marginBottom: 24 }}>
                           <Title level={5}>
                             Question {qIndex + 1} (Score: {question.score})

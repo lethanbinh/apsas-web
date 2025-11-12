@@ -137,14 +137,108 @@ const ProfilePage = () => {
       message.success('Profile updated successfully');
       
       // Refresh profile data
-      const userId = localStorage.getItem('user_id');
+      const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
       if (userId) {
         const freshProfile = await authService.getProfile();
         setProfile(freshProfile);
       }
     } catch (err: any) {
+      // Enhanced error logging
       console.error('Error updating profile:', err);
-      message.error(err.message || 'Failed to update profile');
+      console.error('Error type:', typeof err);
+      console.error('Error constructor:', err?.constructor?.name);
+      
+      // Try to stringify error with error handling
+      try {
+        console.error('Error stringified:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+      } catch (stringifyError) {
+        console.error('Could not stringify error:', stringifyError);
+        // Try to get error properties manually
+        const errorProps: any = {};
+        if (err) {
+          Object.getOwnPropertyNames(err).forEach(key => {
+            try {
+              errorProps[key] = err[key];
+            } catch (e) {
+              errorProps[key] = '[Unable to access]';
+            }
+          });
+        }
+        console.error('Error properties:', errorProps);
+      }
+      
+      console.error('Error details:', {
+        message: err?.message,
+        name: err?.name,
+        response: err?.response,
+        responseData: err?.response?.data,
+        responseStatus: err?.response?.status,
+        responseStatusText: err?.response?.statusText,
+        errorMessages: err?.response?.data?.errorMessages,
+        stack: err?.stack,
+        code: err?.code,
+      });
+      
+      // Extract error message from various possible locations
+      let errorMessage = 'Failed to update profile';
+      
+      // Check if error is a string
+      if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      // Check for Axios error response
+      else if (err?.response) {
+        const errorData = err.response.data;
+        const status = err.response.status;
+        
+        // Check for errorMessages array
+        if (errorData?.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+          errorMessage = errorData.errorMessages.join(', ');
+        }
+        // Check for message string
+        else if (errorData?.message) {
+          errorMessage = errorData.message;
+        }
+        // Check for error string
+        else if (errorData?.error) {
+          errorMessage = errorData.error;
+        }
+        // Check if errorData is a string
+        else if (typeof errorData === 'string' && errorData.trim().length > 0) {
+          errorMessage = errorData;
+        }
+        // Check for status-based messages
+        else if (status === 400) {
+          errorMessage = 'Invalid data. Please check your input.';
+        } else if (status === 401) {
+          errorMessage = 'Unauthorized. Please login again.';
+        } else if (status === 403) {
+          errorMessage = 'You do not have permission to update this profile.';
+        } else if (status === 404) {
+          errorMessage = 'Profile not found.';
+        } else if (status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        } else if (status) {
+          errorMessage = `Request failed with status ${status}.`;
+        }
+      }
+      // Check for direct message
+      else if (err?.message) {
+        errorMessage = err.message;
+      }
+      // Check if error has toString method
+      else if (err?.toString && typeof err.toString === 'function') {
+        const errorString = err.toString();
+        if (errorString !== '[object Object]' && errorString !== '{}') {
+          errorMessage = errorString;
+        }
+      }
+      // Check for error name
+      else if (err?.name) {
+        errorMessage = `${err.name}: Failed to update profile`;
+      }
+      
+      message.error(errorMessage);
     } finally {
       setUpdating(false);
     }
@@ -207,7 +301,37 @@ const ProfilePage = () => {
       setProfile(freshProfile);
     } catch (err: any) {
       console.error('Error uploading avatar:', err);
-      message.error(err.message || 'Failed to upload avatar');
+      console.error('Error details:', {
+        message: err?.message,
+        response: err?.response,
+        responseData: err?.response?.data,
+        errorMessages: err?.response?.data?.errorMessages,
+      });
+      
+      // Extract error message from various possible locations
+      let errorMessage = 'Failed to upload avatar';
+      
+      if (err?.response?.data) {
+        const errorData = err.response.data;
+        // Check for errorMessages array
+        if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
+          errorMessage = errorData.errorMessages.join(', ');
+        }
+        // Check for message string
+        else if (errorData.message) {
+          errorMessage = errorData.message;
+        }
+        // Check for error string
+        else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+      }
+      // Check for direct message
+      else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      message.error(errorMessage);
     } finally {
       setUploadingAvatar(false);
       // Reset input
@@ -396,7 +520,20 @@ const ProfilePage = () => {
             <Form.Item
               name="fullName"
               label="Full Name"
-              rules={[{ required: true, message: 'Please input your full name!' }]}
+              rules={[
+                { required: true, message: 'Please input your full name!' },
+                {
+                  validator: (_, value) => {
+                    if (!value || value.trim().length === 0) {
+                      return Promise.reject(new Error('Full name cannot be empty!'));
+                    }
+                    if (value.trim().length < 2) {
+                      return Promise.reject(new Error('Full name must be at least 2 characters!'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <Input placeholder="Enter full name" />
             </Form.Item>
@@ -404,7 +541,22 @@ const ProfilePage = () => {
             <Form.Item
               name="phoneNumber"
               label="Phone Number"
-              rules={[{ required: true, message: 'Please input your phone number!' }]}
+              rules={[
+                { required: true, message: 'Please input your phone number!' },
+                {
+                  validator: (_, value) => {
+                    if (!value || value.trim().length === 0) {
+                      return Promise.reject(new Error('Phone number cannot be empty!'));
+                    }
+                    // Basic phone validation - at least 10 digits
+                    const phoneRegex = /^[0-9]{10,}$/;
+                    if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
+                      return Promise.reject(new Error('Please enter a valid phone number (at least 10 digits)!'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <Input placeholder="Enter phone number" />
             </Form.Item>
@@ -412,9 +564,45 @@ const ProfilePage = () => {
             <Form.Item
               name="address"
               label="Address"
-              rules={[{ required: true, message: 'Please input your address!' }]}
+              rules={[
+                { required: true, message: 'Please input your address!' },
+                {
+                  validator: (_, value) => {
+                    if (!value || value.trim().length === 0) {
+                      return Promise.reject(new Error('Address cannot be empty!'));
+                    }
+                    if (value.trim().length < 5) {
+                      return Promise.reject(new Error('Address must be at least 5 characters!'));
+                    }
+                    return Promise.resolve();
+                  },
+                },
+              ]}
             >
               <Input.TextArea rows={3} placeholder="Enter address" />
+            </Form.Item>
+
+            <Form.Item
+              name="avatar"
+              label="Avatar URL"
+              rules={[
+                {
+                  validator: (_, value) => {
+                    if (!value || value.trim().length === 0) {
+                      return Promise.resolve(); // Optional field
+                    }
+                    // Basic URL validation
+                    try {
+                      new URL(value);
+                      return Promise.resolve();
+                    } catch {
+                      return Promise.reject(new Error('Please enter a valid URL!'));
+                    }
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="https://example.com/avatar.jpg" />
             </Form.Item>
 
             <Form.Item

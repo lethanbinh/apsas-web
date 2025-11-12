@@ -13,7 +13,24 @@ import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
+
+// Helper function to check if a course element is a Practical Exam based on name
+function isPracticalExam(element: CourseElement): boolean {
+  const name = (element.name || "").toLowerCase();
+  const keywords = [
+    "exam",
+    "pe",
+    "practical exam",
+    "practical",
+    "test",
+    "kiểm tra thực hành",
+    "thi thực hành",
+    "bài thi",
+    "bài kiểm tra",
+    "thực hành",
+  ];
+  return keywords.some((keyword) => name.includes(keyword));
+}
 
 function mapCourseElementToExamData(
   element: CourseElement,
@@ -119,7 +136,7 @@ export default function PracticalExams() {
           pageSize: 1000,
         });
         const classElements = allElements.filter(
-          (el) => el.semesterCourseId === semesterCourseId
+          (el) => el.semesterCourseId === semesterCourseId && isPracticalExam(el)
         );
 
         // 3) Load exam sessions for this class to attach deadlines
@@ -214,30 +231,26 @@ export default function PracticalExams() {
           bordered={false}
           className={styles.collapse}
           defaultActiveKey={exams.length > 0 ? [exams[0].id] : []}
-        >
-          {exams.map((item) => (
-            <Panel
-              key={item.id}
-              header={
-                <div className={styles.panelHeader}>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{ fontSize: "0.9rem", color: "#E86A92" }}
-                    >
-                      <LinkOutlined /> {item.status}
-                    </Text>
-                    <Title level={4} style={{ margin: "4px 0 0 0" }}>
-                      {item.title}
-                    </Title>
-                  </div>
+          items={exams.map((item) => ({
+            key: item.id,
+            label: (
+              <div className={styles.panelHeader}>
+                <div>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: "0.9rem", color: "#E86A92" }}
+                  >
+                    <LinkOutlined /> {item.status}
+                  </Text>
+                  <Title level={4} style={{ margin: "4px 0 0 0" }}>
+                    {item.title}
+                  </Title>
                 </div>
-              }
-            >
-              <AssignmentItem data={item} isExam={true} />
-            </Panel>
-          ))}
-        </Collapse>
+              </div>
+            ),
+            children: <AssignmentItem data={item} isExam={true} />,
+          }))}
+        />
       )}
     </div>
   );

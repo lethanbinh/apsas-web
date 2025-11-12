@@ -148,10 +148,16 @@ export class ClassService {
       const response = await apiService.get<StudentGroupApiResponse>(
         `/StudentGroup/student/${studentId}`
       );
-      return response.result;
-    } catch (error) {
+      return response.result || [];
+    } catch (error: any) {
+      // Handle 404 gracefully - endpoint might not exist
+      if (error?.response?.status === 404) {
+        console.warn(`StudentGroup/student/${studentId} endpoint not found, using fallback method`);
+      } else {
+        console.warn("Direct endpoint not available, using fallback method", error);
+      }
+      
       // Fallback: Get all classes and filter by student
-      console.warn("Direct endpoint not available, using fallback method");
       const { classes } = await this.getClassList({
         pageNumber: 1,
         pageSize: 1000,

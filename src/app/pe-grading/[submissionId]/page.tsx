@@ -175,7 +175,7 @@ export default function PEGradingDetailPage() {
 
               // Use sample data if no questions
               const paperQuestions = questionsRes.items.length > 0
-                ? questionsRes.items
+                ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
                 : [
                     {
                       id: 1,
@@ -183,6 +183,7 @@ export default function PEGradingDetailPage() {
                       questionSampleInput: "5\n10",
                       questionSampleOutput: "15",
                       score: 10,
+                      questionNumber: 1,
                       assessmentPaperId: paper.id,
                       assessmentPaperName: paper.name,
                       rubricCount: 2,
@@ -259,6 +260,7 @@ export default function PEGradingDetailPage() {
                   questionSampleInput: "5\n10",
                   questionSampleOutput: "15",
                   score: 10,
+                  questionNumber: 1,
                   assessmentPaperId: 1,
                   assessmentPaperName: "Sample Paper 1",
                   rubricCount: 2,
@@ -296,6 +298,7 @@ export default function PEGradingDetailPage() {
                   questionSampleInput: "3\n7\n2",
                   questionSampleOutput: "7",
                   score: 10,
+                  questionNumber: 2,
                   assessmentPaperId: 1,
                   assessmentPaperName: "Sample Paper 1",
                   rubricCount: 2,
@@ -743,7 +746,7 @@ export default function PEGradingDetailPage() {
 
         <Collapse 
           defaultActiveKey={questions.map((_, i) => i.toString())}
-          items={questions.map((question, index) => {
+          items={[...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, index) => {
             const questionTotalScore = Object.values(question.rubricScores).reduce(
               (sum, score) => sum + (score || 0),
               0
@@ -975,7 +978,7 @@ function ViewExamModal({
         });
         
         const paperQuestions = questionsRes.items.length > 0
-          ? questionsRes.items
+          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
           : [
               {
                 id: 1,
@@ -983,6 +986,7 @@ function ViewExamModal({
                 questionSampleInput: "5\n10",
                 questionSampleOutput: "15",
                 score: 10,
+                questionNumber: 1,
                 assessmentPaperId: paper.id,
                 assessmentPaperName: paper.name,
                 rubricCount: 2,
@@ -1071,7 +1075,7 @@ function ViewExamModal({
                 ),
                 children: (
                   <div>
-                    {questions[paper.id]?.map((question, qIndex) => (
+                    {questions[paper.id]?.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, qIndex) => (
                       <div key={question.id} style={{ marginBottom: 24 }}>
                         <Title level={5}>
                           Question {qIndex + 1} (Score: {question.score})

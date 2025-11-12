@@ -277,11 +277,12 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         });
 
         const paperQuestions = questionsRes.items.length > 0
-          ? questionsRes.items
+          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
           : [
               {
                 id: 1,
                 questionText: "Sample Question: Write a program to calculate the sum of two numbers",
+                questionNumber: 1,
                 questionSampleInput: "5\n10",
                 questionSampleOutput: "15",
                 score: 10,
@@ -357,7 +358,11 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         // Always create sample data if no questions found
         createSampleQuestions(submission);
       } else {
-        setQuestions(allQuestions);
+        // Sort questions by questionNumber
+        const sortedQuestions = [...allQuestions].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        setQuestions(sortedQuestions);
       }
     } catch (err) {
       console.error("Failed to fetch questions and rubrics:", err);
@@ -374,6 +379,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         questionSampleInput: "5\n10",
         questionSampleOutput: "15",
         score: 10,
+        questionNumber: 1,
         assessmentPaperId: 1,
         assessmentPaperName: "Sample Paper 1",
         rubricCount: 2,
@@ -411,6 +417,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         questionSampleInput: "3\n7\n2",
         questionSampleOutput: "7",
         score: 10,
+        questionNumber: 2,
         assessmentPaperId: 1,
         assessmentPaperName: "Sample Paper 1",
         rubricCount: 2,
@@ -582,7 +589,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
                 <Collapse 
                   defaultActiveKey={questions.map((_, i) => i.toString())}
-                  items={questions.map((question, index) => {
+                  items={[...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, index) => {
                     const questionTotalScore = Object.values(question.rubricScores).reduce(
                       (sum, score) => sum + (score || 0),
                       0

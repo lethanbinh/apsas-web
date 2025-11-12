@@ -26,7 +26,9 @@ import {
   EyeOutlined,
 } from "@ant-design/icons";
 import { submissionService, Submission } from "@/services/submissionService";
-import { classAssessmentService } from "@/services/classAssessmentService";
+import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
+import { classService, ClassInfo } from "@/services/classService";
+import { semesterService } from "@/services/semesterService";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService, AssessmentQuestion } from "@/services/assessmentQuestionService";
@@ -62,6 +64,7 @@ export default function AssignmentGradingPage() {
   const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
   const [totalScore, setTotalScore] = useState(0);
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
+  const [isSemesterPassed, setIsSemesterPassed] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackData>({
     overallFeedback: "",
     strengths: "",
@@ -154,6 +157,9 @@ export default function AssignmentGradingPage() {
       setSubmission(sub);
       setTotalScore(sub.lastGrade || 0);
 
+      // Check if semester has passed
+      await checkSemesterStatus(sub);
+
       // Load feedback from localStorage or use sample
       const savedFeedback = localStorage.getItem(`feedback_${submissionId}`);
       if (savedFeedback) {
@@ -172,29 +178,183 @@ export default function AssignmentGradingPage() {
     }
   };
 
+  const checkSemesterStatus = async (submission: Submission) => {
+    try {
+      if (!submission.classAssessmentId) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      // Get class assessment
+      const classId = localStorage.getItem("selectedClassId");
+      if (!classId) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+        classId: Number(classId),
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+
+      const classAssessment = classAssessmentsRes.items.find(
+        (ca) => ca.id === submission.classAssessmentId
+      );
+
+      if (!classAssessment) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      // Get class info to get semester
+      const classInfo = await classService.getClassById(classId);
+      if (!classInfo) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      // Extract semester code from semesterName (format: "SEMESTER_CODE - ...")
+      const semesterCode = classInfo.semesterName?.split(" - ")[0];
+      if (!semesterCode) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      // Get semester detail to check end date
+      const semesterDetail = await semesterService.getSemesterPlanDetail(semesterCode);
+      if (!semesterDetail?.endDate) {
+        setIsSemesterPassed(false);
+        return;
+      }
+
+      // Check if semester has passed
+      const now = new Date();
+      const semesterEnd = new Date(semesterDetail.endDate.endsWith("Z") ? semesterDetail.endDate : semesterDetail.endDate + "Z");
+      setIsSemesterPassed(now > semesterEnd);
+    } catch (err) {
+      console.error("Failed to check semester status:", err);
+      setIsSemesterPassed(false);
+    }
+  };
+
   const fetchQuestionsAndRubrics = async (submission: Submission) => {
+    // Declare allQuestions outside try-catch so it's accessible in catch block
+    const allQuestions: QuestionWithRubrics[] = [];
+    
     try {
       let assessmentTemplateId: number | null = null;
 
-      // Get assessmentTemplateId from classAssessmentId
-      if (submission.classAssessmentId) {
-        const classId = localStorage.getItem("selectedClassId");
-        if (classId) {
-          const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-            classId: Number(classId),
+      // Try to get assessmentTemplateId from gradingGroupId first (most reliable)
+      if (submission.gradingGroupId) {
+        try {
+          const { gradingGroupService } = await import("@/services/gradingGroupService");
+          const gradingGroups = await gradingGroupService.getGradingGroups({});
+          const gradingGroup = gradingGroups.find((gg) => gg.id === submission.gradingGroupId);
+          if (gradingGroup?.assessmentTemplateId) {
+            assessmentTemplateId = gradingGroup.assessmentTemplateId;
+            console.log("Found assessmentTemplateId from gradingGroup:", assessmentTemplateId);
+          }
+        } catch (err) {
+          console.error("Failed to fetch from gradingGroup:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from classAssessmentId
+      if (!assessmentTemplateId && submission.classAssessmentId) {
+        try {
+          // First try with classId from localStorage
+          const classId = localStorage.getItem("selectedClassId");
+          if (classId) {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(classId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.id === submission.classAssessmentId
+            );
+            if (classAssessment?.assessmentTemplateId) {
+              assessmentTemplateId = classAssessment.assessmentTemplateId;
+              console.log("Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
+            }
+          }
+
+          // If not found, try to fetch classAssessment by ID directly
+          // First, try fetching without classId filter (if API supports it)
+          if (!assessmentTemplateId) {
+            try {
+              // Try fetching with just the classAssessmentId (if API supports filtering by ID)
+              // Since we don't have a direct getById, try fetching all and filtering
+              // But first, let's try to get it from the submission's classAssessmentId
+              // by fetching all class assessments without classId filter
+              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
+                pageNumber: 1,
+                pageSize: 10000, // Large page size to get all
+              });
+              const classAssessment = allClassAssessmentsRes.items.find(
+                (ca) => ca.id === submission.classAssessmentId
+              );
+              if (classAssessment?.assessmentTemplateId) {
+                assessmentTemplateId = classAssessment.assessmentTemplateId;
+                console.log("Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
+              }
+            } catch (err) {
+              // If that fails, try fetching from multiple classes
+              console.log("Trying to fetch from multiple classes...");
+              const { classService } = await import("@/services/classService");
+              try {
+                // Try to get all classes first
+                const classes = await classService.getClassList({ pageNumber: 1, pageSize: 100 });
+                for (const classItem of classes.classes || []) {
+                  try {
+                    const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+                      classId: classItem.id,
+                      pageNumber: 1,
+                      pageSize: 1000,
+                    });
+                    const classAssessment = classAssessmentsRes.items.find(
+                      (ca) => ca.id === submission.classAssessmentId
+                    );
+                    if (classAssessment?.assessmentTemplateId) {
+                      assessmentTemplateId = classAssessment.assessmentTemplateId;
+                      console.log(`Found assessmentTemplateId from classAssessment (classId ${classItem.id}):`, assessmentTemplateId);
+                      break;
+                    }
+                  } catch (err) {
+                    // Continue to next class
+                  }
+                }
+              } catch (err) {
+                console.error("Failed to fetch from multiple classes:", err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch from classAssessment:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from examSessionId
+      if (!assessmentTemplateId && submission.examSessionId) {
+        try {
+          const { examSessionService } = await import("@/services/examSessionService");
+          const examSessions = await examSessionService.getExamSessions({
             pageNumber: 1,
             pageSize: 1000,
           });
-          const classAssessment = classAssessmentsRes.items.find(
-            (ca) => ca.id === submission.classAssessmentId
-          );
-          if (classAssessment?.assessmentTemplateId) {
-            assessmentTemplateId = classAssessment.assessmentTemplateId;
+          const examSession = examSessions.items.find((es) => es.id === submission.examSessionId);
+          if (examSession?.assessmentTemplateId) {
+            assessmentTemplateId = examSession.assessmentTemplateId;
+            console.log("Found assessmentTemplateId from examSession:", assessmentTemplateId);
           }
+        } catch (err) {
+          console.error("Failed to fetch from examSession:", err);
         }
       }
 
       if (!assessmentTemplateId) {
+        console.warn("Could not find assessmentTemplateId for submission:", submission.id);
         createSampleQuestions(submission);
         return;
       }
@@ -211,84 +371,111 @@ export default function AssignmentGradingPage() {
         return;
       }
 
-      // Fetch papers
-      const papers = await assessmentPaperService.getAssessmentPapers({
-        assessmentTemplateId: template.id,
-        pageNumber: 1,
-        pageSize: 100,
-      });
-
       // Fetch questions and rubrics for each paper
-      const allQuestions: QuestionWithRubrics[] = [];
-      
-      const papersData = papers.items.length > 0 
-        ? papers.items 
-        : [
-            {
-              id: 1,
-              name: "Sample Paper 1",
-              description: "Sample paper description",
-              assessmentTemplateId: template.id,
-            },
-          ];
-
-      for (const paper of papersData) {
-        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-          assessmentPaperId: paper.id,
+      // Fetch papers - try to get all papers first
+      let papersData;
+      try {
+        const papers = await assessmentPaperService.getAssessmentPapers({
+          assessmentTemplateId: template.id,
           pageNumber: 1,
           pageSize: 100,
         });
+        papersData = papers.items.length > 0 ? papers.items : null;
+      } catch (err) {
+        console.error("Failed to fetch papers:", err);
+        papersData = null;
+      }
 
-        const paperQuestions = questionsRes.items.length > 0
-          ? questionsRes.items
-          : [
+      // Only use sample paper if no papers found
+      if (!papersData || papersData.length === 0) {
+        papersData = [
+          {
+            id: 1,
+            name: "Sample Paper 1",
+            description: "Sample paper description",
+            assessmentTemplateId: template.id,
+          },
+        ];
+      }
+
+      for (const paper of papersData) {
+        // Fetch questions for this paper
+        let paperQuestions;
+        try {
+          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          paperQuestions = questionsRes.items.length > 0
+            ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
+            : null;
+        } catch (err) {
+          console.error(`Failed to fetch questions for paper ${paper.id}:`, err);
+          paperQuestions = null;
+        }
+
+        // Only use sample question if no questions found
+        if (!paperQuestions || paperQuestions.length === 0) {
+          paperQuestions = [
+            {
+              id: 1,
+              questionText: "Sample Question: Write a program to calculate the sum of two numbers",
+              questionSampleInput: "5\n10",
+              questionSampleOutput: "15",
+              score: 10,
+              questionNumber: 1,
+              assessmentPaperId: paper.id,
+              assessmentPaperName: paper.name,
+              rubricCount: 2,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          ];
+        }
+
+        for (const question of paperQuestions) {
+          // Fetch rubrics for this question
+          let questionRubrics;
+          try {
+            const rubricsRes = await rubricItemService.getRubricsForQuestion({
+              assessmentQuestionId: question.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+            questionRubrics = rubricsRes.items.length > 0 ? rubricsRes.items : null;
+          } catch (err) {
+            console.error(`Failed to fetch rubrics for question ${question.id}:`, err);
+            questionRubrics = null;
+          }
+
+          // Only use sample rubrics if no rubrics found
+          if (!questionRubrics || questionRubrics.length === 0) {
+            questionRubrics = [
               {
                 id: 1,
-                questionText: "Sample Question: Write a program to calculate the sum of two numbers",
-                questionSampleInput: "5\n10",
-                questionSampleOutput: "15",
-                score: 10,
-                assessmentPaperId: paper.id,
-                assessmentPaperName: paper.name,
-                rubricCount: 2,
+                description: "Correct output for sample input",
+                input: "5\n10",
+                output: "15",
+                score: 5,
+                assessmentQuestionId: question.id,
+                questionText: question.questionText,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: 2,
+                description: "Code structure and readability",
+                input: "N/A",
+                output: "N/A",
+                score: 5,
+                assessmentQuestionId: question.id,
+                questionText: question.questionText,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               },
             ];
-
-        for (const question of paperQuestions) {
-          const rubricsRes = await rubricItemService.getRubricsForQuestion({
-            assessmentQuestionId: question.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-
-          const questionRubrics = rubricsRes.items.length > 0
-            ? rubricsRes.items
-            : [
-                {
-                  id: 1,
-                  description: "Correct output for sample input",
-                  input: "5\n10",
-                  output: "15",
-                  score: 5,
-                  assessmentQuestionId: question.id,
-                  questionText: question.questionText,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                },
-                {
-                  id: 2,
-                  description: "Code structure and readability",
-                  input: "N/A",
-                  output: "N/A",
-                  score: 5,
-                  assessmentQuestionId: question.id,
-                  questionText: question.questionText,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                },
-              ];
+          }
 
           // Generate sample scores based on submission grade
           const hasGrade = submission.lastGrade > 0;
@@ -317,7 +504,11 @@ export default function AssignmentGradingPage() {
       if (allQuestions.length === 0) {
         createSampleQuestions(submission);
       } else {
-        setQuestions(allQuestions);
+        // Sort questions by questionNumber
+        const sortedQuestions = [...allQuestions].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        setQuestions(sortedQuestions);
         // Recalculate total score
         let calculatedTotal = 0;
         allQuestions.forEach((q) => {
@@ -333,7 +524,29 @@ export default function AssignmentGradingPage() {
       }
     } catch (err) {
       console.error("Failed to fetch questions and rubrics:", err);
-      createSampleQuestions(submission);
+      // Only create sample questions if we haven't fetched any data at all
+      // The allQuestions array might have some data from partial fetches, so check it
+      if (allQuestions.length === 0) {
+        createSampleQuestions(submission);
+      } else {
+        // We have some questions from partial fetches, use them
+        const sortedQuestions = [...allQuestions].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        setQuestions(sortedQuestions);
+        // Recalculate total score
+        let calculatedTotal = 0;
+        sortedQuestions.forEach((q) => {
+          const questionTotal = Object.values(q.rubricScores).reduce(
+            (sum: number, score: number | undefined) => sum + (score || 0),
+            0
+          );
+          calculatedTotal += questionTotal;
+        });
+        if (calculatedTotal > 0) {
+          setTotalScore(calculatedTotal);
+        }
+      }
     }
   };
 
@@ -342,6 +555,7 @@ export default function AssignmentGradingPage() {
       {
         id: 1,
         questionText: "Sample Question 1: Write a program to calculate the sum of two numbers",
+        questionNumber: 1,
         questionSampleInput: "5\n10",
         questionSampleOutput: "15",
         score: 10,
@@ -379,6 +593,7 @@ export default function AssignmentGradingPage() {
       {
         id: 2,
         questionText: "Sample Question 2: Write a program to find the maximum of three numbers",
+        questionNumber: 2,
         questionSampleInput: "3\n7\n2",
         questionSampleOutput: "7",
         score: 10,
@@ -478,6 +693,11 @@ export default function AssignmentGradingPage() {
   };
 
   const handleSave = async () => {
+    if (isSemesterPassed) {
+      message.warning("Không thể chỉnh sửa điểm của kỳ học đã qua");
+      return;
+    }
+
     try {
       setSaving(true);
       
@@ -490,7 +710,7 @@ export default function AssignmentGradingPage() {
       if (submission) {
         await submissionService.updateSubmissionGrade(submission.id, totalScore);
         message.success("Grade and feedback saved successfully");
-        router.back();
+    router.back();
       }
     } catch (err: any) {
       console.error("Failed to save:", err);
@@ -571,6 +791,7 @@ export default function AssignmentGradingPage() {
               handleRubricScoreChange(question.id, record.id, value)
             }
             style={{ width: "100%" }}
+            disabled={isSemesterPassed}
           />
         );
       },
@@ -601,11 +822,13 @@ export default function AssignmentGradingPage() {
                 loading={saving}
                 onClick={handleSave}
                 size="large"
+                disabled={isSemesterPassed}
+                title={isSemesterPassed ? "Không thể chỉnh sửa điểm của kỳ học đã qua" : ""}
               >
                 Save Grade
               </Button>
             </Space>
-          </div>
+      </div>
 
           <Descriptions bordered column={2}>
             <Descriptions.Item label="Submission ID">{submission.id}</Descriptions.Item>
@@ -642,7 +865,7 @@ export default function AssignmentGradingPage() {
 
         <Collapse 
           defaultActiveKey={questions.map((_, i) => i.toString())}
-          items={questions.map((question, index) => {
+          items={[...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, index) => {
             const questionTotalScore = Object.values(question.rubricScores).reduce(
               (sum, score) => sum + (score || 0),
               0
@@ -683,7 +906,7 @@ export default function AssignmentGradingPage() {
                       <pre className={styles.codeBlock}>
                         {question.questionSampleOutput}
                       </pre>
-                    </div>
+        </div>
                   )}
 
                   <Divider />
@@ -696,7 +919,7 @@ export default function AssignmentGradingPage() {
                     pagination={false}
                     size="small"
                   />
-                </div>
+      </div>
               ),
             };
           })}
@@ -718,6 +941,7 @@ export default function AssignmentGradingPage() {
               value={feedback.overallFeedback || defaultSampleFeedback.overallFeedback}
               onChange={(e) => handleFeedbackChange("overallFeedback", e.target.value)}
               placeholder="Provide overall feedback on the submission..."
+              disabled={isSemesterPassed}
             />
           </div>
 
@@ -730,8 +954,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.strengths || defaultSampleFeedback.strengths}
                   onChange={(e) => handleFeedbackChange("strengths", e.target.value)}
                   placeholder="List the strengths of the submission..."
+                  disabled={isSemesterPassed}
                 />
-              </div>
+          </div>
             </Col>
             <Col xs={24} md={12}>
               <div>
@@ -741,8 +966,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.weaknesses || defaultSampleFeedback.weaknesses}
                   onChange={(e) => handleFeedbackChange("weaknesses", e.target.value)}
                   placeholder="List areas that need improvement..."
+                  disabled={isSemesterPassed}
                 />
-              </div>
+        </div>
             </Col>
           </Row>
 
@@ -755,8 +981,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.codeQuality || defaultSampleFeedback.codeQuality}
                   onChange={(e) => handleFeedbackChange("codeQuality", e.target.value)}
                   placeholder="Evaluate code structure, readability, and maintainability..."
-                />
-              </div>
+                  disabled={isSemesterPassed}
+            />
+          </div>
             </Col>
             <Col xs={24} md={12}>
               <div>
@@ -766,8 +993,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.algorithmEfficiency || defaultSampleFeedback.algorithmEfficiency}
                   onChange={(e) => handleFeedbackChange("algorithmEfficiency", e.target.value)}
                   placeholder="Comment on time/space complexity and optimization..."
+                  disabled={isSemesterPassed}
                 />
-              </div>
+          </div>
             </Col>
           </Row>
 
@@ -778,8 +1006,9 @@ export default function AssignmentGradingPage() {
               value={feedback.suggestionsForImprovement || defaultSampleFeedback.suggestionsForImprovement}
               onChange={(e) => handleFeedbackChange("suggestionsForImprovement", e.target.value)}
               placeholder="Provide specific suggestions for improvement..."
+              disabled={isSemesterPassed}
             />
-          </div>
+        </div>
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
@@ -790,8 +1019,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.bestPractices || defaultSampleFeedback.bestPractices}
                   onChange={(e) => handleFeedbackChange("bestPractices", e.target.value)}
                   placeholder="Comment on adherence to coding best practices..."
+                  disabled={isSemesterPassed}
                 />
-              </div>
+          </div>
             </Col>
             <Col xs={24} md={12}>
               <div>
@@ -801,8 +1031,9 @@ export default function AssignmentGradingPage() {
                   value={feedback.errorHandling || defaultSampleFeedback.errorHandling}
                   onChange={(e) => handleFeedbackChange("errorHandling", e.target.value)}
                   placeholder="Evaluate error handling and input validation..."
+                  disabled={isSemesterPassed}
                 />
-              </div>
+          </div>
             </Col>
           </Row>
         </Space>
@@ -847,25 +1078,84 @@ function ViewExamModal({
 
       let assessmentTemplateId: number | null = null;
 
-      // Get assessmentTemplateId from classAssessmentId
-      if (submission.classAssessmentId) {
-        const classId = localStorage.getItem("selectedClassId");
-        if (classId) {
-          const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-            classId: Number(classId),
+      // Try to get assessmentTemplateId from gradingGroupId first (most reliable)
+      if (submission.gradingGroupId) {
+        try {
+          const { gradingGroupService } = await import("@/services/gradingGroupService");
+          const gradingGroups = await gradingGroupService.getGradingGroups({});
+          const gradingGroup = gradingGroups.find((gg) => gg.id === submission.gradingGroupId);
+          if (gradingGroup?.assessmentTemplateId) {
+            assessmentTemplateId = gradingGroup.assessmentTemplateId;
+            console.log("ViewExamModal: Found assessmentTemplateId from gradingGroup:", assessmentTemplateId);
+          }
+        } catch (err) {
+          console.error("ViewExamModal: Failed to fetch from gradingGroup:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from classAssessmentId
+      if (!assessmentTemplateId && submission.classAssessmentId) {
+        try {
+          // First try with classId from localStorage
+          const classId = localStorage.getItem("selectedClassId");
+          if (classId) {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(classId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.id === submission.classAssessmentId
+            );
+            if (classAssessment?.assessmentTemplateId) {
+              assessmentTemplateId = classAssessment.assessmentTemplateId;
+              console.log("ViewExamModal: Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
+            }
+          }
+
+          // If not found, try to fetch classAssessment by ID directly
+          if (!assessmentTemplateId) {
+            try {
+              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
+                pageNumber: 1,
+                pageSize: 10000,
+              });
+              const classAssessment = allClassAssessmentsRes.items.find(
+                (ca) => ca.id === submission.classAssessmentId
+              );
+              if (classAssessment?.assessmentTemplateId) {
+                assessmentTemplateId = classAssessment.assessmentTemplateId;
+                console.log("ViewExamModal: Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
+              }
+            } catch (err) {
+              console.error("ViewExamModal: Failed to fetch all class assessments:", err);
+            }
+          }
+        } catch (err) {
+          console.error("ViewExamModal: Failed to fetch from classAssessment:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from examSessionId
+      if (!assessmentTemplateId && submission.examSessionId) {
+        try {
+          const { examSessionService } = await import("@/services/examSessionService");
+          const examSessions = await examSessionService.getExamSessions({
             pageNumber: 1,
             pageSize: 1000,
           });
-          const classAssessment = classAssessmentsRes.items.find(
-            (ca) => ca.id === submission.classAssessmentId
-          );
-          if (classAssessment?.assessmentTemplateId) {
-            assessmentTemplateId = classAssessment.assessmentTemplateId;
+          const examSession = examSessions.items.find((es) => es.id === submission.examSessionId);
+          if (examSession?.assessmentTemplateId) {
+            assessmentTemplateId = examSession.assessmentTemplateId;
+            console.log("ViewExamModal: Found assessmentTemplateId from examSession:", assessmentTemplateId);
           }
+        } catch (err) {
+          console.error("ViewExamModal: Failed to fetch from examSession:", err);
         }
       }
 
       if (!assessmentTemplateId) {
+        console.warn("ViewExamModal: Could not find assessmentTemplateId for submission:", submission.id);
         setLoading(false);
         return;
       }
@@ -899,11 +1189,12 @@ function ViewExamModal({
         });
 
         const paperQuestions = questionsRes.items.length > 0
-          ? questionsRes.items
+          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
           : [
               {
                 id: 1,
                 questionText: "Sample Question: Write a program to calculate the sum of two numbers",
+                questionNumber: 1,
                 questionSampleInput: "5\n10",
                 questionSampleOutput: "15",
                 score: 10,

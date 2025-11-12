@@ -6,6 +6,7 @@ export interface AssessmentQuestion {
   questionSampleInput: string;
   questionSampleOutput: string;
   score: number;
+  questionNumber: number;
   assessmentPaperId: number;
   assessmentPaperName: string;
   rubricCount: number;
@@ -46,6 +47,7 @@ export interface CreateAssessmentQuestionPayload {
   questionSampleInput: string;
   questionSampleOutput: string;
   score: number;
+  questionNumber: number;
   assessmentPaperId: number;
 }
 
@@ -54,6 +56,7 @@ export interface UpdateAssessmentQuestionPayload {
   questionSampleInput: string;
   questionSampleOutput: string;
   score: number;
+  questionNumber: number;
 }
 
 export interface GetAssessmentQuestionsResponse {

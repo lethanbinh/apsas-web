@@ -77,10 +77,12 @@ const RubricFormModal = ({
   const title = isEditing ? "Edit Rubric" : "Add New Rubric";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
     }
   }, [initialData, form, open]);
 
@@ -109,6 +111,7 @@ const RubricFormModal = ({
       title={title}
       open={open}
       onCancel={onCancel}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -150,6 +153,7 @@ const QuestionFormModal = ({
   isEditable,
   initialData,
   paperId,
+  existingQuestionsCount = 0,
 }: {
   open: boolean;
   onCancel: () => void;
@@ -157,6 +161,7 @@ const QuestionFormModal = ({
   isEditable: boolean;
   initialData?: AssessmentQuestion;
   paperId?: number;
+  existingQuestionsCount?: number;
 }) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
@@ -164,12 +169,18 @@ const QuestionFormModal = ({
   const title = isEditing ? "Edit Question" : "Add New Question";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        // When creating new question, auto-fill questionNumber
+        form.resetFields();
+        form.setFieldsValue({
+          questionNumber: existingQuestionsCount + 1,
+        });
+      }
     }
-  }, [initialData, form, open]);
+  }, [initialData, form, open, existingQuestionsCount]);
 
   const handleSubmit = async (values: any) => {
     try {
@@ -200,6 +211,7 @@ const QuestionFormModal = ({
       open={open}
       onCancel={onCancel}
       width={700}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -212,6 +224,13 @@ const QuestionFormModal = ({
       ]}
     >
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="questionNumber"
+          label="Question Number"
+          rules={[{ required: true }]}
+        >
+          <Input type="number" disabled={!isEditable || !isEditing} />
+        </Form.Item>
         <Form.Item
           name="questionText"
           label="Question Text"
@@ -255,10 +274,12 @@ const PaperFormModal = ({
   const title = isEditing ? "Edit Paper" : "Add New Paper";
 
   useEffect(() => {
-    if (initialData) {
-      form.setFieldsValue(initialData);
-    } else {
-      form.resetFields();
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue(initialData);
+      } else {
+        form.resetFields();
+      }
     }
   }, [initialData, form, open]);
 
@@ -290,6 +311,7 @@ const PaperFormModal = ({
       title={title}
       open={open}
       onCancel={onCancel}
+      destroyOnHidden
       footer={[
         <Button key="back" onClick={onCancel}>
           Cancel
@@ -404,6 +426,9 @@ const QuestionDetailView = ({
         }
       >
         <Descriptions bordered column={1}>
+          <Descriptions.Item label="Question Number">
+            <Text strong>{question.questionNumber || "N/A"}</Text>
+          </Descriptions.Item>
           <Descriptions.Item label="Question Text">
             <Text style={{ whiteSpace: "pre-wrap" }}>
               {question.questionText}
@@ -765,7 +790,11 @@ export const LecturerTaskContent = ({
             pageNumber: 1,
             pageSize: 100,
           });
-        questionsMap[paper.id] = questionResponse.items;
+        // Sort questions by questionNumber
+        const sortedQuestions = [...questionResponse.items].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        questionsMap[paper.id] = sortedQuestions;
       }
       setAllQuestions(questionsMap);
 
@@ -832,9 +861,13 @@ export const LecturerTaskContent = ({
           pageNumber: 1,
           pageSize: 100,
         });
+      // Sort questions by questionNumber
+      const sortedQuestions = [...questionResponse.items].sort((a, b) => 
+        (a.questionNumber || 0) - (b.questionNumber || 0)
+      );
       setAllQuestions((prev) => ({
         ...prev,
-        [paperId]: questionResponse.items,
+        [paperId]: sortedQuestions,
       }));
     } catch (error) {
       console.error("Failed to refresh questions:", error);
@@ -1084,12 +1117,12 @@ export const LecturerTaskContent = ({
             )}
           </span>
         ),
-        children: questions.map((q) => ({
+        children: [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((q) => ({
           key: `question-${q.id}`,
           icon: <FileTextOutlined />,
           label: (
             <span className={styles.menuLabel}>
-              {q.questionText.substring(0, 30)}...
+              {q.questionNumber ? `Q${q.questionNumber}: ` : ""}{q.questionText.substring(0, 30)}...
               {isEditable && (
                 <Space className={styles.menuActions}>
                   <Button
@@ -1316,6 +1349,9 @@ export const LecturerTaskContent = ({
             }}
             isEditable={isEditable}
             paperId={paperForNewQuestion}
+            existingQuestionsCount={
+              paperForNewQuestion ? (allQuestions[paperForNewQuestion]?.length || 0) : 0
+            }
           />
         </>
       )}

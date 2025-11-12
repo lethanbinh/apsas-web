@@ -450,6 +450,9 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
           content={data.requirementContent}
           classAssessmentId={data.classAssessmentId}
           classId={data.classId}
+          assessmentTemplateId={data.assessmentTemplateId}
+          courseElementId={data.courseElementId}
+          examSessionId={data.examSessionId}
         />
       )}
 

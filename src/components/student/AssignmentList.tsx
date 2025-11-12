@@ -15,7 +15,24 @@ import { AssignmentItem } from "./AssignmentItem";
 import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
+
+// Helper function to check if a course element is a Practical Exam based on name
+function isPracticalExam(element: CourseElement): boolean {
+  const name = (element.name || "").toLowerCase();
+  const keywords = [
+    "exam",
+    "pe",
+    "practical exam",
+    "practical",
+    "test",
+    "kiểm tra thực hành",
+    "thi thực hành",
+    "bài thi",
+    "bài kiểm tra",
+    "thực hành",
+  ];
+  return keywords.some((keyword) => name.includes(keyword));
+}
 
 function mapCourseElementToAssignmentData(
   element: CourseElement,
@@ -107,7 +124,7 @@ export default function AssignmentList() {
           pageSize: 1000,
         });
         const classElements = allElements.filter(
-          (el) => el.semesterCourseId === semesterCourseId
+          (el) => el.semesterCourseId === semesterCourseId && !isPracticalExam(el)
         );
 
         // 3) Load exam sessions for this class to attach deadlines and get assessmentTemplateIds
@@ -245,30 +262,26 @@ export default function AssignmentList() {
           bordered={false}
           className={styles.collapse}
           defaultActiveKey={assignments.length > 0 ? [assignments[0].id] : []}
-        >
-          {assignments.map((item) => (
-            <Panel
-              key={item.id}
-              header={
-                <div className={styles.panelHeader}>
-                  <div>
-                    <Text
-                      type="secondary"
-                      style={{ fontSize: "0.9rem", color: "#E86A92" }}
-                    >
-                      <LinkOutlined /> {item.status}
-                    </Text>
-                    <Title level={4} style={{ margin: "4px 0 0 0" }}>
-                      {item.title}
-                    </Title>
-                  </div>
+          items={assignments.map((item) => ({
+            key: item.id,
+            label: (
+              <div className={styles.panelHeader}>
+                <div>
+                  <Text
+                    type="secondary"
+                    style={{ fontSize: "0.9rem", color: "#E86A92" }}
+                  >
+                    <LinkOutlined /> {item.status}
+                  </Text>
+                  <Title level={4} style={{ margin: "4px 0 0 0" }}>
+                    {item.title}
+                  </Title>
                 </div>
-              }
-            >
-              <AssignmentItem data={item} />
-            </Panel>
-          ))}
-        </Collapse>
+              </div>
+            ),
+            children: <AssignmentItem data={item} />,
+          }))}
+        />
       )}
     </div>
   );

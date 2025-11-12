@@ -174,10 +174,14 @@ export default function PESubmissionPage() {
                 pageSize: 100,
               });
 
-            questionsResponse.items.forEach((q) => {
+            // Sort questions by questionNumber before processing
+            const sortedQuestions = [...questionsResponse.items].sort((a, b) => 
+              (a.questionNumber || 0) - (b.questionNumber || 0)
+            );
+            sortedQuestions.forEach((q) => {
               allQuestions.push({
                 id: q.id.toString(),
-                title: `Question ${String(globalQuestionIndex).padStart(2, "0")}: ${paper.name}`,
+                title: `Question ${q.questionNumber ? String(q.questionNumber).padStart(2, "0") : String(globalQuestionIndex).padStart(2, "0")}: ${paper.name}`,
                 description: q.questionText,
                 code: q.questionSampleInput
                   ? `Input:\n${q.questionSampleInput}\n\nOutput:\n${q.questionSampleOutput}`

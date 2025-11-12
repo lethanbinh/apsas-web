@@ -287,7 +287,7 @@ const ManageUsersPageContent: React.FC = () => {
       )}
     </div>
   );
-};
+}; 
 
 export default function ManageUsersPage() {
   return (

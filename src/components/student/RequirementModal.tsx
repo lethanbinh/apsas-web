@@ -22,6 +22,9 @@ interface RequirementModalProps {
   content: RequirementContent[];
   classAssessmentId?: number;
   classId?: number;
+  assessmentTemplateId?: number;
+  courseElementId?: number;
+  examSessionId?: number;
 }
 
 const renderRequirementContent = (item: RequirementContent, index: number) => {
@@ -59,6 +62,9 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   content,
   classAssessmentId,
   classId,
+  assessmentTemplateId: propAssessmentTemplateId,
+  courseElementId,
+  examSessionId,
 }) => {
   const [loading, setLoading] = useState(false);
   const [papers, setPapers] = useState<any[]>([]);
@@ -67,38 +73,147 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   const [templateDescription, setTemplateDescription] = useState<string>("");
 
   useEffect(() => {
-    if (open && classAssessmentId && classId) {
+    if (open && (propAssessmentTemplateId || classAssessmentId || courseElementId || examSessionId)) {
       fetchRequirementData();
     }
-  }, [open, classAssessmentId, classId]);
+  }, [open, classAssessmentId, classId, propAssessmentTemplateId, courseElementId, examSessionId]);
 
   const fetchRequirementData = async () => {
     try {
       setLoading(true);
 
-      // Get assessmentTemplateId from classAssessment
-      const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-        classId: classId,
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const classAssessment = classAssessmentsRes.items.find(
-        (ca) => ca.id === classAssessmentId
-      );
+      let assessmentTemplateId: number | null = null;
 
-      if (!classAssessment?.assessmentTemplateId) {
+      // First, try to use assessmentTemplateId from props if available
+      if (propAssessmentTemplateId) {
+        assessmentTemplateId = propAssessmentTemplateId;
+        console.log("RequirementModal: Using assessmentTemplateId from props:", assessmentTemplateId);
+      }
+
+      // Try to get assessmentTemplateId from classAssessmentId
+      if (classAssessmentId && classId) {
+        try {
+          // First try with classId from props
+          const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+            classId: classId,
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          const classAssessment = classAssessmentsRes.items.find(
+            (ca) => ca.id === classAssessmentId
+          );
+          if (classAssessment?.assessmentTemplateId) {
+            assessmentTemplateId = classAssessment.assessmentTemplateId;
+            console.log("RequirementModal: Found assessmentTemplateId from classAssessment:", assessmentTemplateId);
+          }
+
+          // If not found, try to fetch all class assessments
+          if (!assessmentTemplateId) {
+            try {
+              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
+                pageNumber: 1,
+                pageSize: 10000,
+              });
+              const classAssessment = allClassAssessmentsRes.items.find(
+                (ca) => ca.id === classAssessmentId
+              );
+              if (classAssessment?.assessmentTemplateId) {
+                assessmentTemplateId = classAssessment.assessmentTemplateId;
+                console.log("RequirementModal: Found assessmentTemplateId from all class assessments:", assessmentTemplateId);
+              }
+            } catch (err) {
+              console.error("RequirementModal: Failed to fetch all class assessments:", err);
+            }
+          }
+        } catch (err) {
+          console.error("RequirementModal: Failed to fetch from classAssessment:", err);
+        }
+      }
+
+      // If still not found, try to get from localStorage classId
+      if (!assessmentTemplateId && classAssessmentId) {
+        try {
+          const localStorageClassId = localStorage.getItem("selectedClassId");
+          if (localStorageClassId && localStorageClassId !== classId?.toString()) {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(localStorageClassId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.id === classAssessmentId
+            );
+            if (classAssessment?.assessmentTemplateId) {
+              assessmentTemplateId = classAssessment.assessmentTemplateId;
+              console.log("RequirementModal: Found assessmentTemplateId from localStorage classId:", assessmentTemplateId);
+            }
+          }
+        } catch (err) {
+          console.error("RequirementModal: Failed to fetch from localStorage classId:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from examSessionId
+      if (!assessmentTemplateId && examSessionId) {
+        try {
+          const { examSessionService } = await import("@/services/examSessionService");
+          const examSessions = await examSessionService.getExamSessions({
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          const examSession = examSessions.items.find((es) => es.id === examSessionId);
+          if (examSession?.assessmentTemplateId) {
+            assessmentTemplateId = examSession.assessmentTemplateId;
+            console.log("RequirementModal: Found assessmentTemplateId from examSession:", assessmentTemplateId);
+          }
+        } catch (err) {
+          console.error("RequirementModal: Failed to fetch from examSession:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from courseElementId via classAssessment
+      if (!assessmentTemplateId && courseElementId) {
+        try {
+          const localStorageClassId = localStorage.getItem("selectedClassId");
+          if (localStorageClassId) {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(localStorageClassId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.courseElementId === courseElementId
+            );
+            if (classAssessment?.assessmentTemplateId) {
+              assessmentTemplateId = classAssessment.assessmentTemplateId;
+              console.log("RequirementModal: Found assessmentTemplateId from courseElementId:", assessmentTemplateId);
+            }
+          }
+        } catch (err) {
+          console.error("RequirementModal: Failed to fetch from courseElementId:", err);
+        }
+      }
+
+      if (!assessmentTemplateId) {
+        console.warn("RequirementModal: Could not find assessmentTemplateId. Props:", {
+          propAssessmentTemplateId,
+          classAssessmentId,
+          classId,
+          courseElementId,
+          examSessionId,
+        });
         setLoading(false);
         return;
       }
 
-      const assessmentTemplateId = classAssessment.assessmentTemplateId;
+      const finalAssessmentTemplateId = assessmentTemplateId;
 
       // Fetch template
       const templates = await assessmentTemplateService.getAssessmentTemplates({
         pageNumber: 1,
         pageSize: 1000,
       });
-      const template = templates.items.find((t) => t.id === assessmentTemplateId);
+      const template = templates.items.find((t) => t.id === finalAssessmentTemplateId);
       
       if (template) {
         setTemplateDescription(template.description || "");
@@ -107,7 +222,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
       // Fetch files
       try {
         const filesRes = await assessmentFileService.getFilesForTemplate({
-          assessmentTemplateId: assessmentTemplateId,
+          assessmentTemplateId: finalAssessmentTemplateId,
           pageNumber: 1,
           pageSize: 100,
         });
@@ -117,22 +232,40 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
       }
 
       // Fetch papers
-      const papersRes = await assessmentPaperService.getAssessmentPapers({
-        assessmentTemplateId: assessmentTemplateId,
-        pageNumber: 1,
-        pageSize: 100,
-      });
-      setPapers(papersRes.items);
-
-      // Fetch questions for each paper
-      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-      for (const paper of papersRes.items) {
-        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-          assessmentPaperId: paper.id,
+      let papersData: any[] = [];
+      try {
+        const papersRes = await assessmentPaperService.getAssessmentPapers({
+          assessmentTemplateId: finalAssessmentTemplateId,
           pageNumber: 1,
           pageSize: 100,
         });
-        questionsMap[paper.id] = questionsRes.items;
+        papersData = papersRes.items || [];
+        console.log("RequirementModal: Fetched papers:", papersData.length);
+      } catch (err) {
+        console.error("RequirementModal: Failed to fetch papers:", err);
+        papersData = [];
+      }
+      setPapers(papersData);
+
+      // Fetch questions for each paper
+      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+      for (const paper of papersData) {
+        try {
+          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          // Sort questions by questionNumber
+          const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+            (a.questionNumber || 0) - (b.questionNumber || 0)
+          );
+          questionsMap[paper.id] = sortedQuestions;
+          console.log(`RequirementModal: Fetched ${sortedQuestions.length} questions for paper ${paper.id}`);
+        } catch (err) {
+          console.error(`RequirementModal: Failed to fetch questions for paper ${paper.id}:`, err);
+          questionsMap[paper.id] = [];
+        }
       }
       setQuestions(questionsMap);
     } catch (err) {
@@ -224,7 +357,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                   ),
                   children: (
                     <div>
-                      {questions[paper.id]?.map((question, qIndex) => (
+                      {questions[paper.id]?.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, qIndex) => (
                         <div key={question.id} style={{ marginBottom: 24 }}>
                           <Title level={5}>
                             Question {qIndex + 1} (Score: {question.score})

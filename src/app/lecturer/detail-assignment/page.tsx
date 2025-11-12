@@ -54,6 +54,24 @@ const toVietnamTime = (dateString: string) => {
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
 
+// Helper function to check if a course element is a Practical Exam based on name
+function isPracticalExam(element: CourseElement): boolean {
+  const name = (element.name || "").toLowerCase();
+  const keywords = [
+    "exam",
+    "pe",
+    "practical exam",
+    "practical",
+    "test",
+    "kiểm tra thực hành",
+    "thi thực hành",
+    "bài thi",
+    "bài kiểm tra",
+    "thực hành",
+  ];
+  return keywords.some((keyword) => name.includes(keyword));
+}
+
 const convertToDate = (dateString?: string): Date | null => {
   if (!dateString) return null;
   if (dateString.endsWith("Z")) {
@@ -159,7 +177,7 @@ const AssignmentDetailItem = ({
           </Button>
         </Card>
 
-        {onDeadlineSave && deadline && (
+        {onDeadlineSave && (
           <Card bordered={false}>
             <Descriptions column={1} layout="vertical">
               <Descriptions.Item label="Deadline">
@@ -281,7 +299,9 @@ const DetailAssignmentPage = () => {
       ]);
 
       const filteredAssignments = allElements.filter(
-        (el) => el.semesterCourseId.toString() === classData.semesterCourseId
+        (el) => 
+          el.semesterCourseId.toString() === classData.semesterCourseId &&
+          !isPracticalExam(el) // Exclude practical exams
       );
 
       // Map exam sessions by course element
@@ -387,30 +407,59 @@ const DetailAssignmentPage = () => {
     if (!newDate || !selectedClassId) return;
 
     const classAssessment = classAssessments.get(courseElementId);
-    if (!classAssessment) {
-      message.error("Class assessment not found. Cannot update deadline.");
-      return;
-    }
+    const assignment = assignments.find(a => a.id === courseElementId);
+    const matchingTemplate = templates.find(t => t.courseElementId === courseElementId);
 
-    try {
-      await classAssessmentService.updateClassAssessment(classAssessment.id, {
-        classId: Number(selectedClassId),
-        assessmentTemplateId: classAssessment.assessmentTemplateId,
-        startAt: classAssessment.startAt,
-        endAt: newDate.toISOString(),
-      });
+    // If classAssessment exists, update it
+    if (classAssessment) {
+      try {
+        await classAssessmentService.updateClassAssessment(classAssessment.id, {
+          classId: Number(selectedClassId),
+          assessmentTemplateId: classAssessment.assessmentTemplateId,
+          startAt: classAssessment.startAt || dayjs().toISOString(),
+          endAt: newDate.toISOString(),
+        });
 
-      // Update local state
-      const updated = new Map(classAssessments);
-      updated.set(courseElementId, {
-        ...classAssessment,
-        endAt: newDate.toISOString(),
-      });
-      setClassAssessments(updated);
-      message.success("Deadline updated successfully!");
-    } catch (err: any) {
-      console.error("Failed to update deadline:", err);
-      message.error(err.message || "Failed to update deadline");
+        // Update local state
+        const updated = new Map(classAssessments);
+        updated.set(courseElementId, {
+          ...classAssessment,
+          endAt: newDate.toISOString(),
+          startAt: classAssessment.startAt || dayjs().toISOString(),
+        });
+        setClassAssessments(updated);
+        message.success("Deadline updated successfully!");
+      } catch (err: any) {
+        console.error("Failed to update deadline:", err);
+        message.error(err.message || "Failed to update deadline");
+      }
+    } else {
+      // If classAssessment doesn't exist, create a new one
+      if (!matchingTemplate) {
+        message.error("Assessment template not found. Cannot create deadline.");
+        return;
+      }
+
+      try {
+        const newClassAssessment = await classAssessmentService.createClassAssessment({
+          classId: Number(selectedClassId),
+          assessmentTemplateId: matchingTemplate.id,
+          startAt: dayjs().toISOString(),
+          endAt: newDate.toISOString(),
+        });
+
+        // Update local state
+        const updated = new Map(classAssessments);
+        updated.set(courseElementId, newClassAssessment);
+        setClassAssessments(updated);
+        message.success("Deadline created successfully!");
+        
+        // Refresh data to get the new classAssessment
+        await fetchData();
+      } catch (err: any) {
+        console.error("Failed to create deadline:", err);
+        message.error(err.message || "Failed to create deadline");
+      }
     }
   };
 

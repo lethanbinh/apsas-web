@@ -647,7 +647,7 @@ function ViewExamModal({
         });
         
         const paperQuestions = questionsRes.items.length > 0
-          ? questionsRes.items
+          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
           : [
               {
                 id: 1,
@@ -655,6 +655,7 @@ function ViewExamModal({
                 questionSampleInput: "5\n10",
                 questionSampleOutput: "15",
                 score: 10,
+                questionNumber: 1,
                 assessmentPaperId: paper.id,
                 assessmentPaperName: paper.name,
                 rubricCount: 2,
@@ -743,7 +744,7 @@ function ViewExamModal({
                 ),
                 children: (
                   <div>
-                    {questions[paper.id]?.map((question, qIndex) => (
+                    {questions[paper.id]?.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, qIndex) => (
                       <div key={question.id} style={{ marginBottom: 24 }}>
                         <Title level={5}>
                           Question {qIndex + 1} (Score: {question.score})

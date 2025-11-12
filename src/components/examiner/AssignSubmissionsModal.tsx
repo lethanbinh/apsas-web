@@ -134,7 +134,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     
     for (const fileItem of fileList) {
       const file = fileItem.originFileObj;
-      if (!file) {
+    if (!file) {
         invalidFiles.push(fileItem.name || "Unknown file");
         continue;
       }
@@ -287,7 +287,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       onCancel={onCancel}
       footer={null}
       width={1000}
-      destroyOnClose
+      destroyOnHidden
     >
       {error && (
         <Alert
@@ -386,11 +386,11 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                       <Text strong>Selected files ({fileList.length}):</Text>
                       {fileList.map((file, index) => (
                         <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <FileZipOutlined />
+                      <FileZipOutlined />
                           <Text>{file.name}</Text>
-                          <Text type="secondary">
+                      <Text type="secondary">
                             ({(file.size! / 1024 / 1024).toFixed(2)} MB)
-                          </Text>
+                      </Text>
                         </div>
                       ))}
                     </Space>

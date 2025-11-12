@@ -148,7 +148,7 @@ export const CreateGradingGroupModal: React.FC<
       onOk={() => form.submit()}
       confirmLoading={isLoading}
       width={700}
-      destroyOnClose
+      destroyOnHidden
       okText="Assign"
       cancelText="Cancel"
     >

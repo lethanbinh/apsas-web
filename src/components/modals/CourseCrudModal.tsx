@@ -102,21 +102,68 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
         <Form.Item
           name="name"
           label="Course Name"
-          rules={[{ required: true, message: "Please enter the course name" }]}
+          rules={[
+            { required: true, message: "Please enter the course name" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Course name cannot be empty!"));
+                }
+                if (value.trim().length < 2) {
+                  return Promise.reject(new Error("Course name must be at least 2 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input />
         </Form.Item>
         <Form.Item
           name="code"
           label="Course Code"
-          rules={[{ required: true, message: "Please enter the course code" }]}
+          rules={[
+            { required: true, message: "Please enter the course code" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Course code cannot be empty!"));
+                }
+                if (value.trim().length < 2) {
+                  return Promise.reject(new Error("Course code must be at least 2 characters!"));
+                }
+                // Check for whitespace
+                if (/\s/.test(value)) {
+                  return Promise.reject(new Error("Course code cannot contain spaces!"));
+                }
+                // Only allow alphanumeric characters, underscore, and hyphen
+                if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+                  return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input />
         </Form.Item>
         <Form.Item
           name="description"
           label="Description"
-          rules={[{ required: true, message: "Please enter a description" }]}
+          rules={[
+            { required: true, message: "Please enter a description" },
+            {
+              validator: (_, value) => {
+                if (!value || value.trim().length === 0) {
+                  return Promise.reject(new Error("Description cannot be empty!"));
+                }
+                if (value.trim().length < 5) {
+                  return Promise.reject(new Error("Description must be at least 5 characters!"));
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Input.TextArea rows={4} />
         </Form.Item>

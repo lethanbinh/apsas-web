@@ -42,6 +42,24 @@ import { useRouter } from "next/navigation";
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
 
+// Helper function to check if a course element is a Practical Exam based on name
+function isPracticalExam(element: CourseElement): boolean {
+  const name = (element.name || "").toLowerCase();
+  const keywords = [
+    "exam",
+    "pe",
+    "practical exam",
+    "practical",
+    "test",
+    "kiểm tra thực hành",
+    "thi thực hành",
+    "bài thi",
+    "bài kiểm tra",
+    "thực hành",
+  ];
+  return keywords.some((keyword) => name.includes(keyword));
+}
+
 const ExamDetailItem = ({
   exam,
   template,
@@ -209,7 +227,9 @@ const PracticalExamsPage = () => {
       ]);
 
       const filteredExams = allElements.filter(
-        (el) => el.semesterCourseId.toString() === classData.semesterCourseId
+        (el) => 
+          el.semesterCourseId.toString() === classData.semesterCourseId &&
+          isPracticalExam(el) // Only include practical exams
       );
 
       // Map exam sessions by course element

@@ -119,7 +119,7 @@ export const ApprovalItem: React.FC<ApprovalItemProps> = ({ questions }) => {
         }
         className={styles.innerCollapse}
       >
-        {questions.map((question) => (
+        {[...questions].sort((a, b) => ((a as any).questionNumber || 0) - ((b as any).questionNumber || 0)).map((question) => (
           <Panel
             header={
               <Title level={5}>{question.questionText || "Question"}</Title>
