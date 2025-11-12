@@ -129,6 +129,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     const sampleQuestions: QuestionWithRubrics[] = [
       {
         id: 1,
+        questionNumber: 1,
         questionText: "Sample Question 1: Write a program to calculate the sum of two numbers",
         questionSampleInput: "5\n10",
         questionSampleOutput: "15",
@@ -166,6 +167,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       },
       {
         id: 2,
+        questionNumber: 2,
         questionText: "Sample Question 2: Write a program to find the maximum of three numbers",
         questionSampleInput: "3\n7\n2",
         questionSampleOutput: "7",

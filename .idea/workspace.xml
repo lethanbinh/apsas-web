@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix bugs UI lecturer and student" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix grading UI" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -99,7 +99,7 @@
       <workItem from="1762605144030" duration="136000" />
       <workItem from="1762770321662" duration="69000" />
       <workItem from="1762842716087" duration="220000" />
-      <workItem from="1762922149952" duration="3430000" />
+      <workItem from="1762922149952" duration="4078000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -189,7 +189,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762928767527</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="Fix grading UI">
+      <option name="closed" value="true" />
+      <created>1762930097712</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1762930097712</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -230,6 +238,7 @@
     <MESSAGE value="Fix exam session. Do exam functions" />
     <MESSAGE value="Fix bugs and complete teacher assign" />
     <MESSAGE value="Fix bugs UI lecturer and student" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix bugs UI lecturer and student" />
+    <MESSAGE value="Fix grading UI" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix grading UI" />
   </component>
 </project>
