@@ -19,6 +19,7 @@ import {
   Tag,
   Modal,
   Input,
+  Alert,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -64,6 +65,7 @@ export default function AssignmentGradingPage() {
   const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
   const [totalScore, setTotalScore] = useState(0);
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
+  // Always allow editing - disable semester check
   const [isSemesterPassed, setIsSemesterPassed] = useState(false);
   const [feedback, setFeedback] = useState<FeedbackData>({
     overallFeedback: "",
@@ -101,6 +103,8 @@ export default function AssignmentGradingPage() {
 
   useEffect(() => {
     if (submissionId) {
+      // Reset state to allow editing
+      setIsSemesterPassed(false);
       fetchData();
     }
   }, [submissionId]);
@@ -163,7 +167,12 @@ export default function AssignmentGradingPage() {
       // Load feedback from localStorage or use sample
       const savedFeedback = localStorage.getItem(`feedback_${submissionId}`);
       if (savedFeedback) {
-        setFeedback(JSON.parse(savedFeedback));
+        try {
+          setFeedback(JSON.parse(savedFeedback));
+        } catch (err) {
+          console.error("Failed to parse saved feedback:", err);
+          setFeedback(defaultSampleFeedback);
+        }
       } else {
         setFeedback(defaultSampleFeedback);
       }
@@ -180,15 +189,18 @@ export default function AssignmentGradingPage() {
 
   const checkSemesterStatus = async (submission: Submission) => {
     try {
+      // Default to allowing editing (isSemesterPassed = false)
+      setIsSemesterPassed(false);
+      
       if (!submission.classAssessmentId) {
-        setIsSemesterPassed(false);
+        console.log("No classAssessmentId, allowing editing");
         return;
       }
 
       // Get class assessment
       const classId = localStorage.getItem("selectedClassId");
       if (!classId) {
-        setIsSemesterPassed(false);
+        console.log("No classId in localStorage, allowing editing");
         return;
       }
 
@@ -203,37 +215,46 @@ export default function AssignmentGradingPage() {
       );
 
       if (!classAssessment) {
-        setIsSemesterPassed(false);
+        console.log("ClassAssessment not found, allowing editing");
         return;
       }
 
       // Get class info to get semester
       const classInfo = await classService.getClassById(classId);
       if (!classInfo) {
-        setIsSemesterPassed(false);
+        console.log("ClassInfo not found, allowing editing");
         return;
       }
 
       // Extract semester code from semesterName (format: "SEMESTER_CODE - ...")
       const semesterCode = classInfo.semesterName?.split(" - ")[0];
       if (!semesterCode) {
-        setIsSemesterPassed(false);
+        console.log("Semester code not found, allowing editing");
         return;
       }
 
       // Get semester detail to check end date
       const semesterDetail = await semesterService.getSemesterPlanDetail(semesterCode);
       if (!semesterDetail?.endDate) {
-        setIsSemesterPassed(false);
+        console.log("Semester end date not found, allowing editing");
         return;
       }
 
       // Check if semester has passed
       const now = new Date();
       const semesterEnd = new Date(semesterDetail.endDate.endsWith("Z") ? semesterDetail.endDate : semesterDetail.endDate + "Z");
-      setIsSemesterPassed(now > semesterEnd);
+      const hasPassed = now > semesterEnd;
+      setIsSemesterPassed(hasPassed);
+      console.log("Semester status check:", { 
+        semesterCode, 
+        endDate: semesterDetail.endDate, 
+        now: now.toISOString(), 
+        semesterEnd: semesterEnd.toISOString(),
+        hasPassed 
+      });
     } catch (err) {
       console.error("Failed to check semester status:", err);
+      // On error, allow editing (default to false)
       setIsSemesterPassed(false);
     }
   };
@@ -529,11 +550,34 @@ export default function AssignmentGradingPage() {
       if (allQuestions.length === 0) {
         createSampleQuestions(submission);
       } else {
+        // Load rubric scores from localStorage if available
+        const savedRubricScores = localStorage.getItem(`rubricScores_${submission.id}`);
+        let finalQuestions = allQuestions;
+        
+        if (savedRubricScores) {
+          try {
+            const parsedScores = JSON.parse(savedRubricScores);
+            finalQuestions = allQuestions.map((q) => {
+              const savedScores = parsedScores[q.id];
+              if (savedScores) {
+                return {
+                  ...q,
+                  rubricScores: { ...q.rubricScores, ...savedScores },
+                };
+              }
+              return q;
+            });
+          } catch (err) {
+            console.error("Failed to parse saved rubric scores:", err);
+          }
+        }
+        
         // We have some questions from partial fetches, use them
-        const sortedQuestions = [...allQuestions].sort((a, b) => 
+        const sortedQuestions = [...finalQuestions].sort((a, b) => 
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         setQuestions(sortedQuestions);
+        
         // Recalculate total score
         let calculatedTotal = 0;
         sortedQuestions.forEach((q) => {
@@ -543,7 +587,7 @@ export default function AssignmentGradingPage() {
           );
           calculatedTotal += questionTotal;
         });
-        if (calculatedTotal > 0) {
+        if (calculatedTotal > 0 || savedRubricScores) {
           setTotalScore(calculatedTotal);
         }
       }
@@ -694,7 +738,7 @@ export default function AssignmentGradingPage() {
 
   const handleSave = async () => {
     if (isSemesterPassed) {
-      message.warning("Không thể chỉnh sửa điểm của kỳ học đã qua");
+      message.warning("The semester has ended. You cannot edit grades for past semesters.");
       return;
     }
 
@@ -704,6 +748,13 @@ export default function AssignmentGradingPage() {
       // Save feedback to localStorage
       if (submissionId) {
         localStorage.setItem(`feedback_${submissionId}`, JSON.stringify(feedback));
+        
+        // Save rubric scores to localStorage
+        const rubricScoresMap: { [questionId: number]: { [rubricId: number]: number } } = {};
+        questions.forEach((q) => {
+          rubricScoresMap[q.id] = q.rubricScores;
+        });
+        localStorage.setItem(`rubricScores_${submissionId}`, JSON.stringify(rubricScoresMap));
       }
       
       // Save total score
@@ -744,13 +795,13 @@ export default function AssignmentGradingPage() {
       title: "Criteria",
       dataIndex: "description",
       key: "description",
-      width: "40%",
+      width: "35%",
     },
     {
       title: "Input",
       dataIndex: "input",
       key: "input",
-      width: "25%",
+      width: "20%",
       render: (text: string) => (
         <Text code style={{ fontSize: "12px" }}>
           {text || "N/A"}
@@ -761,7 +812,7 @@ export default function AssignmentGradingPage() {
       title: "Output",
       dataIndex: "output",
       key: "output",
-      width: "25%",
+      width: "20%",
       render: (text: string) => (
         <Text code style={{ fontSize: "12px" }}>
           {text || "N/A"}
@@ -779,7 +830,7 @@ export default function AssignmentGradingPage() {
     {
       title: "Score",
       key: "rubricScore",
-      width: "15%",
+      width: "25%",
       render: (_: any, record: RubricItem) => {
         const currentScore = question.rubricScores[record.id] || 0;
         return (
@@ -800,6 +851,15 @@ export default function AssignmentGradingPage() {
 
   return (
     <div className={styles.container}>
+      {isSemesterPassed && (
+        <Alert
+          message="Semester Ended"
+          description="The semester has ended. You cannot edit grades or feedback for submissions from past semesters."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Card className={styles.headerCard}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           <div className={styles.headerActions}>
@@ -823,7 +883,7 @@ export default function AssignmentGradingPage() {
                 onClick={handleSave}
                 size="large"
                 disabled={isSemesterPassed}
-                title={isSemesterPassed ? "Không thể chỉnh sửa điểm của kỳ học đã qua" : ""}
+                title={isSemesterPassed ? "The semester has ended. You cannot edit grades for past semesters." : ""}
               >
                 Save Grade
               </Button>
@@ -938,12 +998,12 @@ export default function AssignmentGradingPage() {
             <Title level={5}>Overall Feedback</Title>
             <TextArea
               rows={4}
-              value={feedback.overallFeedback || defaultSampleFeedback.overallFeedback}
+              value={feedback.overallFeedback ?? defaultSampleFeedback.overallFeedback}
               onChange={(e) => handleFeedbackChange("overallFeedback", e.target.value)}
               placeholder="Provide overall feedback on the submission..."
               disabled={isSemesterPassed}
             />
-          </div>
+        </div>
 
           <Row gutter={16}>
             <Col xs={24} md={12}>
@@ -951,7 +1011,7 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Strengths</Title>
                 <TextArea
                   rows={5}
-                  value={feedback.strengths || defaultSampleFeedback.strengths}
+                  value={feedback.strengths ?? defaultSampleFeedback.strengths}
                   onChange={(e) => handleFeedbackChange("strengths", e.target.value)}
                   placeholder="List the strengths of the submission..."
                   disabled={isSemesterPassed}
@@ -963,12 +1023,12 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Weaknesses</Title>
                 <TextArea
                   rows={5}
-                  value={feedback.weaknesses || defaultSampleFeedback.weaknesses}
+                  value={feedback.weaknesses ?? defaultSampleFeedback.weaknesses}
                   onChange={(e) => handleFeedbackChange("weaknesses", e.target.value)}
                   placeholder="List areas that need improvement..."
                   disabled={isSemesterPassed}
                 />
-        </div>
+      </div>
             </Col>
           </Row>
 
@@ -978,7 +1038,7 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Code Quality</Title>
                 <TextArea
                   rows={4}
-                  value={feedback.codeQuality || defaultSampleFeedback.codeQuality}
+                  value={feedback.codeQuality ?? defaultSampleFeedback.codeQuality}
                   onChange={(e) => handleFeedbackChange("codeQuality", e.target.value)}
                   placeholder="Evaluate code structure, readability, and maintainability..."
                   disabled={isSemesterPassed}
@@ -990,7 +1050,7 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Algorithm Efficiency</Title>
                 <TextArea
                   rows={4}
-                  value={feedback.algorithmEfficiency || defaultSampleFeedback.algorithmEfficiency}
+                  value={feedback.algorithmEfficiency ?? defaultSampleFeedback.algorithmEfficiency}
                   onChange={(e) => handleFeedbackChange("algorithmEfficiency", e.target.value)}
                   placeholder="Comment on time/space complexity and optimization..."
                   disabled={isSemesterPassed}
@@ -1003,7 +1063,7 @@ export default function AssignmentGradingPage() {
             <Title level={5}>Suggestions for Improvement</Title>
             <TextArea
               rows={4}
-              value={feedback.suggestionsForImprovement || defaultSampleFeedback.suggestionsForImprovement}
+              value={feedback.suggestionsForImprovement ?? defaultSampleFeedback.suggestionsForImprovement}
               onChange={(e) => handleFeedbackChange("suggestionsForImprovement", e.target.value)}
               placeholder="Provide specific suggestions for improvement..."
               disabled={isSemesterPassed}
@@ -1016,11 +1076,11 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Best Practices</Title>
                 <TextArea
                   rows={3}
-                  value={feedback.bestPractices || defaultSampleFeedback.bestPractices}
+                  value={feedback.bestPractices ?? defaultSampleFeedback.bestPractices}
                   onChange={(e) => handleFeedbackChange("bestPractices", e.target.value)}
                   placeholder="Comment on adherence to coding best practices..."
                   disabled={isSemesterPassed}
-                />
+            />
           </div>
             </Col>
             <Col xs={24} md={12}>
@@ -1028,7 +1088,7 @@ export default function AssignmentGradingPage() {
                 <Title level={5}>Error Handling</Title>
                 <TextArea
                   rows={3}
-                  value={feedback.errorHandling || defaultSampleFeedback.errorHandling}
+                  value={feedback.errorHandling ?? defaultSampleFeedback.errorHandling}
                   onChange={(e) => handleFeedbackChange("errorHandling", e.target.value)}
                   placeholder="Evaluate error handling and input validation..."
                   disabled={isSemesterPassed}
@@ -1043,8 +1103,8 @@ export default function AssignmentGradingPage() {
         visible={viewExamModalVisible}
         onClose={() => setViewExamModalVisible(false)}
         submission={submission}
-      />
-    </div>
+            />
+          </div>
   );
 }
 
@@ -1296,7 +1356,7 @@ function ViewExamModal({
                           <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
                             {question.questionSampleInput}
                           </pre>
-                        </div>
+          </div>
                       )}
 
                       {question.questionSampleOutput && (
@@ -1305,7 +1365,7 @@ function ViewExamModal({
                           <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
                             {question.questionSampleOutput}
                           </pre>
-                        </div>
+        </div>
                       )}
 
                       {rubrics[question.id] && rubrics[question.id].length > 0 && (
@@ -1318,27 +1378,27 @@ function ViewExamModal({
                                 {rubric.input && rubric.input !== "N/A" && (
                                   <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
                                     Input: <code>{rubric.input}</code>
-                                  </div>
+          </div>
                                 )}
                                 {rubric.output && rubric.output !== "N/A" && (
                                   <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
                                     Output: <code>{rubric.output}</code>
-                                  </div>
+          </div>
                                 )}
                               </li>
                             ))}
                           </ul>
-                        </div>
+        </div>
                       )}
 
                       <Divider />
                     </div>
                   ))}
-                </div>
+      </div>
               ),
             }))}
           />
-        </div>
+    </div>
       </Spin>
     </Modal>
   );

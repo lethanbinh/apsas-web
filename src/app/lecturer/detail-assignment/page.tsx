@@ -412,26 +412,26 @@ const DetailAssignmentPage = () => {
 
     // If classAssessment exists, update it
     if (classAssessment) {
-      try {
-        await classAssessmentService.updateClassAssessment(classAssessment.id, {
-          classId: Number(selectedClassId),
-          assessmentTemplateId: classAssessment.assessmentTemplateId,
+    try {
+      await classAssessmentService.updateClassAssessment(classAssessment.id, {
+        classId: Number(selectedClassId),
+        assessmentTemplateId: classAssessment.assessmentTemplateId,
           startAt: classAssessment.startAt || dayjs().toISOString(),
-          endAt: newDate.toISOString(),
-        });
+        endAt: newDate.toISOString(),
+      });
 
-        // Update local state
-        const updated = new Map(classAssessments);
-        updated.set(courseElementId, {
-          ...classAssessment,
-          endAt: newDate.toISOString(),
+      // Update local state
+      const updated = new Map(classAssessments);
+      updated.set(courseElementId, {
+        ...classAssessment,
+        endAt: newDate.toISOString(),
           startAt: classAssessment.startAt || dayjs().toISOString(),
-        });
-        setClassAssessments(updated);
-        message.success("Deadline updated successfully!");
-      } catch (err: any) {
-        console.error("Failed to update deadline:", err);
-        message.error(err.message || "Failed to update deadline");
+      });
+      setClassAssessments(updated);
+      message.success("Deadline updated successfully!");
+    } catch (err: any) {
+      console.error("Failed to update deadline:", err);
+      message.error(err.message || "Failed to update deadline");
       }
     } else {
       // If classAssessment doesn't exist, create a new one
