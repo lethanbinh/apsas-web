@@ -1,23 +1,28 @@
 "use client";
 
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
-import { gradingGroupService } from "@/services/gradingGroupService";
+import { gradingGroupService, GradingGroup } from "@/services/gradingGroupService";
+import { gradingService } from "@/services/gradingService";
+import { submissionService } from "@/services/submissionService";
 import { Lecturer } from "@/services/lecturerService";
-import { FileZipOutlined, InboxOutlined } from "@ant-design/icons";
+import { courseElementService, CourseElement } from "@/services/courseElementService";
+import { FileZipOutlined, InboxOutlined, DatabaseOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import {
   Alert,
   App,
+  Button,
   Card,
   Form,
   Modal,
   Select,
   Space,
   Typography,
-  Upload
+  Upload,
+  Divider
 } from "antd";
 import Dragger from "antd/es/upload/Dragger";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 const { Text } = Typography;
 
@@ -26,6 +31,10 @@ interface CreateGradingGroupModalProps {
   onCancel: () => void;
   onOk: () => void;
   allLecturers: Lecturer[];
+  existingGroups?: GradingGroup[];
+  gradingGroupToSemesterMap?: Map<number, string>;
+  assessmentTemplatesMap?: Map<number, AssessmentTemplate>;
+  courseElementsMap?: Map<number, CourseElement>;
 }
 
 export const CreateGradingGroupModal: React.FC<
@@ -35,19 +44,43 @@ export const CreateGradingGroupModal: React.FC<
   onCancel,
   onOk,
   allLecturers,
+  existingGroups = [],
+  gradingGroupToSemesterMap = new Map(),
+  assessmentTemplatesMap = new Map(),
+  courseElementsMap = new Map(),
 }) => {
   const [form] = Form.useForm();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [databaseFileList, setDatabaseFileList] = useState<UploadFile[]>([]);
+  const [postmanFileList, setPostmanFileList] = useState<UploadFile[]>([]);
   const [assessmentTemplates, setAssessmentTemplates] = useState<AssessmentTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const { message: messageApi } = App.useApp();
+
+  // Get selected assessment template
+  const selectedTemplateId = Form.useWatch("assessmentTemplateId", form);
+  const selectedTemplate = useMemo(() => {
+    return assessmentTemplates.find(t => t.id === selectedTemplateId);
+  }, [assessmentTemplates, selectedTemplateId]);
+  
+  const isWebApiTemplate = selectedTemplate?.templateType === 1;
+
+  // Clear database and postman files if template is not WEBAPI
+  useEffect(() => {
+    if (!isWebApiTemplate) {
+      setDatabaseFileList([]);
+      setPostmanFileList([]);
+    }
+  }, [isWebApiTemplate]);
 
   useEffect(() => {
     if (open) {
       form.resetFields();
       setFileList([]);
+      setDatabaseFileList([]);
+      setPostmanFileList([]);
       setError(null);
       fetchAssessmentTemplates();
     }
@@ -68,9 +101,17 @@ export const CreateGradingGroupModal: React.FC<
     }
   };
 
+  // Get semester code for a given assessment template
+  const getSemesterCodeForTemplate = (templateId: number): string | null => {
+    const template = assessmentTemplatesMap.get(templateId);
+    if (!template) return null;
+    
+    const courseElement = courseElementsMap.get(template.courseElementId);
+    return courseElement?.semesterCourse?.semester?.semesterCode || null;
+  };
+
   // Validate file is ZIP
-  const beforeUpload: UploadProps["beforeUpload"] = (file) => {
-    // Check file extension - must end with .zip
+  const beforeUploadZip: UploadProps["beforeUpload"] = (file) => {
     const fileName = file.name.toLowerCase();
     const isZipExtension = fileName.endsWith(".zip");
     
@@ -79,20 +120,74 @@ export const CreateGradingGroupModal: React.FC<
       return Upload.LIST_IGNORE;
     }
     
-    // Check file size (max 100MB)
     const isLt100M = file.size / 1024 / 1024 < 100;
     if (!isLt100M) {
       messageApi.error("File must be smaller than 100MB!");
       return Upload.LIST_IGNORE;
     }
     
-    return false; // Prevent auto upload
+    return false;
+  };
+
+  // Validate SQL file
+  const beforeUploadSql: UploadProps["beforeUpload"] = (file) => {
+    const fileName = file.name.toLowerCase();
+    const isSqlExtension = fileName.endsWith(".sql");
+    
+    if (!isSqlExtension) {
+      messageApi.error("Only SQL files are accepted! Please select a file with .sql extension");
+      return Upload.LIST_IGNORE;
+    }
+    
+    const isLt100M = file.size / 1024 / 1024 < 100;
+    if (!isLt100M) {
+      messageApi.error("File must be smaller than 100MB!");
+      return Upload.LIST_IGNORE;
+    }
+    
+    return false;
+  };
+
+  // Validate Postman collection file
+  const beforeUploadPostman: UploadProps["beforeUpload"] = (file) => {
+    const fileName = file.name.toLowerCase();
+    const isPostmanExtension = fileName.endsWith(".postman_collection");
+    
+    if (!isPostmanExtension) {
+      messageApi.error("Only Postman collection files are accepted! Please select a file with .postman_collection extension");
+      return Upload.LIST_IGNORE;
+    }
+    
+    const isLt100M = file.size / 1024 / 1024 < 100;
+    if (!isLt100M) {
+      messageApi.error("File must be smaller than 100MB!");
+      return Upload.LIST_IGNORE;
+    }
+    
+    return false;
   };
 
   const handleFileChange: UploadProps["onChange"] = (info) => {
+    // Keep all files that pass validation
+    const validFiles = info.fileList.filter(file => {
+      if (file.status === 'error') return false;
+      if (!file.name.toLowerCase().endsWith('.zip')) return false;
+      return true;
+    });
+    
+    setFileList(validFiles);
+  };
+
+  const handleDatabaseFileChange: UploadProps["onChange"] = (info) => {
     let newFileList = [...info.fileList];
-    newFileList = newFileList.slice(-1); // Only keep the last file
-    setFileList(newFileList);
+    newFileList = newFileList.slice(-1);
+    setDatabaseFileList(newFileList);
+  };
+
+  const handlePostmanFileChange: UploadProps["onChange"] = (info) => {
+    let newFileList = [...info.fileList];
+    newFileList = newFileList.slice(-1);
+    setPostmanFileList(newFileList);
   };
 
   const handleFinish = async (values: any) => {
@@ -100,6 +195,49 @@ export const CreateGradingGroupModal: React.FC<
     setError(null);
 
     try {
+      // Validate duplicate assignment: check if lecturer + assessment template + semester already exists
+      if (values.lecturerId && values.assessmentTemplateId) {
+        const newSemesterCode = getSemesterCodeForTemplate(values.assessmentTemplateId);
+
+        if (newSemesterCode) {
+          // Check existing groups for duplicate
+          const duplicateGroup = existingGroups.find(group => {
+            // Check if same lecturer and same assessment template
+            if (group.lecturerId !== Number(values.lecturerId) || group.assessmentTemplateId !== values.assessmentTemplateId) {
+              return false;
+            }
+            
+            // Check if same semester
+            const existingSemester = gradingGroupToSemesterMap.get(group.id);
+            return existingSemester === newSemesterCode;
+          });
+
+          if (duplicateGroup) {
+            const errorMsg = `This teacher has already been assigned this assessment template for semester ${newSemesterCode}!`;
+            setError(errorMsg);
+            messageApi.error(errorMsg);
+            setIsLoading(false);
+            return;
+          }
+        }
+      }
+
+      // Validate WEBAPI template requirements
+      if (isWebApiTemplate) {
+        if (databaseFileList.length === 0) {
+          setError("Database file (.sql) is required for WEBAPI template!");
+          messageApi.error("Database file (.sql) is required for WEBAPI template!");
+          setIsLoading(false);
+          return;
+        }
+        if (postmanFileList.length === 0) {
+          setError("Postman collection file (.postman_collection) is required for WEBAPI template!");
+          messageApi.error("Postman collection file (.postman_collection) is required for WEBAPI template!");
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Step 1: Create grading group
       const group = await gradingGroupService.createGradingGroup({
         lecturerId: values.lecturerId,
@@ -108,17 +246,125 @@ export const CreateGradingGroupModal: React.FC<
 
       messageApi.success("Teacher assigned successfully!");
 
-      // Step 2: Upload ZIP file if provided
+      let submissions: any[] = [];
+      const submissionZipFiles: File[] = [];
+
+      // Step 2: Upload ZIP files if provided
       if (fileList.length > 0) {
-        const file = fileList[0].originFileObj;
-        if (file) {
+        const files: File[] = [];
+        for (const fileItem of fileList) {
+          const file = fileItem.originFileObj;
+          if (file) {
+            files.push(file);
+            submissionZipFiles.push(file); // Save ZIP file to use as test file
+          }
+        }
+
+        if (files.length > 0) {
           const result = await gradingGroupService.addSubmissionsByFile(group.id, {
-            Files: [file],
+            Files: files,
           });
           messageApi.success(
-            `Added ${result.createdSubmissionsCount} submissions from ZIP file!`,
+            `Added ${result.createdSubmissionsCount} submissions from ${files.length} ZIP file(s)!`,
             5
           );
+        }
+      }
+
+      // Step 3: Fetch all submissions for this grading group (after ZIP upload if any)
+      try {
+        submissions = await submissionService.getSubmissionList({
+          gradingGroupId: group.id,
+        });
+      } catch (err) {
+        console.error("Failed to fetch submissions:", err);
+      }
+
+      // Step 4: Upload test file (the submission ZIP file) for each submission
+      // Match ZIP file with submission based on student code in file name
+      if (submissionZipFiles.length > 0 && submissions.length > 0) {
+        messageApi.info(`Uploading test files for ${submissions.length} submission(s)...`);
+        
+        // Extract student code from file name (STUXXXXXX.zip -> XXXXXX)
+        const extractStudentCode = (fileName: string): string | null => {
+          const match = fileName.match(/^STU(\d{6})\.zip$/i);
+          return match ? match[1] : null;
+        };
+
+        // Create a map of student code to file for quick lookup
+        const fileMap = new Map<string, File>();
+        submissionZipFiles.forEach(file => {
+          const studentCode = extractStudentCode(file.name);
+          if (studentCode) {
+            fileMap.set(studentCode, file);
+          }
+        });
+
+        const uploadPromises: Promise<any>[] = [];
+        
+        // Upload test file for each submission
+        for (const submission of submissions) {
+          const studentCode = submission.studentCode;
+          const testFile = fileMap.get(studentCode);
+          
+          if (testFile) {
+            uploadPromises.push(
+              gradingService.uploadTestFile(submission.id, testFile).catch(err => {
+                console.error(`Failed to upload test file for submission ${submission.id} (${studentCode}):`, err);
+                return null;
+              })
+            );
+          }
+        }
+
+        if (uploadPromises.length > 0) {
+          const results = await Promise.all(uploadPromises);
+          const successCount = results.filter(r => r !== null).length;
+          
+          if (successCount > 0) {
+            messageApi.success(`Test files uploaded for ${successCount}/${uploadPromises.length} submission(s)!`);
+          } else {
+            messageApi.warning("Failed to upload test files for all submissions.");
+          }
+        }
+      }
+
+      // Step 5: Upload database and postman collection files for WEBAPI template
+      if (isWebApiTemplate && values.assessmentTemplateId) {
+        // Upload database file (template=0)
+        if (databaseFileList.length > 0) {
+          const databaseFile = databaseFileList[0].originFileObj;
+          if (databaseFile) {
+            try {
+              await gradingService.uploadPostmanCollectionDatabase(
+                0, // template=0 for database
+                values.assessmentTemplateId,
+                databaseFile
+              );
+              messageApi.success("Database file uploaded successfully!");
+            } catch (err: any) {
+              console.error("Failed to upload database file:", err);
+              messageApi.error("Failed to upload database file: " + (err.message || "Unknown error"));
+            }
+          }
+        }
+
+        // Upload postman collection file (template=1)
+        if (postmanFileList.length > 0) {
+          const postmanFile = postmanFileList[0].originFileObj;
+          if (postmanFile) {
+            try {
+              await gradingService.uploadPostmanCollectionDatabase(
+                1, // template=1 for postman collection
+                values.assessmentTemplateId,
+                postmanFile
+              );
+              messageApi.success("Postman collection file uploaded successfully!");
+            } catch (err: any) {
+              console.error("Failed to upload postman collection file:", err);
+              messageApi.error("Failed to upload postman collection file: " + (err.message || "Unknown error"));
+            }
+          }
         }
       }
 
@@ -136,6 +382,8 @@ export const CreateGradingGroupModal: React.FC<
   const handleCancel = () => {
     form.resetFields();
     setFileList([]);
+    setDatabaseFileList([]);
+    setPostmanFileList([]);
     setError(null);
     onCancel();
   };
@@ -184,11 +432,11 @@ export const CreateGradingGroupModal: React.FC<
 
         <Form.Item
           name="assessmentTemplateId"
-          label="Assessment Template (Optional)"
+          label="Assessment Template"
         >
           <Select
             showSearch
-            placeholder="Select assessment template (optional)"
+            placeholder="Select assessment template"
             allowClear
             loading={loadingTemplates}
             filterOption={(input, option) =>
@@ -205,41 +453,134 @@ export const CreateGradingGroupModal: React.FC<
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
             <Card size="small" style={{ backgroundColor: "#f0f9ff" }}>
               <Space direction="vertical" style={{ width: "100%" }} size="small">
-                <Text strong>Upload ZIP file containing submissions</Text>
+                <Text strong>Upload ZIP files containing submissions</Text>
                 <Text type="secondary" style={{ fontSize: 12 }}>
-                  ZIP file will be extracted and submissions will be created automatically. 
-                  Only ZIP files are accepted, maximum size 100MB.
+                  ZIP files will be extracted and submissions will be created automatically. 
+                  Each ZIP file will also be uploaded as test file for the corresponding submission (matched by student code).
+                  You can select multiple files. Only ZIP files are accepted, maximum size 100MB per file.
                 </Text>
               </Space>
             </Card>
             <Dragger
               fileList={fileList}
-              beforeUpload={beforeUpload}
+              beforeUpload={beforeUploadZip}
               onChange={handleFileChange}
               accept=".zip,application/zip,application/x-zip-compressed"
-              maxCount={1}
+              multiple
             >
               <p className="ant-upload-drag-icon">
                 <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
               </p>
-              <p className="ant-upload-text">Click or drag ZIP file here</p>
+              <p className="ant-upload-text">Click or drag ZIP files here</p>
               <p className="ant-upload-hint">
-                Only ZIP files are accepted. File will be uploaded when you assign the teacher.
+                You can select multiple files. Only ZIP files are accepted. Files will be uploaded when you assign the teacher.
               </p>
             </Dragger>
             {fileList.length > 0 && (
               <Card size="small">
-                <Space>
-                  <FileZipOutlined />
-                  <Text>{fileList[0].name}</Text>
-                  <Text type="secondary">
-                    ({(fileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                  </Text>
+                <Space direction="vertical" style={{ width: "100%" }} size="small">
+                  <Text strong>Selected files ({fileList.length}):</Text>
+                  {fileList.map((file, index) => (
+                    <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <FileZipOutlined />
+                      <Text>{file.name}</Text>
+                      <Text type="secondary">
+                        ({(file.size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                    </div>
+                  ))}
                 </Space>
               </Card>
             )}
           </Space>
         </Form.Item>
+
+        {isWebApiTemplate && (
+          <>
+            <Divider />
+            <Alert
+              message="WEBAPI Template Selected"
+              description="Database file and Postman collection file are required for WEBAPI templates."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            <Form.Item
+              label="Upload Database File (.sql)"
+              required
+              help="Database file is required for WEBAPI template"
+            >
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
+                  <Space direction="vertical" style={{ width: "100%" }} size="small">
+                    <Text strong>Upload database SQL file</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Only .sql files are accepted. Maximum size 100MB.
+                    </Text>
+                  </Space>
+                </Card>
+                <Upload
+                  fileList={databaseFileList}
+                  beforeUpload={beforeUploadSql}
+                  onChange={handleDatabaseFileChange}
+                  accept=".sql"
+                  maxCount={1}
+                >
+                  <Button icon={<DatabaseOutlined />}>Select Database File</Button>
+                </Upload>
+                {databaseFileList.length > 0 && (
+                  <Card size="small">
+                    <Space>
+                      <DatabaseOutlined />
+                      <Text>{databaseFileList[0].name}</Text>
+                      <Text type="secondary">
+                        ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                    </Space>
+                  </Card>
+                )}
+              </Space>
+            </Form.Item>
+
+            <Form.Item
+              label="Upload Postman Collection File (.postman_collection)"
+              required
+              help="Postman collection file is required for WEBAPI template"
+            >
+              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
+                  <Space direction="vertical" style={{ width: "100%" }} size="small">
+                    <Text strong>Upload Postman collection file</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Only .postman_collection files are accepted. Maximum size 100MB.
+                    </Text>
+                  </Space>
+                </Card>
+                <Upload
+                  fileList={postmanFileList}
+                  beforeUpload={beforeUploadPostman}
+                  onChange={handlePostmanFileChange}
+                  accept=".postman_collection"
+                  maxCount={1}
+                >
+                  <Button icon={<DatabaseOutlined />}>Select Postman Collection File</Button>
+                </Upload>
+                {postmanFileList.length > 0 && (
+                  <Card size="small">
+                    <Space>
+                      <DatabaseOutlined />
+                      <Text>{postmanFileList[0].name}</Text>
+                      <Text type="secondary">
+                        ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                    </Space>
+                  </Card>
+                )}
+              </Space>
+            </Form.Item>
+          </>
+        )}
       </Form>
     </Modal>
   );

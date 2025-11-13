@@ -4,7 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix grading UI" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix assign teacher examiner">
+      <change afterPath="$PROJECT_DIR$/src/services/gradingService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/examiner/grading-groups/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/grading-groups/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/[submissionId]/page.module.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/[submissionId]/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/layout.module.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/layout.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/page.module.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe-grading/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe/submission/PESubmission.module.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/pe/submission/page.tsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -35,24 +52,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "js.debugger.nextJs.config.created.client": "true",
-    "js.debugger.nextJs.config.created.server": "true",
-    "kotlin-language-version-configured": "true",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "ts.external.directory.path": "D:\\SourceFE\\apsas-web\\node_modules\\typescript\\lib",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
+    &quot;js.debugger.nextJs.config.created.server&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;D:\\SourceFE\\apsas-web\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="npm.Next.js: server-side">
     <configuration name="Next.js: debug client-side" type="JavascriptDebugType" uri="http://localhost:3000/">
       <method v="2" />
@@ -99,7 +116,8 @@
       <workItem from="1762605144030" duration="136000" />
       <workItem from="1762770321662" duration="69000" />
       <workItem from="1762842716087" duration="220000" />
-      <workItem from="1762922149952" duration="4078000" />
+      <workItem from="1762922149952" duration="4395000" />
+      <workItem from="1763013784721" duration="125000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -197,7 +215,15 @@
       <option name="project" value="LOCAL" />
       <updated>1762930097712</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="fix building production">
+      <option name="closed" value="true" />
+      <created>1762930397900</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1762930397900</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -239,6 +265,8 @@
     <MESSAGE value="Fix bugs and complete teacher assign" />
     <MESSAGE value="Fix bugs UI lecturer and student" />
     <MESSAGE value="Fix grading UI" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix grading UI" />
+    <MESSAGE value="fix building production" />
+    <MESSAGE value="Fix assign teacher examiner" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix assign teacher examiner" />
   </component>
 </project>

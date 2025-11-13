@@ -6,7 +6,7 @@ import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
 import { logout } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
-import { Button, Checkbox, Form, Input, App } from "antd";
+import { Button, Checkbox, Form, Input, App, Select } from "antd";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
@@ -52,6 +52,35 @@ const mapRoleToNumber = (role: string | number): Role => {
   if (roleLower === "examiner") return 4;
   return 2; // Default to Student
 };
+
+// Demo accounts data
+interface DemoAccount {
+  accountCode: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  { accountCode: "ADM000001", email: "admin1@system.com", password: "admin@123", role: "Admin" },
+  { accountCode: "HOD000001", email: "Hod1@example.com", password: "Lenam2386", role: "HOD" },
+  { accountCode: "LEC000001", email: "nguyenvana@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000002", email: "Lecturer1@example.com", password: "Lenam2385", role: "Lecturer" },
+  { accountCode: "LEC000003", email: "tranthib@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000004", email: "leminhc@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000005", email: "phamthid@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000006", email: "hoangvane@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000007", email: "ngothif@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "EXA000001", email: "examiner1@example.com", password: "Lenam2385", role: "Examiner" },
+  { accountCode: "EXA000002", email: "lehongt@example.com", password: "Teach3r!", role: "Examiner" },
+  { accountCode: "STU000001", email: "namle2385@gmail.com", password: "Lenam235", role: "Student" },
+  { accountCode: "STU000002", email: "dangthig@example.com", password: "123456", role: "Student" },
+  { accountCode: "STU000003", email: "vutranh@example.com", password: "123456", role: "Student" },
+  { accountCode: "STU000004", email: "doanthij@example.com", password: "123456", role: "Student" },
+  { accountCode: "STU000005", email: "phamanhk@example.com", password: "123456", role: "Student" },
+  { accountCode: "STU000006", email: "truongthil@example.com", password: "123456", role: "Student" },
+  { accountCode: "STU000007", email: "nguyenthanhm@example.com", password: "123456", role: "Student" },
+];
 
 // Helper function to translate error messages to Vietnamese
 const translateErrorMessage = (errorMsg: string): string => {
@@ -245,6 +274,22 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
     } finally {
       setIsLoggingIn(false);
     }
+  };
+
+  const handleDemoLogin = async (account: DemoAccount) => {
+    if (isLoggingIn) return;
+
+    // Set form values for display
+    form.setFieldsValue({
+      email: account.email,
+      password: account.password,
+    });
+
+    // Call handleSubmit directly with demo credentials
+    await handleSubmit({
+      email: account.email,
+      password: account.password,
+    } as LoginCredentials);
   };
 
   const handleGoogleLogin = async () => {
@@ -503,6 +548,42 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       >
         Login With Google
       </Button>
+
+      <div className="login-divider" style={{ marginTop: "20px" }}>
+        <div className="divider-line"></div>
+        <span className="divider-text">Or login with demo account</span>
+        <div className="divider-line"></div>
+      </div>
+
+      <div style={{ marginTop: "16px" }}>
+        <Select
+          placeholder="Select a demo account to login quickly"
+          style={{ width: "100%", marginBottom: "12px" }}
+          size="large"
+          showSearch
+          optionFilterProp="children"
+          filterOption={(input, option) =>
+            (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+          }
+          options={DEMO_ACCOUNTS.map((account) => ({
+            value: account.accountCode,
+            label: `${account.accountCode} - ${account.role} (${account.email})`,
+            account: account,
+          }))}
+          onChange={(value) => {
+            const selectedAccount = DEMO_ACCOUNTS.find(
+              (acc) => acc.accountCode === value
+            );
+            if (selectedAccount) {
+              handleDemoLogin(selectedAccount);
+            }
+          }}
+          disabled={isLoggingIn || isLoading}
+        />
+        <div style={{ fontSize: "12px", color: "#8c8c8c", textAlign: "center", marginTop: "8px" }}>
+          Select an account from the list to login automatically
+        </div>
+      </div>
     </div>
   );
 };

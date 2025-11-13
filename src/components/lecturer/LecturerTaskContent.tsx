@@ -335,6 +335,107 @@ const PaperFormModal = ({
   );
 };
 
+// --- Component Form Modal cho Template ---
+const TemplateFormModal = ({
+  open,
+  onCancel,
+  onFinish,
+  isEditable,
+  initialData,
+  assignedToHODId,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onFinish: () => void;
+  isEditable: boolean;
+  initialData?: AssessmentTemplate;
+  assignedToHODId?: number;
+}) => {
+  const [form] = Form.useForm();
+  const { notification } = App.useApp();
+  const isEditing = !!initialData;
+  const title = isEditing ? "Edit Assessment Template" : "Add New Template";
+
+  useEffect(() => {
+    if (open) {
+      if (initialData) {
+        form.setFieldsValue({
+          name: initialData.name,
+          description: initialData.description,
+          templateType: initialData.templateType,
+        });
+      } else {
+        form.resetFields();
+      }
+    }
+  }, [initialData, form, open]);
+
+  const handleSubmit = async (values: any) => {
+    try {
+      if (isEditing && initialData && assignedToHODId !== undefined) {
+        await assessmentTemplateService.updateAssessmentTemplate(
+          initialData.id,
+          {
+            name: values.name,
+            description: values.description,
+            templateType: values.templateType,
+            assignedToHODId: assignedToHODId,
+          }
+        );
+        notification.success({
+          message: "Template updated successfully",
+        });
+      }
+      onFinish();
+    } catch (error) {
+      console.error("Failed to save template:", error);
+      notification.error({ message: "Failed to save template" });
+    }
+  };
+
+  return (
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onCancel}
+      destroyOnHidden
+      footer={[
+        <Button key="back" onClick={onCancel}>
+          Cancel
+        </Button>,
+        isEditable ? (
+          <Button key="submit" type="primary" onClick={() => form.submit()}>
+            {isEditing ? "Save Changes" : "Add Template"}
+          </Button>
+        ) : null,
+      ]}
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="name"
+          label="Template Name"
+          rules={[{ required: true }]}
+        >
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item name="description" label="Template Description">
+          <Input disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item
+          name="templateType"
+          label="Template Type"
+          rules={[{ required: true }]}
+        >
+          <Radio.Group disabled={!isEditable}>
+            <Radio value={0}>DSA</Radio>
+            <Radio value={1}>WEBAPI</Radio>
+          </Radio.Group>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 // --- Component hiển thị chi tiết Question (cột bên phải) ---
 const QuestionDetailView = ({
   question,
@@ -586,6 +687,8 @@ const TemplateDetailView = ({
   onFileChange,
   onExport,
   onTemplateDelete,
+  onTemplateChange,
+  assignedToHODId,
 }: {
   template: AssessmentTemplate;
   papers: AssessmentPaper[];
@@ -594,8 +697,11 @@ const TemplateDetailView = ({
   onFileChange: () => void;
   onExport: () => void;
   onTemplateDelete: () => void;
+  onTemplateChange: () => void;
+  assignedToHODId?: number;
 }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const { modal, notification } = App.useApp();
 
   const handleUploadFile = async () => {
@@ -658,9 +764,17 @@ const TemplateDetailView = ({
         extra={
           <Space>
             {isEditable && (
-              <Button danger onClick={confirmTemplateDelete}>
-                Delete Template
-              </Button>
+              <>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => setIsTemplateModalOpen(true)}
+                >
+                  Edit Template
+                </Button>
+                <Button danger onClick={confirmTemplateDelete}>
+                  Delete Template
+                </Button>
+              </>
             )}
             <Button
               type="primary"
@@ -682,6 +796,18 @@ const TemplateDetailView = ({
           <Descriptions.Item label="Papers">{papers.length}</Descriptions.Item>
         </Descriptions>
       </Card>
+
+      <TemplateFormModal
+        open={isTemplateModalOpen}
+        onCancel={() => setIsTemplateModalOpen(false)}
+        onFinish={() => {
+          setIsTemplateModalOpen(false);
+          onTemplateChange();
+        }}
+        isEditable={isEditable}
+        initialData={template}
+        assignedToHODId={assignedToHODId}
+      />
 
       <Card title="Attached Files">
         <List
@@ -1162,6 +1288,11 @@ export const LecturerTaskContent = ({
     );
   };
 
+  const refreshTemplate = async () => {
+    // Refresh toàn bộ template và các dữ liệu liên quan
+    await fetchTemplate();
+  };
+
   const renderContent = () => {
     if (selectedKey === "template-details") {
       return (
@@ -1173,6 +1304,8 @@ export const LecturerTaskContent = ({
           onFileChange={refreshFiles}
           onExport={handleExport}
           onTemplateDelete={handleDeleteTemplate}
+          onTemplateChange={refreshTemplate}
+          assignedToHODId={task.assignedByHODId}
         />
       );
     }

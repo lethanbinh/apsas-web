@@ -21,6 +21,7 @@ import {
   UserAddOutlined,
   ReloadOutlined,
   DownloadOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import {
@@ -38,6 +39,8 @@ import {
   Empty,
   Statistic,
   Select,
+  Popconfirm,
+  Collapse,
 } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./GradingGroups.module.css";
@@ -62,6 +65,7 @@ const GradingGroupsPageContent = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<GradingGroup | null>(null);
+  const [expandedLecturers, setExpandedLecturers] = useState<Set<number>>(new Set());
 
   const { message } = App.useApp();
 
@@ -212,55 +216,81 @@ const GradingGroupsPageContent = () => {
     return allSemesters.map(sem => sem.semesterCode).sort();
   }, [allSemesters]);
 
-  const assignedGroups = useMemo(() => {
-    const groupsMap = new Map<number, GradingGroup & { subs: any[] }>();
+  // Group assignments by lecturer
+  const groupedByLecturer = useMemo(() => {
+    const lecturerMap = new Map<number, {
+      lecturerId: number;
+      lecturerName: string;
+      lecturerCode: string | null;
+      groups: (GradingGroup & { subs: any[]; semesterCode?: string })[];
+    }>();
 
-    allLecturers.forEach((lecturer) => {
-      const group = allGroups.find(
-        (g) => g.lecturerId === Number(lecturer.lecturerId)
-      );
-      if (group) {
-        // Get enriched submissions for this group
-        const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
-        
-        // Convert to enriched format
-        const subs = groupSubmissions.map((sub) => {
-          const enriched = enrichedSubmissionsMap.get(sub.id);
-          return {
-            id: sub.id,
-            studentId: sub.studentId,
-            studentName: sub.studentName,
-            studentCode: sub.studentCode,
-            gradingGroupId: group.id,
-            lecturerName: group.lecturerName || undefined,
-            submittedAt: sub.submittedAt || "",
-            status: sub.status,
-            lastGrade: sub.lastGrade,
-            submissionFile: {
-              ...sub.submissionFile,
-              submissionUrl: enriched?.submissionUrl || sub.submissionFile?.submissionUrl,
-              name: enriched?.fileName || sub.submissionFile?.name,
-            },
-            createdAt: sub.createdAt,
-            updatedAt: sub.updatedAt,
-          };
-        });
+    // Loop qua TẤT CẢ groups
+    allGroups.forEach((group) => {
+      // Get enriched submissions for this group
+      const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
+      
+      // Convert to enriched format
+      const subs = groupSubmissions.map((sub) => {
+        const enriched = enrichedSubmissionsMap.get(sub.id);
+        return {
+          id: sub.id,
+          studentId: sub.studentId,
+          studentName: sub.studentName,
+          studentCode: sub.studentCode,
+          gradingGroupId: group.id,
+          lecturerName: group.lecturerName || undefined,
+          submittedAt: sub.submittedAt || "",
+          status: sub.status,
+          lastGrade: sub.lastGrade,
+          submissionFile: {
+            ...sub.submissionFile,
+            submissionUrl: enriched?.submissionUrl || sub.submissionFile?.submissionUrl,
+            name: enriched?.fileName || sub.submissionFile?.name,
+          },
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+        };
+      });
 
-        // Filter by selected semester - check if group's semester matches
-        const groupSemester = gradingGroupToSemesterMap.get(Number(group.id));
-        if (selectedSemester !== "all") {
-          if (!groupSemester || groupSemester !== selectedSemester) {
-            // Skip this group if semester doesn't match
-            return;
-          }
+      // Get semester code for this group
+      const groupSemester = gradingGroupToSemesterMap.get(Number(group.id));
+
+      // Filter by selected semester - check if group's semester matches
+      if (selectedSemester !== "all") {
+        if (!groupSemester || groupSemester !== selectedSemester) {
+          // Skip this group if semester doesn't match
+          return;
         }
-
-        groupsMap.set(group.id, { ...group, subs });
       }
+
+      // Group by lecturer
+      if (!lecturerMap.has(group.lecturerId)) {
+        lecturerMap.set(group.lecturerId, {
+          lecturerId: group.lecturerId,
+          lecturerName: group.lecturerName || "Unknown",
+          lecturerCode: group.lecturerCode,
+          groups: [],
+        });
+      }
+
+      const lecturerData = lecturerMap.get(group.lecturerId)!;
+      lecturerData.groups.push({ ...group, subs, semesterCode: groupSemester });
     });
 
-    return Array.from(groupsMap.values());
-  }, [allGroups, allLecturers, allSubmissions, enrichedSubmissionsMap, selectedSemester, gradingGroupToSemesterMap]);
+    return Array.from(lecturerMap.values());
+  }, [allGroups, allSubmissions, enrichedSubmissionsMap, selectedSemester, gradingGroupToSemesterMap]);
+
+  // Calculate statistics
+  const totalAssignments = useMemo(() => {
+    return groupedByLecturer.reduce((sum, lecturer) => sum + lecturer.groups.length, 0);
+  }, [groupedByLecturer]);
+
+  const totalSubmissions = useMemo(() => {
+    return groupedByLecturer.reduce((sum, lecturer) => 
+      sum + lecturer.groups.reduce((groupSum, group) => groupSum + group.subs.length, 0), 0
+    );
+  }, [groupedByLecturer]);
 
   const handleOpenAssign = (group: GradingGroup) => {
     setSelectedGroup(group);
@@ -278,6 +308,18 @@ const GradingGroupsPageContent = () => {
     setIsAssignModalOpen(false);
     setSelectedGroup(null);
     fetchData();
+  };
+
+  const handleDeleteGroup = async (group: GradingGroup) => {
+    try {
+      await gradingGroupService.deleteGradingGroup(group.id);
+      message.success(`Assignment deleted successfully for ${group.lecturerName}`);
+      fetchData();
+    } catch (err: any) {
+      console.error("Failed to delete grading group:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete assignment.";
+      message.error(errorMsg);
+    }
   };
 
   const submissionColumns: TableProps<any>["columns"] = [
@@ -436,8 +478,8 @@ const GradingGroupsPageContent = () => {
         <Col span={12}>
           <Card>
             <Statistic
-              title="Total Teachers"
-              value={assignedGroups.length}
+              title="Number of Assignments"
+              value={totalAssignments}
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
@@ -446,7 +488,7 @@ const GradingGroupsPageContent = () => {
           <Card>
             <Statistic
               title="Total Submissions"
-              value={assignedGroups.reduce((sum, group) => sum + group.subs.length, 0)}
+              value={totalSubmissions}
               valueStyle={{ color: "#52c41a" }}
             />
           </Card>
@@ -460,51 +502,105 @@ const GradingGroupsPageContent = () => {
             title={
               <Space>
                 <Text strong>Assigned Teachers</Text>
-                <Tag color="green">{assignedGroups.length}</Tag>
+                <Tag color="green">{groupedByLecturer.length}</Tag>
               </Space>
             }
             className={styles.card}
           >
-            {assignedGroups.length === 0 ? (
+            {groupedByLecturer.length === 0 ? (
               <Empty
                 description="No assigned teachers"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             ) : (
-              <div className={styles.groupsList}>
-                {assignedGroups.map((group) => (
-                  <Card
-                    key={group.id}
-                    size="small"
-                    style={{ marginBottom: 12 }}
-                    title={
-                      <Space>
-                        <Text strong>{group.lecturerName}</Text>
-                        <Tag>{group.subs.length} submissions</Tag>
-                      </Space>
+              <Collapse
+                activeKey={Array.from(expandedLecturers).map(String)}
+                onChange={(keys) => {
+                  const newExpanded = new Set<number>();
+                  keys.forEach(key => {
+                    const lecturerId = Number(key);
+                    if (!isNaN(lecturerId)) {
+                      newExpanded.add(lecturerId);
                     }
-                    extra={
-                      <Button
-                        type="link"
-                        icon={<UserAddOutlined />}
-                        onClick={() => handleOpenAssign(group)}
-                        size="small"
-                      >
-                        Manage
-                      </Button>
-                    }
-                  >
-                    <Table
-                      dataSource={group.subs}
-                      columns={submissionColumns}
-                      rowKey="id"
-                      pagination={false}
-                      size="small"
-                      scroll={{ y: 200 }}
-                    />
-                  </Card>
-                ))}
-              </div>
+                  });
+                  setExpandedLecturers(newExpanded);
+                }}
+                items={groupedByLecturer.map((lecturer) => ({
+                  key: String(lecturer.lecturerId),
+                  label: (
+                    <Space>
+                      <Text strong>{lecturer.lecturerName}</Text>
+                      {lecturer.lecturerCode && (
+                        <Text type="secondary">({lecturer.lecturerCode})</Text>
+                      )}
+                      <Tag color="blue">{lecturer.groups.length} assignment(s)</Tag>
+                      <Tag color="green">
+                        {lecturer.groups.reduce((sum, group) => sum + group.subs.length, 0)} submissions
+                      </Tag>
+                    </Space>
+                  ),
+                  children: (
+                    <Row gutter={[16, 16]}>
+                      {lecturer.groups.map((group) => (
+                        <Col key={group.id} span={24}>
+                          <Card
+                            size="small"
+                            title={
+                              <Space>
+                                <Text strong>
+                                  {group.assessmentTemplateName || "No Template"}
+                                </Text>
+                                {group.semesterCode && (
+                                  <Tag color="purple">{group.semesterCode}</Tag>
+                                )}
+                                <Tag>{group.subs.length} submissions</Tag>
+                              </Space>
+                            }
+                            extra={
+                              <Space>
+                                <Button
+                                  type="link"
+                                  icon={<UserAddOutlined />}
+                                  onClick={() => handleOpenAssign(group)}
+                                  size="small"
+                                >
+                                  Manage
+                                </Button>
+                                <Popconfirm
+                                  title="Delete Assignment"
+                                  description={`Are you sure you want to delete this assignment for ${lecturer.lecturerName}?`}
+                                  onConfirm={() => handleDeleteGroup(group)}
+                                  okText="Delete"
+                                  cancelText="Cancel"
+                                  okType="danger"
+                                >
+                                  <Button
+                                    type="link"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    size="small"
+                                  >
+                                    Delete
+                                  </Button>
+                                </Popconfirm>
+                              </Space>
+                            }
+                          >
+                            <Table
+                              dataSource={group.subs}
+                              columns={submissionColumns}
+                              rowKey="id"
+                              pagination={false}
+                              size="small"
+                              scroll={{ y: 200 }}
+                            />
+                          </Card>
+                        </Col>
+                      ))}
+                    </Row>
+                  ),
+                }))}
+              />
             )}
           </Card>
         </Col>
@@ -516,6 +612,10 @@ const GradingGroupsPageContent = () => {
           onCancel={handleModalCancel}
           onOk={handleModalOk}
           allLecturers={allLecturers}
+          existingGroups={allGroups}
+          gradingGroupToSemesterMap={gradingGroupToSemesterMap}
+          assessmentTemplatesMap={allAssessmentTemplates}
+          courseElementsMap={allCourseElements}
         />
       )}
 
