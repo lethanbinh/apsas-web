@@ -356,23 +356,8 @@ export default function AssignmentGradingPage() {
         }
       }
 
-      // Try to get assessmentTemplateId from examSessionId
-      if (!assessmentTemplateId && submission.examSessionId) {
-        try {
-          const { examSessionService } = await import("@/services/examSessionService");
-          const examSessions = await examSessionService.getExamSessions({
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          const examSession = examSessions.items.find((es) => es.id === submission.examSessionId);
-          if (examSession?.assessmentTemplateId) {
-            assessmentTemplateId = examSession.assessmentTemplateId;
-            console.log("Found assessmentTemplateId from examSession:", assessmentTemplateId);
-          }
-        } catch (err) {
-          console.error("Failed to fetch from examSession:", err);
-        }
-      }
+      // Note: examSessionId is no longer used to fetch templates
+      // Templates are now fetched via classAssessmentId or courseElementId through approved assign requests
 
       if (!assessmentTemplateId) {
         console.warn("Could not find assessmentTemplateId for submission:", submission.id);
@@ -1196,23 +1181,8 @@ function ViewExamModal({
         }
       }
 
-      // Try to get assessmentTemplateId from examSessionId
-      if (!assessmentTemplateId && submission.examSessionId) {
-        try {
-          const { examSessionService } = await import("@/services/examSessionService");
-          const examSessions = await examSessionService.getExamSessions({
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          const examSession = examSessions.items.find((es) => es.id === submission.examSessionId);
-          if (examSession?.assessmentTemplateId) {
-            assessmentTemplateId = examSession.assessmentTemplateId;
-            console.log("ViewExamModal: Found assessmentTemplateId from examSession:", assessmentTemplateId);
-          }
-        } catch (err) {
-          console.error("ViewExamModal: Failed to fetch from examSession:", err);
-        }
-      }
+      // Note: examSessionId is no longer used to fetch templates
+      // Templates are now fetched via classAssessmentId or courseElementId through approved assign requests
 
       if (!assessmentTemplateId) {
         console.warn("ViewExamModal: Could not find assessmentTemplateId for submission:", submission.id);
