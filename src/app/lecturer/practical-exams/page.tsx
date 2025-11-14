@@ -33,9 +33,9 @@ import {
   DownloadOutlined,
   FolderOutlined,
 } from "@ant-design/icons";
-import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 import { submissionService, Submission } from "@/services/submissionService";
+import { assignRequestService } from "@/services/assignRequestService";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 
@@ -64,13 +64,11 @@ const ExamDetailItem = ({
   exam,
   template,
   classAssessment,
-  examSession,
   submissions,
 }: {
   exam: CourseElement;
   template?: AssessmentTemplate;
   classAssessment?: ClassAssessment;
-  examSession?: ExamSession;
   submissions: Submission[];
 }) => {
   const router = useRouter();
@@ -180,7 +178,6 @@ const PracticalExamsPage = () => {
   const [exams, setExams] = useState<CourseElement[]>([]);
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [classAssessments, setClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
-  const [examSessions, setExamSessions] = useState<Map<number, ExamSession>>(new Map());
   const [submissions, setSubmissions] = useState<Map<number, Submission[]>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,8 +202,12 @@ const PracticalExamsPage = () => {
         throw new Error("Class not found");
       }
 
-      const [allElements, templateResponse, sessionRes, classAssessmentRes] = await Promise.all([
+      const [allElements, assignRequestResponse, templateResponse, classAssessmentRes] = await Promise.all([
         courseElementService.getCourseElements({
+          pageNumber: 1,
+          pageSize: 1000,
+        }),
+        assignRequestService.getAssignRequests({
           pageNumber: 1,
           pageSize: 1000,
         }),
@@ -214,11 +215,6 @@ const PracticalExamsPage = () => {
           pageNumber: 1,
           pageSize: 1000,
         }),
-        examSessionService.getExamSessions({
-          classId: Number(selectedClassId),
-          pageNumber: 1,
-          pageSize: 1000,
-        }).catch(() => ({ items: [] })),
         classAssessmentService.getClassAssessments({
           classId: Number(selectedClassId),
           pageNumber: 1,
@@ -226,19 +222,27 @@ const PracticalExamsPage = () => {
         }).catch(() => ({ items: [] })),
       ]);
 
-      const filteredExams = allElements.filter(
+      // Filter approved assign requests (status = 5)
+      const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+      const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
+
+      // Filter assessment templates by approved assign request IDs
+      const approvedTemplates = templateResponse.items.filter(t => 
+        t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
+      );
+      const approvedTemplateIds = new Set(approvedTemplates.map(t => t.id));
+      const approvedTemplateMap = new Map<number, AssessmentTemplate>();
+      approvedTemplates.forEach(t => {
+        if (t.courseElementId) {
+          approvedTemplateMap.set(t.courseElementId, t);
+        }
+      });
+
+      const allExams = allElements.filter(
         (el) => 
           el.semesterCourseId.toString() === classData.semesterCourseId &&
           isPracticalExam(el) // Only include practical exams
       );
-
-      // Map exam sessions by course element
-      const sessionMap = new Map<number, ExamSession>();
-      for (const session of sessionRes.items) {
-        if (session.courseElementId) {
-          sessionMap.set(session.courseElementId, session);
-        }
-      }
 
       // Map class assessments by course element
       const assessmentMap = new Map<number, ClassAssessment>();
@@ -248,27 +252,30 @@ const PracticalExamsPage = () => {
         }
       }
 
-      // Fetch submissions for exam sessions of this class
-      const examSessionIds = Array.from(sessionMap.values()).map(s => s.id);
+      // Don't filter exams - show all course elements
+      // Only approved assessment templates will be used when rendering
+      const filteredExams = allExams;
+
+      // Fetch submissions for class assessments
+      const classAssessmentIds = Array.from(assessmentMap.values()).map(ca => ca.id);
       const submissionsByCourseElement = new Map<number, Submission[]>();
       
-      if (examSessionIds.length > 0) {
+      if (classAssessmentIds.length > 0) {
         try {
-          // Fetch submissions for each exam session
-          const submissionPromises = examSessionIds.map(sessionId =>
-            submissionService.getSubmissionList({ examSessionId: sessionId }).catch(() => [])
+          // Fetch submissions for each class assessment
+          const submissionPromises = classAssessmentIds.map(classAssessmentId =>
+            submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
           );
           const submissionArrays = await Promise.all(submissionPromises);
           const allSubmissions = submissionArrays.flat();
           
-          // Map submissions by course element via exam session
+          // Map submissions by course element via class assessment
           for (const submission of allSubmissions) {
-            if (!submission.examSessionId) continue;
-            const session = Array.from(sessionMap.values()).find(s => s.id === submission.examSessionId);
-            if (session && session.courseElementId) {
-              const existing = submissionsByCourseElement.get(session.courseElementId) || [];
+            const classAssessment = Array.from(assessmentMap.values()).find(ca => ca.id === submission.classAssessmentId);
+            if (classAssessment && classAssessment.courseElementId) {
+              const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
               existing.push(submission);
-              submissionsByCourseElement.set(session.courseElementId, existing);
+              submissionsByCourseElement.set(classAssessment.courseElementId, existing);
             }
           }
           
@@ -295,9 +302,8 @@ const PracticalExamsPage = () => {
       }
 
       setExams(filteredExams);
-      setTemplates(templateResponse.items);
+      setTemplates(approvedTemplates);
       setClassAssessments(assessmentMap);
-      setExamSessions(sessionMap);
       setSubmissions(submissionsByCourseElement);
     } catch (err: any) {
       console.error("Failed to fetch data:", err);
@@ -349,12 +355,27 @@ const PracticalExamsPage = () => {
           defaultActiveKey={exams.length > 0 ? [exams[0].id.toString()] : []}
         >
           {exams.map((exam) => {
-            const matchingTemplate = templates.find(
-              (t) => t.courseElementId === exam.id
-            );
             const classAssessment = classAssessments.get(exam.id);
-            const examSession = examSessions.get(exam.id);
-            const examSubmissions = submissions.get(exam.id) || [];
+            // Only show template if it's approved (templates state already contains only approved templates)
+            let matchingTemplate: AssessmentTemplate | undefined;
+            if (classAssessment?.assessmentTemplateId) {
+              // Check if the classAssessment's template is in the approved templates list
+              matchingTemplate = templates.find(
+                (t) => t.id === classAssessment.assessmentTemplateId
+              );
+            } else {
+              // Check if there's an approved template directly linked to this course element
+              matchingTemplate = templates.find(
+                (t) => t.courseElementId === exam.id
+              );
+            }
+            
+            // Only show classAssessment if it has an approved template
+            const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id 
+              ? classAssessment 
+              : undefined;
+            
+            const examSubmissions = approvedClassAssessment ? (submissions.get(exam.id) || []) : [];
             
             return (
               <Panel
@@ -366,7 +387,7 @@ const PracticalExamsPage = () => {
                         type="secondary"
                         style={{ fontSize: "0.9rem", color: "#E86A92" }}
                       >
-                        <LinkOutlined /> Active Exam
+                        <LinkOutlined /> {matchingTemplate ? "Active Exam" : "No Approved Template"}
                       </Text>
                       <Title level={4} style={{ margin: "4px 0 0 0" }}>
                         {exam.name}
@@ -378,8 +399,7 @@ const PracticalExamsPage = () => {
                 <ExamDetailItem 
                   exam={exam} 
                   template={matchingTemplate}
-                  classAssessment={classAssessment}
-                  examSession={examSession}
+                  classAssessment={approvedClassAssessment}
                   submissions={examSubmissions}
                 />
               </Panel>

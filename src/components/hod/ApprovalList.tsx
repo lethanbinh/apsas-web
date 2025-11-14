@@ -67,7 +67,11 @@ export default function ApprovalList() {
       title: "Date",
       dataIndex: "createdAt", 
       key: "date",
-      render: (text: string) => new Date(text).toLocaleDateString("vi-VN"),
+      render: (text: string) => new Date(text).toLocaleDateString("en-US", { 
+        year: "numeric", 
+        month: "short", 
+        day: "numeric" 
+      }),
       sorter: (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     },
     {

@@ -11,6 +11,7 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService, AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { assessmentFileService } from "@/services/assessmentFileService";
+import { assignRequestService } from "@/services/assignRequestService";
 import { PaperClipOutlined } from "@ant-design/icons";
 
 const { Title, Paragraph, Text } = Typography;
@@ -153,23 +154,8 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
         }
       }
 
-      // Try to get assessmentTemplateId from examSessionId
-      if (!assessmentTemplateId && examSessionId) {
-        try {
-          const { examSessionService } = await import("@/services/examSessionService");
-          const examSessions = await examSessionService.getExamSessions({
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          const examSession = examSessions.items.find((es) => es.id === examSessionId);
-          if (examSession?.assessmentTemplateId) {
-            assessmentTemplateId = examSession.assessmentTemplateId;
-            console.log("RequirementModal: Found assessmentTemplateId from examSession:", assessmentTemplateId);
-          }
-        } catch (err) {
-          console.error("RequirementModal: Failed to fetch from examSession:", err);
-        }
-      }
+      // Note: examSessionId is no longer used to fetch templates
+      // Templates are now fetched via classAssessmentId or courseElementId
 
       // Try to get assessmentTemplateId from courseElementId via classAssessment
       if (!assessmentTemplateId && courseElementId) {
@@ -208,15 +194,50 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
 
       const finalAssessmentTemplateId = assessmentTemplateId;
 
-      // Fetch template
+      // Fetch approved assign requests (status = 5)
+      let approvedAssignRequestIds = new Set<number>();
+      try {
+        const assignRequestResponse = await assignRequestService.getAssignRequests({
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+        // Only include assign requests with status = 5 (Approved/COMPLETED)
+        const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+        approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
+      } catch (err) {
+        console.error("RequirementModal: Failed to fetch assign requests:", err);
+        // Continue without filtering if assign requests cannot be fetched
+      }
+
+      // Fetch template and verify it has an approved assign request
       const templates = await assessmentTemplateService.getAssessmentTemplates({
         pageNumber: 1,
         pageSize: 1000,
       });
-      const template = templates.items.find((t) => t.id === finalAssessmentTemplateId);
+      
+      // Only get template if it has an approved assign request (status = 5)
+      const template = templates.items.find((t) => {
+        if (t.id !== finalAssessmentTemplateId) {
+          return false;
+        }
+        // Check if template has assignRequestId and it's in approved assign requests
+        if (!t.assignRequestId) {
+          return false; // Skip templates without assignRequestId
+        }
+        return approvedAssignRequestIds.has(t.assignRequestId);
+      });
       
       if (template) {
         setTemplateDescription(template.description || "");
+      } else {
+        // Template not found or not approved - don't show template data
+        console.warn("RequirementModal: Template not found or not approved:", finalAssessmentTemplateId);
+        setTemplateDescription("");
+        setPapers([]);
+        setQuestions({});
+        setFiles([]);
+        setLoading(false);
+        return;
       }
 
       // Fetch files

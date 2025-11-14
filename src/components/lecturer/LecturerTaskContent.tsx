@@ -17,6 +17,7 @@ import {
   Layout,
   Menu,
   Descriptions,
+  Select,
 } from "antd";
 import { useState, useEffect } from "react";
 import styles from "./Tasks.module.css";
@@ -874,6 +875,7 @@ export const LecturerTaskContent = ({
   task: AssignRequestItem;
   lecturerId: number;
 }) => {
+  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [template, setTemplate] = useState<AssessmentTemplate | null>(null);
   const [papers, setPapers] = useState<AssessmentPaper[]>([]);
   const [allQuestions, setAllQuestions] = useState<{
@@ -935,23 +937,42 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const fetchTemplate = async () => {
+  const fetchTemplates = async () => {
     setIsLoading(true);
     try {
+      // Fetch all templates for this lecturer
       const response = await assessmentTemplateService.getAssessmentTemplates({
-        assignRequestId: task.id,
+        lecturerId: lecturerId,
         pageNumber: 1,
-        pageSize: 10,
+        pageSize: 1000,
       });
-      if (response.items.length > 0) {
-        const tpl = response.items[0];
-        setTemplate(tpl);
-        await fetchAllData(tpl.id);
+      
+      // Filter templates by courseElementId (all templates for this course element)
+      const courseElementTemplates = response.items.filter(
+        (t) => t.courseElementId === task.courseElementId
+      );
+      
+      setTemplates(courseElementTemplates);
+      
+      // Find template for current assign request (default selected template)
+      const currentTemplate = courseElementTemplates.find(
+        (t) => t.assignRequestId === task.id
+      );
+      
+      // If found, set it as selected template
+      if (currentTemplate) {
+        setTemplate(currentTemplate);
+        await fetchAllData(currentTemplate.id);
+      } else if (courseElementTemplates.length > 0) {
+        // If no template for current assign request, use the first one
+        setTemplate(courseElementTemplates[0]);
+        await fetchAllData(courseElementTemplates[0].id);
       } else {
+        // No templates found
         setTemplate(null);
       }
     } catch (error) {
-      console.error("Failed to fetch template:", error);
+      console.error("Failed to fetch templates:", error);
     } finally {
       setIsLoading(false);
     }
@@ -1015,13 +1036,41 @@ export const LecturerTaskContent = ({
   };
 
   useEffect(() => {
-    fetchTemplate();
-  }, [task.id]);
+    fetchTemplates();
+  }, [task.id, task.courseElementId, lecturerId]);
+
+  // Handle template selection change
+  const handleTemplateChange = async (templateId: number) => {
+    const selectedTemplate = templates.find((t) => t.id === templateId);
+    if (selectedTemplate) {
+      setTemplate(selectedTemplate);
+      setSelectedKey("template-details"); // Reset to template overview
+      await fetchAllData(selectedTemplate.id);
+    }
+  };
 
   // --- Logic Xử lý sự kiện ---
 
   const handleCreateTemplate = async () => {
     try {
+      // Validate: Check if there's already a template for this course element
+      if (templates.length > 0) {
+        notification.error({
+          message: "Template Already Exists",
+          description: `This course element already has a template. Only one template is allowed per course element.`,
+        });
+        return;
+      }
+
+      // Validate: Check if template name is provided
+      if (!newTemplateName.trim()) {
+        notification.error({
+          message: "Template Name Required",
+          description: "Please provide a template name.",
+        });
+        return;
+      }
+
       await assessmentTemplateService.createAssessmentTemplate({
         name: newTemplateName,
         description: newTemplateDesc,
@@ -1032,9 +1081,17 @@ export const LecturerTaskContent = ({
       });
       setNewTemplateName("");
       setNewTemplateDesc("");
-      fetchTemplate();
-    } catch (error) {
+      notification.success({
+        message: "Template Created",
+        description: "Template has been created successfully.",
+      });
+      fetchTemplates();
+    } catch (error: any) {
       console.error("Failed to create template:", error);
+      notification.error({
+        message: "Failed to Create Template",
+        description: error.response?.data?.errorMessages?.[0] || error.message || "An unknown error occurred.",
+      });
     }
   };
 
@@ -1042,9 +1099,8 @@ export const LecturerTaskContent = ({
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
-      setTemplate(null);
-      setPapers([]);
-      setFiles([]);
+      // Refresh templates list after deletion
+      await fetchTemplates();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
       notification.error({
@@ -1218,7 +1274,7 @@ export const LecturerTaskContent = ({
         label: (
           <span className={styles.menuLabel}>
             {paper.name}
-            {isEditable && (
+            {isCurrentTemplateEditable && (
               <Space className={styles.menuActions}>
                 <Button
                   type="text"
@@ -1249,7 +1305,7 @@ export const LecturerTaskContent = ({
           label: (
             <span className={styles.menuLabel}>
               {q.questionNumber ? `Q${q.questionNumber}: ` : ""}{q.questionText.substring(0, 30)}...
-              {isEditable && (
+              {isCurrentTemplateEditable && (
                 <Space className={styles.menuActions}>
                   <Button
                     type="text"
@@ -1289,9 +1345,12 @@ export const LecturerTaskContent = ({
   };
 
   const refreshTemplate = async () => {
-    // Refresh toàn bộ template và các dữ liệu liên quan
-    await fetchTemplate();
+    // Refresh toàn bộ templates và các dữ liệu liên quan
+    await fetchTemplates();
   };
+
+  // Check if current template is editable (belongs to current assign request)
+  const isCurrentTemplateEditable = template?.assignRequestId === task.id && isEditable;
 
   const renderContent = () => {
     if (selectedKey === "template-details") {
@@ -1300,7 +1359,7 @@ export const LecturerTaskContent = ({
           template={template!}
           papers={papers}
           files={files}
-          isEditable={isEditable}
+          isEditable={isCurrentTemplateEditable}
           onFileChange={refreshFiles}
           onExport={handleExport}
           onTemplateDelete={handleDeleteTemplate}
@@ -1317,7 +1376,7 @@ export const LecturerTaskContent = ({
         return (
           <PaperDetailView
             paper={paper}
-            isEditable={isEditable}
+            isEditable={isCurrentTemplateEditable}
             onPaperChange={refreshPapers}
           />
         );
@@ -1342,7 +1401,7 @@ export const LecturerTaskContent = ({
         return (
           <QuestionDetailView
             question={question}
-            isEditable={isEditable}
+            isEditable={isCurrentTemplateEditable}
             onRubricChange={() => {}} // Có thể refresh tổng điểm sau
             onQuestionChange={() => refreshQuestions(paperId!)}
           />
@@ -1364,34 +1423,51 @@ export const LecturerTaskContent = ({
     <div className={`${styles["task-content"]} ${styles["nested-content"]}`}>
       {!template ? (
         isEditable ? (
-          <Card title="No Template Found. Create one.">
-            <Form layout="vertical">
-              <Form.Item label="Template Name" required>
-                <Input
-                  value={newTemplateName}
-                  onChange={(e) => setNewTemplateName(e.target.value)}
-                />
-              </Form.Item>
-              <Form.Item label="Template Description">
-                <Input
-                  value={newTemplateDesc}
-                  onChange={(e) => setNewTemplateDesc(e.target.value)}
-                />
-              </Form.Item>
-              <Form.Item label="Template Type">
-                <Radio.Group
-                  onChange={(e) => setNewTemplateType(e.target.value)}
-                  value={newTemplateType}
+          templates.length > 0 ? (
+            // If there are templates but current assign request doesn't have one
+            <Alert
+              message="Template Already Exists"
+              description={`This course element already has ${templates.length} template(s). Only one template is allowed per course element. Please select an existing template or contact the administrator.`}
+              type="warning"
+              showIcon
+            />
+          ) : (
+            // No template exists, allow creation
+            <Card title="No Template Found. Create one.">
+              <Form layout="vertical">
+                <Form.Item label="Template Name" required>
+                  <Input
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                    placeholder="Enter template name"
+                  />
+                </Form.Item>
+                <Form.Item label="Template Description">
+                  <Input
+                    value={newTemplateDesc}
+                    onChange={(e) => setNewTemplateDesc(e.target.value)}
+                    placeholder="Enter template description (optional)"
+                  />
+                </Form.Item>
+                <Form.Item label="Template Type" required>
+                  <Radio.Group
+                    onChange={(e) => setNewTemplateType(e.target.value)}
+                    value={newTemplateType}
+                  >
+                    <Radio value={0}>DSA</Radio>
+                    <Radio value={1}>WEBAPI</Radio>
+                  </Radio.Group>
+                </Form.Item>
+                <Button 
+                  type="primary" 
+                  onClick={handleCreateTemplate}
+                  disabled={!newTemplateName.trim()}
                 >
-                  <Radio value={0}>DSA</Radio>
-                  <Radio value={1}>WEBAPI</Radio>
-                </Radio.Group>
-              </Form.Item>
-              <Button type="primary" onClick={handleCreateTemplate}>
-                Create Template
-              </Button>
-            </Form>
-          </Card>
+                  Create Template
+                </Button>
+              </Form>
+            </Card>
+          )
         ) : (
           <Alert
             message="No template created for this task."
@@ -1425,11 +1501,30 @@ export const LecturerTaskContent = ({
                   flexShrink: 0,
                 }}
               >
+                {templates.length > 1 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Text strong style={{ display: "block", marginBottom: 8 }}>
+                      Select Template:
+                    </Text>
+                    <Select
+                      value={template?.id}
+                      onChange={handleTemplateChange}
+                      style={{ width: "100%" }}
+                      placeholder="Select a template"
+                    >
+                      {templates.map((t) => (
+                        <Select.Option key={t.id} value={t.id}>
+                          {t.name} {t.assignRequestId === task.id ? "(Current)" : ""}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                )}
                 <Title level={5} style={{ margin: 0 }}>
                   {template.name}
                 </Title>
                 <Text type="secondary">Exam Structure</Text>
-                {isEditable && (
+                {template.assignRequestId === task.id && isEditable && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -1438,6 +1533,14 @@ export const LecturerTaskContent = ({
                   >
                     Add New Paper
                   </Button>
+                )}
+                {template.assignRequestId !== task.id && (
+                  <Alert
+                    message="Viewing template from another assign request"
+                    type="info"
+                    showIcon
+                    style={{ marginTop: 16 }}
+                  />
                 )}
               </div>
 
@@ -1466,7 +1569,7 @@ export const LecturerTaskContent = ({
               setIsPaperModalOpen(false);
               refreshPapers();
             }}
-            isEditable={isEditable}
+            isEditable={isCurrentTemplateEditable}
             templateId={template.id}
           />
           <QuestionFormModal
@@ -1480,7 +1583,7 @@ export const LecturerTaskContent = ({
               refreshQuestions(paperForNewQuestion!);
               setPaperForNewQuestion(undefined);
             }}
-            isEditable={isEditable}
+            isEditable={isCurrentTemplateEditable}
             paperId={paperForNewQuestion}
             existingQuestionsCount={
               paperForNewQuestion ? (allQuestions[paperForNewQuestion]?.length || 0) : 0

@@ -31,7 +31,7 @@ export default function ApprovalDetailPage() {
         try {
           // BƯỚC 1: Lấy approval item
           console.log(`Fetching approval list to find item ID: ${assignRequestId}`);
-          const approvalResponse = await adminService.getApprovalList(1, 100); 
+          const approvalResponse = await adminService.getApprovalList(1, 1000); 
           const foundApproval = approvalResponse.items.find(item => item.id === assignRequestId);
           
           if (!foundApproval) {
@@ -40,41 +40,26 @@ export default function ApprovalDetailPage() {
           
           setApprovalItem(foundApproval); 
           
-          // Lấy courseElementId từ item đó
-          const courseElementId = foundApproval.courseElementId;
-          console.log(`Found courseElementId: ${courseElementId} for approvalId: ${assignRequestId}`);
-
-          // BƯỚC 2: Lấy Assessment Template
-          const templateResponse = await adminService.getAssessmentTemplateList(1, 100);
+          // BƯỚC 2: Lấy Assessment Template - chỉ tìm theo assignRequestId (chính xác nhất)
+          const templateResponse = await adminService.getAssessmentTemplateList(1, 1000);
           console.log(`Total templates found: ${templateResponse.items.length}`);
-          console.log(`Looking for template with assignRequestId: ${assignRequestId} or courseElementId: ${courseElementId}`);
+          console.log(`Looking for template with assignRequestId: ${assignRequestId}`);
           
-          // Thử tìm template bằng assignRequestId trước
-          let foundTemplate = templateResponse.items.find(t => t.assignRequestId === assignRequestId);
-          
-          // Nếu không tìm thấy, thử tìm bằng courseElementId
-          if (!foundTemplate && courseElementId) {
-            console.log(`Template not found by assignRequestId, trying courseElementId: ${courseElementId}`);
-            foundTemplate = templateResponse.items.find(t => t.courseElementId === courseElementId);
-          }
+          // Chỉ tìm template bằng assignRequestId (mỗi assign request chỉ có 1 template)
+          const foundTemplate = templateResponse.items.find(t => t.assignRequestId === assignRequestId);
 
           if (foundTemplate) {
+            // Set status từ approval item (assign request status)
             foundTemplate.status = foundApproval.status;
             setTemplate(foundTemplate);
             console.log("Successfully found template:", foundTemplate);
           } else {
-            // Log thêm thông tin để debug
-            console.warn(`No template found with assignRequestId: ${assignRequestId} or courseElementId: ${courseElementId}`);
-            console.warn("Available templates:", templateResponse.items.map(t => ({
-              id: t.id,
-              assignRequestId: t.assignRequestId,
-              courseElementId: t.courseElementId,
-              name: t.name
-            })));
+            // Template chưa được tạo - đây là trường hợp hợp lệ khi lecturer chưa tạo template
+            console.warn(`No template found with assignRequestId: ${assignRequestId}`);
+            console.warn("This may mean the template has not been created yet by the lecturer.");
             
-            // Template có thể chưa được tạo, đây không phải là lỗi nghiêm trọng
-            // Chỉ hiển thị warning và để component xử lý
-            setError(`Assessment template not found for approval request ID ${assignRequestId}. The template may not have been created yet.`);
+            // Không set error, chỉ hiển thị thông báo rằng template chưa được tạo
+            // Component sẽ xử lý việc hiển thị khi không có template
             setTemplate(null);
           }
         } catch (err: any) { 
@@ -99,12 +84,24 @@ export default function ApprovalDetailPage() {
     return <Alert message="Error" description={error} type="error" showIcon />;
   }
 
-  if (!template || !approvalItem) {
+  if (!approvalItem) {
     return (
       <Alert
         message="Not Found"
-        description="Approval item or template data could not be loaded."
-        type="warning"
+        description="Approval request could not be loaded."
+        type="error"
+        showIcon
+      />
+    );
+  }
+
+  // If template is not found, show a message but still allow viewing the approval item
+  if (!template) {
+    return (
+      <Alert
+        message="Template Not Created"
+        description="The assessment template for this approval request has not been created yet by the lecturer. Please wait for the lecturer to create the template before reviewing."
+        type="info"
         showIcon
       />
     );

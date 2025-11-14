@@ -9,8 +9,9 @@ import { AssignmentData } from "./data";
 import { AssignmentItem } from "./AssignmentItem";
 import { classService } from "@/services/classService";
 import { courseElementService, CourseElement } from "@/services/courseElementService";
-import { examSessionService, ExamSession } from "@/services/examSessionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
+import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { assignRequestService } from "@/services/assignRequestService";
 
 const { Title, Text } = Typography;
 
@@ -34,35 +35,26 @@ function isPracticalExam(element: CourseElement): boolean {
 
 function mapCourseElementToExamData(
   element: CourseElement,
-  sessionMap: Map<number, ExamSession[]>,
   classAssessmentMap: Map<number, ClassAssessment>
 ): AssignmentData {
-  const sessions = sessionMap.get(element.id) || [];
   const classAssessment = classAssessmentMap.get(element.id);
   const now = dayjs();
   let status = "Upcoming Exam";
   let deadline: string | undefined = undefined;
   let startAt = dayjs().toISOString();
-  let examSessionId: number | undefined;
   let assessmentTemplateId: number | undefined;
 
-  // Get deadline from classAssessment only (last set deadline)
+  // Get deadline from classAssessment only if it exists (last set deadline)
   // If no classAssessment, there is no deadline
   try {
     if (classAssessment?.endAt) {
       deadline = classAssessment.endAt;
       startAt = classAssessment.startAt || dayjs().toISOString();
+      assessmentTemplateId = classAssessment.assessmentTemplateId;
     }
   } catch (error) {
     console.error("Error parsing deadline:", error);
     // Continue without deadline
-  }
-
-  // Get examSessionId and assessmentTemplateId from first session if available
-  if (sessions.length > 0) {
-    const session = sessions[0];
-    examSessionId = session.id;
-    assessmentTemplateId = session.assessmentTemplateId;
   }
 
   // Determine status based on deadline
@@ -77,6 +69,8 @@ function mapCourseElementToExamData(
     } else {
       status = "Active Exam";
     }
+  } else {
+    status = "No Deadline";
   }
 
   return {
@@ -99,7 +93,6 @@ function mapCourseElementToExamData(
     suggestionsAvoid: "",
     suggestionsImprove: "",
     submissions: [],
-    examSessionId: examSessionId,
     assessmentTemplateId: assessmentTemplateId,
     startAt: startAt,
     classAssessmentId: classAssessment?.id,
@@ -107,7 +100,6 @@ function mapCourseElementToExamData(
 }
 
 export default function PracticalExams() {
-  const { message } = App.useApp();
   const [exams, setExams] = useState<AssignmentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,27 +131,61 @@ export default function PracticalExams() {
           (el) => el.semesterCourseId === semesterCourseId && isPracticalExam(el)
         );
 
-        // 3) Load exam sessions for this class to attach deadlines
-        let sessionsByCourseElement = new Map<number, ExamSession[]>();
-        
+        // 3) Fetch assign requests and filter by status = 5 (Approved)
+        let approvedAssignRequestIds = new Set<number>();
+        let approvedCourseElementIds = new Set<number>();
         try {
-          const sessionRes = await examSessionService.getExamSessions({
-            classId: Number(cls.id),
+          const assignRequestResponse = await assignRequestService.getAssignRequests({
             pageNumber: 1,
             pageSize: 1000,
           });
-          
-          for (const s of sessionRes.items) {
-            const arr = sessionsByCourseElement.get(s.courseElementId) || [];
-            arr.push(s);
-            sessionsByCourseElement.set(s.courseElementId, arr);
-          }
+          // Only include assign requests with status = 5 (Approved/COMPLETED)
+          const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+          approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
+          // Create map of courseElementIds that have approved assign requests
+          approvedAssignRequests.forEach(ar => {
+            if (ar.courseElementId) {
+              approvedCourseElementIds.add(ar.courseElementId);
+            }
+          });
         } catch (err) {
-          console.error("Failed to fetch exam sessions:", err);
-          // Continue without exam sessions
+          console.error("Failed to fetch assign requests:", err);
+          // Continue without filtering if assign requests cannot be fetched
         }
 
-        // 4) Fetch class assessments for this class to get last set deadline
+        // 4) Fetch assessment templates and filter by approved assign request IDs
+        let approvedTemplateIds = new Set<number>();
+        let approvedTemplates: AssessmentTemplate[] = [];
+        let approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
+        let approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
+        try {
+          const templateResponse = await assessmentTemplateService.getAssessmentTemplates({
+            pageNumber: 1,
+            pageSize: 1000,
+          });
+          // Only include templates with assignRequestId in approved assign requests (status = 5)
+          // Must have assignRequestId AND it must be in the approved assign requests list
+          approvedTemplates = templateResponse.items.filter(t => {
+            if (!t.assignRequestId) {
+              return false; // Skip templates without assignRequestId
+            }
+            return approvedAssignRequestIds.has(t.assignRequestId);
+          });
+          approvedTemplateIds = new Set(approvedTemplates.map(t => t.id));
+          // Create map by courseElementId for quick lookup (same as lecturer)
+          approvedTemplates.forEach(t => {
+            if (t.courseElementId) {
+              approvedTemplateByCourseElementMap.set(t.courseElementId, t);
+            }
+            // Also create map by template id for quick lookup
+            approvedTemplateByIdMap.set(t.id, t);
+          });
+        } catch (err) {
+          console.error("Failed to fetch assessment templates:", err);
+          // Continue without filtering if templates cannot be fetched
+        }
+
+        // 5) Fetch class assessments for this class to get last set deadline
         let classAssessmentMap = new Map<number, ClassAssessment>();
         try {
           const classAssessmentRes = await classAssessmentService.getClassAssessments({
@@ -177,10 +203,41 @@ export default function PracticalExams() {
           // Continue without class assessments
         }
 
-        // 5) Map to AssignmentData
-        const mappedExams = classElements.map((el) =>
-          mapCourseElementToExamData(el, sessionsByCourseElement, classAssessmentMap)
-        );
+        // 6) Map all course elements to AssignmentData (don't filter course elements)
+        // Logic same as lecturer: 
+        // 1. If classAssessment exists, find template by classAssessment.assessmentTemplateId in approved templates
+        // 2. If no classAssessment or template not found, find template by courseElementId in approved templates
+        // Only use classAssessment if approved template exists AND matches classAssessment's template
+        const mappedExams = classElements.map((el) => {
+          const classAssessment = classAssessmentMap.get(el.id);
+          let approvedTemplate: AssessmentTemplate | undefined;
+          
+          // Find approved template (same logic as lecturer)
+          if (classAssessment?.assessmentTemplateId) {
+            // First try: find template by classAssessment's assessmentTemplateId in approved templates
+            approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
+          }
+          
+          // Second try: if no template found via classAssessment, find by courseElementId
+          if (!approvedTemplate) {
+            approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
+          }
+          
+          // Only use classAssessment if approved template exists AND matches classAssessment's template
+          if (approvedTemplate) {
+            // Use classAssessment only if it matches the approved template
+            if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
+              return mapCourseElementToExamData(el, classAssessmentMap);
+            } else {
+              // If approved template exists but classAssessment doesn't match, don't use classAssessment
+              // But still show the course element (just without deadline)
+              return mapCourseElementToExamData(el, new Map());
+            }
+          } else {
+            // If no approved template found, don't use classAssessment
+            return mapCourseElementToExamData(el, new Map());
+          }
+        });
 
         setExams(mappedExams);
       } catch (err: any) {
