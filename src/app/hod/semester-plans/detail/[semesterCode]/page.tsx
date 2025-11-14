@@ -125,6 +125,7 @@ const StudentTable = ({ classId, onDelete }: StudentTableProps) => {
       rowKey="id"
       pagination={false}
       size="small"
+      scroll={{ x: 'max-content' }}
     />
   );
 };
@@ -151,16 +152,47 @@ const ClassesTable = ({
       key: "classCode",
     },
     {
+      title: "Description",
+      dataIndex: "description",
+      key: "description",
+      ellipsis: true,
+      render: (desc: string) => desc || "N/A",
+    },
+    {
       title: "Lecturer",
       dataIndex: ["lecturer", "account", "fullName"],
       key: "lecturer",
       render: (name: string, record: Class) => (
-        <Space>
-          <Avatar
-            src={record.lecturer.account.avatar}
-            icon={<UserOutlined />}
-          />
-          <span>{name}</span>
+        <Space direction="vertical" size={0}>
+          <Space>
+            <Avatar
+              src={record.lecturer.account.avatar}
+              icon={<UserOutlined />}
+            />
+            <span>{name}</span>
+          </Space>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.lecturer.account.accountCode || "N/A"}
+          </Text>
+        </Space>
+      ),
+    },
+    {
+      title: "Lecturer Info",
+      key: "lecturerInfo",
+      render: (_, record: Class) => (
+        <Space direction="vertical" size={0}>
+          <Text style={{ fontSize: 12 }}>
+            <strong>Dept:</strong> {record.lecturer.department || "N/A"}
+          </Text>
+          <Text style={{ fontSize: 12 }}>
+            <strong>Email:</strong> {record.lecturer.account.email || "N/A"}
+          </Text>
+          {record.lecturer.account.phoneNumber && (
+            <Text style={{ fontSize: 12 }}>
+              <strong>Phone:</strong> {record.lecturer.account.phoneNumber}
+            </Text>
+          )}
         </Space>
       ),
     },
@@ -192,6 +224,7 @@ const ClassesTable = ({
       dataSource={classes}
       rowKey="id"
       pagination={{ pageSize: 5, hideOnSinglePage: true }}
+      scroll={{ x: 'max-content' }}
       expandable={{
         expandedRowRender: (record) => (
           <>
@@ -261,6 +294,7 @@ const CourseElementsTable = ({
       dataSource={elements}
       rowKey="id"
       pagination={false}
+      scroll={{ x: 'max-content' }}
     />
   );
 };
@@ -283,19 +317,41 @@ const AssignRequestsTable = ({
       key: "element",
     },
     {
+      title: "Element Description",
+      dataIndex: ["courseElement", "description"],
+      key: "elementDesc",
+      ellipsis: true,
+      render: (desc: string) => desc || "N/A",
+    },
+    {
       title: "Assigned Lecturer",
       dataIndex: ["lecturer", "account", "fullName"],
       key: "lecturer",
+      render: (name: string, record: AssignRequest) => (
+        <Space direction="vertical" size={0}>
+          <span>{name}</span>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.lecturer.account.accountCode || "N/A"} | {record.lecturer.department || "N/A"}
+          </Text>
+        </Space>
+      ),
     },
     {
       title: "Message",
       dataIndex: "message",
       key: "message",
+      ellipsis: true,
     },
     {
       title: "Created At",
       dataIndex: "createdAt",
       key: "created",
+      render: (date: string) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
+    },
+    {
+      title: "Updated At",
+      dataIndex: "updatedAt",
+      key: "updated",
       render: (date: string) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
     },
     {
@@ -320,6 +376,7 @@ const AssignRequestsTable = ({
       dataSource={requests}
       rowKey="id"
       pagination={{ pageSize: 5, hideOnSinglePage: true }}
+      scroll={{ x: 'max-content' }}
     />
   );
 };
@@ -372,6 +429,19 @@ const SemesterCoursesTable = ({
       key: "name",
     },
     {
+      title: "Course Description",
+      dataIndex: ["course", "description"],
+      key: "description",
+      ellipsis: true,
+      render: (desc: string) => desc || "N/A",
+    },
+    {
+      title: "Created By",
+      dataIndex: "createdByHODAccountCode",
+      key: "createdBy",
+      render: (code: string) => code || "N/A",
+    },
+    {
       title: "Classes",
       dataIndex: "classes",
       key: "classes",
@@ -400,6 +470,12 @@ const SemesterCoursesTable = ({
           {requests.length}
         </Tag>
       ),
+    },
+    {
+      title: "Created At",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (date: string) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
     },
     {
       title: "Actions",
@@ -500,6 +576,7 @@ const SemesterCoursesTable = ({
       dataSource={courses}
       rowKey="id"
       expandable={{ expandedRowRender }}
+      scroll={{ x: 'max-content' }}
     />
   );
 };
@@ -540,6 +617,9 @@ const SemesterDetailPageContent = ({
     useState<AssignRequest | null>(null);
   const [currentCourseElements, setCurrentCourseElements] = useState<
     CourseElement[]
+  >([]);
+  const [currentAssignRequests, setCurrentAssignRequests] = useState<
+    AssignRequest[]
   >([]);
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
 
@@ -775,6 +855,7 @@ const SemesterDetailPageContent = ({
     semesterCourse: SemesterCourse
   ) => {
     setCurrentCourseElements(semesterCourse.courseElements);
+    setCurrentAssignRequests(semesterCourse.assignRequests);
     setEditingAssignRequest(null);
     setIsAssignRequestModalOpen(true);
   };
@@ -784,6 +865,7 @@ const SemesterDetailPageContent = ({
     semesterCourse: SemesterCourse
   ) => {
     setCurrentCourseElements(semesterCourse.courseElements);
+    setCurrentAssignRequests(semesterCourse.assignRequests);
     setEditingAssignRequest(request);
     setIsAssignRequestModalOpen(true);
   };
@@ -792,6 +874,7 @@ const SemesterDetailPageContent = ({
     setIsAssignRequestModalOpen(false);
     setEditingAssignRequest(null);
     setCurrentCourseElements([]);
+    setCurrentAssignRequests([]);
   };
 
   const handleAssignRequestModalOk = () => {
@@ -799,6 +882,7 @@ const SemesterDetailPageContent = ({
     const wasEditing = !!editingAssignRequest;
     setEditingAssignRequest(null);
     setCurrentCourseElements([]);
+    setCurrentAssignRequests([]);
     notification.success({
       message: wasEditing ? "Assign Request Updated" : "Assign Request Created",
       description: wasEditing
@@ -912,15 +996,28 @@ const SemesterDetailPageContent = ({
     <div style={{ padding: "24px", background: "#fff", minHeight: "100%" }}>
       <Title level={2}>Semester Plan: {semesterData.semesterCode}</Title>
 
-      <Descriptions bordered style={{ marginBottom: 24 }}>
+      <Descriptions bordered style={{ marginBottom: 24 }} column={2}>
+        <Descriptions.Item label="Semester Code">
+          {semesterData.semesterCode}
+        </Descriptions.Item>
         <Descriptions.Item label="Academic Year">
           {semesterData.academicYear}
         </Descriptions.Item>
-        <Descriptions.Item label="Dates" span={2}>
-          {formatUtcDate(semesterData.startDate, "dd/MM/yyyy")} -{" "}
+        <Descriptions.Item label="Start Date">
+          {formatUtcDate(semesterData.startDate, "dd/MM/yyyy")}
+        </Descriptions.Item>
+        <Descriptions.Item label="End Date">
           {formatUtcDate(semesterData.endDate, "dd/MM/yyyy")}
         </Descriptions.Item>
-        <Descriptions.Item label="Note">{semesterData.note}</Descriptions.Item>
+        <Descriptions.Item label="Created At">
+          {formatUtcDate(semesterData.createdAt, "dd/MM/yyyy HH:mm")}
+        </Descriptions.Item>
+        <Descriptions.Item label="Updated At">
+          {formatUtcDate(semesterData.updatedAt, "dd/MM/yyyy HH:mm")}
+        </Descriptions.Item>
+        <Descriptions.Item label="Note" span={2}>
+          {semesterData.note || "N/A"}
+        </Descriptions.Item>
       </Descriptions>
 
       <Space
@@ -963,6 +1060,7 @@ const SemesterDetailPageContent = ({
         open={isCourseModalOpen}
         semesterId={semesterData.id}
         initialData={editingCourse}
+        existingSemesterCourses={semesterData?.semesterCourses || []}
         onCancel={handleCourseModalCancel}
         onOk={handleCourseModalOk}
       />
@@ -997,6 +1095,7 @@ const SemesterDetailPageContent = ({
         initialData={editingAssignRequest}
         lecturers={lecturers}
         courseElements={currentCourseElements}
+        existingAssignRequests={currentAssignRequests}
         onCancel={handleAssignRequestModalCancel}
         onOk={handleAssignRequestModalOk}
       />

@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Input, Menu, Switch } from "antd";
+import { Layout, Input, Menu } from "antd";
 import {
   SearchOutlined,
   FileTextOutlined,
   BarChartOutlined,
-  SunOutlined,
-  MoonOutlined,
   CalendarOutlined,
   BookOutlined,
 } from "@ant-design/icons";
@@ -40,7 +38,6 @@ const menuItems = [
 ];
 
 export default function HeadOfDepartmentSidebar() {
-  const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
   const activeKey = useMemo(() => {
@@ -52,10 +49,6 @@ export default function HeadOfDepartmentSidebar() {
     );
     return matchingKey ? matchingKey.key : "";
   }, [pathname]);
-
-  const onThemeChange = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
 
   return (
     <Sider width={280} className={styles.sider}>
@@ -71,18 +64,6 @@ export default function HeadOfDepartmentSidebar() {
           selectedKeys={[activeKey]}
           className={styles.menu}
           items={menuItems}
-        />
-      </div>
-
-      <div className={styles.themeToggle}>
-        <SunOutlined />
-        <span className={styles.themeLabel}>Light mode</span>
-        <Switch
-          checked={theme === "dark"}
-          onChange={onThemeChange}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-          className={styles.themeSwitch}
         />
       </div>
     </Sider>

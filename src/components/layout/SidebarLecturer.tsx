@@ -4,16 +4,14 @@ import {
   BookOutlined,
   FileTextOutlined,
   InfoCircleOutlined,
-  MoonOutlined,
   SearchOutlined,
-  SunOutlined,
   UserOutlined,
   BarChartOutlined,
   CheckSquareOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import { Input, Layout, Menu, Switch } from "antd";
+import { Input, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -25,7 +23,6 @@ const { Search } = Input;
 type MenuItem = Required<MenuProps>["items"][number];
 
 export default function SidebarLecturer() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [selectedClassId, setSelectedClassId] = useState("");
   const pathname = usePathname();
 
@@ -81,10 +78,6 @@ export default function SidebarLecturer() {
     const matched = sortedKeys.find((key) => pathname.startsWith(key));
     return matched ?? "";
   }, [pathname]);
-
-  const onThemeChange = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
@@ -99,18 +92,6 @@ export default function SidebarLecturer() {
           selectedKeys={[selectedKey]}
           className={styles.menu}
           items={menuItems}
-        />
-      </div>
-
-      <div className={styles.themeToggle}>
-        <SunOutlined />
-        <span className={styles.themeLabel}>Light mode</span>
-        <Switch
-          checked={theme === "dark"}
-          onChange={onThemeChange}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-          className={styles.themeSwitch}
         />
       </div>
     </Sider>

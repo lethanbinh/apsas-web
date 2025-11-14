@@ -4,19 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix assign teacher examiner">
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="fix building production">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/hod/approval/[approvalId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/approval/[approvalId]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/practical-exams/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/practical-exams/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/hod/ApprovalList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/ApprovalList.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/PracticalExams.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/PracticalExams.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/RequirementModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/RequirementModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/assessmentTemplateService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/assessmentTemplateService.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/examSessionService.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/next.config.ts" beforeDir="false" afterPath="$PROJECT_DIR$/next.config.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/course-management/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarLecturer.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/AssignRequestCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/ClassCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseOnlyCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseOnlyCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/StudentGroupCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/sidebar/ExaminerSidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/sidebar/ExaminerSidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/sidebar/HeadOfDepartmentSidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/sidebar/HeadOfDepartmentSidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/sidebar/StudentSidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/sidebar/StudentSidebar.tsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -115,7 +118,8 @@
       <workItem from="1762922149952" duration="4395000" />
       <workItem from="1763013784721" duration="125000" />
       <workItem from="1763013920940" duration="24000" />
-      <workItem from="1763093903482" duration="900000" />
+      <workItem from="1763093903482" duration="1702000" />
+      <workItem from="1763113040638" duration="521000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -229,7 +233,23 @@
       <option name="project" value="LOCAL" />
       <updated>1763013934037</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="Fix template approval display">
+      <option name="closed" value="true" />
+      <created>1763096193194</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1763096193194</updated>
+    </task>
+    <task id="LOCAL-00016" summary="fix building production">
+      <option name="closed" value="true" />
+      <created>1763097168979</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1763097168979</updated>
+    </task>
+    <option name="localTasksCounter" value="17" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -271,8 +291,9 @@
     <MESSAGE value="Fix bugs and complete teacher assign" />
     <MESSAGE value="Fix bugs UI lecturer and student" />
     <MESSAGE value="Fix grading UI" />
-    <MESSAGE value="fix building production" />
     <MESSAGE value="Fix assign teacher examiner" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix assign teacher examiner" />
+    <MESSAGE value="Fix template approval display" />
+    <MESSAGE value="fix building production" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix building production" />
   </component>
 </project>

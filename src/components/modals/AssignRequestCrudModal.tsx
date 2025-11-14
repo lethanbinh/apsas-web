@@ -20,6 +20,7 @@ interface AssignRequestCrudModalProps {
   initialData: AssignRequest | null;
   lecturers: Lecturer[];
   courseElements: CourseElement[];
+  existingAssignRequests?: AssignRequest[];
   onCancel: () => void;
   onOk: () => void;
 }
@@ -29,6 +30,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
   initialData,
   lecturers,
   courseElements,
+  existingAssignRequests = [],
   onCancel,
   onOk,
 }) => {
@@ -42,15 +44,23 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
   useEffect(() => {
     if (open) {
       if (isEditMode) {
+        // When editing, status field is hidden (not editable)
+        // Status will be kept from existing data or default to 1 in handleFinish
         form.setFieldsValue({
           ...initialData,
           assignedLecturerId: Number(initialData.lecturer.id),
           courseElementId: initialData.courseElement.id,
-          assignedAt: parseUtcDate(initialData.assignedAt),
+          status: 1, // Default to Pending (status not in AssignRequest interface, will be handled in handleFinish)
         });
       } else {
+        // When creating, use current date
+        const currentDate = moment();
+        const formattedDate = currentDate.format("DD/MM/YYYY HH:mm:ss");
         form.resetFields();
-        form.setFieldsValue({ status: 1 });
+        form.setFieldsValue({ 
+          status: 1,
+          assignedAt: formattedDate, // Use current date when creating
+        });
       }
     }
   }, [open, initialData, form, isEditMode]);
@@ -77,10 +87,22 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
     setIsLoading(true);
     setError(null);
     try {
+      let assignedAtValue: string;
+      if (isEditMode) {
+        // When editing, keep the original assignedAt date
+        assignedAtValue = initialData?.assignedAt 
+          ? (initialData.assignedAt.endsWith("Z") ? initialData.assignedAt : initialData.assignedAt + "Z")
+          : moment().toISOString();
+      } else {
+        // When creating, use current date
+        assignedAtValue = moment().toISOString();
+      }
+      
       const payload = {
         ...values,
-        assignedAt: values.assignedAt.toISOString(),
+        assignedAt: assignedAtValue,
         assignedByHODId: 1,
+        status: values.status || 1, // Ensure status is always set (default to Pending)
       };
 
       if (isEditMode) {
@@ -129,7 +151,35 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
         <Form.Item
           name="courseElementId"
           label="Course Element"
-          rules={[{ required: true, message: "Please select an element" }]}
+          rules={[
+            { required: true, message: "Please select an element" },
+            {
+              validator: (_, value) => {
+                if (!value) return Promise.resolve();
+                const lecturerId = form.getFieldValue("assignedLecturerId");
+                if (!lecturerId) return Promise.resolve();
+                
+                // Check for duplicate, excluding the current request if editing
+                if (existingAssignRequests) {
+                  const duplicate = existingAssignRequests.find(
+                    (req) =>
+                      req.courseElement.id === value &&
+                      req.lecturer.id === Number(lecturerId) &&
+                      (!isEditMode || req.id !== initialData?.id) // Exclude current request when editing
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error(
+                        "Đã tồn tại assign request với cùng course element và lecturer trong môn học này!"
+                      )
+                    );
+                  }
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+          dependencies={["assignedLecturerId"]}
         >
           <Select
             showSearch
@@ -143,7 +193,35 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
         <Form.Item
           name="assignedLecturerId"
           label="Assign to Lecturer"
-          rules={[{ required: true, message: "Please select a lecturer" }]}
+          rules={[
+            { required: true, message: "Please select a lecturer" },
+            {
+              validator: (_, value) => {
+                if (!value) return Promise.resolve();
+                const courseElementId = form.getFieldValue("courseElementId");
+                if (!courseElementId) return Promise.resolve();
+                
+                // Check for duplicate, excluding the current request if editing
+                if (existingAssignRequests) {
+                  const duplicate = existingAssignRequests.find(
+                    (req) =>
+                      req.courseElement.id === courseElementId &&
+                      req.lecturer.id === Number(value) &&
+                      (!isEditMode || req.id !== initialData?.id) // Exclude current request when editing
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error(
+                        "Đã tồn tại assign request với cùng course element và lecturer trong môn học này!"
+                      )
+                    );
+                  }
+                }
+                return Promise.resolve();
+              },
+            },
+          ]}
+          dependencies={["courseElementId"]}
         >
           <Select
             showSearch
@@ -154,20 +232,18 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
             }
           />
         </Form.Item>
-        <Form.Item
-          name="status"
-          label="Status"
-          rules={[{ required: true, message: "Please select a status" }]}
-        >
-          <Select placeholder="Select status" options={statusOptions} />
+        {/* Status is hidden: default to Pending (1) when creating, and not editable when editing */}
+        <Form.Item name="status" hidden>
+          <Input type="hidden" />
         </Form.Item>
-        <Form.Item
-          name="assignedAt"
-          label="Assigned Date"
-          rules={[{ required: true, message: "Please select a date" }]}
-        >
-          <DatePicker showTime style={{ width: "100%" }} />
-        </Form.Item>
+        {!isEditMode && (
+          <Form.Item
+            name="assignedAt"
+            label="Assigned Date"
+          >
+            <Input disabled readOnly />
+          </Form.Item>
+        )}
         <Form.Item
           name="message"
           label="Message"

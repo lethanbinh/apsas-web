@@ -1,19 +1,21 @@
 "use client";
 
-import { Modal, Form, Input, Spin, Alert, App } from "antd";
-import { useEffect, useState } from "react";
+import { Course } from "@/services/courseElementService";
 import {
   courseService,
   CreateCoursePayload,
   semesterCourseService,
   UpdateCoursePayload,
 } from "@/services/courseManagementService";
-import { Course } from "@/services/courseElementService";
+import { SemesterCourse } from "@/services/semesterService";
+import { Alert, App, Form, Input, Modal } from "antd";
+import { useEffect, useState } from "react";
 
 interface CourseCrudModalProps {
   open: boolean;
   semesterId: number;
   initialData: Course | null;
+  existingSemesterCourses?: SemesterCourse[];
   onCancel: () => void;
   onOk: () => void;
 }
@@ -22,6 +24,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
   open,
   semesterId,
   initialData,
+  existingSemesterCourses = [],
   onCancel,
   onOk,
 }) => {
@@ -112,10 +115,38 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course name must be at least 2 characters!"));
                 }
+                
+                // Check for duplicate name in the same semester
+                if (!isEditMode && existingSemesterCourses) {
+                  const duplicate = existingSemesterCourses.find(
+                    (sc) => sc.course.name.toLowerCase().trim() === value.toLowerCase().trim()
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error("Đã tồn tại course với tên này trong học kỳ này!")
+                    );
+                  }
+                }
+                
+                // When editing, exclude current course
+                if (isEditMode && existingSemesterCourses) {
+                  const duplicate = existingSemesterCourses.find(
+                    (sc) => 
+                      sc.course.name.toLowerCase().trim() === value.toLowerCase().trim() &&
+                      sc.course.id !== initialData?.id
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error("Đã tồn tại course với tên này trong học kỳ này!")
+                    );
+                  }
+                }
+                
                 return Promise.resolve();
               },
             },
           ]}
+          dependencies={["code"]}
         >
           <Input />
         </Form.Item>
@@ -140,10 +171,38 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
+                
+                // Check for duplicate code in the same semester
+                if (!isEditMode && existingSemesterCourses) {
+                  const duplicate = existingSemesterCourses.find(
+                    (sc) => sc.course.code.toLowerCase().trim() === value.toLowerCase().trim()
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error("Đã tồn tại course với mã code này trong học kỳ này!")
+                    );
+                  }
+                }
+                
+                // When editing, exclude current course
+                if (isEditMode && existingSemesterCourses) {
+                  const duplicate = existingSemesterCourses.find(
+                    (sc) => 
+                      sc.course.code.toLowerCase().trim() === value.toLowerCase().trim() &&
+                      sc.course.id !== initialData?.id
+                  );
+                  if (duplicate) {
+                    return Promise.reject(
+                      new Error("Đã tồn tại course với mã code này trong học kỳ này!")
+                    );
+                  }
+                }
+                
                 return Promise.resolve();
               },
             },
           ]}
+          dependencies={["name"]}
         >
           <Input />
         </Form.Item>

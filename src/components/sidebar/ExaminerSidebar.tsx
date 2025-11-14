@@ -3,14 +3,12 @@
 import {
   ApartmentOutlined,
   FileTextOutlined,
-  MoonOutlined,
   SearchOutlined,
-  SunOutlined,
 } from "@ant-design/icons";
-import { Input, Layout, Menu, Switch } from "antd";
+import { Input, Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import styles from "./ExaminerSidebar.module.css";
 
 const { Sider } = Layout;
@@ -25,7 +23,6 @@ const menuItems = [
 ];
 
 export default function ExaminerSidebar() {
-  const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
   const activeKey = useMemo(() => {
@@ -39,10 +36,6 @@ export default function ExaminerSidebar() {
 
     return matchingKey ? matchingKey.key : "";
   }, [pathname]);
-
-  const onThemeChange = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
 
   return (
     <Sider width={280} className={styles.sider}>
@@ -58,18 +51,6 @@ export default function ExaminerSidebar() {
           selectedKeys={[activeKey]}
           className={styles.menu}
           items={menuItems}
-        />
-      </div>
-
-      <div className={styles.themeToggle}>
-        <SunOutlined />
-        <span className={styles.themeLabel}>Light mode</span>
-        <Switch
-          checked={theme === "dark"}
-          onChange={onThemeChange}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-          className={styles.themeSwitch}
         />
       </div>
     </Sider>

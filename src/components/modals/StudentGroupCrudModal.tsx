@@ -5,6 +5,7 @@ import {
   StudentDetail,
   studentManagementService,
 } from "@/services/studentManagementService";
+import { StudentInClass } from "@/services/classService";
 import { Alert, App, Form, Input, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 
@@ -25,23 +26,31 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [students, setStudents] = useState<StudentDetail[]>([]);
+  const [existingStudents, setExistingStudents] = useState<StudentInClass[]>([]);
   const { notification } = App.useApp();
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchData = async () => {
       try {
-        const data = await studentManagementService.getStudentList();
-        setStudents(data);
+        // Fetch all students
+        const allStudents = await studentManagementService.getStudentList();
+        setStudents(allStudents);
+        
+        // Fetch existing students in class
+        if (classId) {
+          const existing = await studentManagementService.getStudentsInClass(classId);
+          setExistingStudents(existing);
+        }
       } catch (err) {
-        console.error("Failed to fetch students:", err);
+        console.error("Failed to fetch data:", err);
       }
     };
 
     if (open) {
-      fetchStudents();
+      fetchData();
       form.resetFields();
     }
-  }, [open, form]);
+  }, [open, form, classId]);
 
   const studentOptions = students.map((s) => ({
     label: `${s.fullName} (${s.accountCode})`,
@@ -94,7 +103,27 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
         <Form.Item
           name="studentId"
           label="Student"
-          rules={[{ required: true, message: "Please select a student" }]}
+          rules={[
+            { required: true, message: "Please select a student" },
+            {
+              validator: (_, value) => {
+                if (!value) return Promise.resolve();
+                
+                // Check if student already exists in class
+                const existingStudent = existingStudents.find(
+                  (s) => Number(s.studentId) === Number(value)
+                );
+                
+                if (existingStudent) {
+                  return Promise.reject(
+                    new Error("Student này đã có trong lớp rồi!")
+                  );
+                }
+                
+                return Promise.resolve();
+              },
+            },
+          ]}
         >
           <Select
             showSearch

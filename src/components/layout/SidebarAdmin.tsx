@@ -1,15 +1,13 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Input, Menu, Switch } from "antd";
+import { Layout, Input, Menu } from "antd";
 import {
   FileTextOutlined,
   TeamOutlined,
   DashboardOutlined,
-  SunOutlined,
-  MoonOutlined,
 } from "@ant-design/icons";
 import styles from "./SidebarAdmin.module.css";
 
@@ -31,7 +29,6 @@ const menuItems = [
 ];
 
 export default function SidebarAdmin() {
-  const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
   // --- Tìm menu đang active ---
@@ -42,11 +39,6 @@ export default function SidebarAdmin() {
     const match = sortedKeys.find((item) => pathname.startsWith(item.key));
     return match ? match.key : "";
   }, [pathname]);
-
-  const onThemeChange = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-    console.log("Dark mode toggled:", checked);
-  };
 
   return (
     <Sider width={280} className={styles.sider}>
@@ -62,18 +54,6 @@ export default function SidebarAdmin() {
           selectedKeys={[activeKey]}
           className={styles.menu}
           items={menuItems}
-        />
-      </div>
-
-      <div className={styles.themeToggle}>
-        <SunOutlined />
-        <span className={styles.themeLabel}>Light mode</span>
-        <Switch
-          checked={theme === "dark"}
-          onChange={onThemeChange}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-          className={styles.themeSwitch}
         />
       </div>
     </Sider>

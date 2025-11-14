@@ -1,13 +1,13 @@
 "use client";
 
-import { Modal, Form, Input, Spin, Alert, App, InputNumber } from "antd";
-import { useEffect, useState } from "react";
 import {
   courseElementManagementService,
   CreateCourseElementPayload,
   UpdateCourseElementPayload,
 } from "@/services/courseElementManagementService";
 import { CourseElement } from "@/services/semesterService";
+import { Alert, App, Form, Input, InputNumber, Modal } from "antd";
+import { useEffect, useState } from "react";
 
 interface CourseElementCrudModalProps {
   open: boolean;

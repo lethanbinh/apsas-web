@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react"; // 1. Import thêm useMemo
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Input, Menu, Switch } from "antd";
+import { Layout, Input, Menu } from "antd";
 import {
   SearchOutlined,
   InfoCircleOutlined,
@@ -11,8 +11,6 @@ import {
   BookOutlined,
   UsergroupAddOutlined,
   FileTextOutlined,
-  SunOutlined,
-  MoonOutlined,
 } from "@ant-design/icons";
 import styles from "./StudentSidebar.module.css";
 
@@ -49,7 +47,6 @@ const menuItems = [
 ];
 
 export default function StudentSidebar() {
-  const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
   // 2. Logic tìm key active
@@ -69,10 +66,6 @@ export default function StudentSidebar() {
     return matchingKey ? matchingKey.key : "";
   }, [pathname]); // Chỉ chạy lại khi pathname thay đổi
 
-  const onThemeChange = (checked: boolean) => {
-    setTheme(checked ? "dark" : "light");
-  };
-
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
@@ -88,18 +81,6 @@ export default function StudentSidebar() {
           selectedKeys={[activeKey]}
           className={styles.menu}
           items={menuItems}
-        />
-      </div>
-
-      <div className={styles.themeToggle}>
-        <SunOutlined />
-        <span className={styles.themeLabel}>Light mode</span>
-        <Switch
-          checked={theme === "dark"}
-          onChange={onThemeChange}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-          className={styles.themeSwitch}
         />
       </div>
     </Sider>

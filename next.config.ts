@@ -8,18 +8,9 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['antd', '@ant-design/icons'],
   },
-  webpack: (config, { isServer }) => {
-    // Externalize docx and file-saver for server-side builds
-    // These packages are client-side only and should not be bundled for server
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push({
-        'docx': 'commonjs docx',
-        'file-saver': 'commonjs file-saver',
-      });
-    }
-    return config;
-  },
+  // Externalize docx and file-saver for server-side builds (works with both Webpack and Turbopack)
+  // This is the recommended way in Next.js 13+ and handles both bundlers automatically
+  serverExternalPackages: ['docx', 'file-saver'],
   
   images: {
     remotePatterns: [

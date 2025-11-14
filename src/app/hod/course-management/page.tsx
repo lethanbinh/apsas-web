@@ -1,21 +1,38 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Table, Spin, Alert, App, Button, Space, Typography } from "antd";
+import { Table, Spin, Alert, App, Button, Space, Typography, Select } from "antd";
 import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { courseService, Course } from "@/services/courseManagementService";
 import { CourseOnlyCrudModal } from "@/components/modals/CourseOnlyCrudModal";
+import { semesterService, Semester } from "@/services/semesterService";
 
 const { Title } = Typography;
 
 const CourseManagementPageContent = () => {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
+  const [selectedSemesterCourses, setSelectedSemesterCourses] = useState<Course[]>([]);
   const { modal, notification } = App.useApp();
+
+  const fetchSemesters = useCallback(async () => {
+    try {
+      const data = await semesterService.getSemesters({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      setSemesters(data);
+    } catch (err: any) {
+      console.error("Failed to fetch semesters:", err);
+    }
+  }, []);
 
   const fetchCourses = useCallback(async () => {
     try {
@@ -24,6 +41,7 @@ const CourseManagementPageContent = () => {
         pageNumber: 1,
         pageSize: 1000,
       });
+      setAllCourses(data);
       setCourses(data);
     } catch (err: any) {
       console.error("Failed to fetch courses:", err);
@@ -37,14 +55,53 @@ const CourseManagementPageContent = () => {
     }
   }, [notification]);
 
-  useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
+  const fetchSemesterCourses = useCallback(async (semesterId: number) => {
+    try {
+      setLoading(true);
+      const semester = semesters.find(s => s.id === semesterId);
+      if (!semester) {
+        setLoading(false);
+        return;
+      }
+      
+      const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
+      const semesterCourses: Course[] = semesterDetail.semesterCourses.map(sc => ({
+        ...sc.course,
+        createdAt: sc.createdAt || new Date().toISOString(),
+        updatedAt: sc.updatedAt || new Date().toISOString(),
+      }));
+      setSelectedSemesterCourses(semesterCourses);
+      setCourses(semesterCourses);
+    } catch (err: any) {
+      console.error("Failed to fetch semester courses:", err);
+      notification.error({
+        message: "Failed to load semester courses",
+        description: err.message || "An unknown error occurred.",
+      });
+      setCourses([]);
+      setSelectedSemesterCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [semesters, notification]);
 
-  const existingCodes = useMemo(
-    () => courses.map((c) => c.code.toLowerCase()),
-    [courses]
-  );
+  useEffect(() => {
+    fetchSemesters();
+    fetchCourses();
+  }, [fetchSemesters, fetchCourses]);
+
+  useEffect(() => {
+    if (selectedSemesterId && semesters.length > 0) {
+      fetchSemesterCourses(selectedSemesterId);
+    } else if (!selectedSemesterId) {
+      setCourses(allCourses);
+      setSelectedSemesterCourses([]);
+    }
+  }, [selectedSemesterId, fetchSemesterCourses, allCourses, semesters]);
+
+  const handleSemesterChange = (value: number | null) => {
+    setSelectedSemesterId(value);
+  };
 
   const handleOpenCreate = () => {
     setEditingCourse(null);
@@ -155,13 +212,29 @@ const CourseManagementPageContent = () => {
         >
           Course Management
         </Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleOpenCreate}
-        >
-          Create Course
-        </Button>
+        <Space>
+          <Select
+            placeholder="Filter by Semester"
+            style={{ width: 200 }}
+            allowClear
+            value={selectedSemesterId}
+            onChange={handleSemesterChange}
+            options={[
+              { label: "All Semesters", value: null },
+              ...semesters.map((s) => ({
+                label: s.semesterCode,
+                value: s.id,
+              })),
+            ]}
+          />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleOpenCreate}
+          >
+            Create Course
+          </Button>
+        </Space>
       </Space>
 
       {loading && (
@@ -190,7 +263,9 @@ const CourseManagementPageContent = () => {
       <CourseOnlyCrudModal
         open={isModalOpen}
         initialData={editingCourse}
-        existingCodes={existingCodes}
+        selectedSemesterId={selectedSemesterId}
+        existingSemesterCourses={selectedSemesterCourses}
+        allCourses={allCourses}
         onCancel={handleModalCancel}
         onOk={handleModalOk}
       />
