@@ -761,7 +761,22 @@ const TemplateDetailView = ({
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
       <Card
-        title={<Title level={4}>{template.name}</Title>}
+        title={
+          <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
+            <Title 
+              level={4} 
+              style={{ 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap',
+                margin: 0,
+                maxWidth: '100%'
+              }}
+            >
+              {template.name}
+            </Title>
+          </div>
+        }
         extra={
           <Space>
             {isEditable && (
@@ -1273,7 +1288,7 @@ export const LecturerTaskContent = ({
         icon: <BookOutlined />,
         label: (
           <span className={styles.menuLabel}>
-            {paper.name}
+            <span className={styles.menuLabelText}>{paper.name}</span>
             {isCurrentTemplateEditable && (
               <Space className={styles.menuActions}>
                 <Button
@@ -1304,7 +1319,9 @@ export const LecturerTaskContent = ({
           icon: <FileTextOutlined />,
           label: (
             <span className={styles.menuLabel}>
-              {q.questionNumber ? `Q${q.questionNumber}: ` : ""}{q.questionText.substring(0, 30)}...
+              <span className={styles.menuLabelText}>
+                {q.questionNumber ? `Q${q.questionNumber}: ` : ""}{q.questionText.substring(0, 30)}...
+              </span>
               {isCurrentTemplateEditable && (
                 <Space className={styles.menuActions}>
                   <Button
@@ -1520,7 +1537,16 @@ export const LecturerTaskContent = ({
                     </Select>
                   </div>
                 )}
-                <Title level={5} style={{ margin: 0 }}>
+                <Title 
+                  level={5} 
+                  style={{ 
+                    margin: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '100%'
+                  }}
+                >
                   {template.name}
                 </Title>
                 <Text type="secondary">Exam Structure</Text>

@@ -160,7 +160,9 @@ const TasksPageContent = () => {
                 >
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
-                {courseName}
+                <span className={styles["task-title-text"]}>
+                  {courseName}
+                </span>
               </div>
               <div className={styles["task-meta"]}>
                 <span>{groupedByCourse[courseName].length} Tasks</span>
@@ -206,7 +208,9 @@ const TasksPageContent = () => {
                         >
                           <polyline points="6 9 12 15 18 9" />
                         </svg>
-                        {task.courseElementName}
+                        <span className={styles["task-title-text"]}>
+                          {task.courseElementName}
+                        </span>
                         {getStatusTag(task.status)}
                       </div>
                       <svg

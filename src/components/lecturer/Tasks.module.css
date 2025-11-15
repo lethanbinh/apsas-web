@@ -377,7 +377,101 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 1rem;
+  position: relative;
 }
+
+.menuLabelText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
 .menuActions {
-  display: inline-flex;
+  display: inline-flex !important;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: fit-content;
+  position: relative;
+  z-index: 1;
+  margin-left: 1rem;
+  margin-right: 0.5rem;
+}
+
+.menuActions :global(.ant-btn) {
+  flex-shrink: 0;
+  min-width: auto;
+  padding: 4px 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.menuActions :global(.ant-space-item) {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Fix Card title truncation for Ant Design Card */
+:global(.ant-card-head) {
+  display: flex !important;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+:global(.ant-card-head-title) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px;
+}
+
+:global(.ant-card-head-title h1),
+:global(.ant-card-head-title h2),
+:global(.ant-card-head-title h3),
+:global(.ant-card-head-title h4),
+:global(.ant-card-head-title h5),
+:global(.ant-card-head-title h6) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+:global(.ant-card-extra) {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Fix Ant Design Menu item text truncation */
+:global(.ant-menu-item),
+:global(.ant-menu-submenu-title) {
+  overflow: visible !important;
+  padding-right: 8px !important;
+  position: relative;
+}
+
+:global(.ant-menu-item .ant-menu-title-content),
+:global(.ant-menu-submenu-title .ant-menu-title-content) {
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure menu items have enough space for buttons */
+:global(.ant-menu-inline .ant-menu-item),
+:global(.ant-menu-inline .ant-menu-submenu-title) {
+  padding-right: 40px !important;
 }

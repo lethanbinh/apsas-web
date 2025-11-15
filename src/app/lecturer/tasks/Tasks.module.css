@@ -27,6 +27,8 @@
   align-items: center;
   cursor: pointer;
   padding: 0.5rem 0;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .task-title {
@@ -35,6 +37,27 @@
   font-size: 1.125rem;
   font-weight: 600;
   color: #333333;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  gap: 0.5rem;
+}
+
+.task-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title .status-tag,
+.task-title .status-tag-pending,
+.task-title .status-tag-accepted,
+.task-title .status-tag-rejected,
+.task-title .status-tag-progress,
+.task-title .status-tag-completed {
+  flex-shrink: 0;
 }
 
 .task-title svg {
@@ -42,6 +65,7 @@
   width: 1.25rem;
   height: 1.25rem;
   color: #6d28d9;
+  flex-shrink: 0;
 }
 
 .task-meta {
@@ -49,6 +73,7 @@
   align-items: center;
   font-size: 0.875rem;
   color: #6b7280;
+  flex-shrink: 0;
 }
 
 .status-tag {
