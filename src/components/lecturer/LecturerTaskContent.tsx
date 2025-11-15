@@ -21,6 +21,7 @@ import {
 } from "antd";
 import { useState, useEffect } from "react";
 import styles from "./Tasks.module.css";
+import "./TasksGlobal.css";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import {
   AssessmentQuestion,

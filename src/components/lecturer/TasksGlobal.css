@@ -1,0 +1,60 @@
+/* Global styles for Ant Design components in Tasks module */
+
+/* Fix Card title truncation for Ant Design Card */
+.ant-card-head {
+  display: flex !important;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ant-card-head-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.ant-card-head-title h1,
+.ant-card-head-title h2,
+.ant-card-head-title h3,
+.ant-card-head-title h4,
+.ant-card-head-title h5,
+.ant-card-head-title h6 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.ant-card-extra {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* Fix Ant Design Menu item text truncation */
+.ant-menu-item,
+.ant-menu-submenu-title {
+  overflow: visible !important;
+  padding-right: 8px !important;
+  position: relative;
+}
+
+.ant-menu-item .ant-menu-title-content,
+.ant-menu-submenu-title .ant-menu-title-content {
+  overflow: hidden;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Ensure menu items have enough space for buttons */
+.ant-menu-inline .ant-menu-item,
+.ant-menu-inline .ant-menu-submenu-title {
+  padding-right: 40px !important;
+}
+
