@@ -14,9 +14,38 @@ import {
   Typography,
 } from "antd";
 import { format } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const { Title } = Typography;
+
+// Hàm sắp xếp semester theo thứ tự Spring, Summer, Fall trong từng năm
+const sortSemesters = (semesters: Semester[]): Semester[] => {
+  const seasonOrder: { [key: string]: number } = {
+    spring: 1,
+    summer: 2,
+    fall: 3,
+  };
+
+  return [...semesters].sort((a, b) => {
+    // Sắp xếp theo academicYear (từ mới đến cũ)
+    if (b.academicYear !== a.academicYear) {
+      return b.academicYear - a.academicYear;
+    }
+
+    // Nếu cùng năm, sắp xếp theo season: Spring -> Summer -> Fall
+    const aSeason = a.semesterCode
+      .replace(a.academicYear.toString(), "")
+      .toLowerCase();
+    const bSeason = b.semesterCode
+      .replace(b.academicYear.toString(), "")
+      .toLowerCase();
+
+    const aOrder = seasonOrder[aSeason] || 999;
+    const bOrder = seasonOrder[bSeason] || 999;
+
+    return aOrder - bOrder;
+  });
+};
 
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -92,6 +121,11 @@ const SemesterManagementPageContent = () => {
       },
     });
   };
+
+  // Sắp xếp semesters trước khi hiển thị
+  const sortedSemesters = useMemo(() => {
+    return sortSemesters(semesters);
+  }, [semesters]);
 
   const columns: TableProps<Semester>["columns"] = [
     {
@@ -187,7 +221,7 @@ const SemesterManagementPageContent = () => {
       {!loading && !error && (
         <Table
           columns={columns}
-          dataSource={semesters}
+          dataSource={sortedSemesters}
           rowKey="id"
           pagination={{ pageSize: 10 }}
         />

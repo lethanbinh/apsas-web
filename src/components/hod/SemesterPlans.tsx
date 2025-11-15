@@ -14,6 +14,35 @@ import styles from "./SemesterPlans.module.css";
 
 const { Title, Text } = Typography;
 
+// Hàm sắp xếp semester theo thứ tự Spring, Summer, Fall trong từng năm
+const sortSemesters = (semesters: Semester[]): Semester[] => {
+  const seasonOrder: { [key: string]: number } = {
+    spring: 1,
+    summer: 2,
+    fall: 3,
+  };
+
+  return [...semesters].sort((a, b) => {
+    // Sắp xếp theo academicYear (từ mới đến cũ)
+    if (b.academicYear !== a.academicYear) {
+      return b.academicYear - a.academicYear;
+    }
+
+    // Nếu cùng năm, sắp xếp theo season: Spring -> Summer -> Fall
+    const aSeason = a.semesterCode
+      .replace(a.academicYear.toString(), "")
+      .toLowerCase();
+    const bSeason = b.semesterCode
+      .replace(b.academicYear.toString(), "")
+      .toLowerCase();
+
+    const aOrder = seasonOrder[aSeason] || 999;
+    const bOrder = seasonOrder[bSeason] || 999;
+
+    return aOrder - bOrder;
+  });
+};
+
 interface SemesterPlanCardGridProps {
   semesters: Semester[];
   loading: boolean;
@@ -95,13 +124,17 @@ export default function SemesterPlans() {
     useMemo(() => {
       const now = new Date();
       return {
-        ongoingSemesters: semesters.filter(
-          (sem) =>
-            new Date(sem.startDate) <= now && new Date(sem.endDate) >= now
+        ongoingSemesters: sortSemesters(
+          semesters.filter(
+            (sem) =>
+              new Date(sem.startDate) <= now && new Date(sem.endDate) >= now
+          )
         ),
-        endedSemesters: semesters.filter((sem) => new Date(sem.endDate) < now),
-        upcomingSemesters: semesters.filter(
-          (sem) => new Date(sem.startDate) > now
+        endedSemesters: sortSemesters(
+          semesters.filter((sem) => new Date(sem.endDate) < now)
+        ),
+        upcomingSemesters: sortSemesters(
+          semesters.filter((sem) => new Date(sem.startDate) > now)
         ),
       };
     }, [semesters]);
