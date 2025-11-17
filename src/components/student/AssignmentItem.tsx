@@ -25,6 +25,7 @@ import { useStudent } from "@/hooks/useStudent";
 import { useAuth } from "@/hooks/useAuth";
 import { studentManagementService } from "@/services/studentManagementService";
 import { submissionService, Submission } from "@/services/submissionService";
+import { gradingService } from "@/services/gradingService";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -177,12 +178,24 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
       const newFileName = studentCode ? `${studentCode}.zip` : file.name;
       const renamedFile = new File([file], newFileName, { type: file.type });
 
+      // Step 1: Create submission
       const newSubmission = await submissionService.createSubmission({
         StudentId: studentId,
         ClassAssessmentId: data.classAssessmentId,
         ExamSessionId: data.examSessionId,
         file: renamedFile,
       });
+
+      // Step 2: Upload test file using gradingService
+      try {
+        await gradingService.uploadTestFile(newSubmission.id, renamedFile);
+        console.log("Test file uploaded successfully");
+      } catch (uploadErr: any) {
+        console.error("Failed to upload test file:", uploadErr);
+        // Don't fail the submission if test file upload fails
+        // The submission was already created successfully
+        message.warning("Assignment submitted, but test file upload failed. Please contact your lecturer.");
+      }
 
       setFileList([]);
       message.success("Your assignment has been submitted successfully!");

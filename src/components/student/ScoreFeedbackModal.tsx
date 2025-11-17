@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Modal, Typography, Card, Descriptions, Space, Divider, Collapse, Tag, Row, Col, Button, Spin, Table, Input } from "antd";
+import { Modal, Typography, Card, Descriptions, Space, Divider, Collapse, Tag, Row, Col, Button, Spin, Table, Input, Tooltip } from "antd";
 import styles from "./ScoreFeedbackModal.module.css";
 import { AssignmentData } from "./data";
 import { CloseOutlined } from "@ant-design/icons";
@@ -16,6 +16,9 @@ import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService, AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { rubricItemService, RubricItem } from "@/services/rubricItemService";
 import { assignRequestService } from "@/services/assignRequestService";
+import { gradingService, GradingSession, GradeItem as GradingServiceGradeItem } from "@/services/gradingService";
+import { gradeItemService, GradeItem } from "@/services/gradeItemService";
+import { FeedbackData } from "@/services/geminiService";
 import type { ColumnsType } from "antd/es/table";
 
 dayjs.extend(utc);
@@ -27,6 +30,8 @@ const { TextArea } = Input;
 interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
+  rubricComments: { [rubricId: number]: string };
+  questionComment?: string;
 }
 
 // Helper function to convert UTC to Vietnam time (UTC+7)
@@ -48,46 +53,88 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   const { studentId } = useStudent();
   const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(false);
+  const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
+  const [totalScore, setTotalScore] = useState<number>(0);
 
-  // Initialize with sample feedback data
-  const defaultSampleFeedback = {
-    overallFeedback: "The submission demonstrates a good understanding of the problem requirements. The code is functional and produces correct outputs for the given test cases. However, there are areas for improvement in code structure and efficiency.",
-    strengths: "1. Correct output for all test cases\n2. Code is readable and well-formatted\n3. Basic logic is sound\n4. Variable naming is clear",
-    weaknesses: "1. Code could be more modular with better function separation\n2. Some redundant code that could be refactored\n3. Limited error handling\n4. Missing input validation in some areas",
-    codeQuality: "The code quality is acceptable but could be improved. The structure is straightforward but lacks modularity. Consider breaking down complex functions into smaller, reusable components. Code formatting is consistent, which is good.",
-    algorithmEfficiency: "The algorithm works correctly but may not be optimal for larger inputs. Time complexity could be improved in some sections. Consider using more efficient data structures where applicable.",
-    suggestionsForImprovement: "1. Refactor code into smaller, reusable functions\n2. Add input validation and error handling\n3. Optimize algorithms for better time complexity\n4. Add comprehensive code comments\n5. Consider edge cases more thoroughly",
-    bestPractices: "Follow coding best practices such as DRY (Don't Repeat Yourself) principle. Use meaningful variable names consistently. Consider using constants for magic numbers. Implement proper error handling mechanisms.",
-    errorHandling: "Error handling is minimal. Add try-catch blocks where necessary. Validate user inputs before processing. Provide meaningful error messages to help with debugging.",
+  // Initialize with empty feedback data (will be populated from API)
+  const defaultEmptyFeedback: FeedbackData = {
+    overallFeedback: "",
+    strengths: "",
+    weaknesses: "",
+    codeQuality: "",
+    algorithmEfficiency: "",
+    suggestionsForImprovement: "",
+    bestPractices: "",
+    errorHandling: "",
   };
 
-  const [feedback, setFeedback] = useState<any>(defaultSampleFeedback);
+  const [feedback, setFeedback] = useState<FeedbackData>(defaultEmptyFeedback);
   const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
+  const [latestGradeItems, setLatestGradeItems] = useState<GradingServiceGradeItem[]>([]);
+  const [hasMappedGradeItems, setHasMappedGradeItems] = useState(false);
 
   useEffect(() => {
     if (open) {
       // Reset state when modal opens
-      setFeedback(defaultSampleFeedback);
+      setFeedback(defaultEmptyFeedback);
       setQuestions([]);
       setLastSubmission(null);
+      setLatestGradingSession(null);
+      setTotalScore(0);
+      setLatestGradeItems([]);
+      setHasMappedGradeItems(false);
 
       // Then try to fetch real data if available
       if (studentId && data.classAssessmentId) {
         fetchSubmissionData();
       } else {
-        // Only show sample data if no studentId or classAssessmentId
-        createSampleFeedback();
-        createSampleQuestionsForNoSubmission();
+        // If no studentId or classAssessmentId, still try to fetch template questions
+        fetchQuestionsAndRubricsForNoSubmission();
       }
     }
   }, [open, studentId, data.classAssessmentId]);
+
+  // Map grade items to questions when both are available (only once)
+  useEffect(() => {
+    if (questions.length > 0 && latestGradeItems.length > 0 && !hasMappedGradeItems) {
+      setQuestions((prevQuestions) => {
+        return prevQuestions.map((question) => {
+          const newRubricScores = { ...question.rubricScores };
+          const newRubricComments = { ...(question.rubricComments || {}) };
+          let questionComment = "";
+          
+          // Find grade items that match this question's rubrics
+          question.rubrics.forEach((rubric) => {
+            const matchingGradeItem = latestGradeItems.find(
+              (item) => item.rubricItemId === rubric.id
+            );
+            if (matchingGradeItem) {
+              newRubricScores[rubric.id] = matchingGradeItem.score;
+              newRubricComments[rubric.id] = matchingGradeItem.comments || "";
+              // Get comment from first grade item (all grade items in a question share the same comment)
+              if (!questionComment && matchingGradeItem.comments) {
+                questionComment = matchingGradeItem.comments;
+              }
+            }
+          });
+          
+          return { 
+            ...question, 
+            rubricScores: newRubricScores,
+            rubricComments: newRubricComments,
+            questionComment,
+          };
+        });
+      });
+      setHasMappedGradeItems(true);
+    }
+  }, [questions.length, latestGradeItems.length, hasMappedGradeItems]);
 
   const fetchSubmissionData = async () => {
     try {
       setLoading(true);
       if (!studentId) {
-        createSampleFeedback();
-        createSampleQuestionsForNoSubmission();
+        await fetchQuestionsAndRubricsForNoSubmission();
         return;
       }
 
@@ -97,23 +144,22 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       });
 
       if (submissions.length > 0) {
-        const latest = submissions[0];
+        // Get the most recent submission
+        const sorted = submissions.sort(
+          (a, b) =>
+            new Date(b.submittedAt).getTime() -
+            new Date(a.submittedAt).getTime()
+        );
+        const latest = sorted[0];
         setLastSubmission(latest);
 
-        // Load feedback from localStorage
-        const savedFeedback = localStorage.getItem(`feedback_${latest.id}`);
-        if (savedFeedback) {
-          setFeedback(JSON.parse(savedFeedback));
-        } else {
-          // Always create sample feedback if not found
-          createSampleFeedback();
-        }
+        // Fetch latest grading session and grade items (similar to lecturer)
+        await fetchLatestGradingData(latest.id);
 
         // Fetch questions and rubrics
         await fetchQuestionsAndRubrics(latest);
       } else {
         // No submissions found - still try to fetch template questions if template is approved
-        // Only show sample data if no approved template exists
         await fetchQuestionsAndRubricsForNoSubmission();
       }
     } catch (err) {
@@ -125,90 +171,89 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     }
   };
 
-  const createSampleFeedback = () => {
-    setFeedback(defaultSampleFeedback);
+  // Fetch latest grading session and grade items (similar to lecturer logic)
+  const fetchLatestGradingData = async (submissionId: number) => {
+    try {
+      // Fetch latest grading session for this submission
+      const gradingSessionsResult = await gradingService.getGradingSessions({
+        submissionId: submissionId,
+        pageNumber: 1,
+        pageSize: 100, // Get multiple to find the latest
+      });
+
+      if (gradingSessionsResult.items.length > 0) {
+        // Sort by createdAt desc to get the latest session
+        const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
+          return dateB - dateA; // Descending order
+        });
+        
+        const latestSession = sortedSessions[0];
+        setLatestGradingSession(latestSession);
+        
+        // Use gradeItems from the session response (already included in API response)
+        // If gradeItems are not in the response, fetch them separately
+        let gradeItems: GradingServiceGradeItem[] = [];
+        
+        if (latestSession.gradeItems && latestSession.gradeItems.length > 0) {
+          // Use gradeItems from response
+          gradeItems = latestSession.gradeItems;
+        } else {
+          // Fallback: fetch grade items separately if not in response
+          try {
+            const gradeItemsResult = await gradeItemService.getGradeItems({
+              gradingSessionId: latestSession.id,
+              pageNumber: 1,
+              pageSize: 1000, // Get all grade items
+            });
+            // Convert GradeItem from gradeItemService to GradingServiceGradeItem format
+            gradeItems = gradeItemsResult.items.map((item) => ({
+              id: item.id,
+              score: item.score,
+              comments: item.comments,
+              rubricItemId: item.rubricItemId,
+              rubricItemDescription: item.rubricItemDescription,
+              rubricItemMaxScore: item.rubricItemMaxScore,
+            }));
+          } catch (err) {
+            console.error("Failed to fetch grade items separately:", err);
+            gradeItems = [];
+          }
+        }
+        
+        // Filter to get only the latest grade item for each rubricItemId
+        // Since gradeItems from API are already the latest, we just need to deduplicate by rubricItemId
+        const latestGradeItemsMap = new Map<number, GradingServiceGradeItem>();
+        gradeItems.forEach((item) => {
+          const rubricId = item.rubricItemId;
+          if (!latestGradeItemsMap.has(rubricId)) {
+            latestGradeItemsMap.set(rubricId, item);
+          }
+        });
+        
+        const latestGradeItems = Array.from(latestGradeItemsMap.values());
+        setLatestGradeItems(latestGradeItems);
+        
+        // Calculate total score
+        if (latestGradeItems.length > 0) {
+          const total = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
+          setTotalScore(total);
+        } else {
+          // If no grade items, use the grade from session
+          setTotalScore(latestSession.grade);
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch latest grading data:", err);
+      // Don't show error to user, just log it
+    }
   };
 
+
   const createSampleQuestionsForNoSubmission = () => {
-    const sampleQuestions: QuestionWithRubrics[] = [
-      {
-        id: 1,
-        questionNumber: 1,
-        questionText: "Sample Question 1: Write a program to calculate the sum of two numbers",
-        questionSampleInput: "5\n10",
-        questionSampleOutput: "15",
-        score: 10,
-        assessmentPaperId: 1,
-        assessmentPaperName: "Sample Paper 1",
-        rubricCount: 2,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        rubrics: [
-          {
-            id: 1,
-            description: "Correct output for sample input",
-            input: "5\n10",
-            output: "15",
-            score: 5,
-            assessmentQuestionId: 1,
-            questionText: "Sample Question 1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            description: "Code structure and readability",
-            input: "N/A",
-            output: "N/A",
-            score: 5,
-            assessmentQuestionId: 1,
-            questionText: "Sample Question 1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        rubricScores: { 1: 5, 2: 4 },
-      },
-      {
-        id: 2,
-        questionNumber: 2,
-        questionText: "Sample Question 2: Write a program to find the maximum of three numbers",
-        questionSampleInput: "3\n7\n2",
-        questionSampleOutput: "7",
-        score: 10,
-        assessmentPaperId: 1,
-        assessmentPaperName: "Sample Paper 1",
-        rubricCount: 2,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        rubrics: [
-          {
-            id: 3,
-            description: "Correct output for sample input",
-            input: "3\n7\n2",
-            output: "7",
-            score: 6,
-            assessmentQuestionId: 2,
-            questionText: "Sample Question 2",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 4,
-            description: "Code structure and readability",
-            input: "N/A",
-            output: "N/A",
-            score: 4,
-            assessmentQuestionId: 2,
-            questionText: "Sample Question 2",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        rubricScores: { 3: 6, 4: 3 },
-      },
-    ];
-    setQuestions(sampleQuestions);
+    // Don't create sample questions - just show empty list
+    setQuestions([]);
   };
 
   const fetchQuestionsAndRubricsForNoSubmission = async () => {
@@ -450,28 +495,22 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               const questionRubrics = rubricsRes.items || [];
               console.log(`ScoreFeedbackModal: Fetched ${questionRubrics.length} rubrics for question ${question.id}`);
 
-              // Generate sample scores based on submission grade
-              const hasGrade = submission.lastGrade > 0;
+              // Initialize rubric scores and comments (will be populated by useEffect when grade items are available)
               const rubricScores: { [rubricId: number]: number } = {};
+              const rubricComments: { [rubricId: number]: string } = {};
+              let questionComment = "";
+              
               questionRubrics.forEach((rubric) => {
-                if (hasGrade) {
-                  // If already graded, distribute score proportionally
-                  const totalMaxScore = questionRubrics.reduce((sum, r) => sum + r.score, 0);
-                  const questionScore = (submission.lastGrade / 100) * question.score;
-                  rubricScores[rubric.id] = Math.round((rubric.score / totalMaxScore) * questionScore);
-                } else {
-                  // Generate sample score (random between 60-100% of max score)
-                  const minScore = Math.floor(rubric.score * 0.6);
-                  const maxScore = rubric.score;
-                  const sampleScore = Math.floor(Math.random() * (maxScore - minScore + 1)) + minScore;
-                  rubricScores[rubric.id] = sampleScore;
-                }
+                rubricScores[rubric.id] = 0;
+                rubricComments[rubric.id] = "";
               });
 
               allQuestions.push({
                 ...question,
                 rubrics: questionRubrics,
                 rubricScores,
+                rubricComments,
+                questionComment,
               });
             } catch (err) {
               console.error(`ScoreFeedbackModal: Failed to fetch rubrics for question ${question.id}:`, err);
@@ -481,6 +520,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 ...question,
                 rubrics: [],
                 rubricScores: {},
+                rubricComments: {},
               });
             }
           }
@@ -498,9 +538,20 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         const sortedQuestions = [...allQuestions].sort((a, b) =>
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
+        
         console.log(`ScoreFeedbackModal: Setting ${sortedQuestions.length} questions`);
         setQuestions(sortedQuestions);
+        
+        // Grade items will be mapped to questions via useEffect when both are available
       }
+      
+      // Try to load feedback from grading session if available
+      if (latestGradingSession) {
+        // Try to get feedback from grading logs or other sources
+        // For now, we'll keep feedback empty if not available
+        // The feedback might be stored in grading logs or separate feedback API
+      }
+      
       setLoading(false);
     } catch (err) {
       console.error("Failed to fetch questions and rubrics:", err);
@@ -524,163 +575,167 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   };
 
   const createSampleQuestions = (submission: Submission) => {
-    const sampleQuestions: QuestionWithRubrics[] = [
-      {
-        id: 1,
-        questionText: "Sample Question 1: Write a program to calculate the sum of two numbers",
-        questionSampleInput: "5\n10",
-        questionSampleOutput: "15",
-        score: 10,
-        questionNumber: 1,
-        assessmentPaperId: 1,
-        assessmentPaperName: "Sample Paper 1",
-        rubricCount: 2,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        rubrics: [
-          {
-            id: 1,
-            description: "Correct output for sample input",
-            input: "5\n10",
-            output: "15",
-            score: 5,
-            assessmentQuestionId: 1,
-            questionText: "Sample Question 1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            description: "Code structure and readability",
-            input: "N/A",
-            output: "N/A",
-            score: 5,
-            assessmentQuestionId: 1,
-            questionText: "Sample Question 1",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        rubricScores: {},
-      },
-      {
-        id: 2,
-        questionText: "Sample Question 2: Write a program to find the maximum of three numbers",
-        questionSampleInput: "3\n7\n2",
-        questionSampleOutput: "7",
-        score: 10,
-        questionNumber: 2,
-        assessmentPaperId: 1,
-        assessmentPaperName: "Sample Paper 1",
-        rubricCount: 2,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        rubrics: [
-          {
-            id: 3,
-            description: "Correct output for sample input",
-            input: "3\n7\n2",
-            output: "7",
-            score: 6,
-            assessmentQuestionId: 2,
-            questionText: "Sample Question 2",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 4,
-            description: "Code structure and readability",
-            input: "N/A",
-            output: "N/A",
-            score: 4,
-            assessmentQuestionId: 2,
-            questionText: "Sample Question 2",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ],
-        rubricScores: {},
-      },
-    ];
-
-    const hasGrade = submission.lastGrade > 0;
-    sampleQuestions.forEach((q) => {
-      q.rubrics.forEach((rubric) => {
-        if (hasGrade) {
-          const totalMaxScore = q.rubrics.reduce((sum, r) => sum + r.score, 0);
-          const questionScore = (submission.lastGrade / 100) * q.score;
-          q.rubricScores[rubric.id] = Math.round((rubric.score / totalMaxScore) * questionScore);
-        } else {
-          const minScore = Math.floor(rubric.score * 0.6);
-          const maxScore = rubric.score;
-          const sampleScore = Math.floor(Math.random() * (maxScore - minScore + 1)) + minScore;
-          q.rubricScores[rubric.id] = sampleScore;
-        }
-      });
-    });
-
-    setQuestions(sampleQuestions);
+    // Don't create sample questions - just show empty list
+    setQuestions([]);
   };
 
-  // Parse score from string like "5/10" to get numeric values
-  const parseScore = (scoreStr: string) => {
-    if (!scoreStr || scoreStr === "N/A") return { current: 0, max: 100 };
-    const match = scoreStr.match(/(\d+)\/(\d+)/);
-    if (match) {
-      return { current: parseInt(match[1]), max: parseInt(match[2]) };
+  // Calculate total score from questions or use latest grading session
+  const getTotalScoreDisplay = () => {
+    // If we have a grading session, use totalScore (even if it's 0)
+    if (latestGradingSession) {
+      // Calculate max score from questions
+      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
+      if (maxScore > 0) {
+        return `${totalScore}/${maxScore}`;
+      }
+      // If no questions or maxScore is 0, just return the score (even if 0)
+      return totalScore.toString();
     }
-    return { current: 0, max: 100 };
+    
+    // If we have totalScore from state but no grading session yet, still show it
+    if (totalScore !== undefined && totalScore !== null) {
+      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
+      if (maxScore > 0) {
+        return `${totalScore}/${maxScore}`;
+      }
+      return totalScore.toString();
+    }
+    
+    // Fallback to lastSubmission.lastGrade if available
+    if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
+      return lastSubmission.lastGrade.toString();
+    }
+    
+    // Only show N/A if we truly don't have any score data
+    return data.totalScore || "N/A";
   };
-
-  const scoreInfo = parseScore(data.totalScore);
 
   const getQuestionColumns = (question: QuestionWithRubrics): ColumnsType<RubricItem> => [
     {
       title: "Criteria",
       dataIndex: "description",
       key: "description",
-      width: "40%",
+      width: 200,
+      fixed: "left" as const,
+      render: (text: string) => (
+        <Tooltip title={text} placement="topLeft">
+          <Text strong style={{ fontSize: "13px" }}>
+            {text}
+          </Text>
+        </Tooltip>
+      ),
     },
     {
       title: "Input",
       dataIndex: "input",
       key: "input",
-      width: "25%",
-      render: (text: string) => (
-        <Text code style={{ fontSize: "12px" }}>
-          {text || "N/A"}
-        </Text>
-      ),
+      width: 120,
+      render: (text: string) => {
+        const displayText = text && text !== "N/A" ? text : "N/A";
+        return (
+          <Tooltip title={displayText} placement="top">
+            <Text 
+              code 
+              style={{ 
+                fontSize: "11px",
+                display: "block",
+                maxWidth: "100px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {displayText}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Output",
       dataIndex: "output",
       key: "output",
-      width: "25%",
-      render: (text: string) => (
-        <Text code style={{ fontSize: "12px" }}>
-          {text || "N/A"}
-        </Text>
-      ),
+      width: 120,
+      render: (text: string) => {
+        const displayText = text && text !== "N/A" ? text : "N/A";
+        return (
+          <Tooltip title={displayText} placement="top">
+            <Text 
+              code 
+              style={{ 
+                fontSize: "11px",
+                display: "block",
+                maxWidth: "100px",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }}
+            >
+              {displayText}
+            </Text>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Max Score",
       dataIndex: "score",
       key: "maxScore",
-      width: "10%",
+      width: 100,
       align: "center",
-      render: (score: number) => <Tag color="blue">{score}</Tag>,
+      render: (score: number) => (
+        <Tag color="blue" style={{ margin: 0 }}>
+          {score}
+        </Tag>
+      ),
     },
     {
       title: "Score",
       key: "rubricScore",
-      width: "15%",
+      width: 80,
+      align: "center",
       render: (_: any, record: RubricItem) => {
         const currentScore = question.rubricScores[record.id] || 0;
+        const maxScore = record.score;
+        const scorePercentage = maxScore > 0 ? (currentScore / maxScore) * 100 : 0;
+        const tagColor = scorePercentage >= 80 ? "green" : scorePercentage >= 50 ? "orange" : "red";
         return (
-          <Text strong style={{ fontSize: "14px" }}>
+          <Tag color={tagColor} style={{ margin: 0, fontWeight: "bold" }}>
             {currentScore}
-          </Text>
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Comments",
+      key: "rubricComments",
+      width: 400,
+      render: (_: any, record: RubricItem) => {
+        const comment = question.rubricComments?.[record.id] || "";
+        if (!comment || comment === "-") {
+          return <Text type="secondary" style={{ fontSize: "12px" }}>-</Text>;
+        }
+        
+        // Truncate long comments for display
+        const maxLength = 150;
+        const isLong = comment.length > maxLength;
+        const displayText = isLong ? comment.substring(0, maxLength) + "..." : comment;
+        
+        return (
+          <Tooltip title={comment} placement="topLeft" overlayStyle={{ maxWidth: "500px" }}>
+            <div style={{ 
+              fontSize: "12px",
+              lineHeight: "1.5",
+              wordBreak: "break-word",
+              maxHeight: "100px",
+              overflowY: "auto",
+              padding: "4px 0"
+            }}>
+              <Text style={{ fontSize: "12px", whiteSpace: "pre-wrap" }}>
+                {displayText}
+              </Text>
+            </div>
+          </Tooltip>
         );
       },
     },
@@ -696,7 +751,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       open={open}
       onCancel={onCancel}
       footer={null}
-      width={1000}
+      width={1200}
       style={{ top: 20 }}
       closeIcon={<CloseOutlined />}
     >
@@ -723,9 +778,35 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 )}
                 <Descriptions.Item label="Total Score">
                   <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
-                    {data.totalScore}
+                    {getTotalScoreDisplay()}
                   </Text>
                 </Descriptions.Item>
+                {latestGradingSession && (
+                  <>
+                    <Descriptions.Item label="Grading Status">
+                      <Tag color={
+                        latestGradingSession.status === 1 ? "green" : 
+                        latestGradingSession.status === 2 ? "red" : 
+                        "orange"
+                      }>
+                        {latestGradingSession.status === 1 ? "Completed" : 
+                         latestGradingSession.status === 2 ? "Failed" : 
+                         "Processing"}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Grading Type">
+                      <Tag color={
+                        latestGradingSession.gradingType === 0 ? "blue" : 
+                        latestGradingSession.gradingType === 1 ? "purple" : 
+                        "cyan"
+                      }>
+                        {latestGradingSession.gradingType === 0 ? "AI" : 
+                         latestGradingSession.gradingType === 1 ? "Lecturer" : 
+                         "Both"}
+                      </Tag>
+                    </Descriptions.Item>
+                  </>
+                )}
               </Descriptions>
             </Card>
 
@@ -787,14 +868,36 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
                           <Divider />
 
-                          <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
-                          <Table
-                            columns={getQuestionColumns(question)}
-                            dataSource={question.rubrics}
-                            rowKey="id"
-                            pagination={false}
-                            size="small"
-                          />
+                          <Title level={5} style={{ marginBottom: 12 }}>
+                            Grading Criteria ({question.rubrics.length})
+                          </Title>
+                          {question.questionComment && (
+                            <div style={{ 
+                              marginBottom: 16, 
+                              padding: 12, 
+                              backgroundColor: "#f0f7ff", 
+                              borderRadius: 6,
+                              border: "1px solid #d4edda"
+                            }}>
+                              <Text strong style={{ color: "#1890ff" }}>Question Feedback:</Text>
+                              <div style={{ marginTop: 8 }}>
+                                <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>
+                                  {question.questionComment}
+                                </Text>
+                              </div>
+                            </div>
+                          )}
+                          <div style={{ overflowX: "auto" }}>
+                            <Table
+                              columns={getQuestionColumns(question)}
+                              dataSource={question.rubrics}
+                              rowKey="id"
+                              pagination={false}
+                              size="small"
+                              scroll={{ x: 1000 }}
+                              className={styles.gradingTable}
+                            />
+                          </div>
                         </div>
                       ),
                     };
@@ -859,97 +962,101 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   <Title level={5}>Overall Feedback</Title>
                   <TextArea
                     rows={4}
-                    value={feedback?.overallFeedback || data.overallFeedback || defaultSampleFeedback.overallFeedback}
+                    value={feedback?.overallFeedback || data.overallFeedback || ""}
                     readOnly
                     placeholder="No overall feedback provided yet."
                   />
                 </div>
 
-                {/* Always show detailed feedback sections - sample data will be shown if no real data */}
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <div>
-                      <Title level={5}>Strengths</Title>
-                      <TextArea
-                        rows={5}
-                        value={feedback?.strengths || defaultSampleFeedback.strengths}
-                        readOnly
-                        placeholder="List the strengths of the submission..."
-                      />
-                    </div>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <div>
-                      <Title level={5}>Weaknesses</Title>
-                      <TextArea
-                        rows={5}
-                        value={feedback?.weaknesses || defaultSampleFeedback.weaknesses}
-                        readOnly
-                        placeholder="List areas that need improvement..."
-                      />
-                    </div>
-                  </Col>
-                </Row>
+                {/* Show detailed feedback sections only if feedback data exists */}
+                {(feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality || feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement || feedback?.bestPractices || feedback?.errorHandling) && (
+                  <>
+                    <Row gutter={16}>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Strengths</Title>
+                          <TextArea
+                            rows={5}
+                            value={feedback?.strengths || ""}
+                            readOnly
+                            placeholder="No strengths feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Weaknesses</Title>
+                          <TextArea
+                            rows={5}
+                            value={feedback?.weaknesses || ""}
+                            readOnly
+                            placeholder="No weaknesses feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                    </Row>
 
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
+                    <Row gutter={16}>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Code Quality</Title>
+                          <TextArea
+                            rows={4}
+                            value={feedback?.codeQuality || ""}
+                            readOnly
+                            placeholder="No code quality feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Algorithm Efficiency</Title>
+                          <TextArea
+                            rows={4}
+                            value={feedback?.algorithmEfficiency || ""}
+                            readOnly
+                            placeholder="No algorithm efficiency feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                    </Row>
+
                     <div>
-                      <Title level={5}>Code Quality</Title>
+                      <Title level={5}>Suggestions for Improvement</Title>
                       <TextArea
                         rows={4}
-                        value={feedback?.codeQuality || defaultSampleFeedback.codeQuality}
+                        value={feedback?.suggestionsForImprovement || ""}
                         readOnly
-                        placeholder="Evaluate code structure, readability, and maintainability..."
+                        placeholder="No suggestions provided yet."
                       />
                     </div>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <div>
-                      <Title level={5}>Algorithm Efficiency</Title>
-                      <TextArea
-                        rows={4}
-                        value={feedback?.algorithmEfficiency || defaultSampleFeedback.algorithmEfficiency}
-                        readOnly
-                        placeholder="Comment on time/space complexity and optimization..."
-                      />
-                    </div>
-                  </Col>
-                </Row>
 
-                <div>
-                  <Title level={5}>Suggestions for Improvement</Title>
-                  <TextArea
-                    rows={4}
-                    value={feedback?.suggestionsForImprovement || defaultSampleFeedback.suggestionsForImprovement}
-                    readOnly
-                    placeholder="Provide specific suggestions for improvement..."
-                  />
-                </div>
-
-                <Row gutter={16}>
-                  <Col xs={24} md={12}>
-                    <div>
-                      <Title level={5}>Best Practices</Title>
-                      <TextArea
-                        rows={3}
-                        value={feedback?.bestPractices || defaultSampleFeedback.bestPractices}
-                        readOnly
-                        placeholder="Comment on adherence to coding best practices..."
-                      />
-                    </div>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <div>
-                      <Title level={5}>Error Handling</Title>
-                      <TextArea
-                        rows={3}
-                        value={feedback?.errorHandling || defaultSampleFeedback.errorHandling}
-                        readOnly
-                        placeholder="Evaluate error handling and input validation..."
-                      />
-                    </div>
-                  </Col>
-                </Row>
+                    <Row gutter={16}>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Best Practices</Title>
+                          <TextArea
+                            rows={3}
+                            value={feedback?.bestPractices || ""}
+                            readOnly
+                            placeholder="No best practices feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <div>
+                          <Title level={5}>Error Handling</Title>
+                          <TextArea
+                            rows={3}
+                            value={feedback?.errorHandling || ""}
+                            readOnly
+                            placeholder="No error handling feedback provided yet."
+                          />
+                        </div>
+                      </Col>
+                    </Row>
+                  </>
+                )}
 
                 {/* Fallback to old format if no detailed feedback and old data exists */}
                 {!feedback && data.suggestionsAvoid && (
