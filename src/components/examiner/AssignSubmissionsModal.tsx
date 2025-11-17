@@ -8,7 +8,7 @@ import {
 import { submissionService, Submission } from "@/services/submissionService";
 import { gradingService } from "@/services/gradingService";
 import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
-import { DeleteOutlined, FileZipOutlined, InboxOutlined, DatabaseOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FileZipOutlined, InboxOutlined } from "@ant-design/icons";
 import type { TableProps, UploadFile, UploadProps } from "antd";
 import {
   Alert,
@@ -49,19 +49,12 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [databaseFileList, setDatabaseFileList] = useState<UploadFile[]>([]);
-  const [postmanFileList, setPostmanFileList] = useState<UploadFile[]>([]);
   const [activeTab, setActiveTab] = useState<string>("list");
   const [submissions, setSubmissions] = useState<GradingGroupSubmission[]>([]);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [assessmentTemplate, setAssessmentTemplate] = useState<AssessmentTemplate | null>(null);
   const { message: messageApi } = App.useApp();
-
-  // Check if template is WEBAPI type
-  const isWebApiTemplate = useMemo(() => {
-    return assessmentTemplate?.templateType === 1;
-  }, [assessmentTemplate]);
 
   const fetchSubmissions = useCallback(async () => {
     if (!group?.id) return;
@@ -99,21 +92,11 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     if (open && group?.id) {
       fetchSubmissions();
       setFileList([]);
-      setDatabaseFileList([]);
-      setPostmanFileList([]);
       setError(null);
       setActiveTab("list");
       setSelectedRowKeys([]);
     }
   }, [open, group?.id, fetchSubmissions]);
-
-  // Clear database and postman files if template is not WEBAPI
-  useEffect(() => {
-    if (!isWebApiTemplate) {
-      setDatabaseFileList([]);
-      setPostmanFileList([]);
-    }
-  }, [isWebApiTemplate]);
 
   // Validate file name format: STUXXXXXX.zip (X is digit)
   const validateFileName = (fileName: string): boolean => {
@@ -149,44 +132,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     return false; // Prevent auto upload
   };
 
-  // Validate SQL file
-  const beforeUploadSql: UploadProps["beforeUpload"] = (file) => {
-    const fileName = file.name.toLowerCase();
-    const isSqlExtension = fileName.endsWith(".sql");
-    
-    if (!isSqlExtension) {
-      messageApi.error("Only SQL files are accepted! Please select a file with .sql extension");
-      return Upload.LIST_IGNORE;
-    }
-    
-    const isLt100M = file.size / 1024 / 1024 < 100;
-    if (!isLt100M) {
-      messageApi.error("File must be smaller than 100MB!");
-      return Upload.LIST_IGNORE;
-    }
-    
-    return false;
-  };
-
-  // Validate Postman collection file
-  const beforeUploadPostman: UploadProps["beforeUpload"] = (file) => {
-    const fileName = file.name.toLowerCase();
-    const isPostmanExtension = fileName.endsWith(".postman_collection");
-    
-    if (!isPostmanExtension) {
-      messageApi.error("Only Postman collection files are accepted! Please select a file with .postman_collection extension");
-      return Upload.LIST_IGNORE;
-    }
-    
-    const isLt100M = file.size / 1024 / 1024 < 100;
-    if (!isLt100M) {
-      messageApi.error("File must be smaller than 100MB!");
-      return Upload.LIST_IGNORE;
-    }
-    
-    return false;
-  };
-
   const handleFileChange: UploadProps["onChange"] = (info) => {
     // Keep all files that pass validation
     const validFiles = info.fileList.filter(file => {
@@ -196,18 +141,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     });
     
     setFileList(validFiles);
-  };
-
-  const handleDatabaseFileChange: UploadProps["onChange"] = (info) => {
-    let newFileList = [...info.fileList];
-    newFileList = newFileList.slice(-1);
-    setDatabaseFileList(newFileList);
-  };
-
-  const handlePostmanFileChange: UploadProps["onChange"] = (info) => {
-    let newFileList = [...info.fileList];
-    newFileList = newFileList.slice(-1);
-    setPostmanFileList(newFileList);
   };
 
   // Extract student code from file name (STUXXXXXX.zip -> XXXXXX)
@@ -325,49 +258,8 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
         }
       }
 
-      // Step 4: Upload database and postman collection files for WEBAPI template (optional)
-      if (isWebApiTemplate && group.assessmentTemplateId) {
-        // Upload database file (template=0)
-        if (databaseFileList.length > 0) {
-          const databaseFile = databaseFileList[0].originFileObj;
-          if (databaseFile) {
-            try {
-              await gradingService.uploadPostmanCollectionDatabase(
-                0, // template=0 for database
-                group.assessmentTemplateId,
-                databaseFile
-              );
-              messageApi.success("Database file uploaded successfully!");
-            } catch (err: any) {
-              console.error("Failed to upload database file:", err);
-              messageApi.error("Failed to upload database file: " + (err.message || "Unknown error"));
-            }
-          }
-        }
-
-        // Upload postman collection file (template=1)
-        if (postmanFileList.length > 0) {
-          const postmanFile = postmanFileList[0].originFileObj;
-          if (postmanFile) {
-            try {
-              await gradingService.uploadPostmanCollectionDatabase(
-                1, // template=1 for postman collection
-                group.assessmentTemplateId,
-                postmanFile
-              );
-              messageApi.success("Postman collection file uploaded successfully!");
-            } catch (err: any) {
-              console.error("Failed to upload postman collection file:", err);
-              messageApi.error("Failed to upload postman collection file: " + (err.message || "Unknown error"));
-            }
-          }
-        }
-      }
-
       await fetchSubmissions();
       setFileList([]);
-      setDatabaseFileList([]);
-      setPostmanFileList([]);
       onOk(); // Refresh parent component
     } catch (err: any) {
       console.error("Failed to upload files:", err);
@@ -585,91 +477,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                       ))}
                     </Space>
                   </Card>
-                )}
-
-                {isWebApiTemplate && (
-                  <>
-                    <Divider />
-                    <Alert
-                      message="WEBAPI Template Detected"
-                      description="You can optionally upload database file and Postman collection file for this WEBAPI template."
-                      type="info"
-                      showIcon
-                      style={{ marginBottom: 16 }}
-                    />
-
-                    <Form.Item
-                      label="Upload Database File (.sql) - Optional"
-                      help="Database file for WEBAPI template"
-                    >
-                      <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
-                          <Space direction="vertical" style={{ width: "100%" }} size="small">
-                            <Text strong>Upload database SQL file</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Only .sql files are accepted. Maximum size 100MB.
-                            </Text>
-                          </Space>
-                        </Card>
-                        <Upload
-                          fileList={databaseFileList}
-                          beforeUpload={beforeUploadSql}
-                          onChange={handleDatabaseFileChange}
-                          accept=".sql"
-                          maxCount={1}
-                        >
-                          <Button icon={<DatabaseOutlined />}>Select Database File</Button>
-                        </Upload>
-                        {databaseFileList.length > 0 && (
-                          <Card size="small">
-                            <Space>
-                              <DatabaseOutlined />
-                              <Text>{databaseFileList[0].name}</Text>
-                              <Text type="secondary">
-                                ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                              </Text>
-                            </Space>
-                          </Card>
-                        )}
-                      </Space>
-                    </Form.Item>
-
-                    <Form.Item
-                      label="Upload Postman Collection File (.postman_collection) - Optional"
-                      help="Postman collection file for WEBAPI template"
-                    >
-                      <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
-                          <Space direction="vertical" style={{ width: "100%" }} size="small">
-                            <Text strong>Upload Postman collection file</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Only .postman_collection files are accepted. Maximum size 100MB.
-                            </Text>
-                          </Space>
-                        </Card>
-                        <Upload
-                          fileList={postmanFileList}
-                          beforeUpload={beforeUploadPostman}
-                          onChange={handlePostmanFileChange}
-                          accept=".postman_collection"
-                          maxCount={1}
-                        >
-                          <Button icon={<DatabaseOutlined />}>Select Postman Collection File</Button>
-                        </Upload>
-                        {postmanFileList.length > 0 && (
-                          <Card size="small">
-                            <Space>
-                              <DatabaseOutlined />
-                              <Text>{postmanFileList[0].name}</Text>
-                              <Text type="secondary">
-                                ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                              </Text>
-                            </Space>
-                          </Card>
-                        )}
-                      </Space>
-                    </Form.Item>
-                  </>
                 )}
 
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>

@@ -5,7 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix semester plan bugs">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/gradingService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/gradingService.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,6 +112,7 @@
       <workItem from="1763113040638" duration="840000" />
       <workItem from="1763209659070" duration="22000" />
       <workItem from="1763214598373" duration="5000" />
+      <workItem from="1763385158762" duration="654000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />

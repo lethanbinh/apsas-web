@@ -35,8 +35,19 @@ import {
   Typography
 } from "antd";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import styles from "./page.module.css";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -66,6 +77,8 @@ export default function AssignmentGradingPage() {
   const [latestGradeItems, setLatestGradeItems] = useState<GradeItem[]>([]);
   const [gradingHistory, setGradingHistory] = useState<GradingSession[]>([]);
   const [loadingGradingHistory, setLoadingGradingHistory] = useState(false);
+  const [autoGradingLoading, setAutoGradingLoading] = useState(false);
+  const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData>({
     overallFeedback: "",
     strengths: "",
@@ -642,13 +655,22 @@ export default function AssignmentGradingPage() {
   const handleRubricScoreChange = (
     questionId: number,
     rubricId: number,
-    score: number | null
+    score: number | null,
+    maxScore: number
   ) => {
+    const scoreValue = score || 0;
+    
+    // Validate: score cannot exceed max score
+    if (scoreValue > maxScore) {
+      message.error(`Score cannot exceed maximum score of ${maxScore.toFixed(2)}`);
+      return;
+    }
+    
     setQuestions((prev) => {
       const updated = prev.map((q) => {
         if (q.id === questionId) {
           const newRubricScores = { ...q.rubricScores };
-          newRubricScores[rubricId] = score || 0;
+          newRubricScores[rubricId] = scoreValue;
           return { ...q, rubricScores: newRubricScores };
         }
         return q;
@@ -923,6 +945,201 @@ export default function AssignmentGradingPage() {
     return elements;
   };
 
+  const handleAutoGrading = async () => {
+    if (!submissionId || !submission) {
+      message.error("No submission selected");
+      return;
+    }
+
+    try {
+      setAutoGradingLoading(true);
+
+      // Get assessmentTemplateId (same logic as fetchQuestionsAndRubrics)
+      let assessmentTemplateId: number | null = null;
+
+      // Try to get assessmentTemplateId from gradingGroupId first (most reliable)
+      if (submission.gradingGroupId) {
+        try {
+          const { gradingGroupService } = await import("@/services/gradingGroupService");
+          const gradingGroups = await gradingGroupService.getGradingGroups({});
+          const gradingGroup = gradingGroups.find((gg) => gg.id === submission.gradingGroupId);
+          if (gradingGroup?.assessmentTemplateId) {
+            assessmentTemplateId = gradingGroup.assessmentTemplateId;
+            console.log("Found assessmentTemplateId from gradingGroup:", assessmentTemplateId);
+          }
+        } catch (err) {
+          console.error("Failed to fetch from gradingGroup:", err);
+        }
+      }
+
+      // Try to get assessmentTemplateId from classAssessmentId
+      if (!assessmentTemplateId && submission.classAssessmentId) {
+        try {
+          // First try with classId from localStorage
+          const classId = localStorage.getItem("selectedClassId");
+          if (classId) {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(classId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.id === submission.classAssessmentId
+            );
+            if (classAssessment?.assessmentTemplateId) {
+              assessmentTemplateId = classAssessment.assessmentTemplateId;
+              console.log("Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
+            }
+          }
+
+          // If not found, try to fetch classAssessment by ID directly
+          if (!assessmentTemplateId) {
+            try {
+              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
+                pageNumber: 1,
+                pageSize: 10000, // Large page size to get all
+              });
+              const classAssessment = allClassAssessmentsRes.items.find(
+                (ca) => ca.id === submission.classAssessmentId
+              );
+              if (classAssessment?.assessmentTemplateId) {
+                assessmentTemplateId = classAssessment.assessmentTemplateId;
+                console.log("Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
+              }
+            } catch (err) {
+              // If that fails, try fetching from multiple classes
+              console.log("Trying to fetch from multiple classes...");
+              const { classService } = await import("@/services/classService");
+              try {
+                // Try to get all classes first
+                const classes = await classService.getClassList({ pageNumber: 1, pageSize: 100 });
+                for (const classItem of classes.classes || []) {
+                  try {
+                    const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+                      classId: classItem.id,
+                      pageNumber: 1,
+                      pageSize: 1000,
+                    });
+                    const classAssessment = classAssessmentsRes.items.find(
+                      (ca) => ca.id === submission.classAssessmentId
+                    );
+                    if (classAssessment?.assessmentTemplateId) {
+                      assessmentTemplateId = classAssessment.assessmentTemplateId;
+                      console.log(`Found assessmentTemplateId from classAssessment (classId ${classItem.id}):`, assessmentTemplateId);
+                      break;
+                    }
+                  } catch (err) {
+                    // Continue to next class
+                  }
+                }
+              } catch (err) {
+                console.error("Failed to fetch from multiple classes:", err);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch from classAssessment:", err);
+        }
+      }
+
+      if (!assessmentTemplateId) {
+        message.error("Cannot find assessment template. Please contact administrator.");
+        setAutoGradingLoading(false);
+        return;
+      }
+
+      // Call auto grading API
+      const gradingSession = await gradingService.autoGrading({
+        submissionId: submission.id,
+        assessmentTemplateId: assessmentTemplateId,
+      });
+
+      setLatestGradingSession(gradingSession);
+
+      // If status is 0 (PROCESSING), start polling
+      if (gradingSession.status === 0) {
+        message.loading("Auto grading in progress...", 0);
+        
+        // Poll every 2 seconds until status changes
+        const pollInterval = setInterval(async () => {
+          try {
+            const sessionsResult = await gradingService.getGradingSessions({
+              submissionId: submission.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+
+            if (sessionsResult.items.length > 0) {
+              const sortedSessions = [...sessionsResult.items].sort((a, b) => {
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return dateB - dateA;
+              });
+
+              const latestSession = sortedSessions[0];
+              setLatestGradingSession(latestSession);
+
+              // If status is no longer PROCESSING (0), stop polling
+              if (latestSession.status !== 0) {
+                if (autoGradingPollIntervalRef.current) {
+                  clearInterval(autoGradingPollIntervalRef.current);
+                  autoGradingPollIntervalRef.current = null;
+                }
+                message.destroy();
+                setAutoGradingLoading(false);
+                
+                // Refresh grading data
+                await fetchLatestGradingData(submissionId);
+                
+                if (latestSession.status === 1) {
+                  message.success("Auto grading completed successfully");
+                } else if (latestSession.status === 2) {
+                  message.error("Auto grading failed");
+                }
+              }
+            }
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+            if (autoGradingPollIntervalRef.current) {
+              clearInterval(autoGradingPollIntervalRef.current);
+              autoGradingPollIntervalRef.current = null;
+            }
+            message.destroy();
+            setAutoGradingLoading(false);
+            message.error(err.message || "Failed to check grading status");
+          }
+        }, 2000); // Poll every 2 seconds
+
+        autoGradingPollIntervalRef.current = pollInterval;
+
+        // Stop polling after 5 minutes (safety timeout)
+        setTimeout(() => {
+          if (autoGradingPollIntervalRef.current) {
+            clearInterval(autoGradingPollIntervalRef.current);
+            autoGradingPollIntervalRef.current = null;
+          }
+          message.destroy();
+          setAutoGradingLoading(false);
+        }, 300000); // 5 minutes
+      } else {
+        // Status is not PROCESSING, grading completed immediately
+        setAutoGradingLoading(false);
+        await fetchLatestGradingData(submissionId);
+        
+        if (gradingSession.status === 1) {
+          message.success("Auto grading completed successfully");
+        } else if (gradingSession.status === 2) {
+          message.error("Auto grading failed");
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to start auto grading:", err);
+      setAutoGradingLoading(false);
+      const errorMessage = err.message || "Failed to start auto grading";
+      message.error(errorMessage);
+    }
+  };
+
   const handleSave = async () => {
     if (!submissionId || !submission) {
       message.error("No submission selected");
@@ -932,9 +1149,21 @@ export default function AssignmentGradingPage() {
     try {
       setSaving(true);
       
+      // Validate all scores before saving
+      for (const question of questions) {
+        for (const rubric of question.rubrics) {
+          const score = question.rubricScores[rubric.id] || 0;
+          if (score > rubric.score) {
+            message.error(`Score for "${rubric.description || rubric.id}" cannot exceed maximum score of ${rubric.score.toFixed(2)}`);
+            setSaving(false);
+            return;
+          }
+        }
+      }
+
       // Calculate total score from all rubric scores
       let calculatedTotal = 0;
-        questions.forEach((q) => {
+      questions.forEach((q) => {
         const questionTotal = Object.values(q.rubricScores).reduce(
           (sum, score) => sum + (score || 0),
           0
@@ -967,6 +1196,7 @@ export default function AssignmentGradingPage() {
 
         if (!assessmentTemplateId) {
           message.error("Cannot find assessment template. Please contact administrator.");
+          setSaving(false);
           return;
         }
 
@@ -993,6 +1223,7 @@ export default function AssignmentGradingPage() {
           setLatestGradingSession(sortedSessions[0]);
         } else {
           message.error("Failed to create grading session");
+          setSaving(false);
           return;
         }
       }
@@ -1031,9 +1262,6 @@ export default function AssignmentGradingPage() {
         grade: calculatedTotal,
         status: 1, // COMPLETED
       });
-
-      // Update submission grade
-      await submissionService.updateSubmissionGrade(submission.id, calculatedTotal);
 
       message.success("Grade saved successfully");
       
@@ -1115,8 +1343,17 @@ export default function AssignmentGradingPage() {
             max={record.score}
             value={currentScore}
             onChange={(value) =>
-              handleRubricScoreChange(question.id, record.id, value)
+              handleRubricScoreChange(question.id, record.id, value, record.score)
             }
+            onBlur={() => {
+              // Double check on blur - if current score exceeds max, reset it
+              const currentValue = question.rubricScores[record.id] || 0;
+              if (currentValue > record.score) {
+                message.error(`Score cannot exceed maximum score of ${record.score.toFixed(2)}`);
+                // Reset to max score if exceeds
+                handleRubricScoreChange(question.id, record.id, record.score, record.score);
+              }
+            }}
             style={{ width: "100%" }}
             step={0.01}
             precision={2}
@@ -1175,7 +1412,7 @@ export default function AssignmentGradingPage() {
             </Descriptions.Item>
             <Descriptions.Item label="Submitted At">
               {submission.submittedAt
-                ? new Date(submission.submittedAt).toLocaleString("en-US")
+                ? toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
                 : "N/A"}
             </Descriptions.Item>
             <Descriptions.Item label="Submission File">
@@ -1183,7 +1420,9 @@ export default function AssignmentGradingPage() {
             </Descriptions.Item>
             <Descriptions.Item label="Total Score">
               <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
-                {totalScore}/100
+                {totalScore.toFixed(2)}/{questions.reduce((sum, q) => {
+                  return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+                }, 0).toFixed(2)}
               </Text>
             </Descriptions.Item>
           </Descriptions>
@@ -1232,15 +1471,26 @@ export default function AssignmentGradingPage() {
                 children: (
                   <div>
                     <Row gutter={16}>
-                      <Col xs={24} md={8} lg={7}>
+                      <Col xs={24} md={6} lg={6}>
                         <div>
                           <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
                             Total Questions: {questions.length}
                           </Text>
                           <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                            Total Max Score: {questions.reduce((sum, q) => sum + q.score, 0)}
+                            Total Max Score: {questions.reduce((sum, q) => {
+                              return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+                            }, 0).toFixed(2)}
                           </Text>
                           <Space direction="vertical" style={{ width: "100%" }}>
+                            <Button
+                              type="default"
+                              icon={<RobotOutlined />}
+                              onClick={handleAutoGrading}
+                              loading={autoGradingLoading}
+                              block
+                            >
+                              Auto Grading
+                            </Button>
                             <Button
                               type="primary"
                               icon={<SaveOutlined />}
@@ -1261,7 +1511,7 @@ export default function AssignmentGradingPage() {
                           </Space>
                         </div>
                       </Col>
-                      <Col xs={24} md={16} lg={17}>
+                      <Col xs={24} md={18} lg={18}>
                         {(() => {
                           const sortedQuestions = [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
 
@@ -1902,7 +2152,7 @@ function GradingHistoryModal({
                       </Space>
                     </div>
                     <Text type="secondary" style={{ fontSize: "12px" }}>
-                      {new Date(session.createdAt).toLocaleString("en-US")}
+                      {toVietnamTime(session.createdAt).format("DD/MM/YYYY HH:mm:ss")}
                     </Text>
                   </div>
                 ),
@@ -1917,10 +2167,10 @@ function GradingHistoryModal({
                       <Descriptions.Item label="Grade">{session.grade}</Descriptions.Item>
                       <Descriptions.Item label="Grade Item Count">{session.gradeItemCount}</Descriptions.Item>
                       <Descriptions.Item label="Created At">
-                        {new Date(session.createdAt).toLocaleString("en-US")}
+                        {toVietnamTime(session.createdAt).format("DD/MM/YYYY HH:mm:ss")}
                       </Descriptions.Item>
                       <Descriptions.Item label="Updated At">
-                        {new Date(session.updatedAt).toLocaleString("en-US")}
+                        {toVietnamTime(session.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
                       </Descriptions.Item>
                     </Descriptions>
 
@@ -2043,7 +2293,7 @@ function GradingHistoryModal({
                   width: "21%",
                   render: (date: string) => (
                     <Text style={{ fontSize: "12px" }}>
-                      {new Date(date).toLocaleString("en-US")}
+                      {toVietnamTime(date).format("DD/MM/YYYY HH:mm:ss")}
                     </Text>
                   ),
                 },
@@ -2054,7 +2304,7 @@ function GradingHistoryModal({
                   width: "21%",
                   render: (date: string) => (
                     <Text style={{ fontSize: "12px" }}>
-                      {new Date(date).toLocaleString("en-US")}
+                      {toVietnamTime(date).format("DD/MM/YYYY HH:mm:ss")}
                     </Text>
                   ),
                 },

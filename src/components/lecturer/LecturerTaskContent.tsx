@@ -40,6 +40,9 @@ import {
   assessmentFileService,
   AssessmentFile,
 } from "@/services/assessmentFileService";
+import { gradingService } from "@/services/gradingService";
+import { DatabaseOutlined } from "@ant-design/icons";
+import type { UploadProps } from "antd";
 import {
   UploadOutlined,
   DeleteOutlined,
@@ -912,6 +915,8 @@ export const LecturerTaskContent = ({
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateType, setNewTemplateType] = useState(0);
+  const [databaseFileList, setDatabaseFileList] = useState<UploadFile[]>([]);
+  const [postmanFileList, setPostmanFileList] = useState<UploadFile[]>([]);
 
   const isEditable = [1, 4].includes(Number(task.status));
 
@@ -1067,6 +1072,76 @@ export const LecturerTaskContent = ({
 
   // --- Logic Xử lý sự kiện ---
 
+  // Validate SQL file
+  const beforeUploadSql: UploadProps["beforeUpload"] = (file) => {
+    const fileName = file.name.toLowerCase();
+    const isSqlExtension = fileName.endsWith(".sql");
+    
+    if (!isSqlExtension) {
+      notification.error({
+        message: "Invalid File Type",
+        description: "Only SQL files are accepted! Please select a file with .sql extension",
+      });
+      return Upload.LIST_IGNORE;
+    }
+    
+    const isLt100M = file.size / 1024 / 1024 < 100;
+    if (!isLt100M) {
+      notification.error({
+        message: "File Too Large",
+        description: "File must be smaller than 100MB!",
+      });
+      return Upload.LIST_IGNORE;
+    }
+    
+    return false;
+  };
+
+  // Validate Postman collection file
+  const beforeUploadPostman: UploadProps["beforeUpload"] = (file) => {
+    const fileName = file.name.toLowerCase();
+    const isPostmanExtension = fileName.endsWith(".postman_collection");
+    
+    if (!isPostmanExtension) {
+      notification.error({
+        message: "Invalid File Type",
+        description: "Only Postman collection files are accepted! Please select a file with .postman_collection extension",
+      });
+      return Upload.LIST_IGNORE;
+    }
+    
+    const isLt100M = file.size / 1024 / 1024 < 100;
+    if (!isLt100M) {
+      notification.error({
+        message: "File Too Large",
+        description: "File must be smaller than 100MB!",
+      });
+      return Upload.LIST_IGNORE;
+    }
+    
+    return false;
+  };
+
+  const handleDatabaseFileChange: UploadProps["onChange"] = (info) => {
+    let newFileList = [...info.fileList];
+    newFileList = newFileList.slice(-1);
+    setDatabaseFileList(newFileList);
+  };
+
+  const handlePostmanFileChange: UploadProps["onChange"] = (info) => {
+    let newFileList = [...info.fileList];
+    newFileList = newFileList.slice(-1);
+    setPostmanFileList(newFileList);
+  };
+
+  // Clear database and postman files if template type is not WEBAPI
+  useEffect(() => {
+    if (newTemplateType !== 1) {
+      setDatabaseFileList([]);
+      setPostmanFileList([]);
+    }
+  }, [newTemplateType]);
+
   const handleCreateTemplate = async () => {
     try {
       // Validate: Check if there's already a template for this course element
@@ -1087,7 +1162,26 @@ export const LecturerTaskContent = ({
         return;
       }
 
-      await assessmentTemplateService.createAssessmentTemplate({
+      // Validate: If template type is WEBAPI (1), both database and postman files are required
+      if (newTemplateType === 1) {
+        if (databaseFileList.length === 0) {
+          notification.error({
+            message: "Database File Required",
+            description: "Database file (.sql) is required for WEBAPI templates.",
+          });
+          return;
+        }
+        if (postmanFileList.length === 0) {
+          notification.error({
+            message: "Postman Collection File Required",
+            description: "Postman collection file (.postman_collection) is required for WEBAPI templates.",
+          });
+          return;
+        }
+      }
+
+      // Create template
+      const createdTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: newTemplateName,
         description: newTemplateDesc,
         templateType: newTemplateType,
@@ -1095,8 +1189,57 @@ export const LecturerTaskContent = ({
         createdByLecturerId: lecturerId,
         assignedToHODId: task.assignedByHODId,
       });
+
+      // Upload database and postman collection files for WEBAPI template
+      if (newTemplateType === 1 && createdTemplate.id) {
+        // Upload database file (template=0)
+        if (databaseFileList.length > 0) {
+          const databaseFile = databaseFileList[0].originFileObj;
+          if (databaseFile) {
+            try {
+              await gradingService.uploadPostmanCollectionDatabase(
+                0, // template=0 for database
+                createdTemplate.id,
+                databaseFile
+              );
+            } catch (err: any) {
+              console.error("Failed to upload database file:", err);
+              notification.error({
+                message: "Failed to Upload Database File",
+                description: err.message || "An unknown error occurred while uploading the database file.",
+              });
+              // Still continue to show success for template creation
+            }
+          }
+        }
+
+        // Upload postman collection file (template=1)
+        if (postmanFileList.length > 0) {
+          const postmanFile = postmanFileList[0].originFileObj;
+          if (postmanFile) {
+            try {
+              await gradingService.uploadPostmanCollectionDatabase(
+                1, // template=1 for postman collection
+                createdTemplate.id,
+                postmanFile
+              );
+            } catch (err: any) {
+              console.error("Failed to upload postman collection file:", err);
+              notification.error({
+                message: "Failed to Upload Postman Collection File",
+                description: err.message || "An unknown error occurred while uploading the postman collection file.",
+              });
+              // Still continue to show success for template creation
+            }
+          }
+        }
+      }
+
       setNewTemplateName("");
       setNewTemplateDesc("");
+      setNewTemplateType(0);
+      setDatabaseFileList([]);
+      setPostmanFileList([]);
       notification.success({
         message: "Template Created",
         description: "Template has been created successfully.",
@@ -1476,6 +1619,85 @@ export const LecturerTaskContent = ({
                     <Radio value={1}>WEBAPI</Radio>
                   </Radio.Group>
                 </Form.Item>
+
+                {newTemplateType === 1 && (
+                  <>
+                    <Form.Item
+                      label="Upload Database File (.sql)"
+                      required
+                      help="Database file is required for WEBAPI templates"
+                    >
+                      <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
+                          <Space direction="vertical" style={{ width: "100%" }} size="small">
+                            <Text strong>Upload database SQL file</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Only .sql files are accepted. Maximum size 100MB.
+                            </Text>
+                          </Space>
+                        </Card>
+                        <Upload
+                          fileList={databaseFileList}
+                          beforeUpload={beforeUploadSql}
+                          onChange={handleDatabaseFileChange}
+                          accept=".sql"
+                          maxCount={1}
+                        >
+                          <Button icon={<DatabaseOutlined />}>Select Database File</Button>
+                        </Upload>
+                        {databaseFileList.length > 0 && (
+                          <Card size="small">
+                            <Space>
+                              <DatabaseOutlined />
+                              <Text>{databaseFileList[0].name}</Text>
+                              <Text type="secondary">
+                                ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                              </Text>
+                            </Space>
+                          </Card>
+                        )}
+                      </Space>
+                    </Form.Item>
+
+                    <Form.Item
+                      label="Upload Postman Collection File (.postman_collection)"
+                      required
+                      help="Postman collection file is required for WEBAPI templates"
+                    >
+                      <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
+                          <Space direction="vertical" style={{ width: "100%" }} size="small">
+                            <Text strong>Upload Postman collection file</Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Only .postman_collection files are accepted. Maximum size 100MB.
+                            </Text>
+                          </Space>
+                        </Card>
+                        <Upload
+                          fileList={postmanFileList}
+                          beforeUpload={beforeUploadPostman}
+                          onChange={handlePostmanFileChange}
+                          accept=".postman_collection"
+                          maxCount={1}
+                        >
+                          <Button icon={<DatabaseOutlined />}>Select Postman Collection File</Button>
+                        </Upload>
+                        {postmanFileList.length > 0 && (
+                          <Card size="small">
+                            <Space>
+                              <DatabaseOutlined />
+                              <Text>{postmanFileList[0].name}</Text>
+                              <Text type="secondary">
+                                ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                              </Text>
+                            </Space>
+                          </Card>
+                        )}
+                      </Space>
+                    </Form.Item>
+                  </>
+                )}
+
                 <Button 
                   type="primary" 
                   onClick={handleCreateTemplate}

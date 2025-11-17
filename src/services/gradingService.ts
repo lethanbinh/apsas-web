@@ -106,6 +106,41 @@ export class GradingService {
     );
     return response.result;
   }
+
+  /**
+   * Trigger auto grading for a submission
+   * @param payload - Auto grading payload (submissionId and assessmentTemplateId)
+   * @returns Created grading session with status 0 (PROCESSING) if grading is in progress
+   */
+  async autoGrading(payload: CreateGradingPayload): Promise<GradingSession> {
+    try {
+      const response = await apiService.post<{
+        statusCode: number;
+        isSuccess: boolean;
+        errorMessages: any[];
+        result: GradingSession;
+      }>("/grading", payload);
+      
+      if (!response.isSuccess) {
+        const errorMessage = response.errorMessages?.join(", ") || "Failed to start auto grading";
+        throw new Error(errorMessage);
+      }
+      
+      return response.result;
+    } catch (error: any) {
+      // Handle API errors
+      if (error.response?.data) {
+        const apiError = error.response.data;
+        if (apiError.errorMessages && apiError.errorMessages.length > 0) {
+          throw new Error(apiError.errorMessages.join(", "));
+        }
+        if (apiError.message) {
+          throw new Error(apiError.message);
+        }
+      }
+      throw error;
+    }
+  }
   async getGradingSession(id: number): Promise<Grading> {
     const response = await apiService.get<GradingApiResponse>(
       `/grading/session/${id}`
