@@ -78,13 +78,14 @@ interface EnrichedSubmission extends Submission {
   gradingGroup?: GradingGroup;
 }
 
+// Tạm comment lại chức năng check học kỳ
 // Helper function to check if semester has passed
-const isSemesterPassed = (endDate?: string): boolean => {
-  if (!endDate) return false;
-  const now = new Date();
-  const semesterEnd = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
-  return now > semesterEnd;
-};
+// const isSemesterPassed = (endDate?: string): boolean => {
+//   if (!endDate) return false;
+//   const now = new Date();
+//   const semesterEnd = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
+//   return now > semesterEnd;
+// };
 
 const MySubmissionsPageContent = () => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -341,7 +342,8 @@ const MySubmissionsPageContent = () => {
         // Find semester from SemesterPlanDetail to get end date
         const semesterDetail = semesterCode ? semesters.find((s) => s.semesterCode === semesterCode) : undefined;
         const semesterEndDate = semesterDetail?.endDate;
-        const isPassed = isSemesterPassed(semesterEndDate);
+        // Tạm comment lại check học kỳ
+        // const isPassed = isSemesterPassed(semesterEndDate);
         
         // Get class assessment for this submission
         const classAssessment = sub.classAssessmentId ? classAssessments.get(sub.classAssessmentId) : undefined;
@@ -356,7 +358,8 @@ const MySubmissionsPageContent = () => {
           courseName: classAssessment?.courseName || "N/A",
           semesterCode: semesterCode || undefined,
           semesterEndDate,
-          isSemesterPassed: isPassed,
+          // Tạm comment lại check học kỳ
+          isSemesterPassed: false, // isPassed,
           gradingGroup,
       };
     });
@@ -676,8 +679,9 @@ const MySubmissionsPageContent = () => {
             type="primary"
             icon={<EditOutlined />}
             onClick={() => handleViewDetail(record)}
-            disabled={record.isSemesterPassed}
-            title={record.isSemesterPassed ? "Không thể chỉnh sửa điểm của kỳ học đã qua" : ""}
+            // Tạm comment lại check học kỳ
+            // disabled={record.isSemesterPassed}
+            // title={record.isSemesterPassed ? "Không thể chỉnh sửa điểm của kỳ học đã qua" : ""}
         />
         </Space>
       ),

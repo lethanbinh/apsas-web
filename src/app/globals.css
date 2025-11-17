@@ -1706,3 +1706,53 @@ a {
   background-color: #f5f5f5;
   padding: 20px;
 }
+
+/* Center align collapse icon and text for assignment grading */
+.collapse-feedback .ant-collapse-header,
+.collapse-grading .ant-collapse-header {
+  display: flex !important;
+  align-items: center !important;
+  padding: 16px 24px !important;
+  min-height: 48px !important;
+}
+
+.collapse-feedback .ant-collapse-arrow,
+.collapse-grading .ant-collapse-arrow {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 16px !important;
+  height: 16px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.collapse-feedback .ant-collapse-arrow svg,
+.collapse-grading .ant-collapse-arrow svg {
+  display: block !important;
+  width: 12px !important;
+  height: 12px !important;
+  margin: auto !important;
+}
+
+.collapse-feedback .ant-collapse-header-text,
+.collapse-grading .ant-collapse-header-text {
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 !important;
+  margin-left: 32px !important;
+  min-height: 24px !important;
+}
+
+.collapse-feedback .ant-collapse-header-text .ant-typography,
+.collapse-grading .ant-collapse-header-text .ant-typography {
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  line-height: 1.5 !important;
+}

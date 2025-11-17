@@ -1,7 +1,7 @@
 .container {
-  max-width: 1400px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 2rem;
+  background-color: #fff;
 }
 
 .loadingContainer {
@@ -58,5 +58,27 @@
   white-space: pre-wrap;
   word-wrap: break-word;
   margin-top: 8px;
+}
+
+/* Center align collapse icon and text */
+.collapseWrapper :global(.ant-collapse-header) {
+  display: flex !important;
+  align-items: center !important;
+  padding: 16px 24px !important;
+}
+
+.collapseWrapper :global(.ant-collapse-arrow) {
+  display: flex !important;
+  align-items: center !important;
+  height: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  line-height: 1 !important;
+}
+
+.collapseWrapper :global(.ant-collapse-header-text) {
+  display: flex !important;
+  align-items: center !important;
+  flex: 1 !important;
 }
 
