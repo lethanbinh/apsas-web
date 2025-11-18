@@ -26,6 +26,25 @@ import { useEffect, useState, useMemo } from "react";
 
 const { Text } = Typography;
 
+// Helper function to check if an assessment template is a PE (Practical Exam)
+// Based on courseElementName, similar to isPracticalExam in student/lecturer pages
+function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
+  const name = (template.courseElementName || "").toLowerCase();
+  const keywords = [
+    "exam",
+    "pe",
+    "practical exam",
+    "practical",
+    "test",
+    "kiểm tra thực hành",
+    "thi thực hành",
+    "bài thi",
+    "bài kiểm tra",
+    "thực hành",
+  ];
+  return keywords.some((keyword) => name.includes(keyword));
+}
+
 interface CreateGradingGroupModalProps {
   open: boolean;
   onCancel: () => void;
@@ -73,7 +92,9 @@ export const CreateGradingGroupModal: React.FC<
         pageNumber: 1,
         pageSize: 1000,
       });
-      setAssessmentTemplates(response.items);
+      // Filter only PE (Practical Exam) templates, similar to student/lecturer pages
+      const peTemplates = response.items.filter(isPracticalExamTemplate);
+      setAssessmentTemplates(peTemplates);
     } catch (err) {
       console.error("Failed to fetch assessment templates:", err);
     } finally {

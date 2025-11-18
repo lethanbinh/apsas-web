@@ -4,12 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix semester plan bugs">
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/gradingService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/gradingService.ts" afterDir="false" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Grade dsa and api">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -112,7 +108,7 @@
       <workItem from="1763113040638" duration="840000" />
       <workItem from="1763209659070" duration="22000" />
       <workItem from="1763214598373" duration="5000" />
-      <workItem from="1763385158762" duration="654000" />
+      <workItem from="1763385158762" duration="1671000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -250,7 +246,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763113867416</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="Grade dsa and api">
+      <option name="closed" value="true" />
+      <created>1763393332693</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1763393332693</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -296,6 +300,7 @@
     <MESSAGE value="Fix template approval display" />
     <MESSAGE value="fix building production" />
     <MESSAGE value="Fix semester plan bugs" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix semester plan bugs" />
+    <MESSAGE value="Grade dsa and api" />
+    <option name="LAST_COMMIT_MESSAGE" value="Grade dsa and api" />
   </component>
 </project>
