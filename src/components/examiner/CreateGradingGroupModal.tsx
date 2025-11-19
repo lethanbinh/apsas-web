@@ -1,28 +1,27 @@
 "use client";
 
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
-import { gradingGroupService, GradingGroup } from "@/services/gradingGroupService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { GradingGroup, gradingGroupService } from "@/services/gradingGroupService";
 import { gradingService } from "@/services/gradingService";
-import { submissionService } from "@/services/submissionService";
 import { Lecturer } from "@/services/lecturerService";
-import { courseElementService, CourseElement } from "@/services/courseElementService";
+import { Semester, SemesterCourse, SemesterPlanDetail, semesterService } from "@/services/semesterService";
+import { submissionService } from "@/services/submissionService";
 import { FileZipOutlined, InboxOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import {
   Alert,
   App,
-  Button,
   Card,
   Form,
   Modal,
   Select,
   Space,
   Typography,
-  Upload,
-  Divider
+  Upload
 } from "antd";
 import Dragger from "antd/es/upload/Dragger";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 
 const { Text } = Typography;
 
@@ -74,6 +73,11 @@ export const CreateGradingGroupModal: React.FC<
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [assessmentTemplates, setAssessmentTemplates] = useState<AssessmentTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [semesters, setSemesters] = useState<Semester[]>([]);
+  const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
+  const [courses, setCourses] = useState<SemesterCourse[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const { message: messageApi } = App.useApp();
 
   useEffect(() => {
@@ -81,11 +85,40 @@ export const CreateGradingGroupModal: React.FC<
       form.resetFields();
       setFileList([]);
       setError(null);
-      fetchAssessmentTemplates();
+      setSelectedSemesterCode(null);
+      setSelectedCourseId(null);
+      setCourses([]);
+      setAssessmentTemplates([]);
+      fetchSemesters();
     }
   }, [open, form]);
 
-  const fetchAssessmentTemplates = async () => {
+  const fetchSemesters = async () => {
+    try {
+      const semesterList = await semesterService.getSemesters({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      setSemesters(semesterList);
+    } catch (err) {
+      console.error("Failed to fetch semesters:", err);
+    }
+  };
+
+  const fetchCourses = async (semesterCode: string) => {
+    setLoadingCourses(true);
+    try {
+      const semesterDetail: SemesterPlanDetail = await semesterService.getSemesterPlanDetail(semesterCode);
+      setCourses(semesterDetail.semesterCourses || []);
+    } catch (err) {
+      console.error("Failed to fetch courses:", err);
+      setCourses([]);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
+
+  const fetchAssessmentTemplates = async (courseId?: number, semesterCode?: string) => {
     setLoadingTemplates(true);
     try {
       const response = await assessmentTemplateService.getAssessmentTemplates({
@@ -93,7 +126,26 @@ export const CreateGradingGroupModal: React.FC<
         pageSize: 1000,
       });
       // Filter only PE (Practical Exam) templates, similar to student/lecturer pages
-      const peTemplates = response.items.filter(isPracticalExamTemplate);
+      let peTemplates = response.items.filter(isPracticalExamTemplate);
+      
+      // If courseId and semesterCode are provided, filter by course through courseElement
+      if (courseId && semesterCode) {
+        // Get course elements for this semester
+        const courseElements = await courseElementService.getCourseElements({
+          pageNumber: 1,
+          pageSize: 1000,
+          semesterCode: semesterCode,
+        });
+        const courseElementIds = courseElements
+          .filter(ce => ce.semesterCourse?.courseId === courseId)
+          .map(ce => ce.id);
+        
+        // Filter templates by courseElementId
+        peTemplates = peTemplates.filter(template => 
+          courseElementIds.includes(template.courseElementId)
+        );
+      }
+      
       setAssessmentTemplates(peTemplates);
     } catch (err) {
       console.error("Failed to fetch assessment templates:", err);
@@ -328,14 +380,74 @@ export const CreateGradingGroupModal: React.FC<
         </Form.Item>
 
         <Form.Item
+          name="semesterCode"
+          label="Semester"
+          rules={[{ required: true, message: "Please select a semester" }]}
+        >
+          <Select
+            showSearch
+            placeholder="Select semester"
+            allowClear
+            onChange={(value) => {
+              setSelectedSemesterCode(value);
+              setSelectedCourseId(null);
+              setCourses([]);
+              setAssessmentTemplates([]);
+              form.setFieldsValue({ courseId: undefined, assessmentTemplateId: undefined });
+              if (value) {
+                fetchCourses(value);
+              }
+            }}
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+            options={semesters.map((s) => ({
+              label: `${s.semesterCode} (${s.academicYear})`,
+              value: s.semesterCode,
+            }))}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="courseId"
+          label="Course"
+          rules={[{ required: true, message: "Please select a course" }]}
+        >
+          <Select
+            showSearch
+            placeholder="Select course"
+            allowClear
+            loading={loadingCourses}
+            disabled={!selectedSemesterCode}
+            onChange={(value) => {
+              setSelectedCourseId(value);
+              setAssessmentTemplates([]);
+              form.setFieldsValue({ assessmentTemplateId: undefined });
+              if (value && selectedSemesterCode) {
+                fetchAssessmentTemplates(value, selectedSemesterCode);
+              }
+            }}
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+            options={courses.map((sc) => ({
+              label: `${sc.course.code} - ${sc.course.name}`,
+              value: sc.course.id,
+            }))}
+          />
+        </Form.Item>
+
+        <Form.Item
           name="assessmentTemplateId"
           label="Assessment Template"
+          rules={[{ required: true, message: "Please select an assessment template" }]}
         >
           <Select
             showSearch
             placeholder="Select assessment template"
             allowClear
             loading={loadingTemplates}
+            disabled={!selectedCourseId}
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }

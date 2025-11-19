@@ -31,7 +31,7 @@ import {
   AssessmentPaper,
   assessmentPaperService,
 } from "@/services/assessmentPaperService";
-import { AssignRequestItem } from "@/services/assignRequestService";
+import { AssignRequestItem, assignRequestService } from "@/services/assignRequestService";
 import {
   AssessmentTemplate,
   assessmentTemplateService,
@@ -348,6 +348,7 @@ const TemplateFormModal = ({
   isEditable,
   initialData,
   assignedToHODId,
+  task,
 }: {
   open: boolean;
   onCancel: () => void;
@@ -355,11 +356,13 @@ const TemplateFormModal = ({
   isEditable: boolean;
   initialData?: AssessmentTemplate;
   assignedToHODId?: number;
+  task?: AssignRequestItem;
 }) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Assessment Template" : "Add New Template";
+  const isRejected = task && Number(task.status) === 3;
 
   useEffect(() => {
     if (open) {
@@ -387,9 +390,34 @@ const TemplateFormModal = ({
             assignedToHODId: assignedToHODId,
           }
         );
-        notification.success({
-          message: "Template updated successfully",
-        });
+        
+        // If this was a resubmission after rejection, reset status to Pending
+        if (isRejected && task) {
+          try {
+            await assignRequestService.updateAssignRequest(task.id, {
+              message: task.message || "Template updated and resubmitted after rejection",
+              courseElementId: task.courseElementId,
+              assignedLecturerId: task.assignedLecturerId,
+              assignedByHODId: task.assignedByHODId,
+              status: 1, // Reset to Pending
+              assignedAt: task.assignedAt,
+            });
+            notification.success({
+              message: "Template Updated and Resubmitted",
+              description: "Template has been updated and status reset to Pending for HOD review.",
+            });
+          } catch (err: any) {
+            console.error("Failed to reset status:", err);
+            notification.warning({
+              message: "Template Updated",
+              description: "Template updated successfully, but failed to reset status. Please contact administrator.",
+            });
+          }
+        } else {
+          notification.success({
+            message: "Template updated successfully",
+          });
+        }
       }
       onFinish();
     } catch (error) {
@@ -447,11 +475,13 @@ const QuestionDetailView = ({
   isEditable,
   onRubricChange,
   onQuestionChange,
+  onResetStatus,
 }: {
   question: AssessmentQuestion;
   isEditable: boolean;
   onRubricChange: () => void;
   onQuestionChange: () => void;
+  onResetStatus?: () => Promise<void>;
 }) => {
   const [rubrics, setRubrics] = useState<RubricItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -492,10 +522,13 @@ const QuestionDetailView = ({
     setSelectedRubric(undefined);
   };
 
-  const handleRubricFinish = () => {
+  const handleRubricFinish = async () => {
     closeRubricModal();
     fetchRubrics();
     onRubricChange(); // Báo cho component cha biết
+    if (onResetStatus) {
+      await onResetStatus();
+    }
   };
 
   const handleDeleteRubric = (id: number) => {
@@ -625,9 +658,12 @@ const QuestionDetailView = ({
       <QuestionFormModal
         open={isQuestionModalOpen}
         onCancel={() => setIsQuestionModalOpen(false)}
-        onFinish={() => {
+        onFinish={async () => {
           setIsQuestionModalOpen(false);
           onQuestionChange(); // Báo cho component cha biết để refresh
+          if (onResetStatus) {
+            await onResetStatus();
+          }
         }}
         isEditable={isEditable}
         initialData={question}
@@ -641,10 +677,12 @@ const PaperDetailView = ({
   paper,
   isEditable,
   onPaperChange,
+  onResetStatus,
 }: {
   paper: AssessmentPaper;
   isEditable: boolean;
   onPaperChange: () => void;
+  onResetStatus?: () => Promise<void>;
 }) => {
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
 
@@ -672,9 +710,12 @@ const PaperDetailView = ({
       <PaperFormModal
         open={isPaperModalOpen}
         onCancel={() => setIsPaperModalOpen(false)}
-        onFinish={() => {
+        onFinish={async () => {
           setIsPaperModalOpen(false);
           onPaperChange();
+          if (onResetStatus) {
+            await onResetStatus();
+          }
         }}
         isEditable={isEditable}
         initialData={paper}
@@ -694,6 +735,8 @@ const TemplateDetailView = ({
   onTemplateDelete,
   onTemplateChange,
   assignedToHODId,
+  task,
+  onResetStatus,
 }: {
   template: AssessmentTemplate;
   papers: AssessmentPaper[];
@@ -704,6 +747,8 @@ const TemplateDetailView = ({
   onTemplateDelete: () => void;
   onTemplateChange: () => void;
   assignedToHODId?: number;
+  task?: AssignRequestItem;
+  onResetStatus?: () => Promise<void>;
 }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -827,6 +872,7 @@ const TemplateDetailView = ({
         isEditable={isEditable}
         initialData={template}
         assignedToHODId={assignedToHODId}
+        task={task}
       />
 
       <Card title="Attached Files">
@@ -918,7 +964,36 @@ export const LecturerTaskContent = ({
   const [databaseFileList, setDatabaseFileList] = useState<UploadFile[]>([]);
   const [postmanFileList, setPostmanFileList] = useState<UploadFile[]>([]);
 
-  const isEditable = [1, 4].includes(Number(task.status));
+  // Allow editing when status is Pending (1), In Progress (4), or Rejected (3)
+  // When Rejected, lecturer can edit template and resubmit
+  const isEditable = [1, 3, 4].includes(Number(task.status));
+  const isRejected = Number(task.status) === 3;
+
+  // Helper function to reset status to Pending if currently Rejected
+  const resetStatusIfRejected = async () => {
+    if (isRejected) {
+      try {
+        await assignRequestService.updateAssignRequest(task.id, {
+          message: task.message || "Content updated and resubmitted after rejection",
+          courseElementId: task.courseElementId,
+          assignedLecturerId: task.assignedLecturerId,
+          assignedByHODId: task.assignedByHODId,
+          status: 1, // Reset to Pending
+          assignedAt: task.assignedAt,
+        });
+        notification.success({
+          message: "Status Reset to Pending",
+          description: "Content has been updated and status reset to Pending for HOD review.",
+        });
+      } catch (err: any) {
+        console.error("Failed to reset status:", err);
+        notification.warning({
+          message: "Content Updated",
+          description: "Content updated successfully, but failed to reset status. Please contact administrator.",
+        });
+      }
+    }
+  };
 
   // --- Logic Fetch Data ---
 
@@ -999,7 +1074,7 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const refreshPapers = async () => {
+  const refreshPapers = async (shouldResetStatus = false) => {
     if (!template) return;
     try {
       const paperResponse = await assessmentPaperService.getAssessmentPapers({
@@ -1016,12 +1091,17 @@ export const LecturerTaskContent = ({
         }
       });
       setAllQuestions(newQuestionsMap);
+      
+      // Reset status if needed
+      if (shouldResetStatus) {
+        await resetStatusIfRejected();
+      }
     } catch (error) {
       console.error("Failed to refresh papers:", error);
     }
   };
 
-  const refreshQuestions = async (paperId: number) => {
+  const refreshQuestions = async (paperId: number, shouldResetStatus = false) => {
     try {
       const questionResponse =
         await assessmentQuestionService.getAssessmentQuestions({
@@ -1037,12 +1117,17 @@ export const LecturerTaskContent = ({
         ...prev,
         [paperId]: sortedQuestions,
       }));
+      
+      // Reset status if needed
+      if (shouldResetStatus) {
+        await resetStatusIfRejected();
+      }
     } catch (error) {
       console.error("Failed to refresh questions:", error);
     }
   };
 
-  const refreshFiles = async () => {
+  const refreshFiles = async (shouldResetStatus = false) => {
     if (!template) return;
     try {
       const fileResponse = await assessmentFileService.getFilesForTemplate({
@@ -1051,6 +1136,11 @@ export const LecturerTaskContent = ({
         pageSize: 100,
       });
       setFiles(fileResponse.items);
+      
+      // Reset status if needed
+      if (shouldResetStatus) {
+        await resetStatusIfRejected();
+      }
     } catch (error) {
       console.error("Failed to refresh files:", error);
     }
@@ -1145,13 +1235,17 @@ export const LecturerTaskContent = ({
   const handleCreateTemplate = async () => {
     try {
       // Validate: Check if there's already a template for this course element
-      if (templates.length > 0) {
+      // If rejected, allow creating a new template or editing existing one
+      if (templates.length > 0 && !isRejected) {
         notification.error({
           message: "Template Already Exists",
           description: `This course element already has a template. Only one template is allowed per course element.`,
         });
         return;
       }
+      
+      // If rejected and template exists, allow creating new template for resubmission
+      // (This will create a new template, and the old rejected one can be ignored)
 
       // Validate: Check if template name is provided
       if (!newTemplateName.trim()) {
@@ -1240,10 +1334,36 @@ export const LecturerTaskContent = ({
       setNewTemplateType(0);
       setDatabaseFileList([]);
       setPostmanFileList([]);
-      notification.success({
-        message: "Template Created",
-        description: "Template has been created successfully.",
-      });
+      
+      // If this was a resubmission after rejection, reset status to Pending
+      if (isRejected) {
+        try {
+          await assignRequestService.updateAssignRequest(task.id, {
+            message: task.message || "Template resubmitted after rejection",
+            courseElementId: task.courseElementId,
+            assignedLecturerId: task.assignedLecturerId,
+            assignedByHODId: task.assignedByHODId,
+            status: 1, // Reset to Pending
+            assignedAt: task.assignedAt,
+          });
+          notification.success({
+            message: "Template Created and Resubmitted",
+            description: "Template has been created and status reset to Pending for HOD review.",
+          });
+        } catch (err: any) {
+          console.error("Failed to reset status:", err);
+          notification.warning({
+            message: "Template Created",
+            description: "Template created successfully, but failed to reset status. Please contact administrator.",
+          });
+        }
+      } else {
+        notification.success({
+          message: "Template Created",
+          description: "Template has been created successfully.",
+        });
+      }
+      
       fetchTemplates();
     } catch (error: any) {
       console.error("Failed to create template:", error);
@@ -1260,6 +1380,7 @@ export const LecturerTaskContent = ({
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
       // Refresh templates list after deletion
       await fetchTemplates();
+      await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
       notification.error({
@@ -1396,7 +1517,7 @@ export const LecturerTaskContent = ({
         try {
           await assessmentPaperService.deleteAssessmentPaper(paper.id);
           notification.success({ message: "Paper deleted" });
-          refreshPapers();
+          await refreshPapers(true); // Reset status if rejected
           setSelectedKey("template-details"); // Chuyển về view template
         } catch (error) {
           notification.error({ message: "Failed to delete paper" });
@@ -1415,7 +1536,7 @@ export const LecturerTaskContent = ({
         try {
           await assessmentQuestionService.deleteAssessmentQuestion(question.id);
           notification.success({ message: "Question deleted" });
-          refreshQuestions(question.assessmentPaperId);
+          await refreshQuestions(question.assessmentPaperId, true); // Reset status if rejected
           setSelectedKey(`paper-${question.assessmentPaperId}`); // Chuyển về view paper
         } catch (error) {
           notification.error({ message: "Failed to delete question" });
@@ -1505,9 +1626,14 @@ export const LecturerTaskContent = ({
     );
   };
 
-  const refreshTemplate = async () => {
+  const refreshTemplate = async (shouldResetStatus = false) => {
     // Refresh toàn bộ templates và các dữ liệu liên quan
     await fetchTemplates();
+    
+    // Reset status if needed
+    if (shouldResetStatus) {
+      await resetStatusIfRejected();
+    }
   };
 
   // Check if current template is editable (belongs to current assign request)
@@ -1521,11 +1647,15 @@ export const LecturerTaskContent = ({
           papers={papers}
           files={files}
           isEditable={isCurrentTemplateEditable}
-          onFileChange={refreshFiles}
+          onFileChange={() => refreshFiles(true)}
           onExport={handleExport}
           onTemplateDelete={handleDeleteTemplate}
-          onTemplateChange={refreshTemplate}
+          onTemplateChange={async () => {
+            await refreshTemplate(true);
+          }}
           assignedToHODId={task.assignedByHODId}
+          task={task}
+          onResetStatus={resetStatusIfRejected}
         />
       );
     }
@@ -1538,7 +1668,8 @@ export const LecturerTaskContent = ({
           <PaperDetailView
             paper={paper}
             isEditable={isCurrentTemplateEditable}
-            onPaperChange={refreshPapers}
+            onPaperChange={() => refreshPapers(true)}
+            onResetStatus={resetStatusIfRejected}
           />
         );
       }
@@ -1563,8 +1694,9 @@ export const LecturerTaskContent = ({
           <QuestionDetailView
             question={question}
             isEditable={isCurrentTemplateEditable}
-            onRubricChange={() => {}} // Có thể refresh tổng điểm sau
-            onQuestionChange={() => refreshQuestions(paperId!)}
+            onRubricChange={() => refreshQuestions(paperId!, true)} // Reset status if rejected
+            onQuestionChange={() => refreshQuestions(paperId!, true)}
+            onResetStatus={resetStatusIfRejected}
           />
         );
       }
@@ -1582,10 +1714,19 @@ export const LecturerTaskContent = ({
 
   return (
     <div className={`${styles["task-content"]} ${styles["nested-content"]}`}>
+      {isRejected && (
+        <Alert
+          message="Template Rejected"
+          description="This template has been rejected. You can edit the existing template or create a new one. After making changes, the status will be reset to Pending for HOD review."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
       {!template ? (
         isEditable ? (
-          templates.length > 0 ? (
-            // If there are templates but current assign request doesn't have one
+          templates.length > 0 && !isRejected ? (
+            // If there are templates but current assign request doesn't have one (and not rejected)
             <Alert
               message="Template Already Exists"
               description={`This course element already has ${templates.length} template(s). Only one template is allowed per course element. Please select an existing template or contact the administrator.`}
@@ -1816,7 +1957,7 @@ export const LecturerTaskContent = ({
             onCancel={() => setIsPaperModalOpen(false)}
             onFinish={() => {
               setIsPaperModalOpen(false);
-              refreshPapers();
+              refreshPapers(true); // Reset status if rejected
             }}
             isEditable={isCurrentTemplateEditable}
             templateId={template.id}
@@ -1829,7 +1970,7 @@ export const LecturerTaskContent = ({
             }}
             onFinish={() => {
               setIsQuestionModalOpen(false);
-              refreshQuestions(paperForNewQuestion!);
+              refreshQuestions(paperForNewQuestion!, true); // Reset status if rejected
               setPaperForNewQuestion(undefined);
             }}
             isEditable={isCurrentTemplateEditable}

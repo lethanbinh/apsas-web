@@ -237,12 +237,12 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
           <Input type="hidden" />
         </Form.Item>
         {!isEditMode && (
-          <Form.Item
-            name="assignedAt"
-            label="Assigned Date"
-          >
+        <Form.Item
+          name="assignedAt"
+          label="Assigned Date"
+        >
             <Input disabled readOnly />
-          </Form.Item>
+        </Form.Item>
         )}
         <Form.Item
           name="message"

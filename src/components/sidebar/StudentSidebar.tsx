@@ -11,6 +11,7 @@ import {
   BookOutlined,
   UsergroupAddOutlined,
   FileTextOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 import styles from "./StudentSidebar.module.css";
 
@@ -43,6 +44,11 @@ const menuItems = [
     key: "/student/exams",
     icon: <FileTextOutlined />,
     label: <Link href="/student/exams">Practical Exams</Link>,
+  },
+  {
+    key: "/student/labs",
+    icon: <ExperimentOutlined />,
+    label: <Link href="/student/labs">Labs</Link>,
   },
 ];
 

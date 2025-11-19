@@ -1,45 +1,41 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { App, Typography, Collapse, Spin, Alert } from "antd";
-import { LinkOutlined } from "@ant-design/icons";
-import styles from "./AssignmentList.module.css";
-import dayjs from "dayjs";
-import { AssignmentData } from "./data";
-import { AssignmentItem } from "./AssignmentItem";
-import { classService } from "@/services/classService";
-import { courseElementService, CourseElement } from "@/services/courseElementService";
-import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
-import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assignRequestService } from "@/services/assignRequestService";
+import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
+import { classService } from "@/services/classService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { LinkOutlined } from "@ant-design/icons";
+import { Alert, Collapse, Spin, Typography } from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { AssignmentItem } from "./AssignmentItem";
+import styles from "./AssignmentList.module.css";
+import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
 
-// Helper function to check if a course element is a Practical Exam based on name
-function isPracticalExam(element: CourseElement): boolean {
+// Helper function to check if a course element is a Lab based on name
+function isLab(element: CourseElement): boolean {
   const name = (element.name || "").toLowerCase();
   const keywords = [
-    "exam",
-    "pe",
-    "practical exam",
-    "practical",
-    "test",
-    "kiểm tra thực hành",
-    "thi thực hành",
-    "bài thi",
-    "bài kiểm tra",
+    "lab",
+    "laboratory",
     "thực hành",
+    "bài thực hành",
+    "lab session",
+    "lab work",
   ];
   return keywords.some((keyword) => name.includes(keyword));
 }
 
-function mapCourseElementToExamData(
+function mapCourseElementToLabData(
   element: CourseElement,
   classAssessmentMap: Map<number, ClassAssessment>
 ): AssignmentData {
   const classAssessment = classAssessmentMap.get(element.id);
   const now = dayjs();
-  let status = "Upcoming Exam";
+  let status = "Upcoming Lab";
   let deadline: string | undefined = undefined;
   let startAt = dayjs().toISOString();
   let assessmentTemplateId: number | undefined;
@@ -63,11 +59,11 @@ function mapCourseElementToExamData(
     const startDate = dayjs(startAt);
     
     if (now.isBefore(startDate)) {
-      status = "Upcoming Exam";
+      status = "Upcoming Lab";
     } else if (now.isAfter(endDate)) {
-      status = "Completed Exam";
+      status = "Completed Lab";
     } else {
-      status = "Active Exam";
+      status = "Active Lab";
     }
   } else {
     status = "No Deadline";
@@ -76,11 +72,11 @@ function mapCourseElementToExamData(
   return {
     id: element.id.toString(),
     status: status,
-    title: element.name || "Practical Exam",
+    title: element.name || "Lab",
     date: deadline,
     description: element.description || "No description available",
     requirementContent: [
-      { type: "heading", content: element.name || "Exam Details" },
+      { type: "heading", content: element.name || "Lab Details" },
       { type: "paragraph", content: element.description || "" },
     ],
     requirementFile: "",
@@ -99,13 +95,13 @@ function mapCourseElementToExamData(
   };
 }
 
-export default function PracticalExams() {
-  const [exams, setExams] = useState<AssignmentData[]>([]);
+export default function Labs() {
+  const [labs, setLabs] = useState<AssignmentData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchExams = async () => {
+    const fetchLabs = async () => {
       const classId = localStorage.getItem("selectedClassId");
       
       if (!classId) {
@@ -128,7 +124,7 @@ export default function PracticalExams() {
           pageSize: 1000,
         });
         const classElements = allElements.filter(
-          (el) => el.semesterCourseId === semesterCourseId && isPracticalExam(el)
+          (el) => el.semesterCourseId === semesterCourseId && isLab(el)
         );
 
         // 3) Fetch assign requests and filter by status = 5 (Approved)
@@ -208,7 +204,7 @@ export default function PracticalExams() {
         // 1. If classAssessment exists, find template by classAssessment.assessmentTemplateId in approved templates
         // 2. If no classAssessment or template not found, find template by courseElementId in approved templates
         // Only use classAssessment if approved template exists AND matches classAssessment's template
-        const mappedExams = classElements.map((el) => {
+        const mappedLabs = classElements.map((el) => {
           const classAssessment = classAssessmentMap.get(el.id);
           let approvedTemplate: AssessmentTemplate | undefined;
           
@@ -227,28 +223,28 @@ export default function PracticalExams() {
           if (approvedTemplate) {
             // Use classAssessment only if it matches the approved template
             if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
-              return mapCourseElementToExamData(el, classAssessmentMap);
+              return mapCourseElementToLabData(el, classAssessmentMap);
             } else {
               // If approved template exists but classAssessment doesn't match, don't use classAssessment
               // But still show the course element (just without deadline)
-              return mapCourseElementToExamData(el, new Map());
+              return mapCourseElementToLabData(el, new Map());
             }
           } else {
             // If no approved template found, don't use classAssessment
-            return mapCourseElementToExamData(el, new Map());
+            return mapCourseElementToLabData(el, new Map());
           }
         });
 
-        setExams(mappedExams);
+        setLabs(mappedLabs);
       } catch (err: any) {
-        console.error("Failed to fetch exams:", err);
-        setError(err.message || "Failed to load exams.");
+        console.error("Failed to fetch labs:", err);
+        setError(err.message || "Failed to load labs.");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchExams();
+    fetchLabs();
   }, []);
 
 
@@ -278,17 +274,17 @@ export default function PracticalExams() {
           marginBottom: "20px",
         }}
       >
-        Practical Exams
+        Labs
       </Title>
-      {exams.length === 0 ? (
-        <Alert message="No exams found" description="There are no practical exams for this class." type="info" />
+      {labs.length === 0 ? (
+        <Alert message="No labs found" description="There are no labs for this class." type="info" />
       ) : (
         <Collapse
           accordion
           bordered={false}
           className={styles.collapse}
-          defaultActiveKey={exams.length > 0 ? [exams[0].id] : []}
-          items={exams.map((item) => ({
+          defaultActiveKey={labs.length > 0 ? [labs[0].id] : []}
+          items={labs.map((item) => ({
             key: item.id,
             label: (
               <div className={styles.panelHeader}>
@@ -305,10 +301,11 @@ export default function PracticalExams() {
                 </div>
               </div>
             ),
-            children: <AssignmentItem data={item} isPracticalExam={true} />,
+            children: <AssignmentItem data={item} isLab={true} />,
           }))}
         />
       )}
     </div>
   );
 }
+

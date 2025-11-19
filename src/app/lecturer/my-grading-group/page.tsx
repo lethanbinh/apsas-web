@@ -7,7 +7,7 @@ import { AssessmentQuestion, assessmentQuestionService } from "@/services/assess
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
 import { ClassInfo, classService } from "@/services/classService";
-import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { CourseElement } from "@/services/courseElementService";
 import { GradingGroup, gradingGroupService } from "@/services/gradingGroupService";
 import { lecturerService } from "@/services/lecturerService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
@@ -22,12 +22,14 @@ import {
   EyeOutlined,
   FileExcelOutlined,
   FileTextOutlined,
-  SearchOutlined
+  SearchOutlined,
+  DownloadOutlined
 } from "@ant-design/icons";
 import {
   Alert,
   App,
   Button,
+  Checkbox,
   Collapse,
   Divider,
   Input,
@@ -46,6 +48,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import styles from "./MySubmissions.module.css";
+import { gradingService } from "@/services/gradingService";
+import { FeedbackData } from "@/services/geminiService";
+import { courseElementService } from "@/services/courseElementService";
+import { gradeItemService } from "@/services/gradeItemService";
 
 const { Title, Text } = Typography;
 
@@ -115,6 +121,16 @@ const MySubmissionsPageContent = () => {
   const [selectedGradingGroupId, setSelectedGradingGroupId] = useState<number | undefined>(
     undefined
   );
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportTypes, setExportTypes] = useState<{
+    assignment: boolean;
+    lab: boolean;
+    practicalExam: boolean;
+  }>({
+    assignment: true,
+    lab: true,
+    practicalExam: true,
+  });
 
   useEffect(() => {
     if (authLoading) return;
@@ -438,6 +454,7 @@ const MySubmissionsPageContent = () => {
     localStorage.setItem("selectedSubmissionId", submission.id.toString());
     router.push(`/lecturer/assignment-grading`);
   };
+
 
   const handleExportExcel = async () => {
     try {
@@ -783,6 +800,7 @@ const MySubmissionsPageContent = () => {
         }}
         gradingGroup={selectedGradingGroup}
         />
+
     </div>
   );
 };

@@ -1163,7 +1163,7 @@ export default function AssignmentGradingPage() {
 
       // Calculate total score from all rubric scores
       let calculatedTotal = 0;
-      questions.forEach((q) => {
+        questions.forEach((q) => {
         const questionTotal = Object.values(q.rubricScores).reduce(
           (sum, score) => sum + (score || 0),
           0
@@ -1227,7 +1227,7 @@ export default function AssignmentGradingPage() {
           return;
         }
       }
-
+      
       // Save all grade items (create or update)
       for (const question of questions) {
         // Get comment for this question (stored with question.id as key)
@@ -1396,7 +1396,7 @@ export default function AssignmentGradingPage() {
                   icon={<RobotOutlined />}
                   onClick={handleGetAiFeedback}
                   loading={loadingAiFeedback}
-                >
+              >
                   Get AI Feedback
               </Button>
             </Space>
@@ -1597,7 +1597,7 @@ export default function AssignmentGradingPage() {
                               items={sortedQuestions.map((question, index) => 
                                 renderQuestionCollapse(question, index)
                               )}
-                            />
+                />
                           );
                         })()}
             </Col>
@@ -1606,7 +1606,7 @@ export default function AssignmentGradingPage() {
                 ),
               },
             ]}
-          />
+                />
       </Card>
 
       <ViewExamModal
@@ -1621,7 +1621,7 @@ export default function AssignmentGradingPage() {
           gradingHistory={gradingHistory}
           loading={loadingGradingHistory}
           submissionId={submissionId}
-        />
+            />
           </div>
     </App>
   );
@@ -1915,9 +1915,9 @@ function GradingHistoryModal({
       return;
     }
 
-    // Expand - fetch or use cached data, but always filter duplicates
+    // Expand - fetch or use cached data
     if (sessionGradeItems[sessionId]) {
-      // Already loaded, just expand (data is already filtered)
+      // Already loaded, just expand
       newExpanded.add(sessionId);
       setExpandedSessions(newExpanded);
       return;
@@ -1931,35 +1931,10 @@ function GradingHistoryModal({
         pageSize: 1000,
       });
       
-      // Filter to get only the latest grade item for each rubricItemDescription
-      // Sort by updatedAt descending (or createdAt if updatedAt is same), then group by rubricItemDescription and take the first one
-      const sortedItems = [...result.items].sort((a, b) => {
-        const dateA = new Date(a.updatedAt).getTime();
-        const dateB = new Date(b.updatedAt).getTime();
-        if (dateB !== dateA) {
-          return dateB - dateA; // Descending order by updatedAt
-        }
-        // If updatedAt is same, sort by createdAt descending
-        const createdA = new Date(a.createdAt).getTime();
-        const createdB = new Date(b.createdAt).getTime();
-        return createdB - createdA;
-      });
-      
-      const latestGradeItemsMap = new Map<string, GradeItem>();
-      sortedItems.forEach((item) => {
-        const rubricKey = item.rubricItemDescription || "";
-        if (!latestGradeItemsMap.has(rubricKey)) {
-          latestGradeItemsMap.set(rubricKey, item);
-        }
-      });
-      
-      const latestGradeItems = Array.from(latestGradeItemsMap.values());
-      
-      console.log(`Filtered ${result.items.length} grade items to ${latestGradeItems.length} unique items for session ${sessionId}`);
-      
+      // Don't filter duplicates - show all grade items
       setSessionGradeItems((prev) => ({
         ...prev,
-        [sessionId]: latestGradeItems,
+        [sessionId]: result.items,
       }));
       
       newExpanded.add(sessionId);
@@ -2106,33 +2081,7 @@ function GradingHistoryModal({
           <Collapse
             items={gradingHistory.map((session) => {
               const isExpanded = expandedSessions.has(session.id);
-              let gradeItems = sessionGradeItems[session.id] || [];
-              
-              // Ensure no duplicates - filter to keep only latest grade item per rubricItemDescription
-              if (gradeItems.length > 0) {
-                // Sort by updatedAt descending first
-                const sorted = [...gradeItems].sort((a, b) => {
-                  const dateA = new Date(a.updatedAt).getTime();
-                  const dateB = new Date(b.updatedAt).getTime();
-                  if (dateB !== dateA) {
-                    return dateB - dateA;
-                  }
-                  const createdA = new Date(a.createdAt).getTime();
-                  const createdB = new Date(b.createdAt).getTime();
-                  return createdB - createdA;
-                });
-                
-                // Only keep the first occurrence of each rubricItemDescription
-                const rubricDescriptionMap = new Map<string, GradeItem>();
-                sorted.forEach((item) => {
-                  const rubricKey = item.rubricItemDescription || "";
-                  if (!rubricDescriptionMap.has(rubricKey)) {
-                    rubricDescriptionMap.set(rubricKey, item);
-                  }
-                });
-                
-                gradeItems = Array.from(rubricDescriptionMap.values());
-              }
+              const gradeItems = sessionGradeItems[session.id] || [];
               
               const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
 

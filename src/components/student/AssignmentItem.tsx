@@ -46,13 +46,16 @@ const { Dragger } = Upload;
 interface AssignmentItemProps {
   data: AssignmentData;
   isExam?: boolean; // If true, hide requirement details, files, and submission
+  isLab?: boolean; // If true, allow submission with max 3 attempts and auto grading
+  isPracticalExam?: boolean; // If true, allow submission but only show requirement when deadline is set
 }
 
-export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
+export function AssignmentItem({ data, isExam = false, isLab = false, isPracticalExam = false }: AssignmentItemProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
   const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
+  const [submissionCount, setSubmissionCount] = useState(0);
   const [isRequirementModalVisible, setIsRequirementModalVisible] =
     useState(false);
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
@@ -92,12 +95,15 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
               new Date(a.submittedAt).getTime()
           );
           setLastSubmission(sorted[0]);
+          setSubmissionCount(submissions.length);
         } else {
           setLastSubmission(null);
+          setSubmissionCount(0);
         }
       } catch (err) {
         console.error("Failed to fetch submissions:", err);
         setLastSubmission(null);
+        setSubmissionCount(0);
       } finally {
         setIsLoadingSubmission(false);
       }
@@ -141,6 +147,12 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
                   file.name.toLowerCase().endsWith(".zip");
     if (!isZip) {
       message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
+      return;
+    }
+
+    // Check submission limit for labs (max 3 times)
+    if (isLab && submissionCount >= 3) {
+      message.error("You have reached the maximum submission limit (3 times).");
       return;
     }
 
@@ -197,8 +209,26 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
         message.warning("Assignment submitted, but test file upload failed. Please contact your lecturer.");
       }
 
+      // Step 3: For labs, trigger auto grading after submission
+      if (isLab && data.assessmentTemplateId) {
+        try {
+          message.loading("Starting auto grading...", 0);
+          await gradingService.autoGrading({
+            submissionId: newSubmission.id,
+            assessmentTemplateId: data.assessmentTemplateId,
+          });
+          message.destroy();
+          message.success("Submission submitted and auto grading started!");
+        } catch (gradingErr: any) {
+          console.error("Failed to start auto grading:", gradingErr);
+          message.destroy();
+          message.warning("Submission submitted, but auto grading failed to start. Please contact your lecturer.");
+        }
+      } else {
+        message.success("Your assignment has been submitted successfully!");
+      }
+
       setFileList([]);
-      message.success("Your assignment has been submitted successfully!");
       
       // Refresh submissions list to ensure we have the latest
       let submissions: Submission[] = [];
@@ -223,8 +253,10 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
             new Date(a.submittedAt).getTime()
         );
         setLastSubmission(sorted[0]);
+        setSubmissionCount(submissions.length);
       } else {
         setLastSubmission(newSubmission);
+        setSubmissionCount(1);
       }
     } catch (err: any) {
       console.error("Failed to submit assignment:", err);
@@ -272,30 +304,32 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
         </Paragraph>
       </div>
 
-      {!isExam && (
+      {(!isExam || isPracticalExam) && (
         <>
-          <div className={styles.contentSection}>
-            <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-              Requirements
-            </Title>
-            <div className={styles.requirementButtons}>
-              <Button
-                variant="outline"
-                onClick={() => setIsRequirementModalVisible(true)}
-                className={styles.viewRequirementButton}
-                icon={<EyeOutlined />}
-              >
-                View Requirement Details
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setIsScoreModalVisible(true)}
-                className={styles.viewScoreButton}
-                icon={<EyeOutlined />}
-              >
-                View Score & Feedback
-              </Button>
-            </div>
+          {/* For practical exam, only show requirements when deadline is set */}
+          {(!isPracticalExam || hasDeadline()) && (
+            <div className={styles.contentSection}>
+              <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
+                Requirements
+              </Title>
+              <div className={styles.requirementButtons}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRequirementModalVisible(true)}
+                  className={styles.viewRequirementButton}
+                  icon={<EyeOutlined />}
+                >
+                  View Requirement Details
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsScoreModalVisible(true)}
+                  className={styles.viewScoreButton}
+                  icon={<EyeOutlined />}
+                >
+                  View Score & Feedback
+                </Button>
+              </div>
 
             <div className={styles.downloadSection}>
               {data.requirementFile && (
@@ -336,6 +370,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
               )}
             </div>
           </div>
+          )}
 
           <div className={styles.submissionSection}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -399,7 +434,17 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
                   <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
                     Chỉ chấp nhận file ZIP
                   </p>
-                  {lastSubmission && (
+                  {isLab && (
+                    <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
+                      Submission attempts: {submissionCount}/3
+                      {submissionCount >= 3 && (
+                        <span style={{ color: "#ff4d4f", marginLeft: "8px" }}>
+                          (Maximum limit reached)
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {!isLab && lastSubmission && (
                     <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
                       You can submit multiple times. The latest submission will be used.
                     </p>
@@ -410,10 +455,17 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
                   size="large"
                   onClick={handleSubmit}
                   loading={isSubmitting}
-                  disabled={fileList.length === 0 || !canSubmit()}
+                  disabled={fileList.length === 0 || !canSubmit() || (isLab && submissionCount >= 3)}
                   className={styles.submitButton}
                 >
-                  {lastSubmission ? "Resubmit Assignment" : "Submit Assignment"}
+                  {isLab 
+                    ? (submissionCount >= 3 
+                        ? "Maximum Submissions Reached" 
+                        : lastSubmission 
+                          ? `Resubmit Lab (${submissionCount}/3)` 
+                          : `Submit Lab (${submissionCount}/3)`)
+                    : (lastSubmission ? "Resubmit Assignment" : "Submit Assignment")
+                  }
                 </Button>
               </>
             )}
@@ -421,7 +473,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
         </>
       )}
 
-      {isExam && (
+      {isExam && !isPracticalExam && (
         <>
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -446,7 +498,7 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
         </>
       )}
 
-      {!isExam && (
+      {(!isExam || isPracticalExam) && (
         <div className={styles.contentSection} style={{ marginTop: "24px" }}>
           <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
             Deadline
@@ -455,7 +507,24 @@ export function AssignmentItem({ data, isExam = false }: AssignmentItemProps) {
         </div>
       )}
 
-      {!isExam && (
+      {/* Always show "View Score & Feedback" button for lab, assignment, and practical exam */}
+      {(!isExam || isPracticalExam) && (
+        <div className={styles.contentSection} style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #e6f7ff" }}>
+          <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
+            Results
+          </Title>
+          <Button
+            variant="outline"
+            onClick={() => setIsScoreModalVisible(true)}
+            className={styles.viewScoreButtonExam}
+            icon={<EyeOutlined />}
+          >
+            View Score & Feedback
+          </Button>
+        </div>
+      )}
+
+      {(!isExam || isPracticalExam) && (
         <RequirementModal
           open={isRequirementModalVisible}
           onCancel={() => setIsRequirementModalVisible(false)}

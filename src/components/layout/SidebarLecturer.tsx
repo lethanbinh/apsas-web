@@ -9,6 +9,7 @@ import {
   BarChartOutlined,
   CheckSquareOutlined,
   TeamOutlined,
+  ExperimentOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Input, Layout, Menu } from "antd";
@@ -46,9 +47,9 @@ export default function SidebarLecturer() {
         label: <Link href="/lecturer/detail-assignment">Assignments</Link>,
       },
       {
-        key: "/lecturer/practical-exams",
-        icon: <FileTextOutlined />,
-        label: <Link href="/lecturer/practical-exams">Practical Exams</Link>,
+        key: "/lecturer/labs",
+        icon: <ExperimentOutlined />,
+        label: <Link href="/lecturer/labs">Labs</Link>,
       },
       {
         key: "/lecturer/tasks",
@@ -57,8 +58,8 @@ export default function SidebarLecturer() {
       },
       {
         key: "/lecturer/my-grading-group",
-        icon: <BookOutlined />,
-        label: <Link href="/lecturer/my-grading-group">Grading</Link>,
+        icon: <FileTextOutlined />,
+        label: <Link href="/lecturer/my-grading-group">PE</Link>,
       },
       {
         key: "/lecturer/members",

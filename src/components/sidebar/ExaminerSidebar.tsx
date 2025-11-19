@@ -20,6 +20,11 @@ const menuItems = [
     icon: <ApartmentOutlined />,
     label: <Link href="/examiner/grading-groups">Grading Groups</Link>,
   },
+  {
+    key: "/examiner/templates",
+    icon: <FileTextOutlined />,
+    label: <Link href="/examiner/templates">Templates</Link>,
+  },
 ];
 
 export default function ExaminerSidebar() {
