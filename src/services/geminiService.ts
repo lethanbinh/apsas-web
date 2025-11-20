@@ -1,7 +1,7 @@
-import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_API_KEY = "AIzaSyAxP4_3RR7wfZR21TCVKYOHgQnmJoAKwMU";
-const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+const GEMINI_API_KEY = "AIzaSyBlnSD5rt1io9kPcQAwbxdwc8d04ysUPbg";
+const GEMINI_MODEL = "gemini-2.5-pro";
 
 export interface FeedbackData {
   overallFeedback: string;
@@ -14,15 +14,10 @@ export interface FeedbackData {
   errorHandling: string;
 }
 
-export interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-}
+// Initialize GoogleGenAI client
+const ai = new GoogleGenAI({
+  apiKey: GEMINI_API_KEY,
+});
 
 export class GeminiService {
   /**
@@ -172,28 +167,12 @@ Remember:
     const prompt = this.generateDynamicPrompt(rawFeedback);
 
     try {
-      const response = await axios.post<GeminiResponse>(
-        `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
-        {
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+      });
 
-      const generatedText =
-        response.data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const generatedText = response.text || "";
 
       if (!generatedText) {
         throw new Error("No response from Gemini API");

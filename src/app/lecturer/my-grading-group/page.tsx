@@ -7,8 +7,9 @@ import { AssessmentQuestion, assessmentQuestionService } from "@/services/assess
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
 import { ClassInfo, classService } from "@/services/classService";
-import { CourseElement } from "@/services/courseElementService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
 import { GradingGroup, gradingGroupService } from "@/services/gradingGroupService";
+import { gradingService } from "@/services/gradingService";
 import { lecturerService } from "@/services/lecturerService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import {
@@ -22,18 +23,16 @@ import {
   EyeOutlined,
   FileExcelOutlined,
   FileTextOutlined,
-  SearchOutlined,
-  DownloadOutlined
+  RobotOutlined,
+  SearchOutlined
 } from "@ant-design/icons";
 import {
   Alert,
   App,
   Button,
-  Checkbox,
   Collapse,
   Divider,
   Input,
-  message,
   Modal,
   Select,
   Space,
@@ -48,12 +47,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import styles from "./MySubmissions.module.css";
-import { gradingService } from "@/services/gradingService";
-import { FeedbackData } from "@/services/geminiService";
-import { courseElementService } from "@/services/courseElementService";
-import { gradeItemService } from "@/services/gradeItemService";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -83,15 +78,6 @@ interface EnrichedSubmission extends Submission {
   isSemesterPassed?: boolean;
   gradingGroup?: GradingGroup;
 }
-
-// Tạm comment lại chức năng check học kỳ
-// Helper function to check if semester has passed
-// const isSemesterPassed = (endDate?: string): boolean => {
-//   if (!endDate) return false;
-//   const now = new Date();
-//   const semesterEnd = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
-//   return now > semesterEnd;
-// };
 
 const MySubmissionsPageContent = () => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -131,6 +117,7 @@ const MySubmissionsPageContent = () => {
     lab: true,
     practicalExam: true,
   });
+  const [batchGradingLoading, setBatchGradingLoading] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -455,6 +442,69 @@ const MySubmissionsPageContent = () => {
     router.push(`/lecturer/assignment-grading`);
   };
 
+  const handleBatchGrading = async () => {
+    if (filteredData.length === 0) {
+      messageApi.warning("No submissions to grade");
+      return;
+    }
+
+    try {
+      setBatchGradingLoading(true);
+      messageApi.loading(`Starting batch grading for ${filteredData.length} submission(s)...`, 0);
+
+      // Call auto grading for each submission
+      const gradingPromises = filteredData.map(async (submission) => {
+        try {
+          // Get assessmentTemplateId from grading group
+          const gradingGroup = submission.gradingGroup;
+          if (!gradingGroup?.assessmentTemplateId) {
+            return { 
+              success: false, 
+              submissionId: submission.id, 
+              error: "Cannot find assessment template for this submission" 
+            };
+          }
+
+          await gradingService.autoGrading({
+            submissionId: submission.id,
+            assessmentTemplateId: gradingGroup.assessmentTemplateId,
+          });
+          return { success: true, submissionId: submission.id };
+        } catch (err: any) {
+          console.error(`Failed to grade submission ${submission.id}:`, err);
+          return { 
+            success: false, 
+            submissionId: submission.id, 
+            error: err.message || "Unknown error" 
+          };
+        }
+      });
+
+      const results = await Promise.all(gradingPromises);
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      messageApi.destroy();
+      setBatchGradingLoading(false);
+
+      if (successCount > 0) {
+        messageApi.success(`Batch grading started for ${successCount}/${filteredData.length} submission(s)`);
+        // Refresh data after a short delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      }
+      if (failCount > 0) {
+        messageApi.warning(`Failed to start grading for ${failCount} submission(s)`);
+      }
+    } catch (err: any) {
+      console.error("Failed to start batch grading:", err);
+      messageApi.destroy();
+      setBatchGradingLoading(false);
+      messageApi.error(err.message || "Failed to start batch grading");
+    }
+  };
+
 
   const handleExportExcel = async () => {
     try {
@@ -724,6 +774,17 @@ const MySubmissionsPageContent = () => {
               View Exam
             </Button>
           )}
+          {filteredData.length > 0 && (
+            <Button
+              icon={<RobotOutlined />}
+              onClick={handleBatchGrading}
+              loading={batchGradingLoading}
+              size="large"
+              type="primary"
+            >
+              Batch Grade
+            </Button>
+          )}
           <Button
             icon={<FileExcelOutlined />}
             onClick={handleExportExcel}
@@ -918,9 +979,25 @@ function ViewExamModal({
       <Spin spinning={loading}>
         {gradingGroup && (
           <div>
-            <Title level={4}>{gradingGroup.assessmentTemplateName || "Exam"}</Title>
-            <Text>{gradingGroup.assessmentTemplateDescription || "No description"}</Text>
-            <Divider />
+            <Title level={4} style={{ marginBottom: "16px" }}>
+              {gradingGroup.assessmentTemplateName || "Exam"}
+            </Title>
+            <Paragraph
+              ellipsis={{
+                rows: 3,
+                expandable: true,
+                symbol: "Read more",
+              }}
+              style={{
+                fontSize: "1rem",
+                lineHeight: 1.6,
+                color: "#555",
+                marginBottom: "24px",
+              }}
+            >
+              {gradingGroup.assessmentTemplateDescription || "No description"}
+            </Paragraph>
+            <Divider style={{ marginBottom: "24px" }} />
             
             {papers.length === 0 ? (
               <Text type="secondary">No papers found.</Text>
@@ -928,7 +1005,21 @@ function ViewExamModal({
               <Collapse>
                 {papers.map((paper) => (
                   <Collapse.Panel key={paper.id} header={paper.name || `Paper ${paper.id}`}>
-                    <Text>{paper.description || "No description"}</Text>
+                    <Paragraph
+                      ellipsis={{
+                        rows: 2,
+                        expandable: true,
+                        symbol: "Read more",
+                      }}
+                      style={{
+                        fontSize: "0.95rem",
+                        lineHeight: 1.6,
+                        color: "#555",
+                        marginBottom: "16px",
+                      }}
+                    >
+                      {paper.description || "No description"}
+                    </Paragraph>
                     {questions[paper.id] && questions[paper.id].length > 0 && (
                       <div style={{ marginTop: 16 }}>
                         {questions[paper.id].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question) => (
