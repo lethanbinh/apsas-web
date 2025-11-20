@@ -48,7 +48,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import styles from "./MySubmissions.module.css";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
@@ -979,25 +979,9 @@ function ViewExamModal({
       <Spin spinning={loading}>
         {gradingGroup && (
           <div>
-            <Title level={4} style={{ marginBottom: "16px" }}>
-              {gradingGroup.assessmentTemplateName || "Exam"}
-            </Title>
-            <Paragraph
-              ellipsis={{
-                rows: 3,
-                expandable: true,
-                symbol: "Read more",
-              }}
-              style={{
-                fontSize: "1rem",
-                lineHeight: 1.6,
-                color: "#555",
-                marginBottom: "24px",
-              }}
-            >
-              {gradingGroup.assessmentTemplateDescription || "No description"}
-            </Paragraph>
-            <Divider style={{ marginBottom: "24px" }} />
+            <Title level={4}>{gradingGroup.assessmentTemplateName || "Exam"}</Title>
+            <Text>{gradingGroup.assessmentTemplateDescription || "No description"}</Text>
+            <Divider />
             
             {papers.length === 0 ? (
               <Text type="secondary">No papers found.</Text>
@@ -1005,21 +989,7 @@ function ViewExamModal({
               <Collapse>
                 {papers.map((paper) => (
                   <Collapse.Panel key={paper.id} header={paper.name || `Paper ${paper.id}`}>
-                    <Paragraph
-                      ellipsis={{
-                        rows: 2,
-                        expandable: true,
-                        symbol: "Read more",
-                      }}
-                      style={{
-                        fontSize: "0.95rem",
-                        lineHeight: 1.6,
-                        color: "#555",
-                        marginBottom: "16px",
-                      }}
-                    >
-                      {paper.description || "No description"}
-                    </Paragraph>
+                    <Text>{paper.description || "No description"}</Text>
                     {questions[paper.id] && questions[paper.id].length > 0 && (
                       <div style={{ marginTop: 16 }}>
                         {questions[paper.id].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question) => (

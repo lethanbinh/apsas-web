@@ -556,12 +556,11 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
         </Title>
 
         {/* 6. Phần chi tiết (Đã sửa lỗi 'icon') */}
-        <div style={{ marginBottom: "40px" }}>
-          <Descriptions
-            bordered
-            column={{ xs: 1, sm: 2 }}
-            className={styles.descriptions}
-          >
+        <Descriptions
+          bordered
+          column={{ xs: 1, sm: 2 }}
+          className={styles.descriptions}
+        >
           <Descriptions.Item
             // SỬA Ở ĐÂY: Đặt icon bên trong label
             label={
@@ -611,18 +610,12 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
             {classData.studentCount}
           </Descriptions.Item>
         </Descriptions>
-        </div>
 
         {/* 7. Phần mô tả */}
-        <Title level={4} style={{ marginTop: "30px", marginBottom: "16px" }}>
+        <Title level={4} style={{ marginTop: "30px" }}>
           Class Description
         </Title>
         <Paragraph
-          ellipsis={{
-            rows: 3,
-            expandable: true,
-            symbol: "Read more",
-          }}
           style={{
             fontSize: "1.1rem",
             lineHeight: 1.7,
@@ -630,7 +623,7 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
             marginBottom: "30px",
           }}
         >
-          {classData.description || "No description available."}
+          {classData.description}
         </Paragraph>
 
         <Divider />
