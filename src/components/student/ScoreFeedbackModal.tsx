@@ -7,11 +7,12 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 import { assignRequestService } from "@/services/assignRequestService";
 import { classAssessmentService } from "@/services/classAssessmentService";
 import { courseElementService } from "@/services/courseElementService";
-import { FeedbackData } from "@/services/geminiService";
+import { FeedbackData, geminiService } from "@/services/geminiService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { gradingService, GradeItem as GradingServiceGradeItem, GradingSession } from "@/services/gradingService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
+import { submissionFeedbackService } from "@/services/submissionFeedbackService";
 import { CloseOutlined, DownloadOutlined } from "@ant-design/icons";
 import { Alert, App, Button, Card, Checkbox, Col, Collapse, Descriptions, Divider, Input, Modal, Row, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -55,6 +56,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   const { message } = App.useApp();
   const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
   const [totalScore, setTotalScore] = useState<number>(0);
 
@@ -160,6 +162,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
         // Fetch questions and rubrics
         await fetchQuestionsAndRubrics(latest);
+        
+        // Fetch feedback independently after main data is loaded
+        fetchFeedback(latest.id);
       } else {
         // No submissions found - still try to fetch template questions if template is approved
         await fetchQuestionsAndRubricsForNoSubmission();
@@ -170,6 +175,85 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       await fetchQuestionsAndRubricsForNoSubmission();
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Deserialize JSON string to feedback data
+   * Returns null if feedback is not JSON format
+   */
+  const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
+    if (!feedbackText || feedbackText.trim() === "") {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(feedbackText);
+      if (typeof parsed === "object" && parsed !== null) {
+        return {
+          overallFeedback: parsed.overallFeedback || "",
+          strengths: parsed.strengths || "",
+          weaknesses: parsed.weaknesses || "",
+          codeQuality: parsed.codeQuality || "",
+          algorithmEfficiency: parsed.algorithmEfficiency || "",
+          suggestionsForImprovement: parsed.suggestionsForImprovement || "",
+          bestPractices: parsed.bestPractices || "",
+          errorHandling: parsed.errorHandling || "",
+        };
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  /**
+   * Fetch existing feedback from API
+   */
+  const fetchFeedback = async (submissionId: number) => {
+    try {
+      setLoadingFeedback(true);
+      const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
+        submissionId: submissionId,
+      });
+
+      if (feedbackList.length > 0) {
+        // Get the first feedback (assuming one feedback per submission)
+        const existingFeedback = feedbackList[0];
+        
+        // Try to deserialize feedback
+        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+        
+        // If deserialize returns null, it means it's plain text/markdown
+        // Use Gemini to parse it into structured format
+        if (parsedFeedback === null) {
+          try {
+            parsedFeedback = await geminiService.formatFeedback(existingFeedback.feedbackText);
+          } catch (error: any) {
+            console.error("Failed to parse feedback with Gemini:", error);
+            // Fallback: put entire text into overallFeedback
+            parsedFeedback = {
+              overallFeedback: existingFeedback.feedbackText,
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
+            };
+          }
+        }
+        
+        if (parsedFeedback) {
+          setFeedback(parsedFeedback);
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch feedback:", error);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingFeedback(false);
     }
   };
 
@@ -1019,10 +1103,11 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
             )}
 
             <Card className={styles.feedbackCard}>
-              <Title level={3}>Detailed Feedback</Title>
-              <Divider />
+              <Spin spinning={loadingFeedback}>
+                <Title level={3}>Detailed Feedback</Title>
+                <Divider />
 
-              {!hasFeedback() ? (
+                {!hasFeedback() && !loadingFeedback ? (
                 <Alert
                   message="No feedback available"
                   description="No feedback has been provided for this submission yet. Please wait for the lecturer to review your work."
@@ -1157,6 +1242,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 )}
               </Space>
               )}
+              </Spin>
             </Card>
 
             {/* Action Buttons */}

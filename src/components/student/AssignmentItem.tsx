@@ -507,23 +507,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         </div>
       )}
 
-      {/* Always show "View Score & Feedback" button for lab, assignment, and practical exam */}
-      {(!isExam || isPracticalExam) && (
-        <div className={styles.contentSection} style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #e6f7ff" }}>
-          <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-            Results
-          </Title>
-          <Button
-            variant="outline"
-            onClick={() => setIsScoreModalVisible(true)}
-            className={styles.viewScoreButtonExam}
-            icon={<EyeOutlined />}
-          >
-            View Score & Feedback
-          </Button>
-        </div>
-      )}
-
       {(!isExam || isPracticalExam) && (
         <RequirementModal
           open={isRequirementModalVisible}

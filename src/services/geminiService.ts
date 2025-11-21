@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_API_KEY = "AIzaSyBlnSD5rt1io9kPcQAwbxdwc8d04ysUPbg";
+const GEMINI_API_KEY = "AIzaSyAmSj3vZ-PYX4WGjzUsLFxVYWQMgxhpCvc";
 const GEMINI_MODEL = "gemini-2.5-pro";
 
 export interface FeedbackData {

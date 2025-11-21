@@ -9,6 +9,8 @@ import { gradingService, GradingSession } from "@/services/gradingService";
 import { gradeItemService, GradeItem } from "@/services/gradeItemService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
+import { submissionFeedbackService, SubmissionFeedback } from "@/services/submissionFeedbackService";
+import { geminiService } from "@/services/geminiService";
 import {
   ArrowLeftOutlined,
   EyeOutlined,
@@ -66,17 +68,21 @@ export default function AssignmentGradingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
   const [totalScore, setTotalScore] = useState(0);
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
+  const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
   // Always allow editing - disable semester check
   const [isSemesterPassed, setIsSemesterPassed] = useState(false);
   const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
   const [latestGradeItems, setLatestGradeItems] = useState<GradeItem[]>([]);
   const [gradingHistory, setGradingHistory] = useState<GradingSession[]>([]);
   const [loadingGradingHistory, setLoadingGradingHistory] = useState(false);
+  const [feedbackHistory, setFeedbackHistory] = useState<SubmissionFeedback[]>([]);
+  const [loadingFeedbackHistory, setLoadingFeedbackHistory] = useState(false);
   const [autoGradingLoading, setAutoGradingLoading] = useState(false);
   const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData>({
@@ -89,6 +95,7 @@ export default function AssignmentGradingPage() {
     bestPractices: "",
     errorHandling: "",
   });
+  const [submissionFeedbackId, setSubmissionFeedbackId] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -117,11 +124,14 @@ export default function AssignmentGradingPage() {
         bestPractices: "",
         errorHandling: "",
       });
+      setSubmissionFeedbackId(null);
       fetchData();
     }
   }, [submissionId]);
 
   const fetchData = async () => {
+    let currentSubmissionId: number | null = null;
+    
     try {
       setLoading(true);
 
@@ -170,6 +180,7 @@ export default function AssignmentGradingPage() {
         return;
       }
 
+      currentSubmissionId = sub.id;
       setSubmission(sub);
       setTotalScore(sub.lastGrade || 0);
 
@@ -192,6 +203,7 @@ export default function AssignmentGradingPage() {
         bestPractices: "",
         errorHandling: "",
       });
+      setSubmissionFeedbackId(null);
 
       // Fetch questions and rubrics
       await fetchQuestionsAndRubrics(sub);
@@ -203,6 +215,11 @@ export default function AssignmentGradingPage() {
       message.error(err.message || "Failed to load data");
     } finally {
       setLoading(false);
+      // Fetch feedback independently after main data is loaded
+      // This prevents the entire page from loading while parsing feedback
+      if (currentSubmissionId) {
+        fetchFeedback(currentSubmissionId);
+      }
     }
   };
 
@@ -708,6 +725,135 @@ export default function AssignmentGradingPage() {
     });
   };
 
+  /**
+   * Serialize feedback data to JSON string
+   */
+  const serializeFeedback = (feedbackData: FeedbackData): string => {
+    return JSON.stringify(feedbackData);
+  };
+
+  /**
+   * Deserialize JSON string to feedback data
+   * Handles both JSON format and plain text/markdown format
+   * Returns null if feedback is not JSON format
+   */
+  const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
+    if (!feedbackText || feedbackText.trim() === "") {
+      return {
+        overallFeedback: "",
+        strengths: "",
+        weaknesses: "",
+        codeQuality: "",
+        algorithmEfficiency: "",
+        suggestionsForImprovement: "",
+        bestPractices: "",
+        errorHandling: "",
+      };
+    }
+
+    try {
+      // Try to parse as JSON first
+      const parsed = JSON.parse(feedbackText);
+      
+      // Validate that it's a valid FeedbackData object
+      if (typeof parsed === "object" && parsed !== null) {
+        return {
+          overallFeedback: parsed.overallFeedback || "",
+          strengths: parsed.strengths || "",
+          weaknesses: parsed.weaknesses || "",
+          codeQuality: parsed.codeQuality || "",
+          algorithmEfficiency: parsed.algorithmEfficiency || "",
+          suggestionsForImprovement: parsed.suggestionsForImprovement || "",
+          bestPractices: parsed.bestPractices || "",
+          errorHandling: parsed.errorHandling || "",
+        };
+      }
+      
+      // If parsed is not an object, fall through to plain text handling
+      throw new Error("Parsed result is not an object");
+    } catch (error) {
+      // If JSON parsing fails, it's plain text/markdown
+      // Return null to indicate it needs processing
+      return null;
+    }
+  };
+
+  /**
+   * Fetch existing feedback from API
+   */
+  const fetchFeedback = async (submissionId: number) => {
+    try {
+      setLoadingFeedback(true);
+      const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
+        submissionId: submissionId,
+      });
+
+      if (feedbackList.length > 0) {
+        // Get the first feedback (assuming one feedback per submission)
+        const existingFeedback = feedbackList[0];
+        setSubmissionFeedbackId(existingFeedback.id);
+        
+        // Try to deserialize feedback
+        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+        
+        // If deserialize returns null, it means it's plain text/markdown
+        // Use Gemini to parse it into structured format
+        if (parsedFeedback === null) {
+          try {
+            parsedFeedback = await geminiService.formatFeedback(existingFeedback.feedbackText);
+          } catch (error: any) {
+            console.error("Failed to parse feedback with Gemini:", error);
+            // Fallback: put entire text into overallFeedback
+            parsedFeedback = {
+              overallFeedback: existingFeedback.feedbackText,
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
+            };
+          }
+        }
+        
+        if (parsedFeedback) {
+          setFeedback(parsedFeedback);
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch feedback:", error);
+      // Don't show error to user, just log it
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
+  /**
+   * Save or update feedback
+   */
+  const saveFeedback = async (feedbackData: FeedbackData) => {
+    if (!submissionId) {
+      throw new Error("No submission selected");
+    }
+
+    const feedbackText = serializeFeedback(feedbackData);
+
+    if (submissionFeedbackId) {
+      // Update existing feedback
+      await submissionFeedbackService.updateSubmissionFeedback(submissionFeedbackId, {
+        feedbackText: feedbackText,
+      });
+    } else {
+      // Create new feedback
+      const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
+        submissionId: submissionId,
+        feedbackText: feedbackText,
+      });
+      setSubmissionFeedbackId(newFeedback.id);
+    }
+  };
+
   const handleGetAiFeedback = async () => {
     if (!submissionId) {
       message.error("No submission selected");
@@ -716,23 +862,16 @@ export default function AssignmentGradingPage() {
 
     try {
       setLoadingAiFeedback(true);
-      const loadingMessage = message.loading({
-        content: "Getting AI feedback...",
-        key: "ai-feedback",
-        duration: 0 // Keep loading message until we replace it
-      });
 
       const formattedFeedback = await gradingService.getFormattedAiFeedback(submissionId, "OpenAI");
 
       // Update feedback state with AI feedback
       setFeedback(formattedFeedback);
 
-      // Replace loading with success
-      message.success({
-        content: "AI feedback retrieved successfully!",
-        key: "ai-feedback",
-        duration: 3
-      });
+      // Save feedback to database
+      await saveFeedback(formattedFeedback);
+
+      message.success("AI feedback retrieved and saved successfully!");
     } catch (error: any) {
       console.error("Failed to get AI feedback:", error);
       console.error("Error details:", {
@@ -763,12 +902,7 @@ export default function AssignmentGradingPage() {
         errorMessage = error.message;
       }
 
-      // Replace loading message with error message
-      message.error({
-        content: errorMessage,
-        key: "ai-feedback",
-        duration: 5
-      });
+      message.error(errorMessage);
     } finally {
       setLoadingAiFeedback(false);
     }
@@ -782,6 +916,45 @@ export default function AssignmentGradingPage() {
 
     setGradingHistoryModalVisible(true);
     await fetchGradingHistory();
+  };
+
+  const handleOpenFeedbackHistory = async () => {
+    if (!submissionId) {
+      message.error("No submission selected");
+      return;
+    }
+
+    setFeedbackHistoryModalVisible(true);
+    await fetchFeedbackHistory();
+  };
+
+  const fetchFeedbackHistory = async () => {
+    if (!submissionId) {
+      console.error("No submissionId for feedback history");
+      return;
+    }
+
+    try {
+      setLoadingFeedbackHistory(true);
+      const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
+        submissionId: submissionId,
+      });
+      
+      // Sort by createdAt desc (newest first)
+      const sortedHistory = [...feedbackList].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      setFeedbackHistory(sortedHistory);
+    } catch (err: any) {
+      console.error("Failed to fetch feedback history:", err);
+      message.error(err?.message || "Failed to load feedback history");
+      setFeedbackHistory([]);
+    } finally {
+      setLoadingFeedbackHistory(false);
+    }
   };
 
   const fetchGradingHistory = async () => {
@@ -1282,6 +1455,24 @@ export default function AssignmentGradingPage() {
     }));
   };
 
+  /**
+   * Save feedback manually (when user edits feedback fields)
+   */
+  const handleSaveFeedback = async () => {
+    if (!submissionId) {
+      message.error("No submission selected");
+      return;
+    }
+
+    try {
+      await saveFeedback(feedback);
+      message.success("Feedback saved successfully");
+    } catch (error: any) {
+      console.error("Failed to save feedback:", error);
+      message.error(error?.message || "Failed to save feedback");
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -1430,30 +1621,42 @@ export default function AssignmentGradingPage() {
       </Card>
 
         <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
-          <Collapse
-            defaultActiveKey={[]}
-            className={`${styles.collapseWrapper} collapse-feedback`}
-            items={[
-              {
-                key: "feedback",
-                label: (
-                  <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-                    Detailed Feedback
-                  </Title>
-                ),
-                children: (
-                  <div>
-                    <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                      Provide comprehensive feedback for the student's submission
-        </Text>
-                    <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                      {renderFeedbackFields(feedback)}
-                    </Space>
-                  </div>
-                ),
-              },
-            ]}
-          />
+          <Spin spinning={loadingFeedback || loadingAiFeedback}>
+            <Collapse
+              defaultActiveKey={[]}
+              className={`${styles.collapseWrapper} collapse-feedback`}
+              items={[
+                {
+                  key: "feedback",
+                  label: (
+                    <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+                      Detailed Feedback
+                    </Title>
+                  ),
+                  children: (
+                    <div>
+                      <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
+                        <Text type="secondary" style={{ display: "block" }}>
+                          Provide comprehensive feedback for the student's submission
+                        </Text>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          onClick={handleSaveFeedback}
+                          disabled={loadingFeedback || loadingAiFeedback}
+                        >
+                          Save Feedback
+                        </Button>
+                      </Space>
+                      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                        {renderFeedbackFields(feedback)}
+                      </Space>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          </Spin>
         </Card>
 
         <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
@@ -1507,6 +1710,14 @@ export default function AssignmentGradingPage() {
                               block
                             >
                               Grading History
+                            </Button>
+                            <Button
+                              type="default"
+                              icon={<HistoryOutlined />}
+                              onClick={handleOpenFeedbackHistory}
+                              block
+                            >
+                              Feedback History
                             </Button>
                           </Space>
                         </div>
@@ -1620,6 +1831,14 @@ export default function AssignmentGradingPage() {
           onClose={() => setGradingHistoryModalVisible(false)}
           gradingHistory={gradingHistory}
           loading={loadingGradingHistory}
+          submissionId={submissionId}
+            />
+
+        <FeedbackHistoryModal
+          visible={feedbackHistoryModalVisible}
+          onClose={() => setFeedbackHistoryModalVisible(false)}
+          feedbackHistory={feedbackHistory}
+          loading={loadingFeedbackHistory}
           submissionId={submissionId}
             />
           </div>
@@ -2267,6 +2486,185 @@ function GradingHistoryModal({
           )}
         </Spin>
       </Modal>
+    </Modal>
+  );
+}
+
+function FeedbackHistoryModal({
+  visible,
+  onClose,
+  feedbackHistory,
+  loading,
+  submissionId,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  feedbackHistory: SubmissionFeedback[];
+  loading: boolean;
+  submissionId: number | null;
+}) {
+  const { message } = App.useApp();
+  const [expandedFeedbacks, setExpandedFeedbacks] = useState<Set<number>>(new Set());
+  const { Title, Text } = Typography;
+  const { TextArea } = Input;
+
+  /**
+   * Deserialize feedback text to FeedbackData
+   */
+  const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
+    if (!feedbackText || feedbackText.trim() === "") {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(feedbackText);
+      if (typeof parsed === "object" && parsed !== null) {
+        return {
+          overallFeedback: parsed.overallFeedback || "",
+          strengths: parsed.strengths || "",
+          weaknesses: parsed.weaknesses || "",
+          codeQuality: parsed.codeQuality || "",
+          algorithmEfficiency: parsed.algorithmEfficiency || "",
+          suggestionsForImprovement: parsed.suggestionsForImprovement || "",
+          bestPractices: parsed.bestPractices || "",
+          errorHandling: parsed.errorHandling || "",
+        };
+      }
+      return null;
+    } catch (error) {
+      // Not JSON, return null to indicate plain text
+      return null;
+    }
+  };
+
+  const handleExpandFeedback = (feedbackId: number) => {
+    const newExpanded = new Set(expandedFeedbacks);
+    const isCurrentlyExpanded = newExpanded.has(feedbackId);
+    
+    if (isCurrentlyExpanded) {
+      newExpanded.delete(feedbackId);
+    } else {
+      newExpanded.add(feedbackId);
+    }
+    
+    setExpandedFeedbacks(newExpanded);
+  };
+
+  const renderFeedbackFields = (feedbackData: FeedbackData) => {
+    const fields: Array<{ key: keyof FeedbackData; label: string }> = [
+      { key: "overallFeedback", label: "Overall Feedback" },
+      { key: "strengths", label: "Strengths" },
+      { key: "weaknesses", label: "Weaknesses" },
+      { key: "codeQuality", label: "Code Quality" },
+      { key: "algorithmEfficiency", label: "Algorithm Efficiency" },
+      { key: "suggestionsForImprovement", label: "Suggestions for Improvement" },
+      { key: "bestPractices", label: "Best Practices" },
+      { key: "errorHandling", label: "Error Handling" },
+    ];
+
+    return fields.map((field) => {
+      const value = feedbackData[field.key] || "";
+      if (!value) return null;
+
+      return (
+        <div key={field.key} style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: "block", marginBottom: 8 }}>
+            {field.label}:
+          </Text>
+          <TextArea
+            value={value}
+            readOnly
+            rows={value.split("\n").length + 1}
+            style={{ backgroundColor: "#f5f5f5" }}
+          />
+        </div>
+      );
+    });
+  };
+
+  return (
+    <Modal
+      title="Feedback History"
+      open={visible}
+      onCancel={onClose}
+      footer={[
+        <Button key="close" onClick={onClose}>
+          Close
+        </Button>,
+      ]}
+      width={1000}
+    >
+      <Spin spinning={loading}>
+        {feedbackHistory.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <Text type="secondary">No feedback history available</Text>
+          </div>
+        ) : (
+          <Collapse
+            items={feedbackHistory.map((feedback) => {
+              const isExpanded = expandedFeedbacks.has(feedback.id);
+              const parsedFeedback = deserializeFeedback(feedback.feedbackText);
+              const isPlainText = parsedFeedback === null;
+
+              return {
+                key: feedback.id.toString(),
+                label: (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                    <div>
+                      <Text strong>Feedback #{feedback.id}</Text>
+                      <Space style={{ marginLeft: 16 }}>
+                        {isPlainText ? (
+                          <Tag color="orange">Plain Text</Tag>
+                        ) : (
+                          <Tag color="green">Structured</Tag>
+                        )}
+                      </Space>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
+                      {toVietnamTime(feedback.createdAt).format("DD/MM/YYYY HH:mm:ss")}
+                    </Text>
+                  </div>
+                ),
+                children: (
+                  <div>
+                    <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+                      <Descriptions.Item label="Feedback ID">{feedback.id}</Descriptions.Item>
+                      <Descriptions.Item label="Submission ID">{feedback.submissionId}</Descriptions.Item>
+                      <Descriptions.Item label="Created At" span={2}>
+                        {toVietnamTime(feedback.createdAt).format("DD/MM/YYYY HH:mm:ss")}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Updated At" span={2}>
+                        {toVietnamTime(feedback.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
+                      </Descriptions.Item>
+                    </Descriptions>
+
+                    {isPlainText ? (
+                      <div>
+                        <Text strong style={{ display: "block", marginBottom: 8 }}>
+                          Feedback Content:
+                        </Text>
+                        <TextArea
+                          value={feedback.feedbackText}
+                          readOnly
+                          rows={feedback.feedbackText.split("\n").length + 3}
+                          style={{ backgroundColor: "#f5f5f5", fontFamily: "monospace" }}
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <Title level={5} style={{ marginTop: 16, marginBottom: 16 }}>
+                          Feedback Details
+                        </Title>
+                        {renderFeedbackFields(parsedFeedback!)}
+                      </div>
+                    )}
+                  </div>
+                ),
+              };
+            })}
+          />
+        )}
+      </Spin>
     </Modal>
   );
 }
