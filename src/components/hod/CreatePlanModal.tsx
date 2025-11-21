@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Modal, Space, Typography, Upload, App, Spin, Alert } from "antd";
+import { Modal, Space, Typography, Upload, App, Spin, Alert, Steps } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import {
   DownloadOutlined,
@@ -60,6 +60,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     null
   );
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const { user } = useAuth();
 
@@ -145,7 +146,18 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       setFileListExcel([]);
       setFileListPdf([]);
       setLivePreviewData(null);
+      setCurrentStep(0);
     }, 300);
+  };
+
+  const handleContinue = () => {
+    if (fileListExcel.length > 0) {
+      setCurrentStep(1);
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep(0);
   };
 
   const handlePreviewClick = async () => {
@@ -295,9 +307,12 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     maxCount: 1,
     accept: ".xlsx, .xls",
     showUploadList: false,
+    disabled: currentStep < 1,
     onRemove: () => setFileListPdf([]),
     beforeUpload: (file: UploadFile) => {
-      setFileListPdf([file]);
+      if (currentStep >= 1) {
+        setFileListPdf([file]);
+      }
       return false;
     },
   };
@@ -316,94 +331,120 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     textAlign: "center",
   };
 
-  const CombinedStepContent = (
-    <div className={styles.stepContent}>
-      <Title level={4} style={{ marginBottom: "20px" }}>
-        Import Excel Files
-      </Title>
+  const steps = [
+    {
+      title: "Upload Semester Course File",
+      content: (
+        <div className={styles.stepContent}>
+          <div style={{ marginBottom: "24px" }}>
+            <Title level={5}>Template Actions</Title>
+            <Space direction="horizontal" style={{ width: "100%" }} wrap>
+              <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+                Download Template
+              </Button>
+            </Space>
+          </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={5}>Template Actions</Title>
-        <Space direction="horizontal" style={{ width: "100%" }} wrap>
-          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-            Download Template
-          </Button>
-          <Button
-            icon={<EyeOutlined />}
-            variant="outline"
-            className={styles.previewButton}
-            onClick={handlePreviewClick}
-            style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
-            disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
-          >
-            Preview Uploaded Plan
-          </Button>
-        </Space>
-      </div>
+          <div>
+            <Title level={5}>Upload Semester Course File</Title>
+            <Dragger {...uploadPropsExcel} className={styles.dragger}>
+              {fileListExcel.length > 0 ? (
+                <div className={styles.filePreview}>
+                  <FileExcelOutlined className={styles.filePreviewIcon} />
+                  <p style={fileNameStyle} title={fileListExcel[0].name}>
+                    {fileListExcel[0].name}
+                  </p>
+                  <p className={styles.filePreviewHint}>
+                    Click or drag again to replace
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="ant-upload-drag-icon">
+                    <UploadOutlined />
+                  </p>
+                  <p className="ant-upload-text">Click here to Upload</p>
+                  <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
+                </>
+              )}
+            </Dragger>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Upload Class Student File",
+      content: (
+        <div className={styles.stepContent}>
+          <div style={{ marginBottom: "24px" }}>
+            <Title level={5}>Template Actions</Title>
+            <Space direction="horizontal" style={{ width: "100%" }} wrap>
+              <Button
+                icon={<EyeOutlined />}
+                variant="outline"
+                className={styles.previewButton}
+                onClick={handlePreviewClick}
+                style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
+                disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
+              >
+                Preview Uploaded Plan
+              </Button>
+            </Space>
+          </div>
 
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={5}>Upload Semester Course File</Title>
-        <Dragger {...uploadPropsExcel} className={styles.dragger}>
-          {fileListExcel.length > 0 ? (
-            <div className={styles.filePreview}>
-              <FileExcelOutlined className={styles.filePreviewIcon} />
-              <p style={fileNameStyle} title={fileListExcel[0].name}>
-                {fileListExcel[0].name}
-              </p>
-              <p className={styles.filePreviewHint}>
-                Click or drag again to replace
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="ant-upload-drag-icon">
-                <UploadOutlined />
-              </p>
-              <p className="ant-upload-text">Click here to Upload</p>
-              <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
-            </>
-          )}
-        </Dragger>
-      </div>
-
-      <div>
-        <Title level={5}>Upload Class Student File</Title>
-        <Dragger {...uploadPropsPdf} className={styles.dragger}>
-          {fileListPdf.length > 0 ? (
-            <div className={styles.filePreview}>
-              <FileExcelOutlined className={styles.filePreviewIcon} />
-              <p style={fileNameStyle} title={fileListPdf[0].name}>
-                {fileListPdf[0].name}
-              </p>
-              <p className={styles.filePreviewHint}>
-                Click or drag again to replace
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="ant-upload-drag-icon">
-                <UploadOutlined />
-              </p>
-              <p className="ant-upload-text">Click here to Upload</p>
-              <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
-            </>
-          )}
-        </Dragger>
-      </div>
-    </div>
-  );
+          <div>
+            <Title level={5}>Upload Class Student File</Title>
+            <Dragger {...uploadPropsPdf} className={styles.dragger}>
+              {fileListPdf.length > 0 ? (
+                <div className={styles.filePreview}>
+                  <FileExcelOutlined className={styles.filePreviewIcon} />
+                  <p style={fileNameStyle} title={fileListPdf[0].name}>
+                    {fileListPdf[0].name}
+                  </p>
+                  <p className={styles.filePreviewHint}>
+                    Click or drag again to replace
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="ant-upload-drag-icon">
+                    <UploadOutlined />
+                  </p>
+                  <p className="ant-upload-text">Click here to Upload</p>
+                  <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
+                </>
+              )}
+            </Dragger>
+          </div>
+        </div>
+      ),
+    },
+  ];
 
   const renderFooter = () => (
     <Space>
       <Button onClick={handleClose}>Cancel</Button>
-      <Button
-        variant="primary"
-        onClick={handleCreate}
-        loading={isCreating}
-        disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
-      >
-        {isCreating ? "Creating..." : "Create Plan"}
-      </Button>
+      {currentStep === 0 ? (
+        <Button
+          variant="primary"
+          onClick={handleContinue}
+          disabled={fileListExcel.length === 0}
+        >
+          Continue
+        </Button>
+      ) : (
+        <>
+          <Button onClick={handleBack}>Back</Button>
+          <Button
+            variant="primary"
+            onClick={handleCreate}
+            loading={isCreating}
+            disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
+          >
+            {isCreating ? "Creating..." : "Create Plan"}
+          </Button>
+        </>
+      )}
     </Space>
   );
 
@@ -420,7 +461,12 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         footer={renderFooter()}
         width={700}
       >
-        <div>{CombinedStepContent}</div>
+        <Steps
+          current={currentStep}
+          items={steps.map((step) => ({ title: step.title }))}
+          className={styles.steps}
+        />
+        <div>{steps[currentStep].content}</div>
       </Modal>
 
       <PreviewPlanModal
