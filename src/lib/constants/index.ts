@@ -43,6 +43,11 @@ export const API_ENDPOINTS = {
   FILE: {
     UPLOAD: "/File/upload",
   },
+  APP_DOWNLOAD: {
+    GET_CURRENT: "/api/app-download",
+    SAVE: "/api/app-download",
+    HISTORY: "/api/app-download/history",
+  },
 } as const;
 
 export const HTTP_STATUS = {

@@ -2,12 +2,15 @@
  * Footer component - redesigned to match the provided image
  */
 
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { 
     DownloadOutlined, InstagramOutlined, MailOutlined, UsergroupAddOutlined, ChromeOutlined
 } from "@ant-design/icons";
 // Giả định LogoComponent là một component đã có
 import { LogoComponent } from "@/components/ui/Logo"; 
+import { DownloadQRModal } from "@/components/common/DownloadQRModal";
 import Link from "next/link";
 
 interface CustomLinkProps {
@@ -24,6 +27,7 @@ const CustomLink: React.FC<CustomLinkProps> = ({ href, className, children }) =>
 
 export const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
+    const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
     const ContactIcons = [
         { icon: <InstagramOutlined />, href: "#instagram" },
@@ -31,6 +35,11 @@ export const Footer: React.FC = () => {
         { icon: <UsergroupAddOutlined />, href: "#community" },
         { icon: <ChromeOutlined />, href: "#chrome-extension" },
     ];
+
+    const handleDownloadClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setDownloadModalOpen(true);
+    };
 
     return (
         <footer className="footer-base">
@@ -79,11 +88,13 @@ export const Footer: React.FC = () => {
                     {/* Column: Download */}
                     <div className="download-column">
                         <h4 className="column-title">Download</h4>
-                        <CustomLink href="#download">
-                            <button className="download-button">
-                                Download now <DownloadOutlined className="download-icon" />
-                            </button>
-                        </CustomLink>
+                        <button 
+                            className="download-button"
+                            onClick={handleDownloadClick}
+                            type="button"
+                        >
+                            Download now <DownloadOutlined className="download-icon" />
+                        </button>
                     </div>
                 </div>
 
@@ -93,6 +104,12 @@ export const Footer: React.FC = () => {
             <div className="copyright-text">
                 © {currentYear} APSAS. All rights reserved.
             </div>
+
+            {/* Download QR Modal */}
+            <DownloadQRModal 
+                open={downloadModalOpen}
+                onClose={() => setDownloadModalOpen(false)}
+            />
             
         </footer>
     );

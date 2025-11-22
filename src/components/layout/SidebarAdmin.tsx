@@ -8,6 +8,7 @@ import {
   FileTextOutlined,
   TeamOutlined,
   DashboardOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import styles from "./SidebarAdmin.module.css";
 
@@ -25,6 +26,11 @@ const menuItems = [
     key: "/admin/manage-users",
     icon: <TeamOutlined />,
     label: <Link href="/admin/manage-users">Manage users</Link>,
+  },
+  {
+    key: "/admin/app-download",
+    icon: <DownloadOutlined />,
+    label: <Link href="/admin/app-download">App Download</Link>,
   },
 ];
 

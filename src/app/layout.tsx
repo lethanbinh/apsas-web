@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/components/providers/Providers";
 import "./globals.css";
-import { App } from "antd";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -30,7 +29,7 @@ export default function RootLayout({
         suppressHydrationWarning={true}
       >
         <Providers>
-          <App>{children}</App>
+          {children}
         </Providers>
       </body>
     </html>

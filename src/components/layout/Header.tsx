@@ -70,16 +70,16 @@ export const Header: React.FC = () => {
             !mounted || !user?.role
               ? "/home"
               : user.role === 0
-              ? "/admin/dashboard"
-              : user.role === 1
-              ? "/home/lecturer"
-              : user.role === 2
-              ? "/home/student"
-              : user.role === 3
-              ? "/hod/semester-plans"
-              : user.role === 4
-              ? "/examiner/grading-groups"
-              : "/home"
+                ? "/admin/dashboard"
+                : user.role === 1
+                  ? "/home/lecturer"
+                  : user.role === 2
+                    ? "/home/student"
+                    : user.role === 3
+                      ? "/hod/semester-plans"
+                      : user.role === 4
+                        ? "/examiner/grading-groups"
+                        : "/home"
           }
           className={styles.logoLink}
         >
@@ -91,11 +91,9 @@ export const Header: React.FC = () => {
             {navigation.map((item) => {
               const isActive = activeKey === item.key;
               const isHover = hoverKey === item.key;
-              const linkClass = `${styles.navLink} ${
-                isActive ? styles.navActive : ""
-              } ${isHover && !isActive ? styles.navHover : ""} ${
-                isHover && isActive ? styles.navActiveHover : ""
-              }`;
+              const linkClass = `${styles.navLink} ${isActive ? styles.navActive : ""
+                } ${isHover && !isActive ? styles.navHover : ""} ${isHover && isActive ? styles.navActiveHover : ""
+                }`;
 
               return (
                 <Link

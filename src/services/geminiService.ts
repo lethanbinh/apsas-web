@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
-const GEMINI_API_KEY = "AIzaSyAmSj3vZ-PYX4WGjzUsLFxVYWQMgxhpCvc";
-const GEMINI_MODEL = "gemini-2.5-pro";
+const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-2.5-pro";
 
 export interface FeedbackData {
   overallFeedback: string;
@@ -18,6 +18,11 @@ export interface FeedbackData {
 const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY,
 });
+
+// Validate API key on service initialization
+if (!GEMINI_API_KEY) {
+  console.warn("⚠️ GEMINI_API_KEY is not set. Please set it in your .env.local file.");
+}
 
 export class GeminiService {
   /**

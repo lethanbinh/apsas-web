@@ -2250,8 +2250,12 @@ function GradingHistoryModal({
       width: "20%",
       render: (text: string) => (
         <Text
-          ellipsis={{ tooltip: text }}
-          style={{ fontSize: "12px" }}
+          style={{ 
+            fontSize: "12px",
+            whiteSpace: "normal",
+            wordWrap: "break-word",
+            wordBreak: "break-word"
+          }}
         >
           {text || "N/A"}
         </Text>
@@ -2364,7 +2368,6 @@ function GradingHistoryModal({
                             rowKey="id"
                             pagination={false}
                             size="small"
-                            scroll={{ x: "max-content" }}
                           />
                         )}
                       </div>
@@ -2447,8 +2450,12 @@ function GradingHistoryModal({
                   width: "35%",
                   render: (text: string) => (
                     <Text
-                      ellipsis={{ tooltip: text }}
-                      style={{ fontSize: "12px" }}
+                      style={{ 
+                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        wordWrap: "break-word",
+                        wordBreak: "break-word"
+                      }}
                     >
                       {text || "N/A"}
                     </Text>
@@ -2481,7 +2488,6 @@ function GradingHistoryModal({
               rowKey="id"
               pagination={false}
               size="small"
-              scroll={{ x: "max-content" }}
             />
           )}
         </Spin>

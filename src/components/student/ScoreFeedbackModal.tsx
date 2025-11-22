@@ -1104,8 +1104,8 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
             <Card className={styles.feedbackCard}>
               <Spin spinning={loadingFeedback}>
-                <Title level={3}>Detailed Feedback</Title>
-                <Divider />
+              <Title level={3}>Detailed Feedback</Title>
+              <Divider />
 
                 {!hasFeedback() && !loadingFeedback ? (
                 <Alert

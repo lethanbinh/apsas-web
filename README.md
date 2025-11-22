@@ -1,5 +1,34 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# API Configuration
+NEXT_PUBLIC_API_URL=https://aspas-edu.site/api
+
+# Gemini AI Configuration
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_api_key_here
+NEXT_PUBLIC_GEMINI_MODEL=gemini-2.5-pro
+
+# MongoDB Configuration (for App Download feature)
+MONGODB_URI=mongodb://localhost:27017/apsas-web
+# or for MongoDB Atlas:
+# MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/apsas-web
+
+# Firebase Configuration (if using Firebase for other features)
+NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+**Note:** The `.env.local` file is gitignored and will not be committed to the repository. Make sure to create this file before running the application.
+
 ## Getting Started
 
 First, run the development server:
