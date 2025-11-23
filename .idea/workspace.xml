@@ -4,13 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix grade">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/Labs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/Labs.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/services/geminiService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/geminiService.ts" afterDir="false" />
-    </list>
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="App download" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -119,6 +113,7 @@
       <workItem from="1763717528765" duration="5752000" />
       <workItem from="1763741810513" duration="68000" />
       <workItem from="1763787122395" duration="1416000" />
+      <workItem from="1763819187643" duration="168000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -288,7 +283,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763741750542</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="App download">
+      <option name="closed" value="true" />
+      <created>1763819218439</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1763819218439</updated>
+    </task>
+    <option name="localTasksCounter" value="23" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -336,6 +339,7 @@
     <MESSAGE value="Fix semester plan bugs" />
     <MESSAGE value="Grade dsa and api" />
     <MESSAGE value="Fix grade" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix grade" />
+    <MESSAGE value="App download" />
+    <option name="LAST_COMMIT_MESSAGE" value="App download" />
   </component>
 </project>

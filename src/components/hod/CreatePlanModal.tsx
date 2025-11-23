@@ -80,6 +80,22 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }
   };
 
+  const handleDownloadClassStudentTemplate = async () => {
+    try {
+      const blob = await adminService.downloadClassStudentTemplate();
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "ClassStudentTemplate.xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download class student template error:", error);
+    }
+  };
+
   const handleCreate = async () => {
     const semesterCodePlaceholder = `NEW_SEMESTER_${Date.now()}`;
 
@@ -379,6 +395,12 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
           <div style={{ marginBottom: "24px" }}>
             <Title level={5}>Template Actions</Title>
             <Space direction="horizontal" style={{ width: "100%" }} wrap>
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadClassStudentTemplate}
+              >
+                Download Template
+              </Button>
               <Button
                 icon={<EyeOutlined />}
                 variant="outline"

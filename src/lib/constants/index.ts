@@ -27,6 +27,7 @@ export const API_ENDPOINTS = {
     EXCEL_TEMPLATE: "/Import/excel/template",
     SEMESTER_COURSE_DATA: "/Import/excel/semester-course-data",
     CLASS_STUDENT_DATA: "/Import/excel/class-student-data",
+    CLASS_STUDENT_TEMPLATE: "/Import/excel/class-student-template",
   },
   // --- SỬA LỖI: Chỉ giữ lại endpoint chung ---
   SEMESTER: {

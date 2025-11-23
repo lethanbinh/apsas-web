@@ -71,6 +71,13 @@ export class AdminService {
     });
     return response as Blob;
   }
+
+  async downloadClassStudentTemplate(): Promise<Blob> {
+    const response = await apiService.get(API_ENDPOINTS.IMPORT.CLASS_STUDENT_TEMPLATE, {
+      responseType: 'blob',
+    });
+    return response as Blob;
+  }
   
   async getPaginatedSemesters(pageNumber: number, pageSize: number): Promise<Semester[]> {
     const response = await apiService.get<RawSemesterApiResponse>(

@@ -6,8 +6,8 @@ import { accountService } from "@/services/accountService";
 import { adminService } from "@/services/adminService";
 import { CreateExaminerPayload, examinerService } from "@/services/examinerService";
 import { User, UserUpdatePayload } from "@/types";
-import { App, Button, Upload, Modal, Table, Space, Alert } from "antd";
-import { DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { App, Button, Upload, Modal, Table, Space, Alert, Input } from "antd";
+import { DownloadOutlined, UploadOutlined, FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import React, { useCallback, useEffect, useState } from "react";
 import * as XLSX from "xlsx";
@@ -31,6 +31,9 @@ const ManageUsersPageContent: React.FC = () => {
     failed: number;
     errors: Array<{ row: number; accountCode?: string; email?: string; error: string }>;
   }>({ success: 0, failed: 0, errors: [] });
+  const [exportLoading, setExportLoading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [allUsers, setAllUsers] = useState<User[]>([]); // Store all users for filtering
 
   const { modal, notification } = App.useApp();
 
@@ -41,8 +44,15 @@ const ManageUsersPageContent: React.FC = () => {
         currentPage,
         pageSize
       );
-      setUsers(response.users || []);
+      const fetchedUsers = response.users || [];
+      setUsers(fetchedUsers);
       setTotalUsers(response.total);
+      // Store all users for search filtering
+      if (currentPage === 1) {
+        setAllUsers(fetchedUsers);
+      } else {
+        setAllUsers(prev => [...prev, ...fetchedUsers]);
+      }
     } catch (err: any) {
       console.error("Failed to fetch users:", err);
       setError(err.message || "Failed to fetch users");
@@ -50,6 +60,21 @@ const ManageUsersPageContent: React.FC = () => {
       setLoading(false);
     }
   }, [currentPage, pageSize]);
+
+  // Filter users based on search term
+  const filteredUsers = React.useMemo(() => {
+    if (!searchTerm.trim()) {
+      return users;
+    }
+    const searchLower = searchTerm.toLowerCase().trim();
+    return users.filter(user => 
+      user.email?.toLowerCase().includes(searchLower) ||
+      user.fullName?.toLowerCase().includes(searchLower) ||
+      user.accountCode?.toLowerCase().includes(searchLower) ||
+      user.username?.toLowerCase().includes(searchLower) ||
+      user.phoneNumber?.toLowerCase().includes(searchLower)
+    );
+  }, [users, searchTerm]);
 
   useEffect(() => {
     fetchUsers();
@@ -172,6 +197,121 @@ const ManageUsersPageContent: React.FC = () => {
   const prevPage = () => {
     if (currentPage > 1) {
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Fetch all accounts for export
+  const fetchAllAccounts = async (): Promise<User[]> => {
+    const allUsers: User[] = [];
+    let currentPage = 1;
+    const pageSize = 100; // Use large page size to minimize requests
+    let hasMore = true;
+
+    while (hasMore) {
+      try {
+        const response = await accountService.getAccountList(currentPage, pageSize);
+        if (response.users && response.users.length > 0) {
+          allUsers.push(...response.users);
+          // Check if there are more pages
+          if (allUsers.length >= response.total) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        } else {
+          hasMore = false;
+        }
+      } catch (error) {
+        console.error("Error fetching accounts for export:", error);
+        throw error;
+      }
+    }
+
+    return allUsers;
+  };
+
+  // Export all accounts to Excel
+  const handleExportAllAccounts = async () => {
+    try {
+      setExportLoading(true);
+      const allUsers = await fetchAllAccounts();
+
+      if (!allUsers || allUsers.length === 0) {
+        notification.warning({
+          message: "No Data",
+          description: "No accounts found to export.",
+        });
+        return;
+      }
+
+      // Map users to Excel format
+      const excelData = allUsers.map((user, index) => {
+        const roleMap: Record<number, string> = {
+          0: "Admin",
+          1: "Lecturer",
+          2: "Student",
+          3: "HOD",
+          4: "Examiner",
+        };
+
+        const genderMap: Record<number, string> = {
+          0: "Male",
+          1: "Female",
+          2: "Other",
+        };
+
+        return {
+          "No": index + 1,
+          "Account Code": user.accountCode || "",
+          "Username": user.username || "",
+          "Email": user.email || "",
+          "Phone Number": user.phoneNumber || "",
+          "Full Name": user.fullName || "",
+          "Avatar URL": user.avatar || "",
+          "Address": user.address || "",
+          "Gender": user.gender !== undefined ? genderMap[user.gender] || user.gender.toString() : "",
+          "Date of Birth": user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
+          "Role": roleMap[user.role] || user.role.toString(),
+        };
+      });
+
+      // Create worksheet
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "All Accounts");
+
+      // Set column widths
+      ws["!cols"] = [
+        { wch: 8 },  // No
+        { wch: 15 }, // Account Code
+        { wch: 15 }, // Username
+        { wch: 25 }, // Email
+        { wch: 15 }, // Phone Number
+        { wch: 20 }, // Full Name
+        { wch: 30 }, // Avatar URL
+        { wch: 40 }, // Address
+        { wch: 10 }, // Gender
+        { wch: 15 }, // Date of Birth
+        { wch: 12 }, // Role
+      ];
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const filename = `All_Accounts_${timestamp}.xlsx`;
+
+      XLSX.writeFile(wb, filename);
+      notification.success({
+        message: "Export Successful",
+        description: `Successfully exported ${allUsers.length} account(s) to Excel.`,
+      });
+    } catch (error: any) {
+      console.error("Failed to export accounts:", error);
+      notification.error({
+        message: "Export Failed",
+        description: error.message || "Failed to export accounts. Please try again.",
+      });
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -537,41 +677,62 @@ const ManageUsersPageContent: React.FC = () => {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Manage users</h1>
-      <Space style={{ marginBottom: "1rem" }} wrap>
-        <Button
-          type="primary"
-          onClick={showCreateModal}
-          style={{
-            backgroundColor: "#4cbfb6",
-            borderColor: "#4cbfb6",
-          }}
-          className={styles["rounded-button"]}
-        >
-          Create New User
-        </Button>
-        <Button
-          icon={<DownloadOutlined />}
-          onClick={handleDownloadSampleTemplate}
-          className={styles["rounded-button"]}
-        >
-          Download Template
-        </Button>
-        <Upload {...uploadProps}>
+      <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+        <Input
+          placeholder="Search by email, name, account code, username, or phone number..."
+          prefix={<SearchOutlined />}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          allowClear
+          style={{ maxWidth: "500px", flex: "1", minWidth: "300px" }}
+        />
+        <Space wrap>
           <Button
-            icon={<UploadOutlined />}
-            loading={importLoading}
+            type="primary"
+            onClick={showCreateModal}
+            style={{
+              backgroundColor: "#4cbfb6",
+              borderColor: "#4cbfb6",
+            }}
             className={styles["rounded-button"]}
           >
-            Import Excel
+            Create New User
           </Button>
-        </Upload>
-      </Space>
+          <Button
+            icon={<FileExcelOutlined />}
+            onClick={handleExportAllAccounts}
+            loading={exportLoading}
+            className={styles["rounded-button"]}
+          >
+            Export All Accounts
+          </Button>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadSampleTemplate}
+            className={styles["rounded-button"]}
+          >
+            Download Template
+          </Button>
+          <Upload {...uploadProps}>
+            <Button
+              icon={<UploadOutlined />}
+              loading={importLoading}
+              className={styles["rounded-button"]}
+            >
+              Import Excel
+            </Button>
+          </Upload>
+        </Space>
+      </div>
       {loading && <p>Loading users...</p>}
       {error && <p className="!text-red-500">Error: {error}</p>}
-      {!loading && !error && (!users || users.length === 0) && (
+      {!loading && !error && searchTerm && filteredUsers.length === 0 && (
+        <p>No users found matching your search.</p>
+      )}
+      {!loading && !error && !searchTerm && (!users || users.length === 0) && (
         <p>No users found.</p>
       )}
-      {!loading && !error && users && users.length > 0 && (
+      {!loading && !error && (searchTerm ? filteredUsers : users) && (searchTerm ? filteredUsers : users).length > 0 && (
         <table className={styles.table}>
           <thead className={styles["table-header"]}>
             <tr>
@@ -599,7 +760,7 @@ const ManageUsersPageContent: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {users.map((user, index) => {
+            {(searchTerm ? filteredUsers : users).map((user, index) => {
               const key =
                 user.id !== undefined && user.id !== null
                   ? user.id
@@ -634,7 +795,7 @@ const ManageUsersPageContent: React.FC = () => {
           </tbody>
         </table>
       )}
-      {!loading && !error && users && totalUsers > pageSize && (
+      {!loading && !error && !searchTerm && users && totalUsers > pageSize && (
         <div className={styles.pagination}>
           <button onClick={prevPage} disabled={currentPage === 1}>
             Previous
