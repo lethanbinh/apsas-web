@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="App download" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix some bugs admin" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -39,6 +39,7 @@
   &quot;keyToString&quot;: {
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;js.debugger.nextJs.config.created.client&quot;: &quot;true&quot;,
@@ -114,6 +115,7 @@
       <workItem from="1763741810513" duration="68000" />
       <workItem from="1763787122395" duration="1416000" />
       <workItem from="1763819187643" duration="168000" />
+      <workItem from="1763878786472" duration="118000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -291,7 +293,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763819218439</updated>
     </task>
-    <option name="localTasksCounter" value="23" />
+    <task id="LOCAL-00023" summary="Fix some bugs admin">
+      <option name="closed" value="true" />
+      <created>1763878845583</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1763878845583</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -340,6 +350,7 @@
     <MESSAGE value="Grade dsa and api" />
     <MESSAGE value="Fix grade" />
     <MESSAGE value="App download" />
-    <option name="LAST_COMMIT_MESSAGE" value="App download" />
+    <MESSAGE value="Fix some bugs admin" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix some bugs admin" />
   </component>
 </project>

@@ -57,7 +57,6 @@ export const Header: React.FC = () => {
       label: "Profile",
       onClick: () => router.push("/profile"),
     },
-    { key: "settings", label: "Settings" },
     { type: "divider" },
     { key: "logout", label: "Logout", onClick: handleLogout },
   ];

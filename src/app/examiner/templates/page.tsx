@@ -309,29 +309,34 @@ const TemplatesPageContent = () => {
   ];
 
   return (
-    <div className={styles.container}>
+    <>
       <QueryParamsHandler />
-      <Card>
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Row justify="space-between" align="middle">
-            <Col>
-              <Title level={2} style={{ margin: 0 }}>
-                Practical Exam Templates
-              </Title>
-              <Text type="secondary">
-                View and filter all practical exam assessment templates
-              </Text>
-            </Col>
-            <Col>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={fetchData}
-                loading={loading}
-              >
-                Refresh
-              </Button>
-            </Col>
-          </Row>
+      <div className={styles.wrapper}>
+        <div className={styles.header}>
+          <div>
+            <Title
+              level={2}
+              style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
+            >
+              Practical Exam Templates
+            </Title>
+            <Text type="secondary" style={{ fontSize: 14 }}>
+              View and filter all practical exam assessment templates
+            </Text>
+          </div>
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={fetchData}
+              loading={loading}
+            >
+              Refresh
+            </Button>
+          </Space>
+        </div>
+
+        <Card>
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
 
           {error && (
             <Alert
@@ -445,7 +450,8 @@ const TemplatesPageContent = () => {
           template={selectedTemplate}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
