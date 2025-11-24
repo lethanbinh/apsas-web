@@ -36,11 +36,17 @@ import {
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { assignRequestService } from "@/services/assignRequestService";
+import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import { gradingService } from "@/services/gradingService";
 import { RobotOutlined } from "@ant-design/icons";
 import { App } from "antd";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { useRouter } from "next/navigation";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
@@ -64,11 +70,13 @@ const LabDetailItem = ({
   template,
   classAssessment,
   submissions,
+  onDeadlineSave,
 }: {
   lab: CourseElement;
   template?: AssessmentTemplate;
   classAssessment?: ClassAssessment;
   submissions: Submission[];
+  onDeadlineSave?: (courseElementId: number, newDate: dayjs.Dayjs | null) => void;
 }) => {
   const router = useRouter();
   const { message } = App.useApp();
@@ -170,6 +178,20 @@ const LabDetailItem = ({
             </Descriptions.Item>
           </Descriptions>
         </Card>
+
+        {onDeadlineSave && (
+          <Card bordered={false}>
+            <Descriptions column={1} layout="vertical">
+              <Descriptions.Item label="Deadline">
+                <DeadlinePopover
+                  id={lab.id.toString()}
+                  date={classAssessment?.endAt}
+                  onSave={(id, newDate) => onDeadlineSave(lab.id, newDate)}
+                />
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+        )}
 
         <Card 
           title="Submissions"
@@ -384,6 +406,68 @@ const LabsPage = () => {
     fetchData();
   }, [fetchData]);
 
+  const { message } = App.useApp();
+
+  const handleDeadlineSave = async (courseElementId: number, newDate: dayjs.Dayjs | null) => {
+    if (!newDate || !selectedClassId) return;
+
+    const classAssessment = classAssessments.get(courseElementId);
+    const lab = labs.find(l => l.id === courseElementId);
+    const matchingTemplate = templates.find(t => t.courseElementId === courseElementId);
+
+    // If classAssessment exists, update it
+    if (classAssessment) {
+      try {
+        await classAssessmentService.updateClassAssessment(classAssessment.id, {
+          classId: Number(selectedClassId),
+          assessmentTemplateId: classAssessment.assessmentTemplateId,
+          startAt: classAssessment.startAt || dayjs().toISOString(),
+          endAt: newDate.toISOString(),
+        });
+
+        // Update local state
+        const updated = new Map(classAssessments);
+        updated.set(courseElementId, {
+          ...classAssessment,
+          endAt: newDate.toISOString(),
+          startAt: classAssessment.startAt || dayjs().toISOString(),
+        });
+        setClassAssessments(updated);
+        message.success("Deadline updated successfully!");
+      } catch (err: any) {
+        console.error("Failed to update deadline:", err);
+        message.error(err.message || "Failed to update deadline");
+      }
+    } else {
+      // If classAssessment doesn't exist, create a new one
+      if (!matchingTemplate) {
+        message.error("Assessment template not found. Cannot create deadline.");
+        return;
+      }
+
+      try {
+        const newClassAssessment = await classAssessmentService.createClassAssessment({
+          classId: Number(selectedClassId),
+          assessmentTemplateId: matchingTemplate.id,
+          startAt: dayjs().toISOString(),
+          endAt: newDate.toISOString(),
+        });
+
+        // Update local state
+        const updated = new Map(classAssessments);
+        updated.set(courseElementId, newClassAssessment);
+        setClassAssessments(updated);
+        message.success("Deadline created successfully!");
+        
+        // Refresh data to get the new classAssessment
+        await fetchData();
+      } catch (err: any) {
+        console.error("Failed to create deadline:", err);
+        message.error(err.message || "Failed to create deadline");
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className={styles.wrapper}>
@@ -468,6 +552,7 @@ const LabsPage = () => {
                   template={matchingTemplate}
                   classAssessment={approvedClassAssessment}
                   submissions={labSubmissions}
+                  onDeadlineSave={handleDeadlineSave}
                 />
               </Panel>
             );

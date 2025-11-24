@@ -55,7 +55,11 @@ export default function ApprovalList() {
       title: "Name",
       dataIndex: "courseElementName", 
       key: "name",
-      render: (text) => <Text strong>{text}</Text>,
+      render: (text, record) => (
+        <Text strong>
+          {record.courseName} - {text}
+        </Text>
+      ),
     },
     {
       title: "Teacher",
@@ -131,6 +135,7 @@ export default function ApprovalList() {
   const filteredData = approvals.filter(
     (item) =>
       item.courseElementName.toLowerCase().includes(searchText.toLowerCase()) ||
+      item.courseName.toLowerCase().includes(searchText.toLowerCase()) ||
       item.assignedLecturerName.toLowerCase().includes(searchText.toLowerCase())
   );
 

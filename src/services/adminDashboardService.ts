@@ -22,7 +22,6 @@ export interface UserStats {
     lecturer: number;
     student: number;
     hod: number;
-    examiner: number;
   };
   newThisMonth: number;
   active: number;
@@ -353,19 +352,20 @@ export class AdminDashboardService {
         lecturer: 0,
         student: 0,
         hod: 0,
-        examiner: 0,
       };
 
       let newThisMonth = 0;
       let active = 0;
 
-      users.forEach((user) => {
+      // Filter out examiner accounts (role 4) before counting
+      const filteredUsers = users.filter((user) => user.role !== 4);
+
+      filteredUsers.forEach((user) => {
         // Count by role
         if (user.role === ROLES.ADMIN) byRole.admin++;
         else if (user.role === ROLES.LECTURER) byRole.lecturer++;
         else if (user.role === ROLES.STUDENT) byRole.student++;
         else if (user.role === ROLES.HOD) byRole.hod++;
-        else if (user.role === ROLES.EXAMINER) byRole.examiner++;
 
         // Count active (assuming all users in list are active)
         active++;
@@ -389,7 +389,7 @@ export class AdminDashboardService {
       let inactive = 0;
       let neverLoggedIn = 0;
 
-      users.forEach((user) => {
+      filteredUsers.forEach((user) => {
         // Count by gender
         if (user.gender === 0) byGender.male++;
         else if (user.gender === 1) byGender.female++;
@@ -424,7 +424,7 @@ export class AdminDashboardService {
       const averageAge = ageCount > 0 ? Math.round(totalAge / ageCount) : undefined;
 
       return {
-        total,
+        total: filteredUsers.length, // Exclude examiner accounts from total
         byRole,
         newThisMonth,
         active,
@@ -1695,7 +1695,6 @@ export class AdminDashboardService {
         lecturer: 0,
         student: 0,
         hod: 0,
-        examiner: 0,
       },
       newThisMonth: 0,
       active: 0,

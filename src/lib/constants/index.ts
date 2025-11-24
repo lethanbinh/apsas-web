@@ -83,7 +83,6 @@ export const ROLES = {
   LECTURER: 1,
   STUDENT: 2,
   HOD: 3,
-  EXAMINER: 4,
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -103,11 +102,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       label: "My Classes",
       href: "/classes/my-classes/student",
     },
-    {
-      key: "all-classes",
-      label: "All Classes",
-      href: "/search-classes/student",
-    },
   ],
   [ROLES.LECTURER]: [
     { key: "home", label: "Home", href: "/home/lecturer" },
@@ -115,11 +109,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       key: "my-classes",
       label: "My Classes",
       href: "/classes/my-classes/lecturer",
-    },
-    {
-      key: "all-classes",
-      label: "All Classes",
-      href: "/search-classes/lecturer",
     },
     {
       key: "tasks",
@@ -143,12 +132,15 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       href: "/hod/semester-plans",
     },
     { key: "approval", label: "Approval", href: "/hod/approval" },
-  ],
-  [ROLES.EXAMINER]: [
     {
       key: "grading-groups",
       label: "Grading Groups",
-      href: "/examiner/grading-groups",
+      href: "/hod/grading-groups",
+    },
+    {
+      key: "templates",
+      label: "Templates",
+      href: "/hod/templates",
     },
   ],
 };

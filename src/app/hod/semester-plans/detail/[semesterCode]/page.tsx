@@ -105,6 +105,11 @@ const StudentTable = ({ classId, onDelete }: StudentTableProps) => {
       title: "Description",
       dataIndex: "description",
       key: "description",
+      render: (desc: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {desc || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Actions",
@@ -155,8 +160,11 @@ const ClassesTable = ({
       title: "Description",
       dataIndex: "description",
       key: "description",
-      ellipsis: true,
-      render: (desc: string) => desc || "N/A",
+      render: (desc: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {desc || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Lecturer",
@@ -265,6 +273,11 @@ const CourseElementsTable = ({
       title: "Description",
       dataIndex: "description",
       key: "description",
+      render: (desc: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {desc || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Weight",
@@ -320,8 +333,11 @@ const AssignRequestsTable = ({
       title: "Element Description",
       dataIndex: ["courseElement", "description"],
       key: "elementDesc",
-      ellipsis: true,
-      render: (desc: string) => desc || "N/A",
+      render: (desc: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {desc || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Assigned Lecturer",
@@ -340,7 +356,11 @@ const AssignRequestsTable = ({
       title: "Message",
       dataIndex: "message",
       key: "message",
-      ellipsis: true,
+      render: (message: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {message || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Created At",
@@ -432,8 +452,11 @@ const SemesterCoursesTable = ({
       title: "Course Description",
       dataIndex: ["course", "description"],
       key: "description",
-      ellipsis: true,
-      render: (desc: string) => desc || "N/A",
+      render: (desc: string) => (
+        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
+          {desc || "N/A"}
+        </div>
+      ),
     },
     {
       title: "Created By",

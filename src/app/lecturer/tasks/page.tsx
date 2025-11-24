@@ -87,11 +87,13 @@ const TasksPageContent = () => {
 
   const groupedByCourse = useMemo(() => {
     return filteredTasks.reduce((acc, task) => {
-      const course = task.courseName || "Uncategorized";
-      if (!acc[course]) {
-        acc[course] = [];
+      // Group by both courseName and semesterName to handle same course in different semesters
+      // Use a separator that's unlikely to appear in course names
+      const courseKey = `${task.courseName || "Uncategorized"}|||${task.semesterName || "Unknown"}`;
+      if (!acc[courseKey]) {
+        acc[courseKey] = [];
       }
-      acc[course].push(task);
+      acc[courseKey].push(task);
       return acc;
     }, {} as Record<string, AssignRequestItem[]>);
   }, [filteredTasks]);
@@ -140,11 +142,22 @@ const TasksPageContent = () => {
           No tasks found for the selected semester.
         </p>
       ) : (
-        Object.keys(groupedByCourse).map((courseName) => (
-          <div className={styles["task-section"]} key={courseName}>
+        Object.keys(groupedByCourse).map((courseKey) => {
+          // Extract courseName and semesterName from the key
+          // Use the first task in the group to get semesterName (all tasks in same group have same semester)
+          const tasks = groupedByCourse[courseKey];
+          const firstTask = tasks[0];
+          const courseName = firstTask.courseName || "Uncategorized";
+          const semesterName = firstTask.semesterName;
+          const displayTitle = semesterName && semesterName !== "Unknown" 
+            ? `${courseName} (${semesterName})`
+            : courseName;
+          
+          return (
+          <div className={styles["task-section"]} key={courseKey}>
             <div
               className={styles["task-header"]}
-              onClick={() => toggleCourse(courseName)}
+              onClick={() => toggleCourse(courseKey)}
             >
               <div className={styles["task-title"]}>
                 <svg
@@ -161,14 +174,14 @@ const TasksPageContent = () => {
                   <polyline points="6 9 12 15 18 9" />
                 </svg>
                 <span className={styles["task-title-text"]}>
-                  {courseName}
+                  {displayTitle}
                 </span>
               </div>
               <div className={styles["task-meta"]}>
-                <span>{groupedByCourse[courseName].length} Tasks</span>
+                <span>{groupedByCourse[courseKey].length} Tasks</span>
                 <svg
                   className={`${styles["question-dropdown-arrow"]} ${
-                    openCourses[courseName] ? styles.rotate : ""
+                    openCourses[courseKey] ? styles.rotate : ""
                   }`}
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -184,11 +197,11 @@ const TasksPageContent = () => {
                 </svg>
               </div>
             </div>
-            {openCourses[courseName] && (
+            {openCourses[courseKey] && (
               <div
                 className={`${styles["task-content"]} ${styles["nested-content"]}`}
               >
-                {groupedByCourse[courseName].map((task) => (
+                {groupedByCourse[courseKey].map((task) => (
                   <div className={styles["sub-task-section"]} key={task.id}>
                     <div
                       className={styles["task-header"]}
@@ -243,7 +256,8 @@ const TasksPageContent = () => {
               </div>
             )}
           </div>
-        ))
+          );
+        })
       )}
     </div>
   );

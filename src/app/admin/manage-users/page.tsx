@@ -4,7 +4,6 @@ import { UserDetailFormModal } from "@/components/admin/UserDetailFormModal";
 import { Role } from "@/lib/constants";
 import { accountService } from "@/services/accountService";
 import { adminService } from "@/services/adminService";
-import { CreateExaminerPayload, examinerService } from "@/services/examinerService";
 import { User, UserUpdatePayload } from "@/types";
 import { App, Button, Upload, Modal, Table, Space, Alert, Input } from "antd";
 import { DownloadOutlined, UploadOutlined, FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
@@ -86,7 +85,7 @@ const ManageUsersPageContent: React.FC = () => {
   };
 
   const handleEditOk = async (
-    values: UserUpdatePayload | CreateExaminerPayload,
+    values: UserUpdatePayload,
     role: Role
   ) => {
     if (editingUser) {
@@ -122,16 +121,12 @@ const ManageUsersPageContent: React.FC = () => {
   };
 
   const handleCreateOk = async (
-    values: UserUpdatePayload | CreateExaminerPayload,
+    values: UserUpdatePayload,
     role: Role
   ) => {
     try {
       setLoading(true);
-      if (role === 4) {
-        await examinerService.createExaminer(values as CreateExaminerPayload);
-      } else {
-        await adminService.createAccount(values as UserUpdatePayload);
-      }
+      await adminService.createAccount(values as UserUpdatePayload);
 
       setIsCreateModalVisible(false);
       notification.success({ message: "User created successfully" });
@@ -177,8 +172,6 @@ const ManageUsersPageContent: React.FC = () => {
         return "Student";
       case 3:
         return "HOD";
-      case 4:
-        return "Examiner";
       default:
         return `Unknown (${role})`;
     }
@@ -251,7 +244,6 @@ const ManageUsersPageContent: React.FC = () => {
           1: "Lecturer",
           2: "Student",
           3: "HOD",
-          4: "Examiner",
         };
 
         const genderMap: Record<number, string> = {
@@ -324,7 +316,6 @@ const ManageUsersPageContent: React.FC = () => {
         { value: "1", name: "Lecturer" },
         { value: "2", name: "Student" },
         { value: "3", name: "HOD" },
-        { value: "4", name: "Examiner" }
       ];
       const genders = ["0", "1", "2"]; // Male, Female, Other
       const firstNames = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Vu", "Vo", "Dang", "Bui", "Do"];
@@ -470,11 +461,11 @@ const ManageUsersPageContent: React.FC = () => {
       return `Row ${rowNum}: Invalid Date of Birth format (use YYYY-MM-DD)`;
     }
     if (!row["Role"] || row["Role"].toString().trim() === "") {
-      return `Row ${rowNum}: Role is required (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
+      return `Row ${rowNum}: Role is required (0=Admin, 1=Lecturer, 2=Student, 3=HOD)`;
     }
     const role = parseInt(row["Role"].toString().trim());
-    if (isNaN(role) || role < 0 || role > 4) {
-      return `Row ${rowNum}: Role must be 0-4 (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
+    if (isNaN(role) || role < 0 || role > 3) {
+      return `Row ${rowNum}: Role must be 0-3 (0=Admin, 1=Lecturer, 2=Student, 3=HOD)`;
     }
     if (!row["Password"] || !row["Password"].toString().trim()) {
       return `Row ${rowNum}: Password is required`;
@@ -576,16 +567,7 @@ const ManageUsersPageContent: React.FC = () => {
 
         // Create account
         try {
-          if (accountData.role === 4) {
-            // Examiner
-            const examinerPayload: CreateExaminerPayload = {
-              ...accountData,
-              role: "teacher",
-            };
-            await examinerService.createExaminer(examinerPayload);
-          } else {
-            await adminService.createAccount(accountData);
-          }
+          await adminService.createAccount(accountData);
           results.success++;
         } catch (error: any) {
           results.failed++;

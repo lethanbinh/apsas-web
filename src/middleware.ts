@@ -50,7 +50,6 @@ function mapRoleToNumber(role: string | number): number {
   if (roleLower === "lecturer") return 1;
   if (roleLower === "student") return 2;
   if (roleLower === "hod") return 3;
-  if (roleLower === "examiner") return 4;
   return 2; // Default to Student
 }
 
@@ -71,7 +70,6 @@ function hasAccess(pathname: string, userRole: number, allowedPaths: string[]): 
     1: "lecturer",
     2: "student",
     3: "hod",
-    4: "examiner",
   };
   
   // Get current user's role identifier
@@ -173,7 +171,6 @@ export function middleware(request: NextRequest) {
     1: "lecturer",
     2: "student",
     3: "hod",
-    4: "examiner",
   };
   
   const userRoleIdentifier = roleIdentifiers[userRole];
@@ -181,11 +178,6 @@ export function middleware(request: NextRequest) {
   // Redirect /classes to /classes/my-classes/{role}
   if (pathname === "/classes") {
     return NextResponse.redirect(new URL(`/classes/my-classes/${userRoleIdentifier}`, request.url));
-  }
-  
-  // Redirect /search-classes to /search-classes/{role}
-  if (pathname === "/search-classes") {
-    return NextResponse.redirect(new URL(`/search-classes/${userRoleIdentifier}`, request.url));
   }
   
   // Redirect /home to /home/{role}
@@ -206,7 +198,6 @@ export function middleware(request: NextRequest) {
       // Lecturer routes - only lecturer can access
       "/lecturer",
       "/classes/my-classes/lecturer",
-      "/search-classes/lecturer",
       "/home/lecturer",
       "/profile",
       "/dashboard",
@@ -215,7 +206,6 @@ export function middleware(request: NextRequest) {
       // Student routes - only student can access
       "/student",
       "/classes/my-classes/student",
-      "/search-classes/student",
       "/home/student",
       "/profile",
       "/dashboard",
@@ -223,12 +213,6 @@ export function middleware(request: NextRequest) {
     3: [
       // HOD routes - only HOD can access
       "/hod",
-      "/profile",
-      "/dashboard",
-    ],
-    4: [
-      // Examiner routes - only examiner can access
-      "/examiner",
       "/profile",
       "/dashboard",
     ],
@@ -261,7 +245,6 @@ function getDefaultRouteForRole(role: number, baseUrl: string): URL {
     1: "/home/lecturer", // Lecturer
     2: "/home/student", // Student
     3: "/hod/semester-plans", // HOD
-    4: "/examiner/grading-groups", // Examiner
   };
 
   const defaultRoute = defaultRoutes[role] || "/home/student";

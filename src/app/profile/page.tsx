@@ -87,7 +87,6 @@ const ProfilePage = () => {
       { name: 'Lecturer', color: 'cyan' },
       { name: 'Student', color: 'green' },
       { name: 'HOD', color: 'blue' },
-      { name: 'Examiner', color: 'purple' }
     ];
     return roles[role] || { name: 'Unknown', color: 'default' };
   };

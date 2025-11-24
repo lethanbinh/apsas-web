@@ -4,13 +4,12 @@ import React, { useEffect } from "react";
 import { Modal, Form, Input, Select, DatePicker } from "antd";
 import moment from "moment";
 import { User, UserUpdatePayload } from "@/types";
-import { CreateExaminerPayload } from "@/services/examinerService";
 import { Role } from "@/lib/constants";
 
 interface UserDetailFormModalProps {
   visible: boolean;
   onCancel: () => void;
-  onOk: (values: UserUpdatePayload | CreateExaminerPayload, role: Role) => void;
+  onOk: (values: UserUpdatePayload, role: Role) => void;
   editingUser: User | null;
   confirmLoading: boolean;
 }
@@ -53,19 +52,7 @@ export const UserDetailFormModal: React.FC<UserDetailFormModalProps> = ({
           gender: Number(values.gender),
         };
 
-        if (isEditMode) {
-          onOk(formattedValues as UserUpdatePayload, values.role);
-        } else {
-          if (values.role === 4) {
-            const examinerPayload: CreateExaminerPayload = {
-              ...formattedValues,
-              role: "teacher",
-            };
-            onOk(examinerPayload, values.role);
-          } else {
-            onOk(formattedValues as UserUpdatePayload, values.role);
-          }
-        }
+        onOk(formattedValues as UserUpdatePayload, values.role);
       })
       .catch((info) => {
         console.log("Validate Failed:", info);
@@ -267,7 +254,6 @@ export const UserDetailFormModal: React.FC<UserDetailFormModalProps> = ({
             <Option value={1}>Lecturer</Option>
             <Option value={2}>Student</Option>
             <Option value={3}>HOD</Option>
-            <Option value={4}>Examiner</Option>
           </Select>
         </Form.Item>
         {!isEditMode && (

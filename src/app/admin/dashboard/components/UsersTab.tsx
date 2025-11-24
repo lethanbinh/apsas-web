@@ -90,7 +90,6 @@ const UsersTab: React.FC<UsersTabProps> = ({
         ["Lecturers", overview.users.byRole.lecturer],
         ["Admins", overview.users.byRole.admin],
         ["HODs", overview.users.byRole.hod],
-        ["Examiners", overview.users.byRole.examiner],
         ["Active Rate (%)", overview.users.total > 0 ? Math.round((overview.users.active / overview.users.total) * 100) : 0],
         ["Users With Avatar", overview.users.usersWithAvatar || 0],
         ["Average Age", overview.users.averageAge?.toFixed(1) || "N/A"],
@@ -138,7 +137,6 @@ const UsersTab: React.FC<UsersTabProps> = ({
         1: "Lecturer",
         2: "Student",
         3: "HOD",
-        4: "Examiner",
       };
       const genderMap: Record<number, string> = {
         0: "Male",
@@ -230,7 +228,6 @@ const UsersTab: React.FC<UsersTabProps> = ({
     { name: "Lecturer", value: overview.users.byRole.lecturer, color: COLORS.purple },
     { name: "Student", value: overview.users.byRole.student, color: COLORS.green },
     { name: "HOD", value: overview.users.byRole.hod, color: COLORS.blue },
-    { name: "Examiner", value: overview.users.byRole.examiner, color: COLORS.orange },
   ];
 
   const genderDistribution = [
@@ -240,7 +237,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
   ];
 
   const getRoleName = (role: number) => {
-    const roles = ["Admin", "Lecturer", "Student", "HOD", "Examiner"];
+    const roles = ["Admin", "Lecturer", "Student", "HOD"];
     return roles[role] || "Unknown";
   };
 
@@ -456,8 +453,6 @@ const UsersTab: React.FC<UsersTabProps> = ({
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
-                title="Examiners"
-                value={overview.users.byRole.examiner}
                 valueStyle={{ color: COLORS.orange }}
               />
             </Card>
@@ -552,7 +547,6 @@ const UsersTab: React.FC<UsersTabProps> = ({
               <Select.Option value={1}>Lecturer</Select.Option>
               <Select.Option value={2}>Student</Select.Option>
               <Select.Option value={3}>HOD</Select.Option>
-              <Select.Option value={4}>Examiner</Select.Option>
             </Select>
             <RangePicker
               placeholder={["Start Date", "End Date"]}

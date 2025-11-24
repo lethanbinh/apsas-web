@@ -182,7 +182,7 @@ export default function AssignmentGradingPage() {
 
       currentSubmissionId = sub.id;
       setSubmission(sub);
-      setTotalScore(sub.lastGrade || 0);
+      // Don't set score from lastGrade here - it will be calculated from grade items in fetchLatestGradingData
 
       // Check if semester has passed
       // Tạm comment lại chức năng check học kỳ
@@ -250,9 +250,13 @@ export default function AssignmentGradingPage() {
           pageSize: 1000, // Get all grade items
         });
         
-        // Filter to get only the latest grade item for each rubricItemDescription
-        // Sort by updatedAt descending, then group by rubricItemDescription and take the first one
-        const sortedItems = [...gradeItemsResult.items].sort((a, b) => {
+        // Get all grade items (like grading history does)
+        const allGradeItems = gradeItemsResult.items;
+        setLatestGradeItems(allGradeItems);
+        
+        // Filter to get only the latest grade item for each rubricItemId (not description)
+        // Sort by updatedAt descending, then group by rubricItemId and take the first one
+        const sortedItems = [...allGradeItems].sort((a, b) => {
           const dateA = new Date(a.updatedAt).getTime();
           const dateB = new Date(b.updatedAt).getTime();
           if (dateB !== dateA) {
@@ -264,19 +268,20 @@ export default function AssignmentGradingPage() {
           return createdB - createdA;
         });
         
-        const latestGradeItemsMap = new Map<string, GradeItem>();
+        // Group by rubricItemId (not description) to get latest grade item for each rubric
+        const latestGradeItemsMap = new Map<number, GradeItem>();
         sortedItems.forEach((item) => {
-          const rubricKey = item.rubricItemDescription || "";
-          if (!latestGradeItemsMap.has(rubricKey)) {
-            latestGradeItemsMap.set(rubricKey, item);
+          if (item.rubricItemId) {
+            if (!latestGradeItemsMap.has(item.rubricItemId)) {
+              latestGradeItemsMap.set(item.rubricItemId, item);
+            }
           }
         });
         
-        const latestGradeItems = Array.from(latestGradeItemsMap.values());
-        setLatestGradeItems(latestGradeItems);
+        const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
         
         // Map grade items to rubric scores and comments
-        if (latestGradeItems.length > 0) {
+        if (latestGradeItemsForDisplay.length > 0) {
           setQuestions((prevQuestions) => {
             return prevQuestions.map((question) => {
               const newRubricScores = { ...question.rubricScores };
@@ -285,7 +290,7 @@ export default function AssignmentGradingPage() {
               // Find grade items that match this question's rubrics
               let questionComment = "";
               question.rubrics.forEach((rubric) => {
-                const matchingGradeItem = latestGradeItems.find(
+                const matchingGradeItem = latestGradeItemsForDisplay.find(
                   (item) => item.rubricItemId === rubric.id
                 );
                 if (matchingGradeItem) {
@@ -307,9 +312,11 @@ export default function AssignmentGradingPage() {
               };
             });
           });
-          
-          // Calculate total score
-          const total = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
+        }
+        
+        // Calculate total score from ALL grade items (like grading history does)
+        if (allGradeItems.length > 0) {
+          const total = allGradeItems.reduce((sum, item) => sum + item.score, 0);
           setTotalScore(total);
         } else {
           // If no grade items, use the grade from session

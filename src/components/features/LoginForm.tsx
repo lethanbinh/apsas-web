@@ -49,7 +49,6 @@ const mapRoleToNumber = (role: string | number): Role => {
   if (roleLower === "lecturer") return 1;
   if (roleLower === "student") return 2;
   if (roleLower === "hod") return 3;
-  if (roleLower === "examiner") return 4;
   return 2; // Default to Student
 };
 
@@ -71,8 +70,6 @@ const DEMO_ACCOUNTS: DemoAccount[] = [
   { accountCode: "LEC000005", email: "phamthid@example.com", password: "123456", role: "Lecturer" },
   { accountCode: "LEC000006", email: "hoangvane@example.com", password: "123456", role: "Lecturer" },
   { accountCode: "LEC000007", email: "ngothif@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "EXA000001", email: "examiner1@example.com", password: "Lenam2385", role: "Examiner" },
-  { accountCode: "EXA000002", email: "lehongt@example.com", password: "Teach3r!", role: "Examiner" },
   { accountCode: "STU000001", email: "namle2385@gmail.com", password: "Lenam235", role: "Student" },
   { accountCode: "STU000002", email: "dangthig@example.com", password: "123456", role: "Student" },
   { accountCode: "STU000003", email: "vutranh@example.com", password: "123456", role: "Student" },
@@ -170,7 +167,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         1: "/classes/my-classes/lecturer", // Lecturer
         2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
-        4: "/examiner/grading-groups", // examiner
       };
 
       let userRole: Role = 2;
@@ -348,7 +344,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         1: "/classes/my-classes/lecturer", // Lecturer
         2: "/classes/my-classes/student", // Student
         3: "/hod/semester-plans", // HOD
-        4: "/examiner/grading-groups", // examiner
       };
 
       const userRole = mapRoleToNumber(decoded?.role || 2);
