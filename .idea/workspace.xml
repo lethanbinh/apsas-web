@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix some UI" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix paper">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/lecturer/LecturerTaskContent.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/assessmentPaperService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/assessmentPaperService.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -118,6 +122,7 @@
       <workItem from="1763878786472" duration="118000" />
       <workItem from="1763890480798" duration="24000" />
       <workItem from="1763972875572" duration="23000" />
+      <workItem from="1763997607196" duration="1082000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -311,7 +316,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763890493415</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="Fix some UI">
+      <option name="closed" value="true" />
+      <created>1763997789493</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1763997789493</updated>
+    </task>
+    <option name="localTasksCounter" value="26" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -362,6 +375,7 @@
     <MESSAGE value="App download" />
     <MESSAGE value="Fix some bugs admin" />
     <MESSAGE value="Fix some UI" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix some UI" />
+    <MESSAGE value="Fix paper" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix paper" />
   </component>
 </project>

@@ -6,6 +6,7 @@ export interface AssessmentPaper {
   assessmentTemplateId: number;
   assessmentTemplateName: string;
   questionCount: number;
+  language?: number; // 0: CSharp, 1: C, 2: Java
   createdAt: string;
   updatedAt: string;
 }
@@ -42,11 +43,13 @@ export interface CreateAssessmentPaperPayload {
   name: string;
   description: string;
   assessmentTemplateId: number;
+  language: number; // 0: CSharp, 1: C, 2: Java
 }
 
 export interface UpdateAssessmentPaperPayload {
   name: string;
   description: string;
+  language: number; // 0: CSharp, 1: C, 2: Java
 }
 
 export interface GetAssessmentPapersResponse {

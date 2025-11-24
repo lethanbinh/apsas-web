@@ -281,9 +281,13 @@ const PaperFormModal = ({
   useEffect(() => {
     if (open) {
       if (initialData) {
-        form.setFieldsValue(initialData);
+        form.setFieldsValue({
+          ...initialData,
+          language: initialData.language ?? 0, // Default to 0 (CSharp) if not set
+        });
       } else {
         form.resetFields();
+        form.setFieldsValue({ language: 0 }); // Default to CSharp for new paper
       }
     }
   }, [initialData, form, open]);
@@ -333,7 +337,18 @@ const PaperFormModal = ({
           <Input disabled={!isEditable} />
         </Form.Item>
         <Form.Item name="description" label="Paper Description">
-          <Input disabled={!isEditable} />
+          <Input.TextArea rows={3} disabled={!isEditable} />
+        </Form.Item>
+        <Form.Item 
+          name="language" 
+          label="Language" 
+          rules={[{ required: true, message: "Please select a language" }]}
+        >
+          <Select disabled={!isEditable}>
+            <Select.Option value={0}>CSharp</Select.Option>
+            <Select.Option value={1}>C</Select.Option>
+            <Select.Option value={2}>Java</Select.Option>
+          </Select>
         </Form.Item>
       </Form>
     </Modal>
@@ -703,7 +718,10 @@ const PaperDetailView = ({
       <Descriptions bordered column={1}>
         <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
         <Descriptions.Item label="Description">
-          {paper.description}
+          {paper.description || "N/A"}
+        </Descriptions.Item>
+        <Descriptions.Item label="Language">
+          {paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "N/A"}
         </Descriptions.Item>
       </Descriptions>
 
@@ -955,6 +973,7 @@ export const LecturerTaskContent = ({
   const [paperForNewQuestion, setPaperForNewQuestion] = useState<
     number | undefined
   >(undefined);
+  const [paperToEdit, setPaperToEdit] = useState<AssessmentPaper | null>(null);
 
   const { modal, notification } = App.useApp();
 
@@ -1507,6 +1526,11 @@ export const LecturerTaskContent = ({
     setIsQuestionModalOpen(true);
   };
 
+  const openEditPaperModal = (paper: AssessmentPaper) => {
+    setPaperToEdit(paper);
+    setIsPaperModalOpen(true);
+  };
+
   const handleDeletePaper = (paper: AssessmentPaper) => {
     modal.confirm({
       title: `Delete paper: ${paper.name}?`,
@@ -1563,6 +1587,15 @@ export const LecturerTaskContent = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     openAddQuestionModal(paper.id);
+                  }}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditPaperModal(paper);
                   }}
                 />
                 <Button
@@ -1954,13 +1987,18 @@ export const LecturerTaskContent = ({
           {/* Modals */}
           <PaperFormModal
             open={isPaperModalOpen}
-            onCancel={() => setIsPaperModalOpen(false)}
+            onCancel={() => {
+              setIsPaperModalOpen(false);
+              setPaperToEdit(null);
+            }}
             onFinish={() => {
               setIsPaperModalOpen(false);
+              setPaperToEdit(null);
               refreshPapers(true); // Reset status if rejected
             }}
             isEditable={isCurrentTemplateEditable}
             templateId={template.id}
+            initialData={paperToEdit || undefined}
           />
           <QuestionFormModal
             open={isQuestionModalOpen}
