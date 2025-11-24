@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix some bugs admin" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix some UI" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -116,6 +116,7 @@
       <workItem from="1763787122395" duration="1416000" />
       <workItem from="1763819187643" duration="168000" />
       <workItem from="1763878786472" duration="118000" />
+      <workItem from="1763890480798" duration="24000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -301,7 +302,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763878845583</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="Fix some UI">
+      <option name="closed" value="true" />
+      <created>1763890493415</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1763890493415</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -351,6 +360,7 @@
     <MESSAGE value="Fix grade" />
     <MESSAGE value="App download" />
     <MESSAGE value="Fix some bugs admin" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix some bugs admin" />
+    <MESSAGE value="Fix some UI" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix some UI" />
   </component>
 </project>
