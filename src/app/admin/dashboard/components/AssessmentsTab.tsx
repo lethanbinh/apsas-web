@@ -430,37 +430,37 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       {/* Assessment Statistics Overview */}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Assessment Statistics Overview</Title>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Total Templates"
-                value={overview.assessments.totalTemplates}
-                prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Class Assessments"
-                value={overview.assessments.totalClassAssessments}
-                prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.cyan }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Active Assessments"
-                value={overview.assessments.assessmentsByStatus?.active || 0}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Templates"
+              value={overview.assessments.totalTemplates}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: COLORS.blue }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Class Assessments"
+              value={overview.assessments.totalClassAssessments}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: COLORS.cyan }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Active Assessments"
+              value={overview.assessments.assessmentsByStatus?.active || 0}
                 prefix={<ThunderboltOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
+              valueStyle={{ color: COLORS.green }}
+            />
+          </Card>
+        </Col>
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
@@ -473,48 +473,48 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
           </Col>
         </Row>
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Pending Assessments"
-                value={overview.assessments.assessmentsByStatus?.pending || 0}
-                prefix={<ClockCircleOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Pending Assessments"
+              value={overview.assessments.assessmentsByStatus?.pending || 0}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: COLORS.orange }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Without Submissions"
                 value={overview.assessments.assessmentsWithoutSubmissions || 0}
                 prefix={<WarningOutlined />}
                 valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Avg Submissions/Assessment"
                 value={overview.assessments.averageSubmissionsPerAssessment || 0}
                 precision={1}
                 prefix={<BarChartOutlined />}
-                valueStyle={{ color: COLORS.purple }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+              valueStyle={{ color: COLORS.purple }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Upcoming Deadlines"
                 value={overview.assessments.upcomingDeadlines?.length || 0}
                 prefix={<CalendarOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-        </Row>
+              valueStyle={{ color: COLORS.orange }}
+            />
+          </Card>
+        </Col>
+      </Row>
       </Card>
 
       {/* Assessment by Type */}

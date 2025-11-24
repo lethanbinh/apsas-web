@@ -354,27 +354,27 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       {/* Academic Statistics Overview */}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Semester & Course Statistics</Title>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Total Semesters"
-                value={overview.academic.totalSemesters}
-                prefix={<CalendarOutlined />}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Active Semesters"
-                value={overview.academic.activeSemesters}
-                prefix={<CalendarOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Semesters"
+              value={overview.academic.totalSemesters}
+              prefix={<CalendarOutlined />}
+              valueStyle={{ color: COLORS.blue }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Active Semesters"
+              value={overview.academic.activeSemesters}
+              prefix={<CalendarOutlined />}
+              valueStyle={{ color: COLORS.green }}
+            />
+          </Card>
+        </Col>
           <Col xs={24} sm={12} lg={6}>
             <Card>
               <Statistic
@@ -402,40 +402,40 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Class Statistics</Title>
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Total Classes"
-                value={overview.academic.totalClasses}
-                prefix={<BookOutlined />}
-                valueStyle={{ color: COLORS.cyan }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Average Students/Class"
-                value={overview.academic.averageStudentsPerClass || 0}
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Classes"
+              value={overview.academic.totalClasses}
+              prefix={<BookOutlined />}
+              valueStyle={{ color: COLORS.cyan }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Average Students/Class"
+              value={overview.academic.averageStudentsPerClass || 0}
                 prefix={<BarChartOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-                precision={1}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Classes Without Students"
-                value={overview.academic.classesWithoutStudents || 0}
+              valueStyle={{ color: COLORS.orange }}
+              precision={1}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Classes Without Students"
+              value={overview.academic.classesWithoutStudents || 0}
                 prefix={<WarningOutlined />}
-                valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+              valueStyle={{ color: COLORS.red }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Classes Overloaded (>50)"
                 value={overview.academic.classesOverloaded || 0}
                 prefix={<WarningOutlined />}
@@ -457,25 +457,25 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
                 value={overview.academic.totalStudents || 0}
                 prefix={<UsergroupAddOutlined />}
                 valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Total Lecturers"
                 value={overview.academic.totalLecturers || 0}
                 prefix={<SolutionOutlined />}
                 valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Student/Lecturer Ratio"
                 value={overview.academic.studentToLecturerRatio || 0}
-                prefix={<TeamOutlined />}
+              prefix={<TeamOutlined />}
                 valueStyle={{ color: COLORS.purple }}
                 precision={1}
               />
@@ -487,11 +487,11 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
                 title="Semester Courses"
                 value={overview.academic.semesterCourses || 0}
                 prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
-        </Row>
+              valueStyle={{ color: COLORS.green }}
+            />
+          </Card>
+        </Col>
+      </Row>
       </Card>
 
       {/* Charts */}

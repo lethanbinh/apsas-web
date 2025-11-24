@@ -344,54 +344,54 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       {/* Submission Statistics Overview */}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Submission Statistics Overview</Title>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Total Submissions"
-                value={overview.submissions.total}
-                prefix={<UploadOutlined />}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Graded"
-                value={overview.submissions.graded}
-                prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Pending Grading"
-                value={overview.submissions.pending}
-                prefix={<ClockCircleOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Completion Rate"
-                value={overview.submissions.completionRate}
-                suffix="%"
-                prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-              <Progress
-                percent={overview.submissions.completionRate}
-                size="small"
-                style={{ marginTop: "8px" }}
-              />
-            </Card>
-          </Col>
-        </Row>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Submissions"
+              value={overview.submissions.total}
+              prefix={<UploadOutlined />}
+              valueStyle={{ color: COLORS.blue }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Graded"
+              value={overview.submissions.graded}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: COLORS.green }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Pending Grading"
+              value={overview.submissions.pending}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: COLORS.orange }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Completion Rate"
+              value={overview.submissions.completionRate}
+              suffix="%"
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: COLORS.green }}
+            />
+            <Progress
+              percent={overview.submissions.completionRate}
+              size="small"
+              style={{ marginTop: "8px" }}
+            />
+          </Card>
+        </Col>
+      </Row>
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card>
@@ -414,19 +414,19 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Late Submissions"
                 value={overview.submissions.lateSubmissions || 0}
                 prefix={<WarningOutlined />}
-                valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+              valueStyle={{ color: COLORS.red }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Not Submitted"
                 value={overview.submissions.notSubmitted || 0}
                 valueStyle={{ color: COLORS.red }}
@@ -483,8 +483,8 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
                 title="Excellent (≥8.5)"
                 value={overview.submissions.submissionsByGradeRange?.excellent || 0}
                 prefix={<TrophyOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
+              valueStyle={{ color: COLORS.green }}
+            />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
@@ -494,30 +494,30 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
                 value={overview.submissions.submissionsByGradeRange?.good || 0}
                 prefix={<RiseOutlined />}
                 valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Average (5.5-6.9)"
                 value={overview.submissions.submissionsByGradeRange?.average || 0}
                 prefix={<BarChartOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+              valueStyle={{ color: COLORS.orange }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Below Average (<5.5)"
                 value={overview.submissions.submissionsByGradeRange?.belowAverage || 0}
                 prefix={<WarningOutlined />}
                 valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-        </Row>
+            />
+          </Card>
+        </Col>
+      </Row>
       </Card>
 
       {/* Charts */}

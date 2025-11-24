@@ -512,96 +512,96 @@ const GradingTab: React.FC<GradingTabProps> = ({
       {/* Grading Statistics Overview */}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grading Statistics Overview</Title>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Grading Groups"
-                value={overview.grading.totalGradingGroups}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Grading Groups"
+              value={overview.grading.totalGradingGroups}
                 prefix={<TeamOutlined />}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+              valueStyle={{ color: COLORS.blue }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Total Sessions"
-                value={overview.grading.totalGradingSessions}
-                prefix={<FileTextOutlined />}
-                valueStyle={{ color: COLORS.cyan }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Completed Sessions"
-                value={overview.grading.completedGradingSessions}
-                prefix={<CheckCircleOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Pending Requests"
-                value={overview.grading.pendingAssignRequests}
+              value={overview.grading.totalGradingSessions}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: COLORS.cyan }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Completed Sessions"
+              value={overview.grading.completedGradingSessions}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: COLORS.green }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Pending Requests"
+              value={overview.grading.pendingAssignRequests}
                 prefix={<WarningOutlined />}
-                valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-        </Row>
+              valueStyle={{ color: COLORS.red }}
+            />
+          </Card>
+        </Col>
+      </Row>
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Processing Sessions"
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Processing Sessions"
                 value={overview.grading.gradingSessionsByStatus?.processing || processingSessions.length}
                 prefix={<ThunderboltOutlined />}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Failed Sessions"
+              valueStyle={{ color: COLORS.orange }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Failed Sessions"
                 value={overview.grading.gradingSessionsByStatus?.failed || failedSessions.length}
                 prefix={<WarningOutlined />}
-                valueStyle={{ color: COLORS.red }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
-                title="Completion Rate"
-                value={
-                  gradingSessions.length > 0
-                    ? Math.round((completedSessions.length / gradingSessions.length) * 100)
-                    : 0
-                }
-                suffix="%"
+              valueStyle={{ color: COLORS.red }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Completion Rate"
+              value={
+                gradingSessions.length > 0
+                  ? Math.round((completedSessions.length / gradingSessions.length) * 100)
+                  : 0
+              }
+              suffix="%"
                 prefix={<TrophyOutlined />}
-                valueStyle={{ color: COLORS.green }}
-              />
-              <Progress
-                percent={
-                  gradingSessions.length > 0
-                    ? Math.round((completedSessions.length / gradingSessions.length) * 100)
-                    : 0
-                }
-                size="small"
+              valueStyle={{ color: COLORS.green }}
+            />
+            <Progress
+              percent={
+                gradingSessions.length > 0
+                  ? Math.round((completedSessions.length / gradingSessions.length) * 100)
+                  : 0
+              }
+              size="small"
                 style={{ marginTop: 8 }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
-              <Statistic
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
                 title="Average Grading Time"
                 value={overview.grading.averageGradingTime || 0}
                 suffix="hours"
@@ -624,10 +624,10 @@ const GradingTab: React.FC<GradingTabProps> = ({
                 title="AI Grading"
                 value={overview.grading.gradingSessionsByType?.ai || 0}
                 prefix={<RobotOutlined />}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
+              valueStyle={{ color: COLORS.blue }}
+            />
+          </Card>
+        </Col>
           <Col xs={24} sm={12} lg={8}>
             <Card>
               <Statistic
@@ -648,7 +648,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
               />
             </Card>
           </Col>
-        </Row>
+      </Row>
       </Card>
 
       {/* Grading Groups by Status */}
