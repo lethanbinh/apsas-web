@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Modal, Steps, Typography, Space, Spin } from "antd";
+import { Modal, Steps, Typography, Space, Spin, Alert } from "antd";
 import { Button } from "../ui/Button";
 import { PreviewTable } from "./PreviewTable";
 import styles from "./PreviewPlanModal.module.css";
@@ -50,6 +50,7 @@ export interface PreviewPlanModalProps {
   onConfirm: () => void;
   previewData: PreviewData | null;
   isLoading: boolean;
+  error?: string | null;
 }
 const semesterPlanColumns = [
   { title: "SemesterCode", dataIndex: "SemesterCode", key: "SemesterCode" },
@@ -116,6 +117,7 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   onConfirm,
   previewData,
   isLoading,
+  error,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -219,17 +221,14 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
       footer={renderFooter()}
       width={1000}
     >
-      {previewData === null && !isLoading && (
-        <Title
-          level={5}
-          style={{
-            textAlign: "center",
-            color: "#faad14",
-            marginBottom: "20px",
-          }}
-        >
-          Upload both files to see the structural preview.
-        </Title>
+      {error && !isLoading && (
+        <Alert
+          message="Preview Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: "20px" }}
+        />
       )}
 
       <Steps current={currentStep} className={styles.steps}>

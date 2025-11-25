@@ -60,9 +60,11 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     null
   );
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
 
   const { user } = useAuth();
+  const { notification } = App.useApp();
 
   const handleDownloadTemplate = async () => {
     try {
@@ -176,96 +178,86 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     setCurrentStep(0);
   };
 
-  const handlePreviewClick = async () => {
-    if (fileListExcel.length === 0 || fileListPdf.length === 0) {
-      console.warn(
-        "Please upload both Excel files to preview the structural plan."
+  const mapToKeys = (
+    data: any[],
+    keys: string[]
+  ): { [key: string]: any }[] => {
+    const headers = (data[0] || []).map((h: string) =>
+      (h || "").toString().trim()
+    );
+
+    const normalize = (s: string) =>
+      (s || "")
+        .toString()
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[_-]/g, "");
+
+    const normalizedHeaderToIndex: Record<string, number> = {};
+    headers.forEach((h: string, idx: number) => {
+      const n = normalize(h);
+      if (!(n in normalizedHeaderToIndex)) {
+        normalizedHeaderToIndex[n] = idx;
+      }
+    });
+
+    const missing: string[] = [];
+    const keyToIndex: Record<string, number> = {};
+    keys.forEach((k) => {
+      const n = normalize(k);
+      const idx = normalizedHeaderToIndex[n];
+      if (idx === undefined) {
+        missing.push(k);
+      } else {
+        keyToIndex[k] = idx;
+      }
+    });
+
+    if (missing.length > 0) {
+      throw new Error(
+        `File headers do not match template. Missing: ${missing.join(
+          ", "
+        )}. Found: ${headers.join(", ")}`
       );
-      setLivePreviewData(null);
-      setIsPreviewModalOpen(true);
+    }
+
+    return data.slice(1).map((row, rowIndex) => {
+      const rowObject: { [key: string]: any } = {
+        key: rowIndex.toString(),
+      };
+      keys.forEach((k) => {
+        const idx = keyToIndex[k];
+        rowObject[k] = row ? row[idx] : undefined;
+      });
+      return rowObject;
+    });
+  };
+
+  const handlePreviewSemesterCourse = async () => {
+    if (fileListExcel.length === 0) {
       return;
     }
 
     setIsPreviewLoading(true);
     setIsPreviewModalOpen(true);
     setLivePreviewData(null);
+    setPreviewError(null);
 
     try {
       const filePlan = getNativeFile(fileListExcel[0]);
-      const fileRoster = getNativeFile(fileListPdf[0]);
-
-      const [planBuffer, rosterBuffer] = await Promise.all([
-        readFileAsArrayBuffer(filePlan),
-        readFileAsArrayBuffer(fileRoster),
-      ]);
-
+      const planBuffer = await readFileAsArrayBuffer(filePlan);
       const planWb = XLSX.read(planBuffer);
-      const rosterWb = XLSX.read(rosterBuffer);
-
       const planSheet = planWb.Sheets[planWb.SheetNames[0]];
-      const rosterSheet = rosterWb.Sheets[rosterWb.SheetNames[0]];
 
-      if (!planSheet || !rosterSheet) {
-        throw new Error("One of the Excel files is empty or invalid.");
+      if (!planSheet) {
+        throw new Error("The Excel file is empty or invalid.");
       }
 
       const planJson = parseExcelSheet(planSheet);
-      const rosterJson = parseExcelSheet(rosterSheet);
 
-      const mapToKeys = (
-        data: any[],
-        keys: string[]
-      ): { [key: string]: any }[] => {
-        const headers = (data[0] || []).map((h: string) =>
-          (h || "").toString().trim()
-        );
-
-        const normalize = (s: string) =>
-          (s || "")
-            .toString()
-            .toLowerCase()
-            .replace(/\s+/g, "")
-            .replace(/[_-]/g, "");
-
-        const normalizedHeaderToIndex: Record<string, number> = {};
-        headers.forEach((h: string, idx: number) => {
-          const n = normalize(h);
-          if (!(n in normalizedHeaderToIndex)) {
-            normalizedHeaderToIndex[n] = idx;
-          }
-        });
-
-        const missing: string[] = [];
-        const keyToIndex: Record<string, number> = {};
-        keys.forEach((k) => {
-          const n = normalize(k);
-          const idx = normalizedHeaderToIndex[n];
-          if (idx === undefined) {
-            missing.push(k);
-          } else {
-            keyToIndex[k] = idx;
-          }
-        });
-
-        if (missing.length > 0) {
-          throw new Error(
-            `File headers do not match template. Missing: ${missing.join(
-              ", "
-            )}. Found: ${headers.join(", ")}`
-          );
-        }
-
-        return data.slice(1).map((row, rowIndex) => {
-          const rowObject: { [key: string]: any } = {
-            key: rowIndex.toString(),
-          };
-          keys.forEach((k) => {
-            const idx = keyToIndex[k];
-            rowObject[k] = row ? row[idx] : undefined;
-          });
-          return rowObject;
-        });
-      };
+      if (!planJson || planJson.length === 0) {
+        throw new Error("The Excel file is empty or has no data.");
+      }
 
       const semesterPlanKeys = [
         "SemesterCode",
@@ -282,6 +274,55 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         "LecturerAccountCode",
       ];
 
+      const semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
+
+      setLivePreviewData({
+        semesterPlan: semesterPlanData as any,
+        classRoster: [],
+      });
+      setPreviewError(null);
+    } catch (err: any) {
+      console.error("Error parsing Excel for preview:", err);
+      const errorMessage = err.message || "Failed to parse Excel file. Please check the file format.";
+      setPreviewError(errorMessage);
+      setLivePreviewData({
+        semesterPlan: [],
+        classRoster: [],
+      });
+      notification.error({
+        message: "Preview Error",
+        description: errorMessage,
+      });
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const handlePreviewClassStudent = async () => {
+    if (fileListPdf.length === 0) {
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    setIsPreviewModalOpen(true);
+    setPreviewError(null);
+
+    try {
+      const fileRoster = getNativeFile(fileListPdf[0]);
+      const rosterBuffer = await readFileAsArrayBuffer(fileRoster);
+      const rosterWb = XLSX.read(rosterBuffer);
+      const rosterSheet = rosterWb.Sheets[rosterWb.SheetNames[0]];
+
+      if (!rosterSheet) {
+        throw new Error("The Excel file is empty or invalid.");
+      }
+
+      const rosterJson = parseExcelSheet(rosterSheet);
+
+      if (!rosterJson || rosterJson.length === 0) {
+        throw new Error("The Excel file is empty or has no data.");
+      }
+
       const classRosterKeys = [
         "ClassCode",
         "ClassDescription",
@@ -291,16 +332,59 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         "EnrollmentDescription",
       ];
 
-      const semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
       const classRosterData = mapToKeys(rosterJson, classRosterKeys);
 
+      // If semester course file is also uploaded, include it in preview
+      let semesterPlanData: any[] = [];
+      if (fileListExcel.length > 0) {
+        try {
+          const filePlan = getNativeFile(fileListExcel[0]);
+          const planBuffer = await readFileAsArrayBuffer(filePlan);
+          const planWb = XLSX.read(planBuffer);
+          const planSheet = planWb.Sheets[planWb.SheetNames[0]];
+
+          if (planSheet) {
+            const planJson = parseExcelSheet(planSheet);
+            if (planJson && planJson.length > 0) {
+              const semesterPlanKeys = [
+                "SemesterCode",
+                "AcademicYear",
+                "SemesterNote",
+                "StartDate",
+                "EndDate",
+                "CourseCode",
+                "CourseName",
+                "CourseDescription",
+                "CourseElementName",
+                "CourseElementDescription",
+                "CourseElementWeight",
+                "LecturerAccountCode",
+              ];
+              semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
+            }
+          }
+        } catch (err) {
+          console.warn("Could not parse semester course file:", err);
+        }
+      }
+
       setLivePreviewData({
-        semesterPlan: semesterPlanData as any,
+        semesterPlan: semesterPlanData,
         classRoster: classRosterData as any,
       });
+      setPreviewError(null);
     } catch (err: any) {
       console.error("Error parsing Excel for preview:", err);
-      setLivePreviewData(null);
+      const errorMessage = err.message || "Failed to parse Excel file. Please check the file format.";
+      setPreviewError(errorMessage);
+      setLivePreviewData({
+        semesterPlan: [],
+        classRoster: [],
+      });
+      notification.error({
+        message: "Preview Error",
+        description: errorMessage,
+      });
     } finally {
       setIsPreviewLoading(false);
     }
@@ -358,6 +442,16 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
               <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
                 Download Template
               </Button>
+              <Button
+                icon={<EyeOutlined />}
+                variant="outline"
+                className={styles.previewButton}
+                onClick={handlePreviewSemesterCourse}
+                style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
+                disabled={fileListExcel.length === 0}
+              >
+                Preview Semester Course Data
+              </Button>
             </Space>
           </div>
 
@@ -405,11 +499,11 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
                 icon={<EyeOutlined />}
                 variant="outline"
                 className={styles.previewButton}
-                onClick={handlePreviewClick}
+                onClick={handlePreviewClassStudent}
                 style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
-                disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
+                disabled={fileListPdf.length === 0}
               >
-                Preview Uploaded Plan
+                Preview Class Student Data
               </Button>
             </Space>
           </div>
@@ -493,10 +587,17 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
 
       <PreviewPlanModal
         open={isPreviewModalOpen}
-        onCancel={() => setIsPreviewModalOpen(false)}
-        onConfirm={() => setIsPreviewModalOpen(false)}
+        onCancel={() => {
+          setIsPreviewModalOpen(false);
+          setPreviewError(null);
+        }}
+        onConfirm={() => {
+          setIsPreviewModalOpen(false);
+          setPreviewError(null);
+        }}
         previewData={livePreviewData}
         isLoading={isPreviewLoading}
+        error={previewError}
       />
     </>
   );
