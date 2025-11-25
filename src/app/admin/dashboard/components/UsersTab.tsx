@@ -52,6 +52,11 @@ interface UsersTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const { RangePicker } = DatePicker;
@@ -61,6 +66,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
   overview,
   chartData,
   loading,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [users, setUsers] = useState<any[]>([]);
@@ -79,59 +85,57 @@ const UsersTab: React.FC<UsersTabProps> = ({
     try {
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
-
-      // All Statistics Cards Sheet (8 cards)
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Users", overview.users.total],
-        ["Active Users", overview.users.active],
-        ["New This Month", overview.users.newThisMonth],
-        ["Students", overview.users.byRole.student],
-        ["Lecturers", overview.users.byRole.lecturer],
-        ["Admins", overview.users.byRole.admin],
-        ["HODs", overview.users.byRole.hod],
-        ["Active Rate (%)", overview.users.total > 0 ? Math.round((overview.users.active / overview.users.total) * 100) : 0],
-        ["Users With Avatar", overview.users.usersWithAvatar || 0],
-        ["Average Age", overview.users.averageAge?.toFixed(1) || "N/A"],
-        ["Male", overview.users.byGender?.male || 0],
-        ["Female", overview.users.byGender?.female || 0],
-        ["Other", overview.users.byGender?.other || 0],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
-
-      // Role Distribution Chart Data (Pie Chart)
+      const exportData: any[] = [];
       const totalUsers = overview.users.total;
-      const roleData = roleDistribution.map((item) => ({
-        Role: item.name,
-        Count: item.value,
-        Percentage: totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(2) + "%" : "0%",
-      }));
-      const ws2 = XLSX.utils.json_to_sheet(roleData);
-      XLSX.utils.book_append_sheet(wb, ws2, "Role Distribution");
 
-      // Gender Distribution Chart Data (Bar Chart)
-      const genderData = genderDistribution.map((item) => ({
-        Gender: item.name,
-        Count: item.value,
-        Percentage: totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(2) + "%" : "0%",
-      }));
-      const ws3 = XLSX.utils.json_to_sheet(genderData);
-      XLSX.utils.book_append_sheet(wb, ws3, "Gender Distribution");
+      // Section 1: Key Statistics
+      exportData.push(["USERS - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Users", overview.users.total]);
+      exportData.push(["Active Users", overview.users.active]);
+      exportData.push(["Inactive Users", overview.users.inactive || 0]);
+      exportData.push(["Never Logged In", overview.users.neverLoggedIn || 0]);
+      exportData.push(["New This Month", overview.users.newThisMonth]);
+      exportData.push(["Active Rate (%)", totalUsers > 0 ? Math.round((overview.users.active / totalUsers) * 100) : 0]);
+      exportData.push([]);
 
-      // User Growth Chart Data (Bar Chart - Last 12 Months)
+      // Section 2: Users by Role
+      exportData.push(["USERS BY ROLE"]);
+      exportData.push(["Role", "Count", "Percentage"]);
+      roleDistribution.forEach((item) => {
+        const percentage = totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(2) + "%" : "0%";
+        exportData.push([item.name, item.value, percentage]);
+      });
+      exportData.push([]);
+
+      // Section 3: Gender Distribution
+      exportData.push(["GENDER DISTRIBUTION"]);
+      exportData.push(["Gender", "Count", "Percentage"]);
+      genderDistribution.forEach((item) => {
+        const percentage = totalUsers > 0 ? ((item.value / totalUsers) * 100).toFixed(2) + "%" : "0%";
+        exportData.push([item.name, item.value, percentage]);
+      });
+      exportData.push([]);
+
+      // Section 4: Profile Completion
+      exportData.push(["PROFILE COMPLETION"]);
+      exportData.push(["Metric", "Count", "Percentage"]);
+      exportData.push(["Users With Avatar", overview.users.usersWithAvatar || 0, totalUsers > 0 ? ((overview.users.usersWithAvatar || 0) / totalUsers * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Users With Phone", overview.users.usersWithPhone || 0, totalUsers > 0 ? ((overview.users.usersWithPhone || 0) / totalUsers * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Average Age", overview.users.averageAge?.toFixed(1) || "N/A", ""]);
+      exportData.push([]);
+
+      // Section 5: User Growth (Last 12 Months)
       if (chartData?.userGrowth && chartData.userGrowth.length > 0) {
-        const growthData = chartData.userGrowth.map((item) => ({
-          Month: item.month,
-          "Total Users": item.total,
-          Students: item.students,
-          Lecturers: item.lecturers,
-        }));
-        const ws4 = XLSX.utils.json_to_sheet(growthData);
-        XLSX.utils.book_append_sheet(wb, ws4, "User Growth");
+        exportData.push(["USER GROWTH (LAST 12 MONTHS)"]);
+        exportData.push(["Month", "Total Users", "Students", "Lecturers"]);
+        chartData.userGrowth.forEach((item) => {
+          exportData.push([item.month, item.total, item.students, item.lecturers]);
+        });
+        exportData.push([]);
       }
 
-      // All Users Table (Filtered)
+      // Section 6: All Users
       const roleMap: Record<number, string> = {
         0: "Admin",
         1: "Lecturer",
@@ -143,26 +147,31 @@ const UsersTab: React.FC<UsersTabProps> = ({
         1: "Female",
         2: "Other",
       };
-      const usersData = filteredUsers.map((user, index) => ({
-        "No": index + 1,
-        "ID": user.id,
-        "Full Name": user.fullName || "",
-        "Email": user.email || "",
-        "Account Code": user.accountCode || "",
-        "Username": user.username || "",
-        "Role": roleMap[user.role] || "Unknown",
-        "Gender": user.gender !== undefined ? genderMap[user.gender] || "" : "",
-        "Date of Birth": user.dateOfBirth ? dayjs(user.dateOfBirth).format("YYYY-MM-DD") : "",
-        "Phone Number": user.phoneNumber || "",
-        "Address": user.address || "",
-        "Has Avatar": user.avatar ? "Yes" : "No",
-      }));
-      const ws5 = XLSX.utils.json_to_sheet(usersData);
-      XLSX.utils.book_append_sheet(wb, ws5, "All Users");
+      exportData.push(["ALL USERS"]);
+      exportData.push(["No", "ID", "Full Name", "Email", "Account Code", "Username", "Role", "Gender", "Date of Birth", "Phone Number", "Address", "Has Avatar"]);
+      filteredUsers.forEach((user, index) => {
+        exportData.push([
+          index + 1,
+          user.id,
+          user.fullName || "",
+          user.email || "",
+          user.accountCode || "",
+          user.username || "",
+          roleMap[user.role] || "Unknown",
+          user.gender !== undefined ? genderMap[user.gender] || "" : "",
+          user.dateOfBirth ? dayjs(user.dateOfBirth).format("YYYY-MM-DD") : "",
+          user.phoneNumber || "",
+          user.address || "",
+          user.avatar ? "Yes" : "No",
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Users");
 
       const fileName = `Users_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      message.success("All users data exported successfully");
+      message.success("Users data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
       message.error("Failed to export users data");

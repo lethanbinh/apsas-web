@@ -58,12 +58,18 @@ interface SubmissionsTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
   overview,
   chartData,
   loading,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [submissions, setSubmissions] = useState<any[]>([]);
@@ -82,97 +88,103 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
     try {
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
+      const exportData: any[] = [];
+      const totalSubmissions = overview.submissions.total;
+      const gradedSubmissions = submissions.filter((s) => s.lastGrade > 0);
+      const averageGrade = gradedSubmissions.length > 0 
+        ? (gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0) / gradedSubmissions.length).toFixed(2)
+        : 0;
 
-      // All Statistics Cards Sheet
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Submissions", overview.submissions.total],
-        ["Graded", overview.submissions.graded],
-        ["Pending Grading", overview.submissions.pending],
-        ["Not Submitted", overview.submissions.notSubmitted],
-        ["Completion Rate (%)", overview.submissions.completionRate],
-        ["Grading Rate (%)", overview.submissions.total > 0 ? Math.round((overview.submissions.graded / overview.submissions.total) * 100) : 0],
-        ["Pending Rate (%)", overview.submissions.total > 0 ? Math.round((overview.submissions.pending / overview.submissions.total) * 100) : 0],
-        ["Average Grade", overview.submissions.graded > 0 ? (submissions.filter((s) => s.lastGrade > 0).reduce((sum, s) => sum + s.lastGrade, 0) / overview.submissions.graded).toFixed(2) : 0],
-        ["Late Submissions", overview.submissions.lateSubmissions || 0],
-        ["On-Time Submissions", overview.submissions.onTimeSubmissions || 0],
-        ["Assignments", overview.submissions.submissionsByType?.assignment || 0],
-        ["Labs", overview.submissions.submissionsByType?.lab || 0],
-        ["Practical Exams", overview.submissions.submissionsByType?.practicalExam || 0],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
+      // Section 1: Key Statistics
+      exportData.push(["SUBMISSIONS - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Submissions", totalSubmissions]);
+      exportData.push(["Graded", overview.submissions.graded]);
+      exportData.push(["Pending Grading", overview.submissions.pending]);
+      exportData.push(["Not Submitted", overview.submissions.notSubmitted]);
+      exportData.push(["Completion Rate (%)", overview.submissions.completionRate]);
+      exportData.push(["Grading Rate (%)", totalSubmissions > 0 ? Math.round((overview.submissions.graded / totalSubmissions) * 100) : 0]);
+      exportData.push(["Average Grade", averageGrade]);
+      exportData.push(["Late Submissions", overview.submissions.lateSubmissions || 0]);
+      exportData.push(["On-Time Submissions", overview.submissions.onTimeSubmissions || 0]);
+      exportData.push([]);
 
-      // Submission Status Distribution (Pie Chart Data)
-      const pieChartData = submissionStatusData.map((item) => ({
-        Status: item.name,
-        Count: item.value,
-        Percentage: overview.submissions.total > 0 ? ((item.value / overview.submissions.total) * 100).toFixed(2) + "%" : "0%",
-      }));
-      const ws2 = XLSX.utils.json_to_sheet(pieChartData);
-      XLSX.utils.book_append_sheet(wb, ws2, "Status Distribution");
+      // Section 2: Submissions by Type
+      exportData.push(["SUBMISSIONS BY TYPE"]);
+      exportData.push(["Type", "Count"]);
+      exportData.push(["Assignments", overview.submissions.submissionsByType?.assignment || 0]);
+      exportData.push(["Labs", overview.submissions.submissionsByType?.lab || 0]);
+      exportData.push(["Practical Exams", overview.submissions.submissionsByType?.practicalExam || 0]);
+      exportData.push([]);
 
-      // Submission Status Bar Chart Data
-      if (chartData?.submissionStatus && chartData.submissionStatus.length > 0) {
-        const barChartData = chartData.submissionStatus.map((item) => ({
-          Status: item.status,
-          Count: item.count,
-        }));
-        const ws3 = XLSX.utils.json_to_sheet(barChartData);
-        XLSX.utils.book_append_sheet(wb, ws3, "Status Bar Chart");
+      // Section 3: Submission Status Distribution
+      exportData.push(["SUBMISSION STATUS DISTRIBUTION"]);
+      exportData.push(["Status", "Count", "Percentage"]);
+      submissionStatusData.forEach((item) => {
+        const percentage = totalSubmissions > 0 ? ((item.value / totalSubmissions) * 100).toFixed(2) + "%" : "0%";
+        exportData.push([item.name, item.value, percentage]);
+      });
+      exportData.push([]);
+
+      // Section 4: Grade Distribution
+      if (overview.submissions.submissionsByGradeRange) {
+        exportData.push(["GRADE DISTRIBUTION"]);
+        exportData.push(["Grade Range", "Count"]);
+        exportData.push(["Excellent (>= 8.5)", overview.submissions.submissionsByGradeRange.excellent || 0]);
+        exportData.push(["Good (7.0 - 8.4)", overview.submissions.submissionsByGradeRange.good || 0]);
+        exportData.push(["Average (5.5 - 6.9)", overview.submissions.submissionsByGradeRange.average || 0]);
+        exportData.push(["Below Average (< 5.5)", overview.submissions.submissionsByGradeRange.belowAverage || 0]);
+        exportData.push([]);
       }
 
-      // Submissions Over Time (Line Chart Data - Last 30 Days)
+      // Section 5: Submissions Over Time (Last 30 Days)
       if (submissionsChartData && submissionsChartData.length > 0) {
-        const lineChartData = submissionsChartData.map((item: any) => ({
-          Date: item.date,
-          "Total Submissions": item.count,
-          Graded: item.graded,
-        }));
-        const ws4 = XLSX.utils.json_to_sheet(lineChartData);
-        XLSX.utils.book_append_sheet(wb, ws4, "Submissions Over Time");
+        exportData.push(["SUBMISSIONS OVER TIME (LAST 30 DAYS)"]);
+        exportData.push(["Date", "Total Submissions", "Graded"]);
+        submissionsChartData.forEach((item: any) => {
+          exportData.push([item.date, item.count, item.graded]);
+        });
+        exportData.push([]);
       }
 
-      // All Submissions Table (Filtered)
-      const submissionsData = filteredSubmissions.map((sub, index) => ({
-        "No": index + 1,
-        "ID": sub.id,
-        "Student Name": sub.studentName || "",
-        "Student Code": sub.studentCode || "",
-        "Submitted At": sub.submittedAt ? dayjs(sub.submittedAt).format("YYYY-MM-DD HH:mm") : "Not submitted",
-        "Last Grade": sub.lastGrade || 0,
-        "Status": sub.lastGrade > 0 ? "Graded" : sub.submittedAt ? "Pending" : "Not Submitted",
-        "Has File": sub.submissionFile ? "Yes" : "No",
-      }));
-      const ws5 = XLSX.utils.json_to_sheet(submissionsData);
-      XLSX.utils.book_append_sheet(wb, ws5, "All Submissions");
-
-      // Top Students Sheet
+      // Section 6: Top Students by Submissions
       if (overview.submissions.topStudentsBySubmissions && overview.submissions.topStudentsBySubmissions.length > 0) {
-        const topStudentsData = overview.submissions.topStudentsBySubmissions.map((student, index) => ({
-          "Rank": index + 1,
-          "Student Code": student.studentCode,
-          "Student Name": student.studentName,
-          "Submissions": student.submissionCount,
-          "Average Grade": student.averageGrade?.toFixed(2) || 0,
-        }));
-        const ws6 = XLSX.utils.json_to_sheet(topStudentsData);
-        XLSX.utils.book_append_sheet(wb, ws6, "Top Students");
+        exportData.push(["TOP STUDENTS BY SUBMISSIONS"]);
+        exportData.push(["Rank", "Student Code", "Student Name", "Submission Count", "Average Grade"]);
+        overview.submissions.topStudentsBySubmissions.forEach((item, index) => {
+          exportData.push([
+            index + 1,
+            item.studentCode,
+            item.studentName,
+            item.submissionCount,
+            item.averageGrade.toFixed(2),
+          ]);
+        });
+        exportData.push([]);
       }
 
-      // Submissions by Day Sheet
-      if (overview.submissions.submissionsByDay && overview.submissions.submissionsByDay.length > 0) {
-        const byDayData = overview.submissions.submissionsByDay.map((item) => ({
-          Date: item.date,
-          Count: item.count,
-        }));
-        const ws7 = XLSX.utils.json_to_sheet(byDayData);
-        XLSX.utils.book_append_sheet(wb, ws7, "Submissions by Day");
-      }
+      // Section 7: All Submissions
+      exportData.push(["ALL SUBMISSIONS"]);
+      exportData.push(["No", "ID", "Student Name", "Student Code", "Submitted At", "Last Grade", "Status", "Has File"]);
+      filteredSubmissions.forEach((sub, index) => {
+        exportData.push([
+          index + 1,
+          sub.id,
+          sub.studentName || "",
+          sub.studentCode || "",
+          sub.submittedAt ? dayjs(sub.submittedAt).format("YYYY-MM-DD HH:mm") : "Not submitted",
+          sub.lastGrade || 0,
+          sub.lastGrade > 0 ? "Graded" : sub.submittedAt ? "Pending" : "Not Submitted",
+          sub.submissionFile ? "Yes" : "No",
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Submissions");
 
       const fileName = `Submissions_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      message.success(`Exported all submissions data successfully`);
+      message.success("Submissions data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
       message.error("Failed to export submissions data");
@@ -183,12 +195,15 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
 
   useEffect(() => {
     fetchSubmissions();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters?.classId, filters?.courseId, filters?.semesterCode]);
 
   const fetchSubmissions = async () => {
     try {
       setSubmissionsLoading(true);
-      const submissionsData = await submissionService.getSubmissionList({});
+      const submissionsData = await submissionService.getSubmissionList({
+        classId: filters?.classId,
+      });
       setSubmissions(submissionsData);
     } catch (error) {
       console.error("Error fetching submissions:", error);

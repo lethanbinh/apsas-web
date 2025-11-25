@@ -60,6 +60,11 @@ interface OverviewTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -67,6 +72,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   chartData,
   loading,
   onRefresh,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
@@ -84,82 +90,79 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const wb = XLSX.utils.book_new();
       const dataToExport = filteredChartData || chartData;
 
-      // All Statistics Cards Sheet (8 cards total)
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Users", overview.users.total],
-        ["Total Classes", overview.academic.totalClasses],
-        ["Total Submissions", overview.submissions.total],
-        ["Completion Rate (%)", overview.submissions.completionRate],
-        ["Active Semesters", overview.academic.activeSemesters],
-        ["Assessment Templates", overview.assessments.totalTemplates],
-        ["Grading Groups", overview.grading.totalGradingGroups],
-        ["Pending Requests", overview.grading.pendingAssignRequests],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
+      // Combine all data into one sheet with sections
+      const exportData: any[] = [];
+      
+      // Section 1: Key Statistics
+      exportData.push(["OVERVIEW - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Users", overview.users.total]);
+      exportData.push(["Total Classes", overview.academic.totalClasses]);
+      exportData.push(["Total Submissions", overview.submissions.total]);
+      exportData.push(["Completion Rate (%)", overview.submissions.completionRate]);
+      exportData.push(["Active Semesters", overview.academic.activeSemesters]);
+      exportData.push(["Assessment Templates", overview.assessments.totalTemplates]);
+      exportData.push(["Grading Groups", overview.grading.totalGradingGroups]);
+      exportData.push(["Pending Requests", overview.grading.pendingAssignRequests]);
+      exportData.push([]); // Empty row
 
-      // User Growth Chart Data (Line Chart)
+      // Section 2: User Growth
       if (dataToExport.userGrowth && dataToExport.userGrowth.length > 0) {
-        const userGrowthData = dataToExport.userGrowth.map((item) => ({
-          Month: item.month,
-          "Total Users": item.total,
-          Students: item.students,
-          Lecturers: item.lecturers,
-        }));
-        const ws2 = XLSX.utils.json_to_sheet(userGrowthData);
-        XLSX.utils.book_append_sheet(wb, ws2, "User Growth");
+        exportData.push(["USER GROWTH"]);
+        exportData.push(["Month", "Total Users", "Students", "Lecturers"]);
+        dataToExport.userGrowth.forEach((item) => {
+          exportData.push([item.month, item.total, item.students, item.lecturers]);
+        });
+        exportData.push([]); // Empty row
       }
 
-      // Semester Activity Chart Data
+      // Section 3: Semester Activity
       if (dataToExport.semesterActivity && dataToExport.semesterActivity.length > 0) {
-        const semesterData = dataToExport.semesterActivity.map((item) => ({
-          Semester: item.semester,
-          Courses: item.courses,
-          Classes: item.classes,
-          Assessments: item.assessments,
-          Submissions: item.submissions,
-        }));
-        const ws3 = XLSX.utils.json_to_sheet(semesterData);
-        XLSX.utils.book_append_sheet(wb, ws3, "Semester Activity");
+        exportData.push(["SEMESTER ACTIVITY"]);
+        exportData.push(["Semester", "Courses", "Classes", "Assessments", "Submissions"]);
+        dataToExport.semesterActivity.forEach((item) => {
+          exportData.push([item.semester, item.courses, item.classes, item.assessments, item.submissions]);
+        });
+        exportData.push([]); // Empty row
       }
 
-      // Assessment Distribution Chart Data (Pie Chart)
+      // Section 4: Assessment Distribution
       if (dataToExport.assessmentDistribution && dataToExport.assessmentDistribution.length > 0) {
         const totalAssessments = dataToExport.assessmentDistribution.reduce((sum, item) => sum + item.count, 0);
-        const assessmentData = dataToExport.assessmentDistribution.map((item) => ({
-          Type: item.type,
-          Count: item.count,
-          Percentage: totalAssessments > 0 ? ((item.count / totalAssessments) * 100).toFixed(2) + "%" : "0%",
-        }));
-        const ws4 = XLSX.utils.json_to_sheet(assessmentData);
-        XLSX.utils.book_append_sheet(wb, ws4, "Assessment Distribution");
+        exportData.push(["ASSESSMENT DISTRIBUTION"]);
+        exportData.push(["Type", "Count", "Percentage"]);
+        dataToExport.assessmentDistribution.forEach((item) => {
+          const percentage = totalAssessments > 0 ? ((item.count / totalAssessments) * 100).toFixed(2) + "%" : "0%";
+          exportData.push([item.type, item.count, percentage]);
+        });
+        exportData.push([]); // Empty row
       }
 
-      // Submission Status Chart Data (Bar Chart)
+      // Section 5: Submission Status
       if (dataToExport.submissionStatus && dataToExport.submissionStatus.length > 0) {
-        const submissionData = dataToExport.submissionStatus.map((item) => ({
-          Status: item.status,
-          Count: item.count,
-        }));
-        const ws5 = XLSX.utils.json_to_sheet(submissionData);
-        XLSX.utils.book_append_sheet(wb, ws5, "Submission Status");
+        exportData.push(["SUBMISSION STATUS"]);
+        exportData.push(["Status", "Count"]);
+        dataToExport.submissionStatus.forEach((item) => {
+          exportData.push([item.status, item.count]);
+        });
+        exportData.push([]); // Empty row
       }
 
-      // Grading Performance Chart Data (Line Chart)
+      // Section 6: Grading Performance
       if (dataToExport.gradingPerformance && dataToExport.gradingPerformance.length > 0) {
-        const gradingData = dataToExport.gradingPerformance.map((item) => ({
-          Date: item.date,
-          Graded: item.graded,
-          Pending: item.pending,
-        }));
-        const ws6 = XLSX.utils.json_to_sheet(gradingData);
-        XLSX.utils.book_append_sheet(wb, ws6, "Grading Performance");
+        exportData.push(["GRADING PERFORMANCE"]);
+        exportData.push(["Date", "Graded", "Pending"]);
+        dataToExport.gradingPerformance.forEach((item) => {
+          exportData.push([item.date, item.graded, item.pending]);
+        });
       }
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Overview");
 
       const fileName = `Dashboard_Overview_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      message.success("All dashboard data exported successfully");
+      message.success("Overview data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
       message.error("Failed to export dashboard data");

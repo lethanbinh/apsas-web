@@ -55,12 +55,18 @@ interface AcademicTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const AcademicTab: React.FC<AcademicTabProps> = ({
   overview,
   chartData,
   loading,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [semesters, setSemesters] = useState<Semester[]>([]);
@@ -77,85 +83,91 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
     try {
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
+      const exportData: any[] = [];
 
-      // All Statistics Cards Sheet (6 cards)
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Semesters", overview.academic.totalSemesters],
-        ["Active Semesters", overview.academic.activeSemesters],
-        ["Total Classes", overview.academic.totalClasses],
-        ["Classes Without Students", overview.academic.classesWithoutStudents || 0],
-        ["Average Students Per Class", overview.academic.averageStudentsPerClass?.toFixed(1) || 0],
-        ["Semester Courses", overview.academic.semesterCourses || 0],
-        ["Total Course Elements", overview.academic.totalCourseElements || 0],
-        ["Total Students (All Classes)", classes.reduce((sum, cls) => sum + (parseInt(cls.studentCount || "0", 10) || 0), 0)],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
+      // Section 1: Key Statistics
+      exportData.push(["ACADEMIC - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Semesters", overview.academic.totalSemesters]);
+      exportData.push(["Active Semesters", overview.academic.activeSemesters]);
+      exportData.push(["Total Classes", overview.academic.totalClasses]);
+      exportData.push(["Classes Without Students", overview.academic.classesWithoutStudents || 0]);
+      exportData.push(["Average Students Per Class", overview.academic.averageStudentsPerClass?.toFixed(1) || 0]);
+      exportData.push(["Semester Courses", overview.academic.semesterCourses || 0]);
+      exportData.push(["Total Course Elements", overview.academic.totalCourseElements || 0]);
+      exportData.push(["Total Students (All Classes)", classes.reduce((sum, cls) => sum + (parseInt(cls.studentCount || "0", 10) || 0), 0)]);
+      exportData.push([]);
 
-      // Semester Activity Chart Data (Bar Chart)
+      // Section 2: Semester Activity
       if (chartData?.semesterActivity && chartData.semesterActivity.length > 0) {
-        const semesterActivitySheet = chartData.semesterActivity.map((item: any) => ({
-          Semester: item.semester,
-          Classes: item.classes,
-          Courses: item.courses,
-          Assessments: item.assessments,
-          Submissions: item.submissions,
-        }));
-        const ws2 = XLSX.utils.json_to_sheet(semesterActivitySheet);
-        XLSX.utils.book_append_sheet(wb, ws2, "Semester Activity");
+        exportData.push(["SEMESTER ACTIVITY"]);
+        exportData.push(["Semester", "Classes", "Courses", "Assessments", "Submissions"]);
+        chartData.semesterActivity.forEach((item: any) => {
+          exportData.push([item.semester, item.classes, item.courses, item.assessments, item.submissions]);
+        });
+        exportData.push([]);
       }
 
-      // Classes by Semester Chart Data (Line Chart)
+      // Section 3: Classes by Semester
       if (overview.academic.classesBySemester && overview.academic.classesBySemester.length > 0) {
-        const classesBySemSheet = overview.academic.classesBySemester.map((item: any) => ({
-          "Semester Code": item.semesterCode,
-          "Class Count": item.classCount,
-          "Student Count": item.studentCount,
-        }));
-        const ws3 = XLSX.utils.json_to_sheet(classesBySemSheet);
-        XLSX.utils.book_append_sheet(wb, ws3, "Classes by Semester");
+        exportData.push(["CLASSES BY SEMESTER"]);
+        exportData.push(["Semester Code", "Class Count", "Student Count"]);
+        overview.academic.classesBySemester.forEach((item: any) => {
+          exportData.push([item.semesterCode, item.classCount, item.studentCount]);
+        });
+        exportData.push([]);
       }
 
-      // All Semesters Table (Filtered)
-      const semestersData = filteredSemesters.map((sem, index) => ({
-        "No": index + 1,
-        "ID": sem.id,
-        "Semester Code": sem.semesterCode,
-        "Academic Year": sem.academicYear,
-        "Start Date": dayjs(sem.startDate).format("YYYY-MM-DD"),
-        "End Date": dayjs(sem.endDate).format("YYYY-MM-DD"),
-        "Note": sem.note || "",
-        "Status": dayjs().isAfter(dayjs(sem.startDate)) && dayjs().isBefore(dayjs(sem.endDate)) ? "Active" : "Inactive",
-      }));
-      const ws4 = XLSX.utils.json_to_sheet(semestersData);
-      XLSX.utils.book_append_sheet(wb, ws4, "All Semesters");
+      // Section 4: All Semesters
+      exportData.push(["ALL SEMESTERS"]);
+      exportData.push(["No", "ID", "Semester Code", "Academic Year", "Start Date", "End Date", "Note", "Status"]);
+      filteredSemesters.forEach((sem, index) => {
+        exportData.push([
+          index + 1,
+          sem.id,
+          sem.semesterCode,
+          sem.academicYear,
+          dayjs(sem.startDate).format("YYYY-MM-DD"),
+          dayjs(sem.endDate).format("YYYY-MM-DD"),
+          sem.note || "",
+          dayjs().isAfter(dayjs(sem.startDate)) && dayjs().isBefore(dayjs(sem.endDate)) ? "Active" : "Inactive",
+        ]);
+      });
+      exportData.push([]);
 
-      // All Classes Table (Filtered)
-      const classesData = filteredClasses.map((cls, index) => ({
-        "No": index + 1,
-        "ID": cls.id,
-        "Class Code": cls.classCode || "",
-        "Course Name": cls.courseName || "",
-        "Semester": cls.semesterName || "",
-        "Lecturer": cls.lecturerName || "",
-        "Students": parseInt(cls.studentCount || "0", 10),
-      }));
-      const ws5 = XLSX.utils.json_to_sheet(classesData);
-      XLSX.utils.book_append_sheet(wb, ws5, "All Classes");
+      // Section 5: All Classes
+      exportData.push(["ALL CLASSES"]);
+      exportData.push(["No", "ID", "Class Code", "Course Name", "Semester", "Lecturer", "Students"]);
+      filteredClasses.forEach((cls, index) => {
+        exportData.push([
+          index + 1,
+          cls.id,
+          cls.classCode || "",
+          cls.courseName || "",
+          cls.semesterName || "",
+          cls.lecturerName || "",
+          parseInt(cls.studentCount || "0", 10),
+        ]);
+      });
+      exportData.push([]);
 
-      // Top Classes by Students
+      // Section 6: Top Classes by Students
       if (overview.academic.topClassesByStudents && overview.academic.topClassesByStudents.length > 0) {
-        const topClassesData = overview.academic.topClassesByStudents.map((item, index) => ({
-          "Rank": index + 1,
-          "Class Code": item.classCode,
-          "Course Name": item.courseName,
-          "Lecturer": item.lecturerName,
-          "Students": typeof item.studentCount === "string" ? parseInt(item.studentCount || "0", 10) : (item.studentCount || 0),
-        }));
-        const ws6 = XLSX.utils.json_to_sheet(topClassesData);
-        XLSX.utils.book_append_sheet(wb, ws6, "Top Classes by Students");
+        exportData.push(["TOP CLASSES BY STUDENTS"]);
+        exportData.push(["Rank", "Class Code", "Course Name", "Lecturer", "Students"]);
+        overview.academic.topClassesByStudents.forEach((item, index) => {
+          exportData.push([
+            index + 1,
+            item.classCode,
+            item.courseName,
+            item.lecturerName,
+            typeof item.studentCount === "string" ? parseInt(item.studentCount || "0", 10) : (item.studentCount || 0),
+          ]);
+        });
       }
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Academic");
 
       const fileName = `Academic_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
@@ -200,6 +212,11 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
   const filteredSemesters = useMemo(() => {
     let filtered = [...semesters];
 
+    // Apply global semester filter
+    if (filters?.semesterCode) {
+      filtered = filtered.filter((sem) => sem.semesterCode === filters.semesterCode);
+    }
+
     if (semesterSearch) {
       const searchLower = semesterSearch.toLowerCase();
       filtered = filtered.filter(
@@ -224,11 +241,27 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
     }
 
     return filtered;
-  }, [semesters, semesterSearch, semesterDateRange]);
+  }, [semesters, semesterSearch, semesterDateRange, filters?.semesterCode]);
 
   // Filter classes
   const filteredClasses = useMemo(() => {
     let filtered = [...classes];
+
+    // Apply global filters
+    if (filters?.classId) {
+      filtered = filtered.filter((cls) => cls.id === filters.classId);
+    }
+    if (filters?.courseId) {
+      // Need to check courseId from class data - this might need to be fetched
+      // For now, filter by courseName if available
+      filtered = filtered.filter((cls) => {
+        // This is a simplified filter - in reality, you'd need to map class to courseId
+        return true; // Placeholder - will need proper courseId mapping
+      });
+    }
+    if (filters?.semesterCode) {
+      filtered = filtered.filter((cls) => cls.semesterName === filters.semesterCode);
+    }
 
     if (classSearch) {
       const searchLower = classSearch.toLowerCase();
@@ -256,7 +289,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
     }
 
     return filtered;
-  }, [classes, classSearch, selectedSemester, classDateRange]);
+  }, [classes, classSearch, selectedSemester, classDateRange, filters]);
 
   if (!overview) return null;
 

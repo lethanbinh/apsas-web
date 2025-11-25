@@ -14,8 +14,9 @@ import {
   ReloadOutlined,
   UploadOutlined,
   UserOutlined,
+  TrophyOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Space, Spin, Tabs } from "antd";
+import { Alert, Button, Space, Spin, Tabs, Select, Card } from "antd";
 import { useEffect, useState } from "react";
 import AcademicTab from "./components/AcademicTab";
 import AssessmentsTab from "./components/AssessmentsTab";
@@ -23,7 +24,11 @@ import GradingTab from "./components/GradingTab";
 import OverviewTab from "./components/OverviewTab";
 import SubmissionsTab from "./components/SubmissionsTab";
 import UsersTab from "./components/UsersTab";
+import AcademicPerformanceTab from "./components/AcademicPerformanceTab";
 import styles from "./DashboardAdmin.module.css";
+import { classService } from "@/services/classService";
+import { semesterService } from "@/services/semesterService";
+import { courseElementService } from "@/services/courseElementService";
 
 const AdminDashboardPage = () => {
   const [loading, setLoading] = useState(true);
@@ -31,8 +36,20 @@ const AdminDashboardPage = () => {
   const [chartData, setChartData] = useState<ChartData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Filters
+  const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
+  const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(undefined);
+  const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | undefined>(undefined);
+  
+  // Filter options
+  const [classes, setClasses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [semesters, setSemesters] = useState<any[]>([]);
+  const [filtersLoading, setFiltersLoading] = useState(false);
 
   useEffect(() => {
+    fetchFilterOptions();
     fetchDashboardData();
     
     // Auto-refresh every 5 minutes
@@ -44,6 +61,36 @@ const AdminDashboardPage = () => {
       clearInterval(interval);
     };
   }, []);
+
+  const fetchFilterOptions = async () => {
+    try {
+      setFiltersLoading(true);
+      const [classesRes, semestersRes, courseElementsRes] = await Promise.all([
+        classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
+        semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+        courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
+      ]);
+
+      setClasses(classesRes.classes || []);
+      setSemesters(semestersRes || []);
+
+      // Extract unique courses from course elements
+      const uniqueCourses = new Map<number, any>();
+      courseElementsRes.forEach((ce) => {
+        if (ce.semesterCourse?.course) {
+          const course = ce.semesterCourse.course;
+          if (!uniqueCourses.has(course.id)) {
+            uniqueCourses.set(course.id, course);
+          }
+        }
+      });
+      setCourses(Array.from(uniqueCourses.values()));
+    } catch (err) {
+      console.error("Error fetching filter options:", err);
+    } finally {
+      setFiltersLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -65,6 +112,13 @@ const AdminDashboardPage = () => {
     }
   };
 
+  // Filter object to pass to tabs
+  const filterProps = {
+    classId: selectedClassId,
+    courseId: selectedCourseId,
+    semesterCode: selectedSemesterCode,
+  };
+
   const handleRefresh = () => {
     fetchDashboardData();
   };
@@ -84,6 +138,7 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
         />
       ),
     },
@@ -101,6 +156,7 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
         />
       ),
     },
@@ -118,6 +174,27 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
+        />
+      ),
+    },
+    {
+      key: "academic-performance",
+      label: (
+        <Space size={8}>
+          <TrophyOutlined />
+          <span>Academic Performance</span>
+        </Space>
+      ),
+      children: (
+        <AcademicPerformanceTab
+          loading={loading}
+          onRefresh={handleRefresh}
+          filters={{
+            classId: selectedClassId,
+            courseId: selectedCourseId,
+            semesterCode: selectedSemesterCode,
+          }}
         />
       ),
     },
@@ -135,6 +212,7 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
         />
       ),
     },
@@ -152,6 +230,7 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
         />
       ),
     },
@@ -169,6 +248,7 @@ const AdminDashboardPage = () => {
           chartData={chartData}
           loading={loading}
           onRefresh={handleRefresh}
+          filters={filterProps}
         />
       ),
     },
@@ -217,6 +297,57 @@ const AdminDashboardPage = () => {
             </Button>
           </Space>
         </div>
+
+        {/* Filters */}
+        <Card style={{ marginBottom: "1.5rem" }}>
+          <Space size="large" wrap>
+            <div>
+              <span style={{ marginRight: 8 }}>Class:</span>
+              <Select
+                style={{ width: 200 }}
+                placeholder="All Classes"
+                allowClear
+                value={selectedClassId}
+                onChange={setSelectedClassId}
+                loading={filtersLoading}
+                options={classes.map((c) => ({
+                  label: c.classCode,
+                  value: c.id,
+                }))}
+              />
+            </div>
+            <div>
+              <span style={{ marginRight: 8 }}>Course:</span>
+              <Select
+                style={{ width: 200 }}
+                placeholder="All Courses"
+                allowClear
+                value={selectedCourseId}
+                onChange={setSelectedCourseId}
+                loading={filtersLoading}
+                options={courses.map((c) => ({
+                  label: c.name,
+                  value: c.id,
+                }))}
+              />
+            </div>
+            <div>
+              <span style={{ marginRight: 8 }}>Semester:</span>
+              <Select
+                style={{ width: 200 }}
+                placeholder="All Semesters"
+                allowClear
+                value={selectedSemesterCode}
+                onChange={setSelectedSemesterCode}
+                loading={filtersLoading}
+                options={semesters.map((s) => ({
+                  label: s.semesterCode,
+                  value: s.semesterCode,
+                }))}
+              />
+            </div>
+          </Space>
+        </Card>
 
         {error && (
           <Alert

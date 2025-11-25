@@ -56,12 +56,18 @@ interface GradingTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const GradingTab: React.FC<GradingTabProps> = ({
   overview,
   chartData,
   loading,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [gradingGroups, setGradingGroups] = useState<any[]>([]);
@@ -81,109 +87,115 @@ const GradingTab: React.FC<GradingTabProps> = ({
     try {
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
-
-      // All Statistics Cards Sheet (6 cards)
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Grading Groups", overview.grading.totalGradingGroups],
-        ["Total Grading Sessions", overview.grading.totalGradingSessions],
-        ["Completed Sessions", overview.grading.completedGradingSessions || 0],
-        ["Processing Sessions", processingSessions.length],
-        ["Failed Sessions", failedSessions.length],
-        ["Pending Assign Requests", overview.grading.pendingAssignRequests],
-        ["Average Grading Time", overview.grading.averageGradingTime?.toFixed(2) || "N/A"],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
-
-      // Grading Session Status Distribution Chart Data (Pie Chart)
+      const exportData: any[] = [];
       const totalSessions = gradingSessions.length;
-      const sessionStatusData = [
-        { Status: "Completed", Count: completedSessions.length, Percentage: totalSessions > 0 ? ((completedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-        { Status: "Processing", Count: processingSessions.length, Percentage: totalSessions > 0 ? ((processingSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-        { Status: "Failed", Count: failedSessions.length, Percentage: totalSessions > 0 ? ((failedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-      ];
-      const ws2 = XLSX.utils.json_to_sheet(sessionStatusData);
-      XLSX.utils.book_append_sheet(wb, ws2, "Session Status Distribution");
-
-      // Grading Session Type Distribution Chart Data (Pie Chart)
       const aiSessions = gradingSessions.filter((s) => s.gradingType === 0).length;
       const lecturerSessions = gradingSessions.filter((s) => s.gradingType === 1).length;
       const bothSessions = gradingSessions.filter((s) => s.gradingType === 2).length;
-      const sessionTypeData = [
-        { Type: "AI", Count: aiSessions, Percentage: totalSessions > 0 ? ((aiSessions / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-        { Type: "Lecturer", Count: lecturerSessions, Percentage: totalSessions > 0 ? ((lecturerSessions / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-        { Type: "Both", Count: bothSessions, Percentage: totalSessions > 0 ? ((bothSessions / totalSessions) * 100).toFixed(2) + "%" : "0%" },
-      ];
-      const ws3 = XLSX.utils.json_to_sheet(sessionTypeData);
-      XLSX.utils.book_append_sheet(wb, ws3, "Session Type Distribution");
 
-      // Grading Performance Chart Data (Line Chart - Last 30 Days)
+      // Section 1: Key Statistics
+      exportData.push(["GRADING - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Grading Groups", overview.grading.totalGradingGroups]);
+      exportData.push(["Total Grading Sessions", overview.grading.totalGradingSessions]);
+      exportData.push(["Completed Sessions", overview.grading.completedGradingSessions || 0]);
+      exportData.push(["Processing Sessions", processingSessions.length]);
+      exportData.push(["Failed Sessions", failedSessions.length]);
+      exportData.push(["Pending Assign Requests", overview.grading.pendingAssignRequests]);
+      exportData.push(["Average Grading Time (hours)", overview.grading.averageGradingTime?.toFixed(2) || "N/A"]);
+      exportData.push([]);
+
+      // Section 2: Session Status Distribution
+      exportData.push(["GRADING SESSION STATUS DISTRIBUTION"]);
+      exportData.push(["Status", "Count", "Percentage"]);
+      exportData.push(["Completed", completedSessions.length, totalSessions > 0 ? ((completedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Processing", processingSessions.length, totalSessions > 0 ? ((processingSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Failed", failedSessions.length, totalSessions > 0 ? ((failedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push([]);
+
+      // Section 3: Session Type Distribution
+      exportData.push(["GRADING SESSION TYPE DISTRIBUTION"]);
+      exportData.push(["Type", "Count", "Percentage"]);
+      exportData.push(["AI", aiSessions, totalSessions > 0 ? ((aiSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Lecturer", lecturerSessions, totalSessions > 0 ? ((lecturerSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push(["Both", bothSessions, totalSessions > 0 ? ((bothSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
+      exportData.push([]);
+
+      // Section 4: Grading Performance (Last 30 Days)
       if (chartData?.gradingPerformance && chartData.gradingPerformance.length > 0) {
-        const gradingPerformanceData = chartData.gradingPerformance.map((item) => ({
-          Date: item.date,
-          Graded: item.graded,
-          Pending: item.pending,
-        }));
-        const ws4 = XLSX.utils.json_to_sheet(gradingPerformanceData);
-        XLSX.utils.book_append_sheet(wb, ws4, "Grading Performance");
+        exportData.push(["GRADING PERFORMANCE (LAST 30 DAYS)"]);
+        exportData.push(["Date", "Graded", "Pending"]);
+        chartData.gradingPerformance.forEach((item) => {
+          exportData.push([item.date, item.graded, item.pending]);
+        });
+        exportData.push([]);
       }
 
-      // Grading by Lecturer Chart Data (Bar Chart)
+      // Section 5: Grading by Lecturer
       if (overview.grading.gradingByLecturer && overview.grading.gradingByLecturer.length > 0) {
-        const gradingByLecturerData = overview.grading.gradingByLecturer.map((item) => ({
-          Lecturer: item.lecturerName,
-          "Session Count": item.sessionCount,
-          "Completed Count": item.completedCount,
-        }));
-        const ws8 = XLSX.utils.json_to_sheet(gradingByLecturerData);
-        XLSX.utils.book_append_sheet(wb, ws8, "Grading by Lecturer");
+        exportData.push(["GRADING BY LECTURER"]);
+        exportData.push(["Lecturer", "Session Count", "Completed Count"]);
+        overview.grading.gradingByLecturer.forEach((item) => {
+          exportData.push([item.lecturerName, item.sessionCount, item.completedCount]);
+        });
+        exportData.push([]);
       }
 
-      // All Grading Groups Table (Filtered)
-      const groupsData = filteredGradingGroups.map((group, index) => ({
-        "No": index + 1,
-        "ID": group.id,
-        "Lecturer": group.lecturerName || "",
-        "Lecturer Code": group.lecturerCode || "",
-        "Assessment Template": group.assessmentTemplateName || "",
-        "Submissions": group.submissionCount || 0,
-        "Created At": group.createdAt ? dayjs(group.createdAt).format("YYYY-MM-DD") : "",
-      }));
-      const ws5 = XLSX.utils.json_to_sheet(groupsData);
-      XLSX.utils.book_append_sheet(wb, ws5, "All Grading Groups");
+      // Section 6: All Grading Groups
+      exportData.push(["ALL GRADING GROUPS"]);
+      exportData.push(["No", "ID", "Lecturer", "Lecturer Code", "Assessment Template", "Submissions", "Created At"]);
+      filteredGradingGroups.forEach((group, index) => {
+        exportData.push([
+          index + 1,
+          group.id,
+          group.lecturerName || "",
+          group.lecturerCode || "",
+          group.assessmentTemplateName || "",
+          group.submissionCount || 0,
+          group.createdAt ? dayjs(group.createdAt).format("YYYY-MM-DD") : "",
+        ]);
+      });
+      exportData.push([]);
 
-      // All Grading Sessions Table (Filtered)
-      const sessionsData = filteredGradingSessions.map((session, index) => ({
-        "No": index + 1,
-        "ID": session.id,
-        "Student Name": session.submissionStudentName || "",
-        "Student Code": session.submissionStudentCode || "",
-        "Status": session.status === 0 ? "Processing" : session.status === 1 ? "Completed" : "Failed",
-        "Type": session.gradingType === 0 ? "AI" : session.gradingType === 1 ? "Lecturer" : "Both",
-        "Grade": session.grade || 0,
-        "Created At": session.createdAt ? dayjs(session.createdAt).format("YYYY-MM-DD HH:mm") : "",
-      }));
-      const ws6 = XLSX.utils.json_to_sheet(sessionsData);
-      XLSX.utils.book_append_sheet(wb, ws6, "All Grading Sessions");
+      // Section 7: All Grading Sessions
+      exportData.push(["ALL GRADING SESSIONS"]);
+      exportData.push(["No", "ID", "Student Name", "Student Code", "Status", "Type", "Grade", "Created At"]);
+      filteredGradingSessions.forEach((session, index) => {
+        exportData.push([
+          index + 1,
+          session.id,
+          session.submissionStudentName || "",
+          session.submissionStudentCode || "",
+          session.status === 0 ? "Processing" : session.status === 1 ? "Completed" : "Failed",
+          session.gradingType === 0 ? "AI" : session.gradingType === 1 ? "Lecturer" : "Both",
+          session.grade || 0,
+          session.createdAt ? dayjs(session.createdAt).format("YYYY-MM-DD HH:mm") : "",
+        ]);
+      });
+      exportData.push([]);
 
-      // All Assign Requests Table (Filtered)
-      const requestsData = filteredAssignRequests.map((request, index) => ({
-        "No": index + 1,
-        "ID": request.id,
-        "Course Element": request.courseElementName || "",
-        "Course": request.courseName || "",
-        "Assigned Lecturer": request.assignedLecturerName || "",
-        "Assigned By HOD": request.assignedByHODName || "",
-        "Status": request.status === 0 ? "Pending" : request.status === 1 ? "Approved" : "Rejected",
-        "Created At": request.createdAt ? dayjs(request.createdAt).format("YYYY-MM-DD") : "",
-      }));
-      const ws7 = XLSX.utils.json_to_sheet(requestsData);
-      XLSX.utils.book_append_sheet(wb, ws7, "All Assign Requests");
+      // Section 8: All Assign Requests
+      exportData.push(["ALL ASSIGN REQUESTS"]);
+      exportData.push(["No", "ID", "Course Element", "Course", "Assigned Lecturer", "Assigned By HOD", "Status", "Created At"]);
+      filteredAssignRequests.forEach((request, index) => {
+        exportData.push([
+          index + 1,
+          request.id,
+          request.courseElementName || "",
+          request.courseName || "",
+          request.assignedLecturerName || "",
+          request.assignedByHODName || "",
+          request.status === 0 ? "Pending" : request.status === 1 ? "Approved" : "Rejected",
+          request.createdAt ? dayjs(request.createdAt).format("YYYY-MM-DD") : "",
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Grading");
 
       const fileName = `Grading_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      message.success("All grading data exported successfully");
+      message.success("Grading data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
       message.error("Failed to export grading data");

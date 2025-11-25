@@ -1,41 +1,37 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import { Card, Row, Col, Statistic, Table, Tag, Typography, Space, Progress, Input, Select, DatePicker, Button, App } from "antd";
-import {
-  FileTextOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  UserOutlined,
-  CalendarOutlined,
-  SearchOutlined,
-  FilterOutlined,
-  FileExcelOutlined,
-  ExperimentOutlined,
-  BarChartOutlined,
-  WarningOutlined,
-  ThunderboltOutlined,
-  TrophyOutlined,
-} from "@ant-design/icons";
-import { Dayjs } from "dayjs";
-import * as XLSX from "xlsx";
-import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import type { ChartData, DashboardOverview } from "@/services/adminDashboardService";
 import { adminService } from "@/services/adminService";
 import { classAssessmentService } from "@/services/classAssessmentService";
-import type { DashboardOverview, ChartData } from "@/services/adminDashboardService";
-import dayjs from "dayjs";
+import {
+  BarChartOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  ExperimentOutlined,
+  FileExcelOutlined,
+  FileTextOutlined,
+  FilterOutlined,
+  SearchOutlined,
+  ThunderboltOutlined,
+  WarningOutlined
+} from "@ant-design/icons";
+import { App, Button, Card, Col, DatePicker, Input, Row, Select, Space, Statistic, Table, Tag, Typography } from "antd";
+import dayjs, { Dayjs } from "dayjs";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  XAxis,
+  YAxis
+} from "recharts";
+import * as XLSX from "xlsx";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -57,12 +53,18 @@ interface AssessmentsTabProps {
   chartData: ChartData | null;
   loading: boolean;
   onRefresh: () => void;
+  filters?: {
+    classId?: number;
+    courseId?: number;
+    semesterCode?: string;
+  };
 }
 
 const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
   overview,
   chartData,
   loading,
+  filters,
 }) => {
   const { message } = App.useApp();
   const [assessments, setAssessments] = useState<any[]>([]);
@@ -79,95 +81,107 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
     try {
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
+      const exportData: any[] = [];
+      const totalAssessments = overview.assessments.totalClassAssessments;
 
-      // All Statistics Cards Sheet (8 cards)
-      const statsData = [
-        ["Metric", "Value"],
-        ["Total Templates", overview.assessments.totalTemplates],
-        ["Total Class Assessments", overview.assessments.totalClassAssessments],
-        ["Assignments", overview.assessments.byType.assignment],
-        ["Labs", overview.assessments.byType.lab],
-        ["Practical Exams", overview.assessments.byType.practicalExam],
-        ["Active Assessments", overview.assessments.assessmentsByStatus?.active || 0],
-        ["Completed Assessments", overview.assessments.assessmentsByStatus?.completed || 0],
-        ["Pending Assessments", overview.assessments.assessmentsByStatus?.pending || 0],
-        ["Average Submissions/Assessment", overview.assessments.averageSubmissionsPerAssessment?.toFixed(1) || 0],
-        ["Assessments Without Submissions", overview.assessments.assessmentsWithoutSubmissions || 0],
-      ];
-      const ws1 = XLSX.utils.aoa_to_sheet(statsData);
-      XLSX.utils.book_append_sheet(wb, ws1, "Statistics");
+      // Section 1: Key Statistics
+      exportData.push(["ASSESSMENTS - KEY STATISTICS"]);
+      exportData.push(["Metric", "Value"]);
+      exportData.push(["Total Templates", overview.assessments.totalTemplates]);
+      exportData.push(["Total Class Assessments", totalAssessments]);
+      exportData.push(["Active Assessments", overview.assessments.assessmentsByStatus?.active || 0]);
+      exportData.push(["Completed Assessments", overview.assessments.assessmentsByStatus?.completed || 0]);
+      exportData.push(["Pending Assessments", overview.assessments.assessmentsByStatus?.pending || 0]);
+      exportData.push(["Average Submissions/Assessment", overview.assessments.averageSubmissionsPerAssessment?.toFixed(1) || 0]);
+      exportData.push(["Assessments Without Submissions", overview.assessments.assessmentsWithoutSubmissions || 0]);
+      exportData.push([]);
 
-      // Assessment Type Distribution Chart Data (Pie Chart)
+      // Section 2: Assessments by Type
+      exportData.push(["ASSESSMENTS BY TYPE"]);
+      exportData.push(["Type", "Count", "Percentage"]);
       const assessmentDistribution = [
         { name: "Assignment", value: overview.assessments.byType.assignment },
         { name: "Lab", value: overview.assessments.byType.lab },
         { name: "Practical Exam", value: overview.assessments.byType.practicalExam },
       ];
-      const totalAssessments = assessmentDistribution.reduce((sum, item) => sum + item.value, 0);
-      const distributionData = assessmentDistribution.map((item) => ({
-        Type: item.name,
-        Count: item.value,
-        Percentage: totalAssessments > 0 ? ((item.value / totalAssessments) * 100).toFixed(2) + "%" : "0%",
-      }));
-      const ws2 = XLSX.utils.json_to_sheet(distributionData);
-      XLSX.utils.book_append_sheet(wb, ws2, "Assessment Distribution");
+      const totalByType = assessmentDistribution.reduce((sum, item) => sum + item.value, 0);
+      assessmentDistribution.forEach((item) => {
+        const percentage = totalByType > 0 ? ((item.value / totalByType) * 100).toFixed(2) + "%" : "0%";
+        exportData.push([item.name, item.value, percentage]);
+      });
+      exportData.push([]);
 
-      // Assessment Distribution Bar Chart Data
-      if (chartData?.assessmentDistribution && chartData.assessmentDistribution.length > 0) {
-        const barChartData = chartData.assessmentDistribution.map((item) => ({
-          Type: item.type,
-          Count: item.count,
-        }));
-        const ws3 = XLSX.utils.json_to_sheet(barChartData);
-        XLSX.utils.book_append_sheet(wb, ws3, "Assessment Distribution (Bar)");
-      }
-
-      // All Assessment Templates Table (Filtered)
-      const templatesData = filteredTemplates.map((tpl, index) => ({
-        "No": index + 1,
-        "ID": tpl.id,
-        "Template Name": tpl.name || "",
-        "Type": tpl.templateType === 0 ? "Assignment" : tpl.templateType === 1 ? "Lab" : "Practical Exam",
-        "Course Element": tpl.courseElementName || "",
-        "Lecturer": tpl.lecturerName || "",
-        "Description": tpl.description || "",
-        "Created At": tpl.createdAt ? dayjs(tpl.createdAt).format("YYYY-MM-DD") : "",
-      }));
-      const ws4 = XLSX.utils.json_to_sheet(templatesData);
-      XLSX.utils.book_append_sheet(wb, ws4, "All Templates");
-
-      // All Class Assessments Table (Filtered)
-      const assessmentsData = filteredAssessments.map((ass, index) => ({
-        "No": index + 1,
-        "ID": ass.id,
-        "Assessment Name": ass.assessmentTemplateName || "",
-        "Course Element": ass.courseElementName || "",
-        "Course": ass.courseName || "",
-        "Lecturer": ass.lecturerName || "",
-        "Status": ass.status === 0 ? "Pending" : ass.status === 1 ? "Active" : "Completed",
-        "Start Date": ass.startAt ? dayjs(ass.startAt).format("YYYY-MM-DD") : "",
-        "End Date": ass.endAt ? dayjs(ass.endAt).format("YYYY-MM-DD") : "",
-        "Submissions": parseInt(ass.submissionCount || "0", 10),
-      }));
-      const ws5 = XLSX.utils.json_to_sheet(assessmentsData);
-      XLSX.utils.book_append_sheet(wb, ws5, "All Class Assessments");
-
-      // Top Assessments by Submissions
+      // Section 3: Top Assessments by Submissions
       if (overview.assessments.topAssessmentsBySubmissions && overview.assessments.topAssessmentsBySubmissions.length > 0) {
-        const topAssessmentsData = overview.assessments.topAssessmentsBySubmissions.map((ass, index) => ({
-          "Rank": index + 1,
-          "Assessment Name": ass.name,
-          "Course": ass.courseName,
-          "Submissions": ass.submissionCount,
-          "Lecturer": ass.lecturerName,
-        }));
-        const ws6 = XLSX.utils.json_to_sheet(topAssessmentsData);
-        XLSX.utils.book_append_sheet(wb, ws6, "Top Assessments");
+        exportData.push(["TOP ASSESSMENTS BY SUBMISSIONS"]);
+        exportData.push(["Rank", "Assessment Name", "Course Name", "Lecturer", "Submission Count"]);
+        overview.assessments.topAssessmentsBySubmissions.forEach((item, index) => {
+          exportData.push([
+            index + 1,
+            item.name,
+            item.courseName,
+            item.lecturerName,
+            item.submissionCount,
+          ]);
+        });
+        exportData.push([]);
       }
+
+      // Section 4: Upcoming Deadlines
+      if (overview.assessments.upcomingDeadlines && overview.assessments.upcomingDeadlines.length > 0) {
+        exportData.push(["UPCOMING DEADLINES (NEXT 7 DAYS)"]);
+        exportData.push(["Assessment Name", "End Date", "Days Remaining"]);
+        overview.assessments.upcomingDeadlines.forEach((item) => {
+          exportData.push([
+            item.name,
+            dayjs(item.endAt).format("YYYY-MM-DD"),
+            item.daysRemaining,
+          ]);
+        });
+        exportData.push([]);
+      }
+
+      // Section 5: All Assessment Templates
+      exportData.push(["ALL ASSESSMENT TEMPLATES"]);
+      exportData.push(["No", "ID", "Template Name", "Type", "Course Element", "Lecturer", "Description", "Created At"]);
+      filteredTemplates.forEach((tpl, index) => {
+        exportData.push([
+          index + 1,
+          tpl.id,
+          tpl.name || "",
+          tpl.templateType === 0 ? "Assignment" : tpl.templateType === 1 ? "Lab" : "Practical Exam",
+          tpl.courseElementName || "",
+          tpl.lecturerName || "",
+          tpl.description || "",
+          tpl.createdAt ? dayjs(tpl.createdAt).format("YYYY-MM-DD") : "",
+        ]);
+      });
+      exportData.push([]);
+
+      // Section 6: All Class Assessments
+      exportData.push(["ALL CLASS ASSESSMENTS"]);
+      exportData.push(["No", "ID", "Assessment Name", "Course Element", "Course", "Lecturer", "Status", "Start Date", "End Date", "Submissions"]);
+      filteredAssessments.forEach((ass, index) => {
+        exportData.push([
+          index + 1,
+          ass.id,
+          ass.assessmentTemplateName || "",
+          ass.courseElementName || "",
+          ass.courseName || "",
+          ass.lecturerName || "",
+          ass.status === 0 ? "Pending" : ass.status === 1 ? "Active" : "Completed",
+          ass.startAt ? dayjs(ass.startAt).format("YYYY-MM-DD") : "",
+          ass.endAt ? dayjs(ass.endAt).format("YYYY-MM-DD") : "",
+          parseInt(ass.submissionCount || "0", 10),
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, "Assessments");
 
       const fileName = `Assessments_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
       XLSX.writeFile(wb, fileName);
-      message.success("All assessments data exported successfully");
+      message.success("Assessments data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
       message.error("Failed to export assessments data");
@@ -182,15 +196,12 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
   const [templateDateRange, setTemplateDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [assessmentDateRange, setAssessmentDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     try {
       setAssessmentsLoading(true);
       const [assessmentsData, templatesData] = await Promise.all([
         classAssessmentService.getClassAssessments({
+          classId: filters?.classId,
           pageNumber: 1,
           pageSize: 1000,
         }),
@@ -204,6 +215,11 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       setAssessmentsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters?.classId, filters?.courseId, filters?.semesterCode]);
 
   // Filter templates
   const filteredTemplates = useMemo(() => {
@@ -267,6 +283,16 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
   const filteredAssessments = useMemo(() => {
     let filtered = [...assessments];
 
+    // Apply global filters
+    if (filters?.courseId) {
+      // Filter by course name - this is a simplified approach
+      // In reality, you'd need to map courseId to courseName
+      filtered = filtered.filter((ass) => {
+        // This would need proper courseId mapping
+        return true; // Placeholder
+      });
+    }
+
     if (assessmentSearch) {
       const searchLower = assessmentSearch.toLowerCase();
       filtered = filtered.filter(
@@ -296,7 +322,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
     }
 
     return filtered;
-  }, [assessments, assessmentSearch, selectedAssessmentStatus, assessmentDateRange]);
+  }, [assessments, assessmentSearch, selectedAssessmentStatus, assessmentDateRange, filters]);
 
   if (!overview) return null;
 
