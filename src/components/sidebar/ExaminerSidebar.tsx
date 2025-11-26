@@ -6,39 +6,26 @@ import { usePathname } from "next/navigation";
 import { Layout, Input, Menu } from "antd";
 import {
   SearchOutlined,
-  FileTextOutlined,
-  BarChartOutlined,
-  CalendarOutlined,
-  BookOutlined,
   ApartmentOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
-import styles from "../sidebar/StudentSidebar.module.css";
+import styles from "./StudentSidebar.module.css";
 
 const { Sider } = Layout;
 const menuItems = [
   {
-    key: "/hod/semester-plans",
+    key: "/examiner/grading-groups",
+    icon: <ApartmentOutlined />,
+    label: <Link href="/examiner/grading-groups">Grading Groups</Link>,
+  },
+  {
+    key: "/examiner/templates",
     icon: <FileTextOutlined />,
-    label: <Link href="/hod/semester-plans">Semester plans</Link>,
-  },
-  {
-    key: "/hod/approval",
-    icon: <BarChartOutlined />,
-    label: <Link href="/hod/approval">Approval</Link>,
-  },
-  {
-    key: "/hod/semester-management",
-    icon: <CalendarOutlined />,
-    label: <Link href="/hod/semester-management">Semester management</Link>,
-  },
-  {
-    key: "/hod/course-management",
-    icon: <BookOutlined />,
-    label: <Link href="/hod/course-management">Course management</Link>,
+    label: <Link href="/examiner/templates">Templates</Link>,
   },
 ];
 
-export default function HeadOfDepartmentSidebar() {
+export default function ExaminerSidebar() {
   const pathname = usePathname();
 
   const activeKey = useMemo(() => {
@@ -70,3 +57,4 @@ export default function HeadOfDepartmentSidebar() {
     </Sider>
   );
 }
+

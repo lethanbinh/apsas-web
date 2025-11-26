@@ -1444,7 +1444,7 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const handleDownloadTemplate = () => {
+  const handleDownloadTemplate = async () => {
     if (!template) {
       notification.warning({ message: "No template selected" });
       return;
@@ -1459,7 +1459,7 @@ export const LecturerTaskContent = ({
         ["Field", "Value", "Description"],
         ["Name", template.name || "", "Template name"],
         ["Description", template.description || "", "Template description"],
-        ["Template Type", template.templateType === 0 ? "DSA (0)" : template.templateType === 1 ? "WEBAPI (1)" : template.templateType === 2 ? "Lab (2)" : "Practical Exam (3)", "0: DSA, 1: WEBAPI, 2: Lab, 3: Practical Exam"],
+        ["Template Type", template.templateType === 0 ? "DSA (0)" : "WEBAPI (1)", "0: DSA, 1: WEBAPI"],
         [],
         ["INSTRUCTIONS:"],
         ["1. Fill in the Name, Description, and Template Type fields above"],
@@ -1470,60 +1470,187 @@ export const LecturerTaskContent = ({
       const templateWs = XLSX.utils.aoa_to_sheet(templateData);
       XLSX.utils.book_append_sheet(wb, templateWs, "Assessment Template");
 
-      // Sheet 2: Papers
-      const papersData = [
-        ["PAPERS"],
-        ["Name", "Description", "Language", "Instructions"],
-        ["Paper 1", "Description for Paper 1", "CSharp", "Language: CSharp (0), C (1), Java (2)"],
-        ["Paper 2", "Description for Paper 2", "C", ""],
-        [],
-        ["INSTRUCTIONS:"],
-        ["- Name: Paper name (required)"],
-        ["- Description: Paper description (optional)"],
-        ["- Language: CSharp (0), C (1), or Java (2)"],
-        ["- Reference papers by name in the Questions sheet"],
-      ];
+      // Sheet 2: Papers - Use actual data if available, otherwise use sample
+      let papersData: any[][];
+      if (papers.length > 0) {
+        // Deduplicate papers by name, description, and language
+        const papersMap = new Map<string, AssessmentPaper>();
+        for (const paper of papers) {
+          const key = `${paper.name}|${paper.description || ""}|${paper.language || 0}`;
+          if (!papersMap.has(key)) {
+            papersMap.set(key, paper);
+          }
+        }
+        const uniquePapers = Array.from(papersMap.values());
+        
+        papersData = [
+          ["PAPERS"],
+          ["Name", "Description", "Language", "Instructions"],
+        ];
+        for (const paper of uniquePapers) {
+          const langStr = paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "CSharp";
+          papersData.push([paper.name, paper.description || "", langStr, ""]);
+        }
+        papersData.push([]);
+        papersData.push(["INSTRUCTIONS:"]);
+        papersData.push(["- Name: Paper name (required)"]);
+        papersData.push(["- Description: Paper description (optional)"]);
+        papersData.push(["- Language: CSharp (0), C (1), or Java (2)"]);
+        papersData.push(["- Reference papers by name in the Questions sheet"]);
+      } else {
+        // Sample data (no duplicates)
+        papersData = [
+          ["PAPERS"],
+          ["Name", "Description", "Language", "Instructions"],
+          ["Paper 1", "Description for Paper 1", "CSharp", "Language: CSharp (0), C (1), Java (2)"],
+          [],
+          ["INSTRUCTIONS:"],
+          ["- Name: Paper name (required)"],
+          ["- Description: Paper description (optional)"],
+          ["- Language: CSharp (0), C (1), or Java (2)"],
+          ["- Reference papers by name in the Questions sheet"],
+        ];
+      }
       const papersWs = XLSX.utils.aoa_to_sheet(papersData);
       XLSX.utils.book_append_sheet(wb, papersWs, "Papers");
 
-      // Sheet 3: Questions
-      const questionsData = [
-        ["QUESTIONS"],
-        ["Paper Name", "Question Number", "Question Text", "Sample Input", "Sample Output", "Score", "Instructions"],
-        ["Paper 1", 1, "Write a function to calculate factorial", "5", "120", 10, "Paper Name must match a paper from Papers sheet"],
-        ["Paper 1", 2, "Write a function to find maximum", "4 9 2", "9", 10, ""],
-        ["Paper 2", 1, "Write a function to reverse string", "hello", "olleh", 10, ""],
-        [],
-        ["INSTRUCTIONS:"],
-        ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
-        ["- Question Number: Sequential number for questions in the same paper (required)"],
-        ["- Question Text: The question description (required)"],
-        ["- Sample Input: Example input for testing (optional)"],
-        ["- Sample Output: Expected output for the sample input (optional)"],
-        ["- Score: Maximum score for this question (required)"],
-        ["- Reference questions by Question Number in the Rubrics sheet"],
-      ];
+      // Sheet 3: Questions - Use actual data if available, otherwise use sample
+      let questionsData: any[][];
+      if (papers.length > 0 && Object.keys(allQuestions).length > 0) {
+        // Collect all questions and deduplicate
+        const questionsMap = new Map<string, { paperName: string; question: AssessmentQuestion }>();
+        for (const paper of papers) {
+          const questions = allQuestions[paper.id] || [];
+          for (const question of questions) {
+            const key = `${paper.name}|${question.questionNumber || 0}|${question.questionText || ""}|${question.questionSampleInput || ""}|${question.questionSampleOutput || ""}|${question.score || 0}`;
+            if (!questionsMap.has(key)) {
+              questionsMap.set(key, { paperName: paper.name, question });
+            }
+          }
+        }
+        const uniqueQuestions = Array.from(questionsMap.values());
+        
+        questionsData = [
+          ["QUESTIONS"],
+          ["Paper Name", "Question Number", "Question Text", "Sample Input", "Sample Output", "Score", "Instructions"],
+        ];
+        for (const { paperName, question } of uniqueQuestions) {
+          questionsData.push([
+            paperName,
+            question.questionNumber || 0,
+            question.questionText || "",
+            question.questionSampleInput || "",
+            question.questionSampleOutput || "",
+            question.score || 0,
+            "",
+          ]);
+        }
+        questionsData.push([]);
+        questionsData.push(["INSTRUCTIONS:"]);
+        questionsData.push(["- Paper Name: Must match a paper name from the Papers sheet (required)"]);
+        questionsData.push(["- Question Number: Sequential number for questions in the same paper (required)"]);
+        questionsData.push(["- Question Text: The question description (required)"]);
+        questionsData.push(["- Sample Input: Example input for testing (optional)"]);
+        questionsData.push(["- Sample Output: Expected output for the sample input (optional)"]);
+        questionsData.push(["- Score: Maximum score for this question (required)"]);
+        questionsData.push(["- Reference questions by Question Number in the Rubrics sheet"]);
+      } else {
+        // Sample data (no duplicates)
+        questionsData = [
+          ["QUESTIONS"],
+          ["Paper Name", "Question Number", "Question Text", "Sample Input", "Sample Output", "Score", "Instructions"],
+          ["Paper 1", 1, "Write a function to calculate factorial", "5", "120", 10, "Paper Name must match a paper from Papers sheet"],
+          [],
+          ["INSTRUCTIONS:"],
+          ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
+          ["- Question Number: Sequential number for questions in the same paper (required)"],
+          ["- Question Text: The question description (required)"],
+          ["- Sample Input: Example input for testing (optional)"],
+          ["- Sample Output: Expected output for the sample input (optional)"],
+          ["- Score: Maximum score for this question (required)"],
+          ["- Reference questions by Question Number in the Rubrics sheet"],
+        ];
+      }
       const questionsWs = XLSX.utils.aoa_to_sheet(questionsData);
       XLSX.utils.book_append_sheet(wb, questionsWs, "Questions");
 
-      // Sheet 4: Rubrics
-      const rubricsData = [
-        ["RUBRICS"],
-        ["Paper Name", "Question Number", "Description", "Input", "Output", "Score", "Instructions"],
-        ["Paper 1", 1, "Correct input/output format", "4 9 2", "9", 5, "Paper Name and Question Number must match from Questions sheet"],
-        ["Paper 1", 1, "Handles edge cases", "0", "0", 3, ""],
-        ["Paper 1", 1, "Code efficiency", "", "", 2, ""],
-        ["Paper 1", 2, "Correct input/output format", "5", "120", 5, ""],
-        ["Paper 1", 2, "Handles large numbers", "20", "2432902008176640000", 5, ""],
-        [],
-        ["INSTRUCTIONS:"],
-        ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
-        ["- Question Number: Must match a question number from the Questions sheet (required)"],
-        ["- Description: Rubric description (required)"],
-        ["- Input: Test input for this rubric (optional)"],
-        ["- Output: Expected output for this input (optional)"],
-        ["- Score: Points for this rubric (required)"],
-      ];
+      // Sheet 4: Rubrics - Use actual data if available, otherwise use sample
+      let rubricsData: any[][];
+      if (papers.length > 0 && Object.keys(allQuestions).length > 0) {
+        // Fetch all rubrics for all questions
+        const allRubrics: Array<{ paperName: string; questionNumber: number; rubric: RubricItem }> = [];
+        for (const paper of papers) {
+          const questions = allQuestions[paper.id] || [];
+          for (const question of questions) {
+            try {
+              const rubricsResponse = await rubricItemService.getRubricsForQuestion({
+                assessmentQuestionId: question.id,
+                pageNumber: 1,
+                pageSize: 100,
+              });
+              for (const rubric of rubricsResponse.items) {
+                allRubrics.push({
+                  paperName: paper.name,
+                  questionNumber: question.questionNumber || 0,
+                  rubric,
+                });
+              }
+            } catch (error) {
+              console.error(`Failed to fetch rubrics for question ${question.id}:`, error);
+            }
+          }
+        }
+        
+        // Deduplicate rubrics
+        const rubricsMap = new Map<string, { paperName: string; questionNumber: number; rubric: RubricItem }>();
+        for (const item of allRubrics) {
+          const key = `${item.paperName}|${item.questionNumber}|${item.rubric.description || ""}|${item.rubric.input || ""}|${item.rubric.output || ""}|${item.rubric.score || 0}`;
+          if (!rubricsMap.has(key)) {
+            rubricsMap.set(key, item);
+          }
+        }
+        const uniqueRubrics = Array.from(rubricsMap.values());
+        
+        rubricsData = [
+          ["RUBRICS"],
+          ["Paper Name", "Question Number", "Description", "Input", "Output", "Score", "Instructions"],
+        ];
+        for (const { paperName, questionNumber, rubric } of uniqueRubrics) {
+          rubricsData.push([
+            paperName,
+            questionNumber,
+            rubric.description || "",
+            rubric.input || "",
+            rubric.output || "",
+            rubric.score || 0,
+            "",
+          ]);
+        }
+        rubricsData.push([]);
+        rubricsData.push(["INSTRUCTIONS:"]);
+        rubricsData.push(["- Paper Name: Must match a paper name from the Papers sheet (required)"]);
+        rubricsData.push(["- Question Number: Must match a question number from the Questions sheet (required)"]);
+        rubricsData.push(["- Description: Rubric description (required)"]);
+        rubricsData.push(["- Input: Test input for this rubric (optional)"]);
+        rubricsData.push(["- Output: Expected output for this input (optional)"]);
+        rubricsData.push(["- Score: Points for this rubric (required)"]);
+      } else {
+        // Sample data (no duplicates)
+        rubricsData = [
+          ["RUBRICS"],
+          ["Paper Name", "Question Number", "Description", "Input", "Output", "Score", "Instructions"],
+          ["Paper 1", 1, "Correct input/output format", "4 9 2", "9", 5, "Paper Name and Question Number must match from Questions sheet"],
+          ["Paper 1", 1, "Handles edge cases", "0", "0", 3, ""],
+          [],
+          ["INSTRUCTIONS:"],
+          ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
+          ["- Question Number: Must match a question number from the Questions sheet (required)"],
+          ["- Description: Rubric description (required)"],
+          ["- Input: Test input for this rubric (optional)"],
+          ["- Output: Expected output for this input (optional)"],
+          ["- Score: Points for this rubric (required)"],
+        ];
+      }
       const rubricsWs = XLSX.utils.aoa_to_sheet(rubricsData);
       XLSX.utils.book_append_sheet(wb, rubricsWs, "Rubrics");
 
@@ -1578,8 +1705,14 @@ export const LecturerTaskContent = ({
             const typeStr = String(row[1]);
             if (typeStr.includes("0")) templateType = 0;
             else if (typeStr.includes("1")) templateType = 1;
-            else if (typeStr.includes("2")) templateType = 2;
-            else if (typeStr.includes("3")) templateType = 3;
+            else {
+              // Default to 0 if invalid type is provided
+              templateType = 0;
+              notification.warning({
+                message: "Invalid Template Type",
+                description: `Template type "${typeStr}" is not valid. Only 0 (DSA) and 1 (WEBAPI) are accepted. Defaulting to 0 (DSA).`,
+              });
+            }
           }
         }
       }
@@ -1643,7 +1776,8 @@ export const LecturerTaskContent = ({
       const papersRows = XLSX.utils.sheet_to_json(papersSheet, { header: 1 }) as any[][];
       
       // Skip header rows (first 2 rows)
-      const paperData: Array<{ name: string; description: string; language: number }> = [];
+      // Use Map to deduplicate papers by name, description, and language
+      const paperDataMap = new Map<string, { name: string; description: string; language: number }>();
       for (let i = 2; i < papersRows.length; i++) {
         const row = papersRows[i];
         if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
@@ -1655,9 +1789,14 @@ export const LecturerTaskContent = ({
             if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
             else if (langStr.includes("java")) language = 2;
           }
-          paperData.push({ name, description, language });
+          // Create unique key for paper (name + description + language)
+          const paperKey = `${name}|${description}|${language}`;
+          if (!paperDataMap.has(paperKey)) {
+            paperDataMap.set(paperKey, { name, description, language });
+          }
         }
       }
+      const paperData = Array.from(paperDataMap.values());
 
       // Read Questions sheet
       const questionsSheet = workbook.Sheets["Questions"];
@@ -1667,14 +1806,15 @@ export const LecturerTaskContent = ({
       const questionsRows = XLSX.utils.sheet_to_json(questionsSheet, { header: 1 }) as any[][];
       
       // Skip header rows
-      const questionData: Array<{
+      // Use Map to deduplicate questions by paperName, questionNumber, questionText, sampleInput, sampleOutput, and score
+      const questionDataMap = new Map<string, {
         paperName: string;
         questionNumber: number;
         questionText: string;
         sampleInput: string;
         sampleOutput: string;
         score: number;
-      }> = [];
+      }>();
       for (let i = 2; i < questionsRows.length; i++) {
         const row = questionsRows[i];
         if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
@@ -1685,10 +1825,15 @@ export const LecturerTaskContent = ({
           const sampleOutput = row[4] ? String(row[4]).trim() : "";
           const score = row[5] ? Number(row[5]) : 0;
           if (paperName && questionNumber > 0 && questionText) {
-            questionData.push({ paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
+            // Create unique key for question (paperName + questionNumber + questionText + sampleInput + sampleOutput + score)
+            const questionKey = `${paperName}|${questionNumber}|${questionText}|${sampleInput}|${sampleOutput}|${score}`;
+            if (!questionDataMap.has(questionKey)) {
+              questionDataMap.set(questionKey, { paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
+            }
           }
         }
       }
+      const questionData = Array.from(questionDataMap.values());
 
       // Read Rubrics sheet
       const rubricsSheet = workbook.Sheets["Rubrics"];
@@ -1698,14 +1843,15 @@ export const LecturerTaskContent = ({
       const rubricsRows = XLSX.utils.sheet_to_json(rubricsSheet, { header: 1 }) as any[][];
       
       // Skip header rows
-      const rubricData: Array<{
+      // Use Map to deduplicate rubrics by paperName, questionNumber, description, input, output, and score
+      const rubricDataMap = new Map<string, {
         paperName: string;
         questionNumber: number;
         description: string;
         input: string;
         output: string;
         score: number;
-      }> = [];
+      }>();
       for (let i = 2; i < rubricsRows.length; i++) {
         const row = rubricsRows[i];
         if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
@@ -1716,22 +1862,38 @@ export const LecturerTaskContent = ({
           const output = row[4] ? String(row[4]).trim() : "";
           const score = row[5] ? Number(row[5]) : 0;
           if (paperName && questionNumber > 0 && description) {
-            rubricData.push({ paperName, questionNumber, description, input, output, score });
+            // Create unique key for rubric (paperName + questionNumber + description + input + output + score)
+            const rubricKey = `${paperName}|${questionNumber}|${description}|${input}|${output}|${score}`;
+            if (!rubricDataMap.has(rubricKey)) {
+              rubricDataMap.set(rubricKey, { paperName, questionNumber, description, input, output, score });
+            }
           }
         }
       }
+      const rubricData = Array.from(rubricDataMap.values());
 
       // Create papers - using the template ID we just created/updated
+      // Use unique key (name|description|language) to map papers
       const createdPapers = new Map<string, AssessmentPaper>();
       for (const paper of paperData) {
         try {
+          const paperKey = `${paper.name}|${paper.description}|${paper.language}`;
+          // Check if paper already exists in map (shouldn't happen after deduplication, but just in case)
+          if (createdPapers.has(paperKey)) {
+            continue; // Skip if already created
+          }
           const createdPaper = await assessmentPaperService.createAssessmentPaper({
             name: paper.name,
             description: paper.description,
             assessmentTemplateId: currentTemplate.id, // Use the template ID from creation/update
             language: paper.language,
           });
-          createdPapers.set(paper.name, createdPaper);
+          createdPapers.set(paperKey, createdPaper);
+          // Also set by name for backward compatibility with question/rubric lookup
+          // But only if name is unique, otherwise use the full key
+          if (!createdPapers.has(paper.name)) {
+            createdPapers.set(paper.name, createdPaper);
+          }
         } catch (error: any) {
           console.error(`Failed to create paper ${paper.name}:`, error);
           notification.warning({
@@ -2298,13 +2460,13 @@ export const LecturerTaskContent = ({
                 )}
 
                 <Space>
-                  <Button 
-                    type="primary" 
-                    onClick={handleCreateTemplate}
-                    disabled={!newTemplateName.trim()}
-                  >
-                    Create Template
-                  </Button>
+                <Button 
+                  type="primary" 
+                  onClick={handleCreateTemplate}
+                  disabled={!newTemplateName.trim()}
+                >
+                  Create Template
+                </Button>
                   <Upload
                     fileList={importFileListForNewTemplate}
                     beforeUpload={(file) => {

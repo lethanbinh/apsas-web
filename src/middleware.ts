@@ -50,6 +50,7 @@ function mapRoleToNumber(role: string | number): number {
   if (roleLower === "lecturer") return 1;
   if (roleLower === "student") return 2;
   if (roleLower === "hod") return 3;
+  if (roleLower === "examiner") return 4;
   return 2; // Default to Student
 }
 
@@ -70,6 +71,7 @@ function hasAccess(pathname: string, userRole: number, allowedPaths: string[]): 
     1: "lecturer",
     2: "student",
     3: "hod",
+    4: "examiner",
   };
   
   // Get current user's role identifier
@@ -171,6 +173,7 @@ export function middleware(request: NextRequest) {
     1: "lecturer",
     2: "student",
     3: "hod",
+    4: "examiner",
   };
   
   const userRoleIdentifier = roleIdentifiers[userRole];
@@ -216,6 +219,12 @@ export function middleware(request: NextRequest) {
       "/profile",
       "/dashboard",
     ],
+    4: [
+      // Examiner routes - only Examiner can access
+      "/examiner",
+      "/profile",
+      "/dashboard",
+    ],
   };
 
   // Get allowed routes for user's role
@@ -245,6 +254,7 @@ function getDefaultRouteForRole(role: number, baseUrl: string): URL {
     1: "/home/lecturer", // Lecturer
     2: "/home/student", // Student
     3: "/hod/semester-plans", // HOD
+    4: "/examiner/grading-groups", // Examiner
   };
 
   const defaultRoute = defaultRoutes[role] || "/home/student";

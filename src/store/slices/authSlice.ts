@@ -132,6 +132,9 @@ export const loginUser = createAsyncThunk(
             : decoded.role === 'Lecturer' ? 1 
             : decoded.role === 'HOD' ? 3 
             : decoded.role === 'hod' ? 3 
+            : decoded.role === 'EXAMINER' ? 4 
+            : decoded.role === 'Examiner' ? 4 
+            : decoded.role === 'examiner' ? 4 
             : 2, // default to Student
         };
         
