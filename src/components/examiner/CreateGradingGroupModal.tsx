@@ -3,10 +3,11 @@
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { CourseElement, courseElementService } from "@/services/courseElementService";
 import { GradingGroup, gradingGroupService } from "@/services/gradingGroupService";
-import { gradingService } from "@/services/gradingService";
 import { Lecturer } from "@/services/lecturerService";
 import { Semester, SemesterCourse, SemesterPlanDetail, semesterService } from "@/services/semesterService";
 import { submissionService } from "@/services/submissionService";
+import { examinerService } from "@/services/examinerService";
+import { useAuth } from "@/hooks/useAuth";
 import { FileZipOutlined, InboxOutlined } from "@ant-design/icons";
 import type { UploadFile, UploadProps } from "antd";
 import {
@@ -79,6 +80,7 @@ export const CreateGradingGroupModal: React.FC<
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const { message: messageApi } = App.useApp();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open) {
@@ -200,6 +202,38 @@ export const CreateGradingGroupModal: React.FC<
     setError(null);
 
     try {
+      // Fetch examiner ID from service
+      let currentExaminerId: number | null = null;
+      
+      if (user && user.id) {
+        try {
+          const examiners = await examinerService.getExaminerList();
+          const currentUserAccountId = String(user.id);
+          console.log("Current user account ID:", currentUserAccountId);
+          console.log("Examiners:", examiners);
+          const matchingExaminer = examiners.find(
+            (ex) => ex.accountId === String(currentUserAccountId)
+          );
+          console.log("Matching examiner:", matchingExaminer);
+          if (matchingExaminer) {
+            currentExaminerId = Number(matchingExaminer.examinerId);
+          }
+        } catch (err) {
+          console.error("Failed to fetch examiner list:", err);
+        }
+      }
+
+      // Check if examiner ID is available
+      if (!currentExaminerId) {
+        const errorMsg = "Examiner information not found. Please contact administrator.";
+        setError(errorMsg);
+        messageApi.error(errorMsg);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("Creating grading group with examinerId:", currentExaminerId);
+
       // Validate duplicate assignment: check if lecturer + assessment template + semester already exists
       if (values.lecturerId && values.assessmentTemplateId) {
         const newSemesterCode = getSemesterCodeForTemplate(values.assessmentTemplateId);
@@ -231,6 +265,7 @@ export const CreateGradingGroupModal: React.FC<
       const group = await gradingGroupService.createGradingGroup({
         lecturerId: values.lecturerId,
         assessmentTemplateId: values.assessmentTemplateId || null,
+        createdByExaminerId: currentExaminerId,
       });
 
       messageApi.success("Teacher assigned successfully!");
@@ -268,56 +303,6 @@ export const CreateGradingGroupModal: React.FC<
       } catch (err) {
         console.error("Failed to fetch submissions:", err);
       }
-
-      // Step 4: Upload test file (the submission ZIP file) for each submission
-      // Match ZIP file with submission based on student code in file name
-      if (submissionZipFiles.length > 0 && submissions.length > 0) {
-        messageApi.info(`Uploading test files for ${submissions.length} submission(s)...`);
-        
-        // Extract student code from file name (STUXXXXXX.zip -> XXXXXX)
-        const extractStudentCode = (fileName: string): string | null => {
-          const match = fileName.match(/^STU(\d{6})\.zip$/i);
-          return match ? match[1] : null;
-        };
-
-        // Create a map of student code to file for quick lookup
-        const fileMap = new Map<string, File>();
-        submissionZipFiles.forEach(file => {
-          const studentCode = extractStudentCode(file.name);
-          if (studentCode) {
-            fileMap.set(studentCode, file);
-          }
-        });
-
-        const uploadPromises: Promise<any>[] = [];
-        
-        // Upload test file for each submission
-        for (const submission of submissions) {
-          const studentCode = submission.studentCode;
-          const testFile = fileMap.get(studentCode);
-          
-          if (testFile) {
-            uploadPromises.push(
-              gradingService.uploadTestFile(submission.id, testFile).catch(err => {
-                console.error(`Failed to upload test file for submission ${submission.id} (${studentCode}):`, err);
-                return null;
-              })
-            );
-          }
-        }
-
-        if (uploadPromises.length > 0) {
-          const results = await Promise.all(uploadPromises);
-          const successCount = results.filter(r => r !== null).length;
-          
-          if (successCount > 0) {
-            messageApi.success(`Test files uploaded for ${successCount}/${uploadPromises.length} submission(s)!`);
-          } else {
-            messageApi.warning("Failed to upload test files for all submissions.");
-          }
-        }
-      }
-
 
       onOk();
     } catch (err: any) {
@@ -465,7 +450,6 @@ export const CreateGradingGroupModal: React.FC<
                 <Text strong>Upload ZIP files containing submissions</Text>
                 <Text type="secondary" style={{ fontSize: 12 }}>
                   ZIP files will be extracted and submissions will be created automatically. 
-                  Each ZIP file will also be uploaded as test file for the corresponding submission (matched by student code).
                   You can select multiple files. Only ZIP files are accepted, maximum size 100MB per file.
                 </Text>
               </Space>

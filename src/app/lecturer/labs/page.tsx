@@ -40,6 +40,7 @@ import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import { gradingService } from "@/services/gradingService";
 import { RobotOutlined } from "@ant-design/icons";
 import { App } from "antd";
+import { semesterService } from "@/services/semesterService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -71,12 +72,16 @@ const LabDetailItem = ({
   classAssessment,
   submissions,
   onDeadlineSave,
+  semesterStartDate,
+  semesterEndDate,
 }: {
   lab: CourseElement;
   template?: AssessmentTemplate;
   classAssessment?: ClassAssessment;
   submissions: Submission[];
-  onDeadlineSave?: (courseElementId: number, newDate: dayjs.Dayjs | null) => void;
+  onDeadlineSave?: (courseElementId: number, startDate: dayjs.Dayjs | null, endDate: dayjs.Dayjs | null) => void;
+  semesterStartDate?: string;
+  semesterEndDate?: string;
 }) => {
   const router = useRouter();
   const { message } = App.useApp();
@@ -120,6 +125,16 @@ const LabDetailItem = ({
     if (submissions.length === 0) {
       message.warning("No submissions to grade");
       return;
+    }
+
+    // Check if semester has ended
+    if (semesterEndDate) {
+      const semesterEnd = dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh");
+      const now = dayjs().tz("Asia/Ho_Chi_Minh");
+      if (now.isAfter(semesterEnd, 'day')) {
+        message.warning("Cannot use batch grading when the semester has ended.");
+        return;
+      }
     }
 
     // Get assessmentTemplateId
@@ -185,8 +200,11 @@ const LabDetailItem = ({
               <Descriptions.Item label="Deadline">
                 <DeadlinePopover
                   id={lab.id.toString()}
-                  date={classAssessment?.endAt}
-                  onSave={(id, newDate) => onDeadlineSave(lab.id, newDate)}
+                  startDate={classAssessment?.startAt}
+                  endDate={classAssessment?.endAt}
+                  semesterStartDate={semesterStartDate}
+                  semesterEndDate={semesterEndDate}
+                  onSave={(id, startDate, endDate) => onDeadlineSave(lab.id, startDate, endDate)}
                 />
               </Descriptions.Item>
             </Descriptions>
@@ -202,6 +220,7 @@ const LabDetailItem = ({
                 icon={<RobotOutlined />}
                 onClick={handleBatchGrading}
                 loading={batchGradingLoading}
+                disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
               >
                 Batch Grade
               </Button>
@@ -268,6 +287,7 @@ const LabsPage = () => {
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [classAssessments, setClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
   const [submissions, setSubmissions] = useState<Map<number, Submission[]>>(new Map());
+  const [semesterInfo, setSemesterInfo] = useState<{ startDate: string; endDate: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -390,6 +410,37 @@ const LabsPage = () => {
         }
       }
 
+      // Fetch semester info from course element
+      let semesterStartDate: string | undefined;
+      let semesterEndDate: string | undefined;
+      try {
+        const classElement = allElements.find(
+          el => el.semesterCourseId.toString() === classData.semesterCourseId
+        );
+        if (classElement?.semesterCourse?.semester) {
+          semesterStartDate = classElement.semesterCourse.semester.startDate;
+          semesterEndDate = classElement.semesterCourse.semester.endDate;
+        } else {
+          // Fallback: fetch all semesters and find by semesterCourseId
+          const semesters = await semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 });
+          if (classElement?.semesterCourse?.semesterId) {
+            const semester = semesters.find(s => s.id === classElement.semesterCourse.semesterId);
+            if (semester) {
+              semesterStartDate = semester.startDate;
+              semesterEndDate = semester.endDate;
+            }
+          }
+        }
+        if (semesterStartDate && semesterEndDate) {
+          setSemesterInfo({
+            startDate: semesterStartDate,
+            endDate: semesterEndDate,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch semester info:", err);
+      }
+
       setLabs(filteredLabs);
       setTemplates(approvedTemplates);
       setClassAssessments(assessmentMap);
@@ -408,8 +459,36 @@ const LabsPage = () => {
 
   const { message } = App.useApp();
 
-  const handleDeadlineSave = async (courseElementId: number, newDate: dayjs.Dayjs | null) => {
-    if (!newDate || !selectedClassId) return;
+  const handleDeadlineSave = async (
+    courseElementId: number, 
+    startDate: dayjs.Dayjs | null, 
+    endDate: dayjs.Dayjs | null
+  ) => {
+    if (!startDate || !endDate || !selectedClassId) return;
+
+    // Validate dates
+    if (startDate.isAfter(endDate) || startDate.isSame(endDate)) {
+      message.error("Start date must be before end date");
+      return;
+    }
+
+    // Validate with semester dates if available
+    if (semesterInfo) {
+      const semesterStart = dayjs.utc(semesterInfo.startDate).tz("Asia/Ho_Chi_Minh");
+      const semesterEnd = dayjs.utc(semesterInfo.endDate).tz("Asia/Ho_Chi_Minh");
+      const startVietnam = startDate.tz("Asia/Ho_Chi_Minh");
+      const endVietnam = endDate.tz("Asia/Ho_Chi_Minh");
+
+      if (startVietnam.isBefore(semesterStart, 'day')) {
+        message.error(`Start date must be on or after semester start date (${semesterStart.format("DD/MM/YYYY")})`);
+        return;
+      }
+
+      if (endVietnam.isAfter(semesterEnd, 'day')) {
+        message.error(`End date must be on or before semester end date (${semesterEnd.format("DD/MM/YYYY")})`);
+        return;
+      }
+    }
 
     const classAssessment = classAssessments.get(courseElementId);
     const lab = labs.find(l => l.id === courseElementId);
@@ -421,16 +500,16 @@ const LabsPage = () => {
         await classAssessmentService.updateClassAssessment(classAssessment.id, {
           classId: Number(selectedClassId),
           assessmentTemplateId: classAssessment.assessmentTemplateId,
-          startAt: classAssessment.startAt || dayjs().toISOString(),
-          endAt: newDate.toISOString(),
+          startAt: startDate.toISOString(),
+          endAt: endDate.toISOString(),
         });
 
         // Update local state
         const updated = new Map(classAssessments);
         updated.set(courseElementId, {
           ...classAssessment,
-          endAt: newDate.toISOString(),
-          startAt: classAssessment.startAt || dayjs().toISOString(),
+          startAt: startDate.toISOString(),
+          endAt: endDate.toISOString(),
         });
         setClassAssessments(updated);
         message.success("Deadline updated successfully!");
@@ -449,8 +528,8 @@ const LabsPage = () => {
         const newClassAssessment = await classAssessmentService.createClassAssessment({
           classId: Number(selectedClassId),
           assessmentTemplateId: matchingTemplate.id,
-          startAt: dayjs().toISOString(),
-          endAt: newDate.toISOString(),
+          startAt: startDate.toISOString(),
+          endAt: endDate.toISOString(),
         });
 
         // Update local state
@@ -553,6 +632,8 @@ const LabsPage = () => {
                   classAssessment={approvedClassAssessment}
                   submissions={labSubmissions}
                   onDeadlineSave={handleDeadlineSave}
+                  semesterStartDate={semesterInfo?.startDate}
+                  semesterEndDate={semesterInfo?.endDate}
                 />
               </Panel>
             );

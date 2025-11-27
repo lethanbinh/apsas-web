@@ -42,6 +42,30 @@ export const Header: React.FC = () => {
   }, [user?.role, mounted]);
 
   const activeKey = useMemo(() => {
+    // Special handling for lecturer sidebar pages - should be treated as "my-classes"
+    if (user?.role === 1 && (
+      pathname.startsWith("/lecturer/info/") ||
+      pathname.startsWith("/lecturer/detail-assignment") ||
+      pathname.startsWith("/lecturer/labs") ||
+      pathname.startsWith("/lecturer/members")
+    )) {
+      return "my-classes";
+    }
+    
+    // Special handling for student sidebar pages and my-classes - should be treated as "my-classes"
+    if (user?.role === 2 && (
+      pathname.startsWith("/student/class-detail") ||
+      pathname.startsWith("/student/assignments") ||
+      pathname.startsWith("/student/submissions") ||
+      pathname.startsWith("/student/members") ||
+      pathname.startsWith("/student/labs") ||
+      pathname.startsWith("/student/my-grading-group") ||
+      pathname.startsWith("/student/assignment-grading") ||
+      pathname.startsWith("/classes/my-classes/student")
+    )) {
+      return "my-classes";
+    }
+    
     const sortedKeys = [...navigation].sort(
       (a, b) => b.href.length - a.href.length
     );
@@ -49,7 +73,7 @@ export const Header: React.FC = () => {
       pathname.startsWith(item.href)
     );
     return matchingItem?.key || "home";
-  }, [pathname, navigation]);
+  }, [pathname, navigation, user?.role]);
 
   const userMenuItems: MenuProps["items"] = [
     {

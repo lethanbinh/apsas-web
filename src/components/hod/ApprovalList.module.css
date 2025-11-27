@@ -46,8 +46,8 @@
 }
 
 .approvalCard :global(.ant-card-body) {
-    padding: 0;
-    /* Remove card padding */
+    padding: 24px;
+    /* Add padding on all sides */
 }
 
 /* Table customization */

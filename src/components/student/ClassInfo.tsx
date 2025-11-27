@@ -28,6 +28,8 @@ import { gradingService } from "@/services/gradingService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { classService } from "@/services/classService";
 import { gradingGroupService, GradingGroup } from "@/services/gradingGroupService";
+import { lecturerService } from "@/services/lecturerService";
+import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
 import { CourseElement } from "@/services/courseElementService";
 import { Submission } from "@/services/submissionService";
 import { FeedbackData } from "@/services/geminiService";
@@ -121,15 +123,178 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
                  name.includes("thi thực hành") || name.includes("kiểm tra thực hành");
         };
 
-        // Get all course elements for this class
+        // Get all course elements for this class (excluding PE)
         const allCourseElements = courseElementsRes.filter(ce => {
           const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
-          return classAssessment && classAssessment.classId === Number(selectedClassId);
+          return classAssessment && classAssessment.classId === Number(selectedClassId) && !isPracticalExam(ce);
         });
 
         const reportData: GradeReportData[] = [];
 
-        // Process each course element
+        // Process PE separately from grading groups (if selected)
+        if (exportTypes.practicalExam && user?.id) {
+          try {
+            // Get lecturerId from user
+            const lecturerList = await lecturerService.getLecturerList();
+            const currentLecturer = lecturerList.find(
+              (l) => l.accountId === user.id.toString()
+            );
+            
+            if (currentLecturer) {
+              const lecturerId = Number(currentLecturer.lecturerId);
+              
+              // Fetch all grading groups for this lecturer
+              const allGradingGroups = await gradingGroupService.getGradingGroups({
+                lecturerId: lecturerId,
+              });
+
+              // Fetch all submissions from all grading groups
+              const allPESubmissions: Submission[] = [];
+              for (const group of allGradingGroups) {
+                const groupSubmissions = await submissionService.getSubmissionList({
+                  gradingGroupId: group.id,
+                }).catch(() => []);
+                allPESubmissions.push(...groupSubmissions);
+              }
+
+              // Get unique assessmentTemplateIds from grading groups
+              const assessmentTemplateIds = Array.from(
+                new Set(
+                  allGradingGroups
+                    .filter((g) => g.assessmentTemplateId !== null && g.assessmentTemplateId !== undefined)
+                    .map((g) => Number(g.assessmentTemplateId))
+                )
+              );
+
+              // Fetch assessment templates
+              const assessmentTemplateMap = new Map<number, AssessmentTemplate>();
+              if (assessmentTemplateIds.length > 0) {
+                const allAssessmentTemplatesRes = await assessmentTemplateService.getAssessmentTemplates({
+                  pageNumber: 1,
+                  pageSize: 1000,
+                }).catch(() => ({ items: [] }));
+
+                allAssessmentTemplatesRes.items.forEach((template) => {
+                  if (assessmentTemplateIds.includes(template.id)) {
+                    assessmentTemplateMap.set(template.id, template);
+                  }
+                });
+              }
+
+              // Get unique courseElementIds from assessment templates
+              const courseElementIds = Array.from(
+                new Set(Array.from(assessmentTemplateMap.values()).map((t) => t.courseElementId))
+              );
+
+              // Fetch course elements
+              const courseElementMap = new Map<number, CourseElement>();
+              if (courseElementIds.length > 0) {
+                const allCourseElementsRes = await courseElementService.getCourseElements({
+                  pageNumber: 1,
+                  pageSize: 1000,
+                }).catch(() => []);
+
+                allCourseElementsRes.forEach((element) => {
+                  if (courseElementIds.includes(element.id)) {
+                    courseElementMap.set(element.id, element);
+                  }
+                });
+              }
+
+              // Group submissions by grading group and process
+              for (const group of allGradingGroups) {
+                const groupSubmissions = allPESubmissions.filter(s => s.gradingGroupId === group.id);
+                if (groupSubmissions.length === 0) continue;
+
+                const assessmentTemplate = group.assessmentTemplateId ? assessmentTemplateMap.get(Number(group.assessmentTemplateId)) : null;
+                if (!assessmentTemplate) continue;
+
+                const courseElement = courseElementMap.get(Number(assessmentTemplate.courseElementId));
+                if (!courseElement) continue;
+
+                // Fetch questions and rubrics
+                let questions: any[] = [];
+                const rubrics: { [questionId: number]: any[] } = {};
+
+                try {
+                  const papersRes = await assessmentPaperService.getAssessmentPapers({
+                    assessmentTemplateId: assessmentTemplate.id,
+                    pageNumber: 1,
+                    pageSize: 100,
+                  });
+
+                  for (const paper of papersRes.items) {
+                    const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+                      assessmentPaperId: paper.id,
+                      pageNumber: 1,
+                      pageSize: 100,
+                    });
+                    questions = [...questions, ...questionsRes.items];
+
+                    for (const question of questionsRes.items) {
+                      const rubricsRes = await rubricItemService.getRubricsForQuestion({
+                        assessmentQuestionId: question.id,
+                        pageNumber: 1,
+                        pageSize: 100,
+                      });
+                      rubrics[question.id] = rubricsRes.items;
+                    }
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch questions/rubrics for PE ${courseElement.id}:`, err);
+                }
+
+                // Process all submissions in this grading group
+                for (const submission of groupSubmissions) {
+                  let gradingSession = null;
+                  let gradeItems: any[] = [];
+
+                  try {
+                    const gradingSessionsResult = await gradingService.getGradingSessions({
+                      submissionId: submission.id,
+                    });
+                    if (gradingSessionsResult.items.length > 0) {
+                      gradingSession = gradingSessionsResult.items.sort((a, b) => 
+                        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                      )[0];
+                      
+                      const gradeItemsResult = await gradeItemService.getGradeItems({
+                        gradingSessionId: gradingSession.id,
+                      });
+                      gradeItems = gradeItemsResult.items;
+                    }
+                  } catch (err) {
+                    console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
+                  }
+
+                  reportData.push({
+                    submission,
+                    gradingSession,
+                    gradeItems,
+                    questions,
+                    rubrics,
+                    feedback: {
+                      overallFeedback: "",
+                      strengths: "",
+                      weaknesses: "",
+                      codeQuality: "",
+                      algorithmEfficiency: "",
+                      suggestionsForImprovement: "",
+                      bestPractices: "",
+                      errorHandling: "",
+                    },
+                    courseElementName: courseElement.name,
+                    assignmentType: "Practical Exam",
+                  });
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Failed to fetch PE data:", err);
+          }
+        }
+
+        // Process each course element (Assignment and Lab only)
         for (const courseElement of allCourseElements) {
           const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === courseElement.id);
           if (!classAssessment) continue;
@@ -138,14 +303,11 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
           let assignmentType: "Assignment" | "Lab" | "Practical Exam" = "Assignment";
           if (isLab(courseElement)) {
             assignmentType = "Lab";
-          } else if (isPracticalExam(courseElement)) {
-            assignmentType = "Practical Exam";
           }
 
           // Filter by selected export types
           if (assignmentType === "Assignment" && !exportTypes.assignment) continue;
           if (assignmentType === "Lab" && !exportTypes.lab) continue;
-          if (assignmentType === "Practical Exam" && !exportTypes.practicalExam) continue;
 
           // Fetch all students in the class
           const allStudents = await classService.getStudentsInClass(Number(selectedClassId)).catch(() => []);
@@ -310,9 +472,13 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
           studentId: studentId,
         });
 
-        // Group submissions by classAssessmentId to get course elements
+        // Separate PE submissions (have gradingGroupId) from other submissions
+        const peSubmissions = allSubmissions.filter(s => s.gradingGroupId !== null && s.gradingGroupId !== undefined);
+        const otherSubmissions = allSubmissions.filter(s => !s.gradingGroupId);
+
+        // Group other submissions by classAssessmentId to get course elements (Assignment and Lab)
         const classAssessmentIds = Array.from(
-          new Set(allSubmissions.map((s) => s.classAssessmentId).filter((id) => id !== null && id !== undefined))
+          new Set(otherSubmissions.map((s) => s.classAssessmentId).filter((id) => id !== null && id !== undefined))
         );
 
         // Fetch all class assessments to get course element info
@@ -336,7 +502,7 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
 
         const courseElementMap = new Map(courseElementsRes.map(ce => [ce.id, ce]));
 
-        // Group submissions by course element (classAssessmentId -> courseElementId)
+        // Group submissions by course element (classAssessmentId -> courseElementId) for Assignment and Lab
         const courseElementSubmissionsMap = new Map<number, Submission[]>();
         for (const classAssessmentId of classAssessmentIds) {
           if (!classAssessmentId) continue;
@@ -354,9 +520,6 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
             const nameLower = (courseElement.name || "").toLowerCase();
             if (nameLower.includes("lab") || nameLower.includes("thực hành")) {
               return "Lab";
-            } else if (nameLower.includes("exam") || nameLower.includes("pe") || nameLower.includes("practical") || 
-                       nameLower.includes("thi thực hành") || nameLower.includes("kiểm tra thực hành")) {
-              return "Practical Exam";
             }
             return "Assignment";
           })();
@@ -364,10 +527,9 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
           // Filter by selected export types
           if (assignmentType === "Assignment" && !exportTypes.assignment) continue;
           if (assignmentType === "Lab" && !exportTypes.lab) continue;
-          if (assignmentType === "Practical Exam" && !exportTypes.practicalExam) continue;
 
           // Get submissions for this class assessment
-          const submissions = allSubmissions.filter((s) => s.classAssessmentId === classAssessmentId);
+          const submissions = otherSubmissions.filter((s) => s.classAssessmentId === classAssessmentId);
           
           // Group by course element ID
           const courseElementId = courseElement.id;
@@ -511,6 +673,203 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
             courseElementName: courseElement.name,
             assignmentType,
           });
+        }
+
+        // Process PE submissions separately (if selected)
+        if (exportTypes.practicalExam && peSubmissions.length > 0) {
+          try {
+            // Get unique grading group IDs
+            const gradingGroupIds = Array.from(
+              new Set(peSubmissions.map(s => s.gradingGroupId).filter(id => id !== null && id !== undefined))
+            );
+
+            // Fetch grading groups
+            const allGradingGroups = await Promise.all(
+              gradingGroupIds.map(id => 
+                gradingGroupService.getGradingGroups({}).then(groups => 
+                  groups.find(g => g.id === id)
+                ).catch(() => null)
+              )
+            );
+            const gradingGroupsMap = new Map<number, GradingGroup>();
+            allGradingGroups.forEach(group => {
+              if (group) {
+                gradingGroupsMap.set(group.id, group);
+              }
+            });
+
+            // Get unique assessmentTemplateIds from grading groups
+            const assessmentTemplateIds = Array.from(
+              new Set(
+                Array.from(gradingGroupsMap.values())
+                  .filter((g) => g.assessmentTemplateId !== null && g.assessmentTemplateId !== undefined)
+                  .map((g) => Number(g.assessmentTemplateId))
+              )
+            );
+
+            // Fetch assessment templates
+            const assessmentTemplateMap = new Map<number, AssessmentTemplate>();
+            if (assessmentTemplateIds.length > 0) {
+              const allAssessmentTemplatesRes = await assessmentTemplateService.getAssessmentTemplates({
+                pageNumber: 1,
+                pageSize: 1000,
+              }).catch(() => ({ items: [] }));
+
+              allAssessmentTemplatesRes.items.forEach((template) => {
+                if (assessmentTemplateIds.includes(template.id)) {
+                  assessmentTemplateMap.set(template.id, template);
+                }
+              });
+            }
+
+            // Get unique courseElementIds from assessment templates
+            const courseElementIds = Array.from(
+              new Set(Array.from(assessmentTemplateMap.values()).map((t) => t.courseElementId))
+            );
+
+            // Fetch course elements
+            const peCourseElementMap = new Map<number, CourseElement>();
+            if (courseElementIds.length > 0) {
+              const allCourseElementsRes = await courseElementService.getCourseElements({
+                pageNumber: 1,
+                pageSize: 1000,
+              }).catch(() => []);
+
+              allCourseElementsRes.forEach((element) => {
+                if (courseElementIds.includes(element.id)) {
+                  peCourseElementMap.set(element.id, element);
+                }
+              });
+            }
+
+            // Group PE submissions by grading group and process
+            const peSubmissionsByGroup = new Map<number, Submission[]>();
+            for (const submission of peSubmissions) {
+              if (!submission.gradingGroupId) continue;
+              if (!peSubmissionsByGroup.has(submission.gradingGroupId)) {
+                peSubmissionsByGroup.set(submission.gradingGroupId, []);
+              }
+              peSubmissionsByGroup.get(submission.gradingGroupId)!.push(submission);
+            }
+
+            for (const [gradingGroupId, groupSubmissions] of peSubmissionsByGroup.entries()) {
+              const gradingGroup = gradingGroupsMap.get(gradingGroupId);
+              if (!gradingGroup || !gradingGroup.assessmentTemplateId) continue;
+
+              const assessmentTemplate = assessmentTemplateMap.get(Number(gradingGroup.assessmentTemplateId));
+              if (!assessmentTemplate) continue;
+
+              const courseElement = peCourseElementMap.get(Number(assessmentTemplate.courseElementId));
+              if (!courseElement) continue;
+
+              // Fetch questions and rubrics
+              let questions: any[] = [];
+              const rubrics: { [questionId: number]: any[] } = {};
+
+              try {
+                const papersRes = await assessmentPaperService.getAssessmentPapers({
+                  assessmentTemplateId: assessmentTemplate.id,
+                  pageNumber: 1,
+                  pageSize: 100,
+                });
+
+                for (const paper of papersRes.items) {
+                  const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+                    assessmentPaperId: paper.id,
+                    pageNumber: 1,
+                    pageSize: 100,
+                  });
+                  questions = [...questions, ...questionsRes.items];
+
+                  for (const question of questionsRes.items) {
+                    const rubricsRes = await rubricItemService.getRubricsForQuestion({
+                      assessmentQuestionId: question.id,
+                      pageNumber: 1,
+                      pageSize: 100,
+                    });
+                    rubrics[question.id] = rubricsRes.items;
+                  }
+                }
+              } catch (err) {
+                console.error(`Failed to fetch questions/rubrics for PE ${courseElement.id}:`, err);
+              }
+
+              // Process all submissions in this grading group - find latest grading session
+              let latestSubmission: Submission | null = null;
+              let allGradeItems: any[] = [];
+              let latestGradingSession = null;
+              let latestSubmissionWithGrading: Submission | null = null;
+
+              for (const submission of groupSubmissions) {
+                // Keep track of latest submission
+                if (submission.submittedAt && submission.submittedAt !== "") {
+                  if (!latestSubmission || new Date(submission.submittedAt).getTime() > new Date(latestSubmission.submittedAt).getTime()) {
+                    latestSubmission = submission;
+                  }
+                } else if (!latestSubmission) {
+                  latestSubmission = submission;
+                }
+
+                // Fetch latest grading session for this submission
+                try {
+                  const gradingSessionsResult = await gradingService.getGradingSessions({
+                    submissionId: submission.id,
+                  });
+                  if (gradingSessionsResult.items.length > 0) {
+                    const gradingSession = gradingSessionsResult.items.sort((a, b) => 
+                      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    )[0];
+                    
+                    // Keep latest grading session across all submissions
+                    if (!latestGradingSession || new Date(gradingSession.createdAt).getTime() > new Date(latestGradingSession.createdAt).getTime()) {
+                      latestGradingSession = gradingSession;
+                      latestSubmissionWithGrading = submission;
+                    }
+                  }
+                } catch (err) {
+                  console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
+                }
+              }
+
+              // Only fetch gradeItems from the latest grading session
+              if (latestGradingSession && latestSubmissionWithGrading) {
+                try {
+                  const gradeItemsResult = await gradeItemService.getGradeItems({
+                    gradingSessionId: latestGradingSession.id,
+                  });
+                  allGradeItems = gradeItemsResult.items;
+                } catch (err) {
+                  console.error(`Failed to fetch grade items for grading session ${latestGradingSession.id}:`, err);
+                }
+              }
+
+              // Use latest submission or first submission if no latest
+              const submissionToUse = latestSubmission || groupSubmissions[0];
+              if (!submissionToUse) continue;
+
+              reportData.push({
+                submission: submissionToUse,
+                gradingSession: latestGradingSession,
+                gradeItems: allGradeItems,
+                questions,
+                rubrics,
+                feedback: {
+                  overallFeedback: "",
+                  strengths: "",
+                  weaknesses: "",
+                  codeQuality: "",
+                  algorithmEfficiency: "",
+                  suggestionsForImprovement: "",
+                  bestPractices: "",
+                  errorHandling: "",
+                },
+                courseElementName: courseElement.name,
+                assignmentType: "Practical Exam",
+              });
+            }
+          } catch (err) {
+            console.error("Failed to fetch PE data:", err);
+          }
         }
 
         if (reportData.length === 0) {

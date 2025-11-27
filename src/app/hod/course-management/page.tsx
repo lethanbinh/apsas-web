@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Table, Spin, Alert, App, Button, Space, Typography, Select } from "antd";
+import { Table, Spin, Alert, App, Button, Space, Typography, Select, Input, Modal, Tooltip } from "antd";
 import type { TableProps } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { courseService, Course } from "@/services/courseManagementService";
@@ -9,6 +9,18 @@ import { CourseOnlyCrudModal } from "@/components/modals/CourseOnlyCrudModal";
 import { semesterService, Semester } from "@/services/semesterService";
 
 const { Title } = Typography;
+
+// Kiểm tra xem semester đã bắt đầu chưa
+const isSemesterStarted = (startDate: string): boolean => {
+  if (!startDate) return false;
+  const semesterStartDate = new Date(
+    startDate.endsWith("Z") ? startDate : startDate + "Z"
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  semesterStartDate.setHours(0, 0, 0, 0);
+  return semesterStartDate <= today;
+};
 
 const CourseManagementPageContent = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -20,6 +32,13 @@ const CourseManagementPageContent = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [selectedSemesterCourses, setSelectedSemesterCourses] = useState<Course[]>([]);
+  // Lưu mapping courseId -> semesterIds để biết course thuộc semester nào
+  const [courseSemesterMap, setCourseSemesterMap] = useState<Map<number, number[]>>(new Map());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; record: Course | null; confirmValue: string }>({
+    open: false,
+    record: null,
+    confirmValue: "",
+  });
   const { modal, notification } = App.useApp();
 
   const fetchSemesters = useCallback(async () => {
@@ -31,6 +50,32 @@ const CourseManagementPageContent = () => {
       setSemesters(data);
     } catch (err: any) {
       console.error("Failed to fetch semesters:", err);
+    }
+  }, []);
+
+  // Fetch tất cả semester courses để build courseSemesterMap
+  const fetchAllCourseSemesterMapping = useCallback(async (semestersList: Semester[]) => {
+    try {
+      const newMap = new Map<number, number[]>();
+      
+      // Fetch tất cả semester details để biết course thuộc semester nào
+      for (const semester of semestersList) {
+        try {
+          const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
+          semesterDetail.semesterCourses.forEach(sc => {
+            const existingSemesters = newMap.get(sc.course.id) || [];
+            if (!existingSemesters.includes(semester.id)) {
+              newMap.set(sc.course.id, [...existingSemesters, semester.id]);
+            }
+          });
+        } catch (err) {
+          console.error(`Failed to fetch semester detail for ${semester.semesterCode}:`, err);
+        }
+      }
+      
+      setCourseSemesterMap(newMap);
+    } catch (err) {
+      console.error("Failed to fetch course-semester mapping:", err);
     }
   }, []);
 
@@ -72,6 +117,18 @@ const CourseManagementPageContent = () => {
       }));
       setSelectedSemesterCourses(semesterCourses);
       setCourses(semesterCourses);
+      
+      // Cập nhật mapping course -> semester sử dụng functional update để tránh dependency
+      setCourseSemesterMap(prevMap => {
+        const newMap = new Map(prevMap);
+        semesterCourses.forEach(course => {
+          const existingSemesters = newMap.get(course.id) || [];
+          if (!existingSemesters.includes(semesterId)) {
+            newMap.set(course.id, [...existingSemesters, semesterId]);
+          }
+        });
+        return newMap;
+      });
     } catch (err: any) {
       console.error("Failed to fetch semester courses:", err);
       notification.error({
@@ -90,6 +147,14 @@ const CourseManagementPageContent = () => {
     fetchCourses();
   }, [fetchSemesters, fetchCourses]);
 
+  // Fetch course-semester mapping khi semesters đã load (chỉ chạy một lần)
+  useEffect(() => {
+    if (semesters.length > 0) {
+      fetchAllCourseSemesterMapping(semesters);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [semesters.length]); // Chỉ phụ thuộc vào length để tránh loop
+
   useEffect(() => {
     if (selectedSemesterId && semesters.length > 0) {
       fetchSemesterCourses(selectedSemesterId);
@@ -97,7 +162,7 @@ const CourseManagementPageContent = () => {
       setCourses(allCourses);
       setSelectedSemesterCourses([]);
     }
-  }, [selectedSemesterId, fetchSemesterCourses, allCourses, semesters]);
+  }, [selectedSemesterId, fetchSemesterCourses, allCourses, semesters.length]);
 
   const handleSemesterChange = (value: number | null) => {
     setSelectedSemesterId(value);
@@ -124,27 +189,89 @@ const CourseManagementPageContent = () => {
     fetchCourses();
   };
 
-  const handleDelete = (id: number) => {
-    modal.confirm({
-      title: "Are you sure you want to delete this course?",
-      content: "This action cannot be undone.",
-      okText: "Yes, Delete",
-      okType: "danger",
-      cancelText: "No",
-      onOk: async () => {
-        try {
-          await courseService.deleteCourse(id);
-          notification.success({ message: "Course deleted successfully!" });
-          fetchCourses();
-        } catch (err: any) {
-          console.error("Failed to delete course:", err);
-          notification.error({
-            message: "Failed to delete course",
-            description: err.message || "An unknown error occurred.",
-          });
-        }
-      },
+  // Kiểm tra xem course có thể xóa được không
+  const canDeleteCourse = useCallback((course: Course): boolean => {
+    // Nếu đang filter theo semester, kiểm tra semester đó đã bắt đầu chưa
+    if (selectedSemesterId) {
+      const semester = semesters.find(s => s.id === selectedSemesterId);
+      if (semester && isSemesterStarted(semester.startDate)) {
+        return false;
+      }
+      return true;
+    }
+    
+    // Nếu không filter, kiểm tra xem course có thuộc semester nào đã bắt đầu không
+    const courseSemesterIds = courseSemesterMap.get(course.id) || [];
+    if (courseSemesterIds.length === 0) {
+      // Nếu course chưa thuộc semester nào, có thể xóa
+      return true;
+    }
+    
+    // Kiểm tra xem course có thuộc semester nào đã bắt đầu không
+    const startedSemesterIds = semesters
+      .filter(s => isSemesterStarted(s.startDate))
+      .map(s => s.id);
+    
+    // Nếu course thuộc bất kỳ semester nào đã bắt đầu thì không cho xóa
+    const hasStartedSemester = courseSemesterIds.some(semesterId => 
+      startedSemesterIds.includes(semesterId)
+    );
+    
+    return !hasStartedSemester;
+  }, [selectedSemesterId, semesters, courseSemesterMap]);
+
+  const handleDelete = (record: Course) => {
+    // Kiểm tra xem course có thể xóa được không
+    if (!canDeleteCourse(record)) {
+      notification.warning({
+        message: "Cannot delete course",
+        description: "You cannot delete a course that belongs to a semester that has already started.",
+      });
+      return;
+    }
+
+    setDeleteConfirm({
+      open: true,
+      record,
+      confirmValue: "",
     });
+  };
+
+  const handleDeleteConfirmCancel = () => {
+    setDeleteConfirm({
+      open: false,
+      record: null,
+      confirmValue: "",
+    });
+  };
+
+  const handleDeleteConfirmOk = async () => {
+    if (!deleteConfirm.record) return;
+    
+    if (deleteConfirm.confirmValue !== deleteConfirm.record.name) {
+      notification.error({
+        message: "Confirmation failed",
+        description: "The entered name does not match the course name.",
+      });
+      return;
+    }
+
+    try {
+      await courseService.deleteCourse(deleteConfirm.record.id);
+      notification.success({ message: "Course deleted successfully!" });
+      fetchCourses();
+      setDeleteConfirm({
+        open: false,
+        record: null,
+        confirmValue: "",
+      });
+    } catch (err: any) {
+      console.error("Failed to delete course:", err);
+      notification.error({
+        message: "Failed to delete course",
+        description: err.message || "An unknown error occurred.",
+      });
+    }
   };
 
   const columns: TableProps<Course>["columns"] = [
@@ -166,25 +293,41 @@ const CourseManagementPageContent = () => {
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Delete
-          </Button>
-        </Space>
-      ),
+      render: (_, record) => {
+        const canDelete = canDeleteCourse(record);
+        return (
+          <Space size="middle">
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenEdit(record)}
+            >
+              Edit
+            </Button>
+            {canDelete ? (
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(record)}
+              >
+                Delete
+              </Button>
+            ) : (
+              <Tooltip title="Cannot delete a course that belongs to a semester that has already started">
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled
+                >
+                  Delete
+                </Button>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -269,6 +412,41 @@ const CourseManagementPageContent = () => {
         onCancel={handleModalCancel}
         onOk={handleModalOk}
       />
+
+      <Modal
+        title="Are you sure you want to delete this course?"
+        open={deleteConfirm.open}
+        onOk={handleDeleteConfirmOk}
+        onCancel={handleDeleteConfirmCancel}
+        okText="Yes, Delete"
+        okType="danger"
+        cancelText="No"
+        okButtonProps={{
+          disabled: deleteConfirm.confirmValue !== deleteConfirm.record?.name,
+        }}
+      >
+        <div>
+          <p style={{ marginBottom: 8 }}>
+            This action cannot be undone. Please type <strong>{deleteConfirm.record?.name}</strong> to confirm.
+          </p>
+          <Input
+            placeholder={`Type "${deleteConfirm.record?.name}" to confirm`}
+            value={deleteConfirm.confirmValue}
+            onChange={(e) => {
+              setDeleteConfirm(prev => ({
+                ...prev,
+                confirmValue: e.target.value,
+              }));
+            }}
+            onPressEnter={() => {
+              if (deleteConfirm.confirmValue === deleteConfirm.record?.name) {
+                handleDeleteConfirmOk();
+              }
+            }}
+            autoFocus
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

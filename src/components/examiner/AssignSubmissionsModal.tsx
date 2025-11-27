@@ -6,7 +6,6 @@ import {
   gradingGroupService,
 } from "@/services/gradingGroupService";
 import { submissionService, Submission } from "@/services/submissionService";
-import { gradingService } from "@/services/gradingService";
 import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
 import { DeleteOutlined, FileZipOutlined, InboxOutlined } from "@ant-design/icons";
 import type { TableProps, UploadFile, UploadProps } from "antd";
@@ -28,6 +27,18 @@ import {
 } from "antd";
 import Dragger from "antd/es/upload/Dragger";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string | null) => {
+  if (!dateString) return null;
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
 
 const { Title, Text } = Typography;
 
@@ -216,48 +227,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
         console.error("Failed to fetch submissions:", err);
       }
 
-      // Step 3: Upload test file (ZIP file) for each submission
-      if (allSubmissions.length > 0 && files.length > 0) {
-        messageApi.info(`Uploading test files for submissions...`);
-        
-        const uploadPromises: Promise<any>[] = [];
-        
-        // Create a map of student code to file for quick lookup
-        const fileMap = new Map<string, File>();
-        files.forEach(file => {
-          const studentCode = extractStudentCode(file.name);
-          if (studentCode) {
-            fileMap.set(studentCode, file);
-          }
-        });
-
-        // Upload test file for each submission
-        for (const submission of allSubmissions) {
-          const studentCode = submission.studentCode;
-          const testFile = fileMap.get(studentCode);
-          
-          if (testFile) {
-            uploadPromises.push(
-              gradingService.uploadTestFile(submission.id, testFile).catch(err => {
-                console.error(`Failed to upload test file for submission ${submission.id} (${studentCode}):`, err);
-                return null;
-              })
-            );
-          }
-        }
-
-        if (uploadPromises.length > 0) {
-          const results = await Promise.all(uploadPromises);
-          const successCount = results.filter(r => r !== null).length;
-          
-          if (successCount > 0) {
-            messageApi.success(`Test files uploaded for ${successCount}/${uploadPromises.length} submission(s)!`);
-          } else {
-            messageApi.warning("Failed to upload test files for all submissions.");
-          }
-        }
-      }
-
       await fetchSubmissions();
       setFileList([]);
       onOk(); // Refresh parent component
@@ -325,7 +294,12 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       title: "Submitted At",
       dataIndex: "submittedAt",
       key: "submittedAt",
-      render: (date) => date ? new Date(date).toLocaleString() : "N/A",
+      render: (date: string | null) => {
+        const vietnamTime = toVietnamTime(date);
+        return vietnamTime && vietnamTime.isValid() 
+          ? vietnamTime.format("DD/MM/YYYY HH:mm:ss")
+          : "N/A";
+      },
     },
     {
       title: "Status",
@@ -437,7 +411,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                     <Text strong>Upload ZIP files containing submissions</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       ZIP files will be extracted and submissions will be created automatically. 
-                      Each ZIP file will also be uploaded as test file for the corresponding submission (matched by student code).
                       Only ZIP files are accepted, maximum size 100MB per file.
                       <br />
                       <Text strong style={{ color: "#ff4d4f" }}>

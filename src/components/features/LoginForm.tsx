@@ -64,7 +64,8 @@ interface DemoAccount {
 const DEMO_ACCOUNTS: DemoAccount[] = [
   { accountCode: "ADM000001", email: "admin1@system.com", password: "admin@123", role: "Admin" },
   { accountCode: "HOD000001", email: "Hod1@example.com", password: "Lenam2386", role: "HOD" },
-  { accountCode: "EXA000001", email: "examiner1@example.com", password: "Lenam2385", role: "Examiner" },
+  { accountCode: "EXA000001", email: "namnoname@example.com", password: "Lenam2385", role: "Examiner" },
+  { accountCode: "EXA000002", email: "examiner01@example.com", password: "Examiner@123", role: "Examiner" },
   { accountCode: "LEC000001", email: "nguyenvana@example.com", password: "123456", role: "Lecturer" },
   { accountCode: "LEC000002", email: "Lecturer1@example.com", password: "Lenam2385", role: "Lecturer" },
   { accountCode: "LEC000003", email: "tranthib@example.com", password: "123456", role: "Lecturer" },

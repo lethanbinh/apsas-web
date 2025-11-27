@@ -4,7 +4,7 @@ import { ClassCrudModal } from "@/components/modals/ClassCrudModal";
 import { CourseCrudModal } from "@/components/modals/CourseCrudModal";
 import { CourseElementCrudModal } from "@/components/modals/CourseElementCrudModal";
 import { StudentGroupCrudModal } from "@/components/modals/StudentGroupCrudModal";
-import { assignRequestService } from "@/services/assignRequestService";
+import { ViewStudentsModal } from "@/components/modals/ViewStudentsModal";
 import { classManagementService } from "@/services/classManagementService";
 import { StudentInClass } from "@/services/classService";
 import { courseElementManagementService } from "@/services/courseElementManagementService";
@@ -20,6 +20,7 @@ import {
   semesterService,
 } from "@/services/semesterService";
 import { studentManagementService } from "@/services/studentManagementService";
+import { assignRequestService } from "@/services/assignRequestService";
 import {
   BookOutlined,
   DeleteOutlined,
@@ -55,92 +56,15 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-interface StudentTableProps {
-  classId: number;
-  onDelete: (studentGroupId: number) => void;
-}
-
-const StudentTable = ({ classId, onDelete }: StudentTableProps) => {
-  const [students, setStudents] = useState<StudentInClass[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchStudents = async () => {
-      setLoading(true);
-      try {
-        const data = await studentManagementService.getStudentsInClass(classId);
-        setStudents(data);
-      } catch (e) {
-        console.error(e);
-      }
-      setLoading(false);
-    };
-    fetchStudents();
-  }, [classId]);
-
-  const columns: TableProps<StudentInClass>["columns"] = [
-    {
-      title: "Student Code",
-      dataIndex: "studentCode",
-      key: "code",
-    },
-    {
-      title: "Full Name",
-      dataIndex: "studentName",
-      key: "name",
-      render: (name: string) => (
-        <Space>
-          <Avatar icon={<UserOutlined />} />
-          <span>{name}</span>
-        </Space>
-      ),
-    },
-    {
-      title: "Enrolled",
-      dataIndex: "enrollmentDate",
-      key: "enrolled",
-      render: (date: string) => formatUtcDate(date, "dd/MM/yyyy"),
-    },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      render: (desc: string) => (
-        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
-          {desc || "N/A"}
-        </div>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <Button type="link" danger onClick={() => onDelete(record.id)}>
-          Remove
-        </Button>
-      ),
-    },
-  ];
-
-  return (
-    <Table
-      loading={loading}
-      columns={columns}
-      dataSource={students}
-      rowKey="id"
-      pagination={false}
-      size="small"
-      scroll={{ x: 'max-content' }}
-    />
-  );
-};
 
 interface ClassesTableProps {
   classes: Class[];
   onEdit: (cls: Class) => void;
   onDelete: (classId: number) => void;
   onAddStudent: (classId: number) => void;
+  onViewStudents: (classId: number, classCode: string) => void;
   onDeleteStudent: (studentGroupId: number) => void;
+  refreshTrigger?: number;
 }
 
 const ClassesTable = ({
@@ -148,23 +72,48 @@ const ClassesTable = ({
   onEdit,
   onDelete,
   onAddStudent,
+  onViewStudents,
   onDeleteStudent,
+  refreshTrigger,
 }: ClassesTableProps) => {
+  const [studentCounts, setStudentCounts] = useState<Map<number, number>>(new Map());
+  const [loadingCounts, setLoadingCounts] = useState(false);
+
+  useEffect(() => {
+    const fetchStudentCounts = async () => {
+      setLoadingCounts(true);
+      const counts = new Map<number, number>();
+      
+      try {
+        await Promise.all(
+          classes.map(async (cls) => {
+            try {
+              const students = await studentManagementService.getStudentsInClass(cls.id);
+              counts.set(cls.id, students.length);
+            } catch (err) {
+              console.error(`Failed to fetch students for class ${cls.id}:`, err);
+              counts.set(cls.id, 0);
+            }
+          })
+        );
+      } catch (err) {
+        console.error("Failed to fetch student counts:", err);
+      } finally {
+        setStudentCounts(counts);
+        setLoadingCounts(false);
+      }
+    };
+
+    if (classes.length > 0) {
+      fetchStudentCounts();
+    }
+  }, [classes, refreshTrigger]);
+
   const columns: TableProps<Class>["columns"] = [
     {
       title: "Class Code",
       dataIndex: "classCode",
       key: "classCode",
-    },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      render: (desc: string) => (
-        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
-          {desc || "N/A"}
-        </div>
-      ),
     },
     {
       title: "Lecturer",
@@ -206,15 +155,20 @@ const ClassesTable = ({
     },
     {
       title: "Students",
-      dataIndex: "totalStudent",
       key: "totalStudent",
-      render: (total: number) => <Tag color="blue">{total} Students</Tag>,
+      render: (_: any, record: Class) => {
+        const count = studentCounts.get(record.id) ?? 0;
+        return <Tag color="blue">{loadingCounts ? "..." : `${count} Students`}</Tag>;
+      },
     },
     {
       title: "Actions",
       key: "actions",
       render: (_, record) => (
         <Space>
+          <Button type="link" icon={<TeamOutlined />} onClick={() => onViewStudents(record.id, record.classCode)}>
+            View Students
+          </Button>
           <Button type="link" onClick={() => onEdit(record)}>
             Edit
           </Button>
@@ -233,21 +187,6 @@ const ClassesTable = ({
       rowKey="id"
       pagination={{ pageSize: 5, hideOnSinglePage: true }}
       scroll={{ x: 'max-content' }}
-      expandable={{
-        expandedRowRender: (record) => (
-          <>
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => onAddStudent(record.id)}
-              style={{ marginBottom: 16, marginTop: 8 }}
-            >
-              Add Student
-            </Button>
-            <StudentTable classId={record.id} onDelete={onDeleteStudent} />
-          </>
-        ),
-        rowExpandable: (record) => true,
-      }}
     />
   );
 };
@@ -268,16 +207,6 @@ const CourseElementsTable = ({
       title: "Name",
       dataIndex: "name",
       key: "name",
-    },
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      render: (desc: string) => (
-        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
-          {desc || "N/A"}
-        </div>
-      ),
     },
     {
       title: "Weight",
@@ -323,21 +252,36 @@ const AssignRequestsTable = ({
   onEdit,
   onDelete,
 }: AssignRequestsTableProps) => {
+  // Map status theo ApprovalDetail.tsx:
+  // 1=PENDING, 2=ACCEPTED, 3=REJECTED, 4=IN_PROGRESS, 5=COMPLETED (Approved)
+  // Hiển thị 3 status: Pending (1,2,4), Approved (5), Rejected (3)
+  const getStatusDisplay = (status: number | undefined) => {
+    if (status === undefined || status === null) return { text: "Pending", color: "default" };
+    
+    switch (status) {
+      case 1: // PENDING
+      case 2: // ACCEPTED -> Pending (theo yêu cầu)
+      case 4: // IN_PROGRESS -> Pending (theo yêu cầu)
+        return { text: "Pending", color: "default" };
+      case 5: // COMPLETED -> Approved (đã duyệt)
+        return { text: "Approved", color: "success" };
+      case 3: // REJECTED
+        return { text: "Rejected", color: "error" };
+      default:
+        return { text: "Pending", color: "default" };
+    }
+  };
+
+  // Check if status is approved (status 5 = COMPLETED/Approved)
+  const isApproved = (status: number | undefined) => {
+    return status === 5; // Status 5 is COMPLETED/Approved
+  };
+
   const columns: TableProps<AssignRequest>["columns"] = [
     {
       title: "Course Element",
       dataIndex: ["courseElement", "name"],
       key: "element",
-    },
-    {
-      title: "Element Description",
-      dataIndex: ["courseElement", "description"],
-      key: "elementDesc",
-      render: (desc: string) => (
-        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
-          {desc || "N/A"}
-        </div>
-      ),
     },
     {
       title: "Assigned Lecturer",
@@ -351,6 +295,15 @@ const AssignRequestsTable = ({
           </Text>
         </Space>
       ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_: any, record: AssignRequest) => {
+        const status = (record as any).status as number | undefined;
+        const statusDisplay = getStatusDisplay(status);
+        return <Tag color={statusDisplay.color}>{statusDisplay.text}</Tag>;
+      },
     },
     {
       title: "Message",
@@ -377,16 +330,23 @@ const AssignRequestsTable = ({
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
+      render: (_, record) => {
+        const status = (record as any).status as number | undefined;
+        const approved = isApproved(status);
+        
+        return (
         <Space>
+            {!approved && (
           <Button type="link" onClick={() => onEdit(record)}>
             Edit
           </Button>
+            )}
           <Button type="link" danger onClick={() => onDelete(record.id)}>
             Delete
           </Button>
         </Space>
-      ),
+        );
+      },
     },
   ];
 
@@ -409,6 +369,7 @@ interface SemesterCoursesTableProps {
   onEditClass: (cls: Class) => void;
   onDeleteClass: (classId: number) => void;
   onAddStudent: (classId: number) => void;
+  onViewStudents: (classId: number, classCode: string) => void;
   onDeleteStudent: (studentGroupId: number) => void;
   onAddElement: (semesterCourseId: number) => void;
   onEditElement: (element: CourseElement) => void;
@@ -419,6 +380,7 @@ interface SemesterCoursesTableProps {
     semesterCourse: SemesterCourse
   ) => void;
   onDeleteAssignRequest: (requestId: number) => void;
+  studentCountRefreshTrigger?: number;
 }
 
 const SemesterCoursesTable = ({
@@ -429,6 +391,7 @@ const SemesterCoursesTable = ({
   onEditClass,
   onDeleteClass,
   onAddStudent,
+  onViewStudents,
   onDeleteStudent,
   onAddElement,
   onEditElement,
@@ -436,6 +399,7 @@ const SemesterCoursesTable = ({
   onAddAssignRequest,
   onEditAssignRequest,
   onDeleteAssignRequest,
+  studentCountRefreshTrigger,
 }: SemesterCoursesTableProps) => {
   const columns: TableProps<SemesterCourse>["columns"] = [
     {
@@ -447,16 +411,6 @@ const SemesterCoursesTable = ({
       title: "Course Name",
       dataIndex: ["course", "name"],
       key: "name",
-    },
-    {
-      title: "Course Description",
-      dataIndex: ["course", "description"],
-      key: "description",
-      render: (desc: string) => (
-        <div style={{ wordBreak: "break-word", whiteSpace: "normal", maxWidth: 300 }}>
-          {desc || "N/A"}
-        </div>
-      ),
     },
     {
       title: "Created By",
@@ -544,7 +498,9 @@ const SemesterCoursesTable = ({
               onEdit={onEditClass}
               onDelete={onDeleteClass}
               onAddStudent={onAddStudent}
+              onViewStudents={onViewStudents}
               onDeleteStudent={onDeleteStudent}
+              refreshTrigger={studentCountRefreshTrigger}
             />
           </>
         ),
@@ -649,6 +605,11 @@ const SemesterDetailPageContent = ({
   const [isStudentGroupModalOpen, setIsStudentGroupModalOpen] = useState(false);
   const [currentClassId, setCurrentClassId] = useState<number | null>(null);
 
+  const [isViewStudentsModalOpen, setIsViewStudentsModalOpen] = useState(false);
+  const [viewingClassId, setViewingClassId] = useState<number | null>(null);
+  const [viewingClassCode, setViewingClassCode] = useState<string>("");
+  const [studentCountRefreshTrigger, setStudentCountRefreshTrigger] = useState(0);
+
   const fetchDetail = useCallback(async () => {
     if (!params.semesterCode) {
       setError("No semester code provided.");
@@ -660,6 +621,34 @@ const SemesterDetailPageContent = ({
       const data = await semesterService.getSemesterPlanDetail(
         params.semesterCode
       );
+      
+      // Fetch assign requests to get status
+      try {
+        const assignRequestsResponse = await assignRequestService.getAssignRequests({
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+        
+        // Create a map of assign request ID to status
+        const statusMap = new Map<number, number>();
+        assignRequestsResponse.items.forEach(ar => {
+          statusMap.set(ar.id, ar.status);
+        });
+        
+        // Enrich assign requests with status
+        data.semesterCourses.forEach(semesterCourse => {
+          semesterCourse.assignRequests.forEach(ar => {
+            const status = statusMap.get(ar.id);
+            if (status !== undefined) {
+              (ar as any).status = status;
+            }
+          });
+        });
+      } catch (err) {
+        console.error("Failed to fetch assign requests status:", err);
+        // Continue without status if fetch fails
+      }
+      
       setSemesterData(data);
       setError(null);
     } catch (err: any) {
@@ -949,6 +938,18 @@ const SemesterDetailPageContent = ({
     setIsStudentGroupModalOpen(true);
   };
 
+  const handleViewStudents = (classId: number, classCode: string) => {
+    setViewingClassId(classId);
+    setViewingClassCode(classCode);
+    setIsViewStudentsModalOpen(true);
+  };
+
+  const handleViewStudentsModalCancel = () => {
+    setIsViewStudentsModalOpen(false);
+    setViewingClassId(null);
+    setViewingClassCode("");
+  };
+
   const handleStudentGroupModalCancel = () => {
     setIsStudentGroupModalOpen(false);
     setCurrentClassId(null);
@@ -963,6 +964,7 @@ const SemesterDetailPageContent = ({
       placement: "topRight",
     });
     fetchDetail();
+    setStudentCountRefreshTrigger(prev => prev + 1);
   };
 
   const handleDeleteStudentGroup = (studentGroupId: number) => {
@@ -981,6 +983,7 @@ const SemesterDetailPageContent = ({
             placement: "topRight",
           });
           fetchDetail();
+          setStudentCountRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
           console.error("Failed to remove student:", err);
           notification.error({
@@ -1070,6 +1073,7 @@ const SemesterDetailPageContent = ({
         onEditClass={handleOpenEditClassModal}
         onDeleteClass={handleDeleteClass}
         onAddStudent={handleOpenAddStudentModal}
+        onViewStudents={handleViewStudents}
         onDeleteStudent={handleDeleteStudentGroup}
         onAddElement={handleOpenCreateElementModal}
         onEditElement={handleOpenEditElementModal}
@@ -1077,6 +1081,7 @@ const SemesterDetailPageContent = ({
         onAddAssignRequest={handleOpenCreateAssignRequestModal}
         onEditAssignRequest={handleOpenEditAssignRequestModal}
         onDeleteAssignRequest={handleDeleteAssignRequest}
+        studentCountRefreshTrigger={studentCountRefreshTrigger}
       />
 
       <CourseCrudModal
@@ -1131,6 +1136,20 @@ const SemesterDetailPageContent = ({
           onOk={handleStudentGroupModalOk}
         />
       )}
+
+      <ViewStudentsModal
+        open={isViewStudentsModalOpen}
+        classId={viewingClassId}
+        classCode={viewingClassCode}
+        onCancel={handleViewStudentsModalCancel}
+        onDeleteStudent={(studentGroupId) => {
+          handleDeleteStudentGroup(studentGroupId);
+        }}
+        onRefresh={() => {
+          fetchDetail();
+          setStudentCountRefreshTrigger(prev => prev + 1);
+        }}
+      />
     </div>
   );
 };

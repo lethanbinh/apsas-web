@@ -19,6 +19,12 @@ export interface GradingGroup {
   assessmentTemplateName: string | null;
   assessmentTemplateDescription: string | null;
   assessmentTemplateType: number | null;
+  createdByExaminerId: number | null;
+  examinerName: string | null;
+  examinerCode: string | null;
+  submittedGradeSheetUrl: string | null;
+  gradeSheetSubmittedAt: string | null;
+  isGradingCompleted: boolean | null;
   createdAt: string;
   updatedAt: string;
   submissionCount: number;
@@ -46,6 +52,7 @@ export interface GetGradingGroupsParams {
 export interface CreateGradingGroupPayload {
   lecturerId: number;
   assessmentTemplateId: number | null;
+  createdByExaminerId: number | null;
 }
 
 export interface UpdateGradingGroupPayload {
@@ -166,6 +173,35 @@ export class GradingGroupService {
       }
     );
     return response.result;
+  }
+
+  async submitGradesToExaminer(
+    gradingGroupId: number,
+    file: File
+  ): Promise<void> {
+    const formData = new FormData();
+    formData.append("File", file);
+
+    try {
+      await apiService.post(
+        `/GradingGroup/${gradingGroupId}/submit-grades-to-examiner`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+    } catch (error: any) {
+      // Extract error messages from API response
+      if (error.response?.data?.errorMessages && Array.isArray(error.response.data.errorMessages)) {
+        const errorMessage = error.response.data.errorMessages.join(", ");
+        const customError = new Error(errorMessage);
+        (customError as any).response = error.response;
+        throw customError;
+      }
+      throw error;
+    }
   }
 }
 

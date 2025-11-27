@@ -8,6 +8,7 @@ import { AssessmentTemplate, assessmentTemplateService } from "@/services/assess
 import { CourseElement, courseElementService } from "@/services/courseElementService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Semester, SemesterCourse, SemesterPlanDetail, semesterService } from "@/services/semesterService";
+import { assignRequestService } from "@/services/assignRequestService";
 import { CloseOutlined, EyeOutlined, ReloadOutlined } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import {
@@ -86,14 +87,42 @@ const TemplatesPageContent = () => {
       });
       setSemesters(semesterList);
 
+      // Fetch assign requests to get approved ones (status = 5)
+      let approvedCourseElementIds = new Set<number>();
+      try {
+        const assignRequestResponse = await assignRequestService.getAssignRequests({
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+        // Only include assign requests with status = 5 (Approved/COMPLETED)
+        const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+        // Create set of courseElementIds that have approved assign requests
+        approvedAssignRequests.forEach(ar => {
+          if (ar.courseElementId) {
+            approvedCourseElementIds.add(ar.courseElementId);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to fetch assign requests:", err);
+        // Continue without filtering if assign requests cannot be fetched
+      }
+
       // Fetch all assessment templates
       const response = await assessmentTemplateService.getAssessmentTemplates({
         pageNumber: 1,
         pageSize: 1000,
       });
       
-      // Filter only PE (Practical Exam) templates
-      const peTemplates = response.items.filter(isPracticalExamTemplate);
+      // Filter only PE (Practical Exam) templates that have approved assign requests
+      const peTemplates = response.items.filter(template => {
+        if (!isPracticalExamTemplate(template)) return false;
+        // Only include templates whose courseElementId has an approved assign request
+        if (approvedCourseElementIds.size > 0) {
+          return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
+        }
+        // If no approved assign requests found, return all PE templates (fallback)
+        return true;
+      });
       setAllTemplates(peTemplates);
       setFilteredTemplates(peTemplates);
 
@@ -181,13 +210,8 @@ const TemplatesPageContent = () => {
 
     if (selectedSemesterCode) {
       // Filter by semester through courseElement
-      // Get course elements from the selected semester's courses
-      const semesterCourseElementIds = Array.from(allCourseElementsMap.values())
-        .filter(ce => {
-          const semesterCode = ce.semesterCourse?.semester?.semesterCode;
-          return semesterCode === selectedSemesterCode;
-        })
-        .map(ce => ce.id);
+      // Sử dụng courseElements đã fetch (có semesterCode filter) thay vì allCourseElementsMap
+      const semesterCourseElementIds = courseElements.map(ce => ce.id);
       
       filtered = filtered.filter(template => 
         semesterCourseElementIds.includes(template.courseElementId)
@@ -196,7 +220,7 @@ const TemplatesPageContent = () => {
 
     if (selectedCourseId) {
       // Filter by course through courseElement
-      const courseElementIds = Array.from(allCourseElementsMap.values())
+      const courseElementIds = courseElements
         .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
         .map(ce => ce.id);
       
@@ -213,7 +237,7 @@ const TemplatesPageContent = () => {
     }
 
     setFilteredTemplates(filtered);
-  }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, allCourseElementsMap]);
+  }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, courseElements]);
 
   const handleSemesterChange = (value: string | null) => {
     setSelectedSemesterCode(value);
@@ -318,20 +342,20 @@ const TemplatesPageContent = () => {
               level={2}
               style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
             >
-              Practical Exam Templates
-            </Title>
+                Practical Exam Templates
+              </Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
-              View and filter all practical exam assessment templates
-            </Text>
+                View and filter all practical exam assessment templates
+              </Text>
           </div>
           <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={fetchData}
-              loading={loading}
-            >
-              Refresh
-            </Button>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={fetchData}
+                loading={loading}
+              >
+                Refresh
+              </Button>
           </Space>
         </div>
 
@@ -349,7 +373,7 @@ const TemplatesPageContent = () => {
             />
           )}
 
-          <Card title="Filters" size="small">
+          <Card size="small">
             <Row gutter={16}>
               <Col xs={24} sm={8} md={8}>
                 <Space direction="vertical" style={{ width: "100%" }}>
@@ -450,7 +474,7 @@ const TemplatesPageContent = () => {
           template={selectedTemplate}
         />
       )}
-      </div>
+    </div>
     </>
   );
 };
@@ -565,18 +589,6 @@ function TemplateDetailModal({
     return typeMap[type] || "Unknown";
   };
 
-  const getStatusText = (status: number | undefined) => {
-    if (status === undefined) return "N/A";
-    const statusMap: Record<number, string> = {
-      1: "PENDING",
-      2: "ACCEPTED",
-      3: "REJECTED",
-      4: "IN_PROGRESS",
-      5: "COMPLETED",
-    };
-    return statusMap[status] || "UNKNOWN";
-  };
-
   return (
     <Modal
       title={
@@ -596,24 +608,18 @@ function TemplateDetailModal({
     >
       <Spin spinning={loading}>
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Descriptions bordered column={2}>
+          <Descriptions bordered column={1}>
             <Descriptions.Item label="Template Name">
-              <Text strong>{template.name}</Text>
+              <Text strong style={{ fontSize: "16px" }}>{template.name}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Course Element">
               {template.courseElementName}
             </Descriptions.Item>
-            <Descriptions.Item label="Description" span={2}>
-              {template.description || "No description"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Type">
-              <Tag color="blue">{getTypeText(template.templateType)}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Status">
-              <Tag color="green">{getStatusText(template.status)}</Tag>
-            </Descriptions.Item>
             <Descriptions.Item label="Lecturer">
               {template.lecturerName} ({template.lecturerCode})
+            </Descriptions.Item>
+            <Descriptions.Item label="Description">
+              {template.description || "No description"}
             </Descriptions.Item>
             <Descriptions.Item label="Created At">
               {new Date(template.createdAt).toLocaleString("en-US", {

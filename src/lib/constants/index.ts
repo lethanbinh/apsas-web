@@ -123,7 +123,7 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
     },
     {
       key: "pe",
-      label: "PE",
+      label: "Grading",
       href: "/lecturer/my-grading-group",
     },
   ],

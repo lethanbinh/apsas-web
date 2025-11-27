@@ -12,6 +12,9 @@ import {
   Table,
   TableProps,
   Typography,
+  Input,
+  Modal,
+  Tooltip,
 } from "antd";
 import { format } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -55,13 +58,30 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
+// Kiểm tra xem semester đã bắt đầu chưa
+const isSemesterStarted = (startDate: string): boolean => {
+  if (!startDate) return false;
+  const semesterStartDate = new Date(
+    startDate.endsWith("Z") ? startDate : startDate + "Z"
+  );
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  semesterStartDate.setHours(0, 0, 0, 0);
+  return semesterStartDate <= today;
+};
+
 const SemesterManagementPageContent = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSemester, setEditingSemester] = useState<Semester | null>(null);
-  const { modal } = App.useApp();
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; record: Semester | null; confirmValue: string }>({
+    open: false,
+    record: null,
+    confirmValue: "",
+  });
+  const { modal, notification } = App.useApp();
 
   const fetchSemesters = useCallback(async () => {
     try {
@@ -104,22 +124,58 @@ const SemesterManagementPageContent = () => {
     fetchSemesters();
   };
 
-  const handleDelete = (id: number) => {
-    modal.confirm({
-      title: "Are you sure you want to delete this semester?",
-      content: "This action cannot be undone.",
-      okText: "Yes, Delete",
-      okType: "danger",
-      cancelText: "No",
-      onOk: async () => {
-        try {
-          await semesterService.deleteSemester(id);
-          fetchSemesters();
-        } catch (err) {
-          console.error("Failed to delete semester:", err);
-        }
-      },
+  const handleDelete = (record: Semester) => {
+    // Kiểm tra xem semester đã bắt đầu chưa
+    if (isSemesterStarted(record.startDate)) {
+      notification.warning({
+        message: "Cannot delete semester",
+        description: "You cannot delete a semester that has already started.",
+      });
+      return;
+    }
+
+    setDeleteConfirm({
+      open: true,
+      record,
+      confirmValue: "",
     });
+  };
+
+  const handleDeleteConfirmCancel = () => {
+    setDeleteConfirm({
+      open: false,
+      record: null,
+      confirmValue: "",
+    });
+  };
+
+  const handleDeleteConfirmOk = async () => {
+    if (!deleteConfirm.record) return;
+    
+    if (deleteConfirm.confirmValue !== deleteConfirm.record.semesterCode) {
+      notification.error({
+        message: "Confirmation failed",
+        description: "The entered semester code does not match.",
+      });
+      return;
+    }
+
+    try {
+      await semesterService.deleteSemester(deleteConfirm.record.id);
+      notification.success({ message: "Semester deleted successfully!" });
+      fetchSemesters();
+      setDeleteConfirm({
+        open: false,
+        record: null,
+        confirmValue: "",
+      });
+    } catch (err: any) {
+      console.error("Failed to delete semester:", err);
+      notification.error({
+        message: "Failed to delete semester",
+        description: err.message || "An unknown error occurred.",
+      });
+    }
   };
 
   // Sắp xếp semesters trước khi hiển thị
@@ -158,25 +214,41 @@ const SemesterManagementPageContent = () => {
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleOpenEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Delete
-          </Button>
-        </Space>
-      ),
+      render: (_, record) => {
+        const canDelete = !isSemesterStarted(record.startDate);
+        return (
+          <Space size="middle">
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleOpenEdit(record)}
+            >
+              Edit
+            </Button>
+            {canDelete ? (
+              <Button
+                type="link"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={() => handleDelete(record)}
+              >
+                Delete
+              </Button>
+            ) : (
+              <Tooltip title="Cannot delete a semester that has already started">
+                <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  disabled
+                >
+                  Delete
+                </Button>
+              </Tooltip>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -234,6 +306,41 @@ const SemesterManagementPageContent = () => {
         onCancel={handleModalCancel}
         onOk={handleModalOk}
       />
+
+      <Modal
+        title="Are you sure you want to delete this semester?"
+        open={deleteConfirm.open}
+        onOk={handleDeleteConfirmOk}
+        onCancel={handleDeleteConfirmCancel}
+        okText="Yes, Delete"
+        okType="danger"
+        cancelText="No"
+        okButtonProps={{
+          disabled: deleteConfirm.confirmValue !== deleteConfirm.record?.semesterCode,
+        }}
+      >
+        <div>
+          <p style={{ marginBottom: 8 }}>
+            This action cannot be undone. Please type <strong>{deleteConfirm.record?.semesterCode}</strong> to confirm.
+          </p>
+          <Input
+            placeholder={`Type "${deleteConfirm.record?.semesterCode}" to confirm`}
+            value={deleteConfirm.confirmValue}
+            onChange={(e) => {
+              setDeleteConfirm(prev => ({
+                ...prev,
+                confirmValue: e.target.value,
+              }));
+            }}
+            onPressEnter={() => {
+              if (deleteConfirm.confirmValue === deleteConfirm.record?.semesterCode) {
+                handleDeleteConfirmOk();
+              }
+            }}
+            autoFocus
+          />
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -1,7 +1,7 @@
 // Tên file: components/AssignmentList/AssignmentItem.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { App, Typography, Alert, Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import {
@@ -62,6 +62,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
   const { message } = App.useApp();
   const { studentId } = useStudent();
   const { user } = useAuth();
+  const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch last submission
   useEffect(() => {
@@ -111,6 +112,16 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
 
     fetchLastSubmission();
   }, [studentId, data.classAssessmentId, data.examSessionId]);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (autoGradingPollIntervalRef.current) {
+        clearInterval(autoGradingPollIntervalRef.current);
+        autoGradingPollIntervalRef.current = null;
+      }
+    };
+  }, []);
 
   // Check if deadline exists
   const hasDeadline = () => {
@@ -198,27 +209,81 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         file: renamedFile,
       });
 
-      // Step 2: Upload test file using gradingService
-      try {
-        await gradingService.uploadTestFile(newSubmission.id, renamedFile);
-        console.log("Test file uploaded successfully");
-      } catch (uploadErr: any) {
-        console.error("Failed to upload test file:", uploadErr);
-        // Don't fail the submission if test file upload fails
-        // The submission was already created successfully
-        message.warning("Assignment submitted, but test file upload failed. Please contact your lecturer.");
-      }
-
-      // Step 3: For labs, trigger auto grading after submission
+      // Step 2: For labs, trigger auto grading after submission
       if (isLab && data.assessmentTemplateId) {
         try {
-          message.loading("Starting auto grading...", 0);
-          await gradingService.autoGrading({
+          // Call auto grading API
+          const gradingSession = await gradingService.autoGrading({
             submissionId: newSubmission.id,
             assessmentTemplateId: data.assessmentTemplateId,
           });
-          message.destroy();
-          message.success("Submission submitted and auto grading started!");
+
+          // If status is 0 (PROCESSING), start polling
+          if (gradingSession.status === 0) {
+            message.loading("Auto grading in progress...", 0);
+            
+            // Poll every 2 seconds until status changes
+            const pollInterval = setInterval(async () => {
+              try {
+                const sessionsResult = await gradingService.getGradingSessions({
+                  submissionId: newSubmission.id,
+                  pageNumber: 1,
+                  pageSize: 100,
+                });
+
+                if (sessionsResult.items.length > 0) {
+                  const sortedSessions = [...sessionsResult.items].sort((a, b) => {
+                    const dateA = new Date(a.createdAt).getTime();
+                    const dateB = new Date(b.createdAt).getTime();
+                    return dateB - dateA;
+                  });
+
+                  const latestSession = sortedSessions[0];
+
+                  // If status is no longer PROCESSING (0), stop polling
+                  if (latestSession.status !== 0) {
+                    if (autoGradingPollIntervalRef.current) {
+                      clearInterval(autoGradingPollIntervalRef.current);
+                      autoGradingPollIntervalRef.current = null;
+                    }
+                    message.destroy();
+                    
+                    if (latestSession.status === 1) {
+                      message.success("Auto grading completed successfully");
+                    } else if (latestSession.status === 2) {
+                      message.error("Auto grading failed");
+                    }
+                  }
+                }
+              } catch (err: any) {
+                console.error("Failed to poll grading status:", err);
+                if (autoGradingPollIntervalRef.current) {
+                  clearInterval(autoGradingPollIntervalRef.current);
+                  autoGradingPollIntervalRef.current = null;
+                }
+                message.destroy();
+                message.error(err.message || "Failed to check grading status");
+              }
+            }, 2000); // Poll every 2 seconds
+
+            autoGradingPollIntervalRef.current = pollInterval;
+
+            // Stop polling after 5 minutes (safety timeout)
+            setTimeout(() => {
+              if (autoGradingPollIntervalRef.current) {
+                clearInterval(autoGradingPollIntervalRef.current);
+                autoGradingPollIntervalRef.current = null;
+              }
+              message.destroy();
+            }, 300000); // 5 minutes
+          } else {
+            // Status is not PROCESSING, grading completed immediately
+            if (gradingSession.status === 1) {
+              message.success("Auto grading completed successfully");
+            } else if (gradingSession.status === 2) {
+              message.error("Auto grading failed");
+            }
+          }
         } catch (gradingErr: any) {
           console.error("Failed to start auto grading:", gradingErr);
           message.destroy();

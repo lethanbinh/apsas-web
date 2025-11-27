@@ -11,6 +11,9 @@ import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
 import { submissionFeedbackService, SubmissionFeedback } from "@/services/submissionFeedbackService";
 import { geminiService } from "@/services/geminiService";
+import { semesterService } from "@/services/semesterService";
+import { courseElementService } from "@/services/courseElementService";
+import { Alert } from "antd";
 import {
   ArrowLeftOutlined,
   EyeOutlined,
@@ -75,8 +78,8 @@ export default function AssignmentGradingPage() {
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
   const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
-  // Always allow editing - disable semester check
   const [isSemesterPassed, setIsSemesterPassed] = useState(false);
+  const [semesterInfo, setSemesterInfo] = useState<{ startDate: string; endDate: string } | null>(null);
   const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
   const [latestGradeItems, setLatestGradeItems] = useState<GradeItem[]>([]);
   const [gradingHistory, setGradingHistory] = useState<GradingSession[]>([]);
@@ -185,8 +188,7 @@ export default function AssignmentGradingPage() {
       // Don't set score from lastGrade here - it will be calculated from grade items in fetchLatestGradingData
 
       // Check if semester has passed
-      // Tạm comment lại chức năng check học kỳ
-      // await checkSemesterStatus(sub);
+      await checkSemesterStatus(sub);
 
       // Clear any existing feedback in localStorage to prevent sample data
       // Feedback will only be loaded from AI or entered manually
@@ -313,7 +315,7 @@ export default function AssignmentGradingPage() {
             });
           });
         }
-        
+          
         // Calculate total score from ALL grade items (like grading history does)
         if (allGradeItems.length > 0) {
           const total = allGradeItems.reduce((sum, item) => sum + item.score, 0);
@@ -329,78 +331,64 @@ export default function AssignmentGradingPage() {
     }
   };
 
-  // Tạm comment lại chức năng check học kỳ
-  // const checkSemesterStatus = async (submission: Submission) => {
-  //   try {
-  //     // Default to allowing editing (isSemesterPassed = false)
-  //     setIsSemesterPassed(false);
-  //     
-  //     if (!submission.classAssessmentId) {
-  //       console.log("No classAssessmentId, allowing editing");
-  //       return;
-  //     }
+  const checkSemesterStatus = async (submission: Submission) => {
+    try {
+      let semesterStartDate: string | undefined;
+      let semesterEndDate: string | undefined;
 
-  //     // Get class assessment
-  //     const classId = localStorage.getItem("selectedClassId");
-  //     if (!classId) {
-  //       console.log("No classId in localStorage, allowing editing");
-  //       return;
-  //     }
+      // Try to get semester info from classAssessment
+      if (submission.classAssessmentId) {
+        const classId = localStorage.getItem("selectedClassId");
+        if (classId) {
+          try {
+            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
+              classId: Number(classId),
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            const classAssessment = classAssessmentsRes.items.find(
+              (ca) => ca.id === submission.classAssessmentId
+            );
+            if (classAssessment?.courseElementId) {
+              // Fetch course element to get semesterCourse
+              const courseElements = await courseElementService.getCourseElements({
+                pageNumber: 1,
+                pageSize: 1000,
+              });
+              const courseElement = courseElements.find(
+                (el) => el.id === classAssessment.courseElementId
+              );
+              if (courseElement?.semesterCourse?.semester) {
+                semesterStartDate = courseElement.semesterCourse.semester.startDate;
+                semesterEndDate = courseElement.semesterCourse.semester.endDate;
+              }
+            }
+          } catch (err) {
+            console.error("Failed to fetch from classAssessment:", err);
+          }
+        }
+      }
 
-  //     const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-  //       classId: Number(classId),
-  //       pageNumber: 1,
-  //       pageSize: 1000,
-  //     });
+      if (semesterStartDate && semesterEndDate) {
+        setSemesterInfo({
+          startDate: semesterStartDate,
+          endDate: semesterEndDate,
+        });
 
-  //     const classAssessment = classAssessmentsRes.items.find(
-  //       (ca) => ca.id === submission.classAssessmentId
-  //     );
-
-  //     if (!classAssessment) {
-  //       console.log("ClassAssessment not found, allowing editing");
-  //       return;
-  //     }
-
-  //     // Get class info to get semester
-  //     const classInfo = await classService.getClassById(classId);
-  //     if (!classInfo) {
-  //       console.log("ClassInfo not found, allowing editing");
-  //       return;
-  //     }
-
-  //     // Extract semester code from semesterName (format: "SEMESTER_CODE - ...")
-  //     const semesterCode = classInfo.semesterName?.split(" - ")[0];
-  //     if (!semesterCode) {
-  //       console.log("Semester code not found, allowing editing");
-  //       return;
-  //     }
-
-  //     // Get semester detail to check end date
-  //     const semesterDetail = await semesterService.getSemesterPlanDetail(semesterCode);
-  //     if (!semesterDetail?.endDate) {
-  //       console.log("Semester end date not found, allowing editing");
-  //       return;
-  //     }
-
-  //     // Check if semester has passed
-  //     const now = new Date();
-  //     const semesterEnd = new Date(semesterDetail.endDate.endsWith("Z") ? semesterDetail.endDate : semesterDetail.endDate + "Z");
-  //     const hasPassed = now > semesterEnd;
-  //     setIsSemesterPassed(hasPassed);
-  //     console.log("Semester status check:", { 
-  //       semesterCode, 
-  //       endDate: semesterDetail.endDate, 
-  //       now: now.toISOString(), 
-  //       semesterEnd: semesterEnd.toISOString(),
-  //       hasPassed 
-  //     });
-  //   } catch (err) {
-  //     console.error("Failed to check semester status:", err);
-  //     // On error, allow editing (default to false)
-  //     setIsSemesterPassed(false);
-  //   }
-  // };
+        // Check if semester has passed
+        const now = dayjs().tz("Asia/Ho_Chi_Minh");
+        const semesterEnd = toVietnamTime(semesterEndDate);
+        const hasPassed = now.isAfter(semesterEnd, 'day');
+        setIsSemesterPassed(hasPassed);
+      } else {
+        setIsSemesterPassed(false);
+      }
+    } catch (err) {
+      console.error("Failed to check semester status:", err);
+      // On error, allow editing (default to false)
+      setIsSemesterPassed(false);
+    }
+  };
 
   const fetchQuestionsAndRubrics = async (submission: Submission) => {
     // Declare allQuestions outside try-catch so it's accessible in catch block
@@ -1131,6 +1119,12 @@ export default function AssignmentGradingPage() {
       return;
     }
 
+    // Check if semester has passed
+    if (isSemesterPassed) {
+      message.warning("Cannot use auto grading when the semester has ended.");
+      return;
+    }
+
     try {
       setAutoGradingLoading(true);
 
@@ -1323,6 +1317,12 @@ export default function AssignmentGradingPage() {
   const handleSave = async () => {
     if (!submissionId || !submission) {
       message.error("No submission selected");
+      return;
+    }
+
+    // Check if semester has passed
+    if (isSemesterPassed) {
+      message.warning("Cannot edit grades when the semester has ended.");
       return;
     }
 
@@ -1527,7 +1527,7 @@ export default function AssignmentGradingPage() {
       key: "maxScore",
       width: "10%",
       align: "center" as const,
-      render: (score: number) => <Tag color="blue">{score}</Tag>,
+      render: (score: number) => <Tag color="blue">{score.toFixed(2)}</Tag>,
     },
     {
       title: "Score",
@@ -1555,6 +1555,7 @@ export default function AssignmentGradingPage() {
             style={{ width: "100%" }}
             step={0.01}
             precision={2}
+            disabled={isSemesterPassed}
           />
         );
       },
@@ -1564,16 +1565,15 @@ export default function AssignmentGradingPage() {
   return (
     <App>
     <div className={styles.container}>
-        {/* Tạm comment lại check học kỳ */}
-        {/* {isSemesterPassed && (
+        {isSemesterPassed && (
         <Alert
           message="Semester Ended"
-          description="The semester has ended. You cannot edit grades or feedback for submissions from past semesters."
+          description="Cannot edit grades when the semester has ended."
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
-      )} */}
+      )}
       <Card className={styles.headerCard}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           <div className={styles.headerActions}>
@@ -1594,6 +1594,7 @@ export default function AssignmentGradingPage() {
                   icon={<RobotOutlined />}
                   onClick={handleGetAiFeedback}
                   loading={loadingAiFeedback}
+                  disabled={isSemesterPassed}
               >
                   Get AI Feedback
               </Button>
@@ -1697,6 +1698,7 @@ export default function AssignmentGradingPage() {
                               icon={<RobotOutlined />}
                               onClick={handleAutoGrading}
                               loading={autoGradingLoading}
+                              disabled={isSemesterPassed}
                               block
                             >
                               Auto Grading
@@ -1706,6 +1708,7 @@ export default function AssignmentGradingPage() {
                               icon={<SaveOutlined />}
                               onClick={handleSave}
                               loading={saving}
+                              disabled={isSemesterPassed}
                               block
                             >
                               Save Grade
@@ -1752,9 +1755,9 @@ export default function AssignmentGradingPage() {
                   </span>
                   <Space>
                     <Tag color="blue">
-                      Score: {questionTotalScore}/{questionMaxScore}
+                      Score: {questionTotalScore.toFixed(2)}/{questionMaxScore.toFixed(2)}
                     </Tag>
-                    <Tag color="green">Max: {question.score}</Tag>
+                    <Tag color="green">Max: {question.score.toFixed(2)}</Tag>
                   </Space>
                 </div>
               ),
@@ -2027,7 +2030,7 @@ function ViewExamModal({
                   {questions[paper.id]?.map((question, qIndex) => (
                     <div key={question.id} style={{ marginBottom: 24 }}>
                       <Title level={5}>
-                        Question {qIndex + 1} (Score: {question.score})
+                        Question {qIndex + 1} (Score: {question.score.toFixed(2)})
                       </Title>
                       <Text>{question.questionText}</Text>
 
@@ -2055,7 +2058,7 @@ function ViewExamModal({
                           <ul>
                             {rubrics[question.id].map((rubric) => (
                               <li key={rubric.id}>
-                                {rubric.description} (Max: {rubric.score} points)
+                                {rubric.description} (Max: {rubric.score.toFixed(2)} points)
                                 {rubric.input && rubric.input !== "N/A" && (
                                   <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
                                     Input: <code>{rubric.input}</code>
@@ -2240,7 +2243,7 @@ function GradingHistoryModal({
       key: "rubricItemMaxScore",
       width: "12%",
       align: "center" as const,
-      render: (score: number) => <Tag color="blue">{score}</Tag>,
+      render: (score: number) => <Tag color="blue">{score.toFixed(2)}</Tag>,
     },
     {
       title: "Score",

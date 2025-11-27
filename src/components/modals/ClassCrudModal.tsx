@@ -70,7 +70,7 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
     try {
       const payload = {
         ...values,
-        totalStudent: Number(values.totalStudent),
+        totalStudent: isEditMode ? 0 : 0, // Số lượng sinh viên sẽ được đếm tự động
         lecturerId: Number(values.lecturerId),
         semesterCourseId: semesterCourseId,
       };
@@ -156,30 +156,6 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
             }
           />
-        </Form.Item>
-        <Form.Item
-          name="totalStudent"
-          label="Total Students"
-          rules={[
-            { required: true, message: "Please enter the total students" },
-            {
-              validator: (_, value) => {
-                if (value === undefined || value === null || value === '') {
-                  return Promise.reject(new Error("Total students cannot be empty!"));
-                }
-                const numValue = Number(value);
-                if (isNaN(numValue) || numValue < 1) {
-                  return Promise.reject(new Error("Total students must be at least 1!"));
-                }
-                if (numValue > 1000) {
-                  return Promise.reject(new Error("Total students cannot exceed 1000!"));
-                }
-                return Promise.resolve();
-              },
-            },
-          ]}
-        >
-          <Input type="number" min={1} max={1000} />
         </Form.Item>
         <Form.Item
           name="description"

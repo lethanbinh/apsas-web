@@ -1,13 +1,9 @@
 "use client";
 
 import {
-  BookOutlined,
-  FileTextOutlined,
   InfoCircleOutlined,
   SearchOutlined,
-  UserOutlined,
   BarChartOutlined,
-  CheckSquareOutlined,
   TeamOutlined,
   ExperimentOutlined,
 } from "@ant-design/icons";
@@ -50,16 +46,6 @@ export default function SidebarLecturer() {
         key: "/lecturer/labs",
         icon: <ExperimentOutlined />,
         label: <Link href="/lecturer/labs">Labs</Link>,
-      },
-      {
-        key: "/lecturer/tasks",
-        icon: <CheckSquareOutlined />,
-        label: <Link href="/lecturer/tasks">Tasks</Link>,
-      },
-      {
-        key: "/lecturer/my-grading-group",
-        icon: <FileTextOutlined />,
-        label: <Link href="/lecturer/my-grading-group">PE</Link>,
       },
       {
         key: "/lecturer/members",
