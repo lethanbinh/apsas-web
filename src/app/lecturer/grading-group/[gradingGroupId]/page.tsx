@@ -139,8 +139,35 @@ export default function GradingGroupPage() {
         gradingGroupId: gradingGroupId,
       });
       
-      // Sort by student code for easier navigation
-      const sortedSubmissions = [...allSubmissions].sort((a, b) => 
+      // Group by studentId and get latest submission for each student
+      const studentSubmissions = new Map<number, Submission>();
+      for (const sub of allSubmissions) {
+        if (!sub.studentId) continue;
+        const existing = studentSubmissions.get(sub.studentId);
+        if (!existing) {
+          studentSubmissions.set(sub.studentId, sub);
+        } else {
+          // Compare by submittedAt, if equal or both empty, use the one with larger ID
+          const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
+          const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+          
+          if (currentDate > existingDate) {
+            // Current submission has newer date
+            studentSubmissions.set(sub.studentId, sub);
+          } else if (currentDate < existingDate) {
+            // Existing submission has newer date, keep it
+            // Do nothing, keep existing
+          } else {
+            // Dates are equal (both 0 or same date), keep the one with the largest ID (newest)
+            if (sub.id > existing.id) {
+              studentSubmissions.set(sub.studentId, sub);
+            }
+          }
+        }
+      }
+      
+      // Convert to array and sort by student code for easier navigation
+      const sortedSubmissions = Array.from(studentSubmissions.values()).sort((a, b) => 
         (a.studentCode || "").localeCompare(b.studentCode || "")
       );
       

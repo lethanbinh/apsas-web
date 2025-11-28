@@ -74,10 +74,13 @@ function mapCourseElementToAssignmentData(
   const files = filesMap.get(element.id) || [];
   
   // Get requirement file and database file if available
+  // Note: fileTemplate = 0 is Database, fileTemplate = 1 is Postman (hidden from students), fileTemplate = 2 is Custom
   const requirementFileObj = files.find(f => f.fileTemplate === 0);
-  const databaseFileObj = files.find(f => f.fileTemplate === 1);
+  // Don't get Postman files (fileTemplate = 1) for students - only get database file (fileTemplate = 0)
+  // If there are multiple files with fileTemplate = 0, we'll use the first one for both requirement and database
+  const databaseFileObj = files.find(f => f.fileTemplate === 0 && f.id !== requirementFileObj?.id) || requirementFileObj;
   const requirementFile = requirementFileObj?.name || "";
-  const databaseFile = databaseFileObj?.name || "";
+  const databaseFile = databaseFileObj && databaseFileObj.id !== requirementFileObj?.id ? databaseFileObj.name : "";
 
   return {
     id: element.id.toString(),

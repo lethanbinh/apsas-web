@@ -19,8 +19,6 @@ import { AssessmentQuestion, assessmentQuestionService } from "@/services/assess
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { assessmentFileService } from "@/services/assessmentFileService";
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   PlusOutlined,
   UserAddOutlined,
   DownloadOutlined,
@@ -826,35 +824,6 @@ const GradingGroupsPageContent = () => {
           </Text>
         </div>
       ),
-    },
-    {
-      title: "Submitted At",
-      dataIndex: "submittedAt",
-      key: "submittedAt",
-      render: (date) => date ? new Date(date).toLocaleString() : "N/A",
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      width: 120,
-      render: (status) =>
-        status === 0 ? (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            On Time
-          </Tag>
-        ) : (
-          <Tag icon={<ClockCircleOutlined />} color="error">
-            Late
-          </Tag>
-        ),
-    },
-    {
-      title: "Score",
-      dataIndex: "lastGrade",
-      key: "score",
-      width: 100,
-      render: (grade) => <Text>{grade !== null && grade !== undefined ? `${grade}/100` : "N/A"}</Text>,
     },
     {
       title: "Action",

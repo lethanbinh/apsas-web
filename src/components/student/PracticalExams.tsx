@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { App, Typography, Collapse, Spin, Alert } from "antd";
-import { LinkOutlined } from "@ant-design/icons";
-import styles from "./AssignmentList.module.css";
-import dayjs from "dayjs";
-import { AssignmentData } from "./data";
-import { AssignmentItem } from "./AssignmentItem";
-import { classService } from "@/services/classService";
-import { courseElementService, CourseElement } from "@/services/courseElementService";
-import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
-import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assignRequestService } from "@/services/assignRequestService";
+import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
+import { classService } from "@/services/classService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { LinkOutlined } from "@ant-design/icons";
+import { Alert, Collapse, Spin, Typography } from "antd";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { AssignmentItem } from "./AssignmentItem";
+import styles from "./AssignmentList.module.css";
+import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
 

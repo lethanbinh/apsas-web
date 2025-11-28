@@ -326,12 +326,12 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </>
           )}
 
-          {/* Requirement Files */}
-          {files.length > 0 && (
+          {/* Requirement Files - exclude Postman files (fileTemplate = 1) */}
+          {files.filter(f => f.fileTemplate !== 1).length > 0 && (
             <>
               <Title level={5}>Requirement Files</Title>
               <List
-                dataSource={files}
+                dataSource={files.filter(f => f.fileTemplate !== 1)}
                 renderItem={(file) => (
                   <List.Item>
                     <a

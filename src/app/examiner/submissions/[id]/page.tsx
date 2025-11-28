@@ -15,30 +15,14 @@ import {
   Space,
   Spin,
   Table,
-  Tag,
   Typography,
 } from "antd";
-import { format } from "date-fns";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./Submissions.module.css";
 
 const { Title } = Typography;
 
-const formatUtcDate = (dateString: string, formatStr: string) => {
-  if (!dateString) return "N/A";
-  const date = new Date(
-    dateString.endsWith("Z") ? dateString : dateString + "Z"
-  );
-  return format(date, formatStr);
-};
-
-const getStatusTag = (status: number) => {
-  if (status === 0) {
-    return <Tag color="green">On time</Tag>;
-  }
-  return <Tag color="red">Late</Tag>;
-};
 
 const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
   const [submissions, setSubmissions] = useState<Submission[]>([]);
@@ -108,26 +92,6 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
           {name} ({record.studentCode})
         </span>
       ),
-    },
-    {
-      title: "Submitted At",
-      dataIndex: "submittedAt",
-      key: "submittedAt",
-      render: (date) => formatUtcDate(date, "dd/MM/yyyy HH:mm"),
-      sorter: (a, b) =>
-        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
-    },
-    {
-      title: "Score",
-      dataIndex: "lastGrade",
-      key: "lastGrade",
-      render: (score) => `${score}/100`,
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => getStatusTag(status),
     },
     {
       title: "Grader",
