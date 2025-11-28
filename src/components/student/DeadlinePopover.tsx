@@ -57,20 +57,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       return "Start date must be before end date";
     }
 
-    // Validate with semester dates if provided
-    if (semesterStartDate && semesterEndDate) {
-      const semesterStart = toVietnamTime(semesterStartDate);
-      const semesterEnd = toVietnamTime(semesterEndDate);
-
-      if (start.isBefore(semesterStart)) {
-        return `Start date must be on or after semester start date (${semesterStart.format("DD/MM/YYYY")})`;
-      }
-
-      if (end.isAfter(semesterEnd)) {
-        return `End date must be on or before semester end date (${semesterEnd.format("DD/MM/YYYY")})`;
-      }
-    }
-
     return null;
   };
 
@@ -112,25 +98,10 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     setValidationError(null);
   };
 
-  // Get disabled dates for DatePicker based on semester dates
+  // Get disabled dates for DatePicker - only validate start < end
   const getDisabledDate = (isStartDate: boolean) => {
     return (current: dayjs.Dayjs) => {
-      if (semesterStartDate && semesterEndDate) {
-        const semesterStart = toVietnamTime(semesterStartDate);
-        const semesterEnd = toVietnamTime(semesterEndDate);
-        
-        if (isStartDate) {
-          // For start date: disable dates before semester start
-          return current.isBefore(semesterStart, 'day');
-        } else {
-          // For end date: disable dates after semester end or before start date
-          if (tempStartDate && current.isBefore(tempStartDate, 'day')) {
-            return true;
-          }
-          return current.isAfter(semesterEnd, 'day');
-        }
-      }
-      // If no semester dates, only validate start < end
+      // For end date: disable dates before start date
       if (!isStartDate && tempStartDate) {
         return current.isBefore(tempStartDate, 'day');
       }

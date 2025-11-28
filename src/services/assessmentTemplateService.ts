@@ -30,6 +30,7 @@ export interface AssessmentTemplate {
   templateType: number;
   name: string;
   description: string;
+  startupProject?: string;
   createdByLecturerId: number;
   lecturerName: string;
   lecturerCode: string;
@@ -79,6 +80,7 @@ export interface CreateAssessmentTemplatePayload {
   templateType: number;
   name: string;
   description: string;
+  startupProject?: string;
   createdByLecturerId: number;
   assignedToHODId: number;
 }
@@ -94,6 +96,7 @@ export interface UpdateAssessmentTemplatePayload {
   templateType: number;
   name: string;
   description: string;
+  startupProject?: string;
   assignedToHODId: number;
 }
 

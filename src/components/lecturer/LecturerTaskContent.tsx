@@ -62,6 +62,126 @@ const { TextArea } = Input;
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 
+// --- Component Upload File Modal ---
+const UploadFileModal = ({
+  open,
+  onCancel,
+  onFinish,
+  fileType,
+  templateType,
+  fileList,
+  onFileListChange,
+}: {
+  open: boolean;
+  onCancel: () => void;
+  onFinish: (values: { name: string; databaseName?: string; file: File }) => void;
+  fileType: 0 | 1 | 2;
+  templateType: number;
+  fileList: UploadFile[];
+  onFileListChange: (fileList: UploadFile[]) => void;
+}) => {
+  const [form] = Form.useForm();
+  const { notification } = App.useApp();
+
+  useEffect(() => {
+    if (open) {
+      form.resetFields();
+      onFileListChange([]);
+    }
+  }, [open, form, onFileListChange]);
+
+  const handleFileChange = (info: UploadChangeParam) => {
+    onFileListChange(info.fileList);
+    // Auto-fill name when file is selected
+    if (info.fileList.length > 0 && info.fileList[0].originFileObj) {
+      const fileName = info.fileList[0].name;
+      form.setFieldsValue({ name: fileName });
+    } else {
+      form.setFieldsValue({ name: "" });
+    }
+  };
+
+  const handleSubmit = (values: { name: string; databaseName?: string }) => {
+    if (fileList.length === 0) {
+      notification.warning({ message: "Please select a file" });
+      return;
+    }
+    const file = fileList[0].originFileObj as File;
+    onFinish({
+      name: values.name,
+      databaseName: values.databaseName,
+      file: file,
+    });
+  };
+
+  const title =
+    fileType === 0
+      ? "Upload Database File"
+      : fileType === 1
+      ? "Upload Postman File"
+      : "Upload Custom File";
+
+  return (
+    <Modal
+      title={title}
+      open={open}
+      onCancel={onCancel}
+      footer={null}
+      width={600}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+      >
+        <Form.Item
+          label="File"
+          required
+          rules={[{ required: true, message: "Please select a file" }]}
+        >
+          <Upload
+            fileList={fileList}
+            onChange={handleFileChange}
+            beforeUpload={() => false}
+            maxCount={1}
+          >
+            <Button icon={<UploadOutlined />}>Select File</Button>
+          </Upload>
+        </Form.Item>
+
+        <Form.Item
+          label="Name"
+          name="name"
+          required
+          rules={[{ required: true, message: "Please enter file name" }]}
+        >
+          <Input placeholder="Enter file name" />
+        </Form.Item>
+
+        {fileType === 0 && templateType === 1 && (
+          <Form.Item
+            label="Database Name"
+            name="databaseName"
+            required
+            rules={[{ required: true, message: "Please enter database name" }]}
+          >
+            <Input placeholder="Enter database name" />
+          </Form.Item>
+        )}
+
+        <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button type="primary" htmlType="submit" disabled={fileList.length === 0}>
+              Upload
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 // --- Component Form Modal cho Rubric ---
 const RubricFormModal = ({
   open,
@@ -388,6 +508,7 @@ const TemplateFormModal = ({
           name: initialData.name,
           description: initialData.description,
           templateType: initialData.templateType,
+          startupProject: initialData.startupProject || "",
         });
       } else {
         form.resetFields();
@@ -404,6 +525,7 @@ const TemplateFormModal = ({
             name: values.name,
             description: values.description,
             templateType: values.templateType,
+            startupProject: values.templateType === 1 ? values.startupProject : undefined,
             assignedToHODId: assignedToHODId,
           }
         );
@@ -480,6 +602,23 @@ const TemplateFormModal = ({
             <Radio value={0}>DSA</Radio>
             <Radio value={1}>WEBAPI</Radio>
           </Radio.Group>
+        </Form.Item>
+        <Form.Item
+          noStyle
+          shouldUpdate={(prevValues, currentValues) => prevValues.templateType !== currentValues.templateType}
+        >
+          {({ getFieldValue }) => {
+            const templateType = getFieldValue("templateType");
+            return templateType === 1 ? (
+              <Form.Item
+                name="startupProject"
+                label="Startup Project"
+                rules={[{ required: true, message: "Startup Project is required for WEBAPI templates" }]}
+              >
+                <Input disabled={!isEditable} placeholder="Enter startup project" />
+              </Form.Item>
+            ) : null;
+          }}
         </Form.Item>
       </Form>
     </Modal>
@@ -777,25 +916,58 @@ const TemplateDetailView = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFileType, setUploadFileType] = useState<0 | 1 | 2>(2); // 0=Database, 1=Postman, 2=Custom
   const { modal, notification } = App.useApp();
 
-  const handleUploadFile = async () => {
-    if (fileList.length === 0) return;
-    const uploadPromises = fileList.map((file) => {
-      const nativeFile = file.originFileObj as File;
-      return assessmentFileService.createAssessmentFile({
-        File: nativeFile,
-        Name: nativeFile.name,
-        FileTemplate: 0,
+  // Count existing files by type
+  const databaseFilesCount = files.filter(f => f.fileTemplate === 0).length;
+  const postmanFilesCount = files.filter(f => f.fileTemplate === 1).length;
+  const customFilesCount = files.filter(f => f.fileTemplate === 2).length;
+
+  const handleOpenUploadModal = (fileType: 0 | 1 | 2) => {
+    // Validate: WEBAPI only allows max 1 database and 1 postman file
+    if (template.templateType === 1) {
+      if (fileType === 0 && databaseFilesCount >= 1) {
+        notification.warning({
+          message: "Maximum limit reached",
+          description: "Only 1 database file is allowed for WEBAPI templates.",
+        });
+        return;
+      }
+      if (fileType === 1 && postmanFilesCount >= 1) {
+        notification.warning({
+          message: "Maximum limit reached",
+          description: "Only 1 postman file is allowed for WEBAPI templates.",
+        });
+        return;
+      }
+    }
+    setUploadFileType(fileType);
+    setIsUploadModalOpen(true);
+  };
+
+  const handleUploadFile = async (values: { name: string; databaseName?: string; file: File }) => {
+    try {
+      let fileTemplate = uploadFileType;
+      
+      // For DSA template, always use FileTemplate=2 (Custom)
+      if (template.templateType === 0) {
+        fileTemplate = 2;
+      }
+
+      await assessmentFileService.createAssessmentFile({
+        File: values.file,
+        Name: values.name,
+        DatabaseName: fileTemplate === 0 ? values.databaseName : undefined,
+        FileTemplate: fileTemplate,
         AssessmentTemplateId: template.id,
       });
-    });
 
-    try {
-      await Promise.all(uploadPromises);
+      setIsUploadModalOpen(false);
       setFileList([]);
       onFileChange();
-      notification.success({ message: "Files uploaded successfully" });
+      notification.success({ message: "File uploaded successfully" });
     } catch (error: any) {
       notification.error({
         message: "File upload failed",
@@ -859,6 +1031,11 @@ const TemplateDetailView = ({
           <Descriptions.Item label="Type">
             {template.templateType === 0 ? "DSA" : "WEBAPI"}
           </Descriptions.Item>
+          {template.templateType === 1 && template.startupProject && (
+            <Descriptions.Item label="Startup Project">
+              {template.startupProject}
+            </Descriptions.Item>
+          )}
           <Descriptions.Item label="Papers">{papers.length}</Descriptions.Item>
         </Descriptions>
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
@@ -928,6 +1105,135 @@ const TemplateDetailView = ({
       />
 
       <Card title="Attached Files">
+        {/* Group files by type for WEBAPI */}
+        {template.templateType === 1 ? (
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            {/* Database Files */}
+            <div>
+              <Typography.Text strong>Database Files:</Typography.Text>
+              <List
+                style={{ marginTop: 8 }}
+                dataSource={files.filter(f => f.fileTemplate === 0)}
+                renderItem={(file) => (
+                  <List.Item
+                    actions={
+                      isEditable
+                        ? [
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDeleteFile(file.id)}
+                            />,
+                          ]
+                        : []
+                    }
+                  >
+                    <List.Item.Meta
+                      title={
+                        <a
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <DatabaseOutlined /> {file.name}
+                        </a>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              {files.filter(f => f.fileTemplate === 0).length === 0 && (
+                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                  No database files
+                </Typography.Text>
+              )}
+            </div>
+
+            <div>
+              <Typography.Text strong>Postman Files:</Typography.Text>
+              <List
+                style={{ marginTop: 8 }}
+                dataSource={files.filter(f => f.fileTemplate === 1)}
+                renderItem={(file) => (
+                  <List.Item
+                    actions={
+                      isEditable
+                        ? [
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDeleteFile(file.id)}
+                            />,
+                          ]
+                        : []
+                    }
+                  >
+                    <List.Item.Meta
+                      title={
+                        <a
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <PaperClipOutlined /> {file.name}
+                        </a>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              {files.filter(f => f.fileTemplate === 1).length === 0 && (
+                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                  No postman files
+                </Typography.Text>
+              )}
+            </div>
+
+            {/* Custom Files */}
+            <div>
+              <Typography.Text strong>Custom Files:</Typography.Text>
+              <List
+                style={{ marginTop: 8 }}
+                dataSource={files.filter(f => f.fileTemplate === 2)}
+                renderItem={(file) => (
+                  <List.Item
+                    actions={
+                      isEditable
+                        ? [
+                            <Button
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleDeleteFile(file.id)}
+                            />,
+                          ]
+                        : []
+                    }
+                  >
+                    <List.Item.Meta
+                      title={
+                        <a
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <PaperClipOutlined /> {file.name}
+                        </a>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+              {files.filter(f => f.fileTemplate === 2).length === 0 && (
+                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
+                  No custom files
+                </Typography.Text>
+              )}
+            </div>
+          </Space>
+        ) : (
         <List
           dataSource={files}
           renderItem={(file) => (
@@ -959,27 +1265,61 @@ const TemplateDetailView = ({
             </List.Item>
           )}
         />
+        )}
+
         {isEditable && (
-          <Space.Compact style={{ width: "100%", marginTop: "16px" }}>
-            <Upload
-              fileList={fileList}
-              onChange={(info) => setFileList(info.fileList)}
-              beforeUpload={() => false}
-              multiple={true}
-              style={{ flex: 1 }}
+          <Space direction="vertical" style={{ width: "100%", marginTop: "16px" }} size="small">
+            {template.templateType === 1 ? (
+              // WEBAPI: Show buttons for each file type
+              <Space wrap>
+                <Button
+                  icon={<DatabaseOutlined />}
+                  onClick={() => handleOpenUploadModal(0)}
+                  disabled={databaseFilesCount >= 1}
             >
-              <Button icon={<UploadOutlined />}>Select Files</Button>
-            </Upload>
+                  Upload Database File {databaseFilesCount >= 1 ? "(Max 1)" : ""}
+                </Button>
             <Button
-              type="primary"
-              onClick={handleUploadFile}
-              disabled={fileList.length === 0}
+                  icon={<UploadOutlined />}
+                  onClick={() => handleOpenUploadModal(1)}
+                  disabled={postmanFilesCount >= 1}
             >
-              Upload ({fileList.length})
+                  Upload Postman File {postmanFilesCount >= 1 ? "(Max 1)" : ""}
             </Button>
-          </Space.Compact>
+                <Button
+                  icon={<UploadOutlined />}
+                  onClick={() => handleOpenUploadModal(2)}
+                >
+                  Upload Custom File
+                </Button>
+              </Space>
+            ) : (
+              // DSA: Only custom files
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => handleOpenUploadModal(2)}
+                block
+              >
+                Upload Custom File
+              </Button>
+            )}
+          </Space>
         )}
       </Card>
+
+      {/* Upload File Modal */}
+      <UploadFileModal
+        open={isUploadModalOpen}
+        onCancel={() => {
+          setIsUploadModalOpen(false);
+          setFileList([]);
+        }}
+        onFinish={handleUploadFile}
+        fileType={uploadFileType}
+        templateType={template.templateType}
+        fileList={fileList}
+        onFileListChange={setFileList}
+      />
     </Space>
   );
 };
@@ -1014,9 +1354,17 @@ export const LecturerTaskContent = ({
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateType, setNewTemplateType] = useState(0);
+  const [newTemplateStartupProject, setNewTemplateStartupProject] = useState("");
   const [databaseFileList, setDatabaseFileList] = useState<UploadFile[]>([]);
   const [postmanFileList, setPostmanFileList] = useState<UploadFile[]>([]);
+  const [databaseName, setDatabaseName] = useState("");
+  const [databaseFileName, setDatabaseFileName] = useState("");
+  const [postmanFileName, setPostmanFileName] = useState("");
   const [importFileListForNewTemplate, setImportFileListForNewTemplate] = useState<UploadFile[]>([]);
+  const [isDatabaseUploadModalOpen, setIsDatabaseUploadModalOpen] = useState(false);
+  const [isPostmanUploadModalOpen, setIsPostmanUploadModalOpen] = useState(false);
+  const [databaseUploadFileList, setDatabaseUploadFileList] = useState<UploadFile[]>([]);
+  const [postmanUploadFileList, setPostmanUploadFileList] = useState<UploadFile[]>([]);
 
   // Allow editing when status is Pending (1), In Progress (4), or Rejected (3)
   // When Rejected, lecturer can edit template and resubmit
@@ -1278,6 +1626,41 @@ export const LecturerTaskContent = ({
     setPostmanFileList(newFileList);
   };
 
+  // Handle upload database file via modal (when creating template)
+  const handleDatabaseUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
+    setDatabaseFileName(values.name);
+    setDatabaseName(values.databaseName || "");
+    // Set file to databaseFileList
+    const uploadFile: UploadFile = {
+      uid: `-${Date.now()}`,
+      name: values.file.name,
+      status: 'done',
+      originFileObj: values.file as any,
+      size: values.file.size,
+    };
+    setDatabaseFileList([uploadFile]);
+    setIsDatabaseUploadModalOpen(false);
+    setDatabaseUploadFileList([]);
+    notification.success({ message: "Database file selected successfully" });
+  };
+
+  // Handle upload postman file via modal (when creating template)
+  const handlePostmanUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
+    setPostmanFileName(values.name);
+    // Set file to postmanFileList
+    const uploadFile: UploadFile = {
+      uid: `-${Date.now()}`,
+      name: values.file.name,
+      status: 'done',
+      originFileObj: values.file as any,
+      size: values.file.size,
+    };
+    setPostmanFileList([uploadFile]);
+    setIsPostmanUploadModalOpen(false);
+    setPostmanUploadFileList([]);
+    notification.success({ message: "Postman file selected successfully" });
+  };
+
   // Clear database and postman files if template type is not WEBAPI
   useEffect(() => {
     if (newTemplateType !== 1) {
@@ -1312,6 +1695,13 @@ export const LecturerTaskContent = ({
 
       // Validate: If template type is WEBAPI (1), both database and postman files are required
       if (newTemplateType === 1) {
+        if (!newTemplateStartupProject.trim()) {
+          notification.error({
+            message: "Startup Project Required",
+            description: "Startup Project is required for WEBAPI templates.",
+          });
+          return;
+        }
         if (databaseFileList.length === 0) {
           notification.error({
             message: "Database File Required",
@@ -1319,10 +1709,31 @@ export const LecturerTaskContent = ({
           });
           return;
         }
+        if (!databaseFileName.trim()) {
+          notification.error({
+            message: "Database File Name Required",
+            description: "Please enter database file name.",
+          });
+          return;
+        }
+        if (!databaseName.trim()) {
+          notification.error({
+            message: "Database Name Required",
+            description: "Please enter database name.",
+          });
+          return;
+        }
         if (postmanFileList.length === 0) {
           notification.error({
             message: "Postman Collection File Required",
-            description: "Postman collection file (.postman_collection) is required for WEBAPI templates.",
+            description: "Postman collection file (.postman_collection.json) is required for WEBAPI templates.",
+          });
+          return;
+        }
+        if (!postmanFileName.trim()) {
+          notification.error({
+            message: "Postman File Name Required",
+            description: "Please enter postman file name.",
           });
           return;
         }
@@ -1333,6 +1744,7 @@ export const LecturerTaskContent = ({
         name: newTemplateName,
         description: newTemplateDesc,
         templateType: newTemplateType,
+        startupProject: newTemplateType === 1 ? newTemplateStartupProject : undefined,
         assignRequestId: task.id,
         createdByLecturerId: lecturerId,
         assignedToHODId: task.assignedByHODId,
@@ -1345,11 +1757,13 @@ export const LecturerTaskContent = ({
           const databaseFile = databaseFileList[0].originFileObj;
           if (databaseFile) {
             try {
-              await gradingService.uploadPostmanCollectionDatabase(
-                0, // template=0 for database
-                createdTemplate.id,
-                databaseFile
-              );
+              await assessmentFileService.createAssessmentFile({
+                File: databaseFile,
+                Name: databaseFileName || databaseFile.name,
+                DatabaseName: databaseName,
+                FileTemplate: 0,
+                AssessmentTemplateId: createdTemplate.id,
+              });
             } catch (err: any) {
               console.error("Failed to upload database file:", err);
               notification.error({
@@ -1366,11 +1780,12 @@ export const LecturerTaskContent = ({
           const postmanFile = postmanFileList[0].originFileObj;
           if (postmanFile) {
             try {
-              await gradingService.uploadPostmanCollectionDatabase(
-                1, // template=1 for postman collection
-                createdTemplate.id,
-                postmanFile
-              );
+              await assessmentFileService.createAssessmentFile({
+                File: postmanFile,
+                Name: postmanFileName || postmanFile.name,
+                FileTemplate: 1,
+                AssessmentTemplateId: createdTemplate.id,
+              });
             } catch (err: any) {
               console.error("Failed to upload postman collection file:", err);
               notification.error({
@@ -1386,8 +1801,12 @@ export const LecturerTaskContent = ({
       setNewTemplateName("");
       setNewTemplateDesc("");
       setNewTemplateType(0);
+      setNewTemplateStartupProject("");
       setDatabaseFileList([]);
       setPostmanFileList([]);
+      setDatabaseName("");
+      setDatabaseFileName("");
+      setPostmanFileName("");
       
       // If this was a resubmission after rejection, reset status to Pending
       if (isRejected) {
@@ -1444,38 +1863,62 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const handleDownloadTemplate = async () => {
-    if (!template) {
-      notification.warning({ message: "No template selected" });
-      return;
-    }
+  const handleDownloadTemplate = async (templateToDownload?: AssessmentTemplate | null) => {
+    const targetTemplate = templateToDownload || template;
+    
+    // If no template exists, create a sample template structure for download
+    // Include both DSA and WEBAPI sample data in the template
+    const finalTemplate = targetTemplate || {
+      id: 0,
+      assignRequestId: task.id,
+      templateType: 0,
+      name: "Sample Template",
+      description: "Sample template description",
+      startupProject: "",
+      createdByLecturerId: lecturerId,
+      lecturerName: "",
+      lecturerCode: "",
+      assignedToHODId: task.assignedByHODId,
+      hodName: "",
+      hodCode: "",
+      courseElementId: task.courseElementId || 0,
+      courseElementName: "",
+      createdAt: "",
+      updatedAt: "",
+      files: [],
+      papers: [],
+    };
 
     try {
       const wb = XLSX.utils.book_new();
 
       // Sheet 1: Assessment Template
+      // Always include Startup Project field in the template, but only require it for WEBAPI
       const templateData = [
         ["ASSESSMENT TEMPLATE"],
         ["Field", "Value", "Description"],
-        ["Name", template.name || "", "Template name"],
-        ["Description", template.description || "", "Template description"],
-        ["Template Type", template.templateType === 0 ? "DSA (0)" : "WEBAPI (1)", "0: DSA, 1: WEBAPI"],
+        ["Name", finalTemplate.name || "", "Template name"],
+        ["Description", finalTemplate.description || "", "Template description"],
+        ["Template Type", finalTemplate.templateType === 0 ? "DSA (0)" : "WEBAPI (1)", "0: DSA, 1: WEBAPI"],
+        ["Startup Project", finalTemplate.startupProject || "", "Startup project (required for WEBAPI, leave empty for DSA)"],
         [],
         ["INSTRUCTIONS:"],
         ["1. Fill in the Name, Description, and Template Type fields above"],
-        ["2. Use the Papers sheet to add papers"],
-        ["3. Use the Questions sheet to add questions (reference papers by name)"],
-        ["4. Use the Rubrics sheet to add rubrics (reference questions by question number)"],
+        ...(finalTemplate.templateType === 1 ? [["2. Fill in the Startup Project field (required for WEBAPI templates)"]] : []),
+        [finalTemplate.templateType === 1 ? "3" : "2", ". Use the Papers sheet to add papers"],
+        [finalTemplate.templateType === 1 ? "4" : "3", ". Use the Questions sheet to add questions (reference papers by name)"],
+        [finalTemplate.templateType === 1 ? "5" : "4", ". Use the Rubrics sheet to add rubrics (reference questions by question number)"],
       ];
       const templateWs = XLSX.utils.aoa_to_sheet(templateData);
       XLSX.utils.book_append_sheet(wb, templateWs, "Assessment Template");
 
       // Sheet 2: Papers - Use actual data if available, otherwise use sample
       let papersData: any[][];
-      if (papers.length > 0) {
+      const targetPapers = finalTemplate === template ? papers : [];
+      if (targetPapers.length > 0) {
         // Deduplicate papers by name, description, and language
         const papersMap = new Map<string, AssessmentPaper>();
-        for (const paper of papers) {
+        for (const paper of targetPapers) {
           const key = `${paper.name}|${paper.description || ""}|${paper.language || 0}`;
           if (!papersMap.has(key)) {
             papersMap.set(key, paper);
@@ -1516,11 +1959,12 @@ export const LecturerTaskContent = ({
 
       // Sheet 3: Questions - Use actual data if available, otherwise use sample
       let questionsData: any[][];
-      if (papers.length > 0 && Object.keys(allQuestions).length > 0) {
+      const targetAllQuestions = finalTemplate === template ? allQuestions : {};
+      if (targetPapers.length > 0 && Object.keys(targetAllQuestions).length > 0) {
         // Collect all questions and deduplicate
         const questionsMap = new Map<string, { paperName: string; question: AssessmentQuestion }>();
-        for (const paper of papers) {
-          const questions = allQuestions[paper.id] || [];
+        for (const paper of targetPapers) {
+          const questions = targetAllQuestions[paper.id] || [];
           for (const question of questions) {
             const key = `${paper.name}|${question.questionNumber || 0}|${question.questionText || ""}|${question.questionSampleInput || ""}|${question.questionSampleOutput || ""}|${question.score || 0}`;
             if (!questionsMap.has(key)) {
@@ -1576,11 +2020,11 @@ export const LecturerTaskContent = ({
 
       // Sheet 4: Rubrics - Use actual data if available, otherwise use sample
       let rubricsData: any[][];
-      if (papers.length > 0 && Object.keys(allQuestions).length > 0) {
+      if (targetPapers.length > 0 && Object.keys(targetAllQuestions).length > 0) {
         // Fetch all rubrics for all questions
         const allRubrics: Array<{ paperName: string; questionNumber: number; rubric: RubricItem }> = [];
-        for (const paper of papers) {
-          const questions = allQuestions[paper.id] || [];
+        for (const paper of targetPapers) {
+          const questions = targetAllQuestions[paper.id] || [];
           for (const question of questions) {
             try {
               const rubricsResponse = await rubricItemService.getRubricsForQuestion({
@@ -1664,7 +2108,7 @@ export const LecturerTaskContent = ({
       setColumnWidths(questionsWs, { A: 20, B: 15, C: 40, D: 20, E: 20, F: 10, G: 40 });
       setColumnWidths(rubricsWs, { A: 20, B: 15, C: 30, D: 20, E: 20, F: 10, G: 40 });
 
-      const fileName = `Assessment_Template_Import_${template.name || "Template"}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const fileName = `Assessment_Template_Import_${finalTemplate.name || "Template"}_${new Date().toISOString().split("T")[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       notification.success({
         message: "Template Downloaded",
@@ -1695,13 +2139,17 @@ export const LecturerTaskContent = ({
       let templateName = "";
       let templateDesc = "";
       let templateType = 0;
+      let startupProject = "";
       
       for (let i = 2; i < templateRows.length; i++) {
         const row = templateRows[i];
         if (row && row[0]) {
-          if (row[0] === "Name" && row[1]) templateName = String(row[1]).trim();
-          if (row[0] === "Description" && row[1]) templateDesc = String(row[1]).trim();
-          if (row[0] === "Template Type" && row[1]) {
+          const fieldName = String(row[0]).trim();
+          if (fieldName === "Name" && row[1]) {
+            templateName = String(row[1]).trim();
+          } else if (fieldName === "Description" && row[1]) {
+            templateDesc = String(row[1]).trim();
+          } else if (fieldName === "Template Type" && row[1]) {
             const typeStr = String(row[1]);
             if (typeStr.includes("0")) templateType = 0;
             else if (typeStr.includes("1")) templateType = 1;
@@ -1713,6 +2161,8 @@ export const LecturerTaskContent = ({
                 description: `Template type "${typeStr}" is not valid. Only 0 (DSA) and 1 (WEBAPI) are accepted. Defaulting to 0 (DSA).`,
               });
             }
+          } else if (fieldName === "Startup Project" && row[1]) {
+            startupProject = String(row[1]).trim();
           }
         }
       }
@@ -1722,15 +2172,22 @@ export const LecturerTaskContent = ({
         throw new Error("Template name is required in the Assessment Template sheet");
       }
 
+      // Validate startupProject for WEBAPI template
+      if (templateType === 1 && !startupProject) {
+        throw new Error("Startup Project is required for WEBAPI templates in the Assessment Template sheet");
+      }
+
       // Create or update template
       let currentTemplate: AssessmentTemplate;
       if (existingTemplate) {
         // Update existing template if changed
-        if (templateName !== existingTemplate.name || templateDesc !== existingTemplate.description || templateType !== existingTemplate.templateType) {
+        const existingStartupProject = existingTemplate.startupProject || "";
+        if (templateName !== existingTemplate.name || templateDesc !== existingTemplate.description || templateType !== existingTemplate.templateType || (templateType === 1 && startupProject !== existingStartupProject)) {
           currentTemplate = await assessmentTemplateService.updateAssessmentTemplate(existingTemplate.id, {
             name: templateName,
             description: templateDesc,
             templateType: templateType,
+            startupProject: templateType === 1 ? startupProject : undefined,
             assignedToHODId: existingTemplate.assignedToHODId,
           });
         } else {
@@ -1746,6 +2203,7 @@ export const LecturerTaskContent = ({
           name: templateName,
           description: templateDesc,
           templateType: templateType,
+          startupProject: templateType === 1 ? startupProject : undefined,
           assignRequestId: task.id,
           createdByLecturerId: lecturerId,
           assignedToHODId: task.assignedByHODId,
@@ -2382,6 +2840,20 @@ export const LecturerTaskContent = ({
                 </Form.Item>
 
                 {newTemplateType === 1 && (
+                  <Form.Item 
+                    label="Startup Project" 
+                    required
+                    rules={[{ required: true, message: "Startup Project is required for WEBAPI templates" }]}
+                  >
+                    <Input
+                      value={newTemplateStartupProject}
+                      onChange={(e) => setNewTemplateStartupProject(e.target.value)}
+                      placeholder="Enter startup project"
+                    />
+                  </Form.Item>
+                )}
+
+                {newTemplateType === 1 && (
                   <>
                     <Form.Item
                       label="Upload Database File (.sql)"
@@ -2389,30 +2861,23 @@ export const LecturerTaskContent = ({
                       help="Database file is required for WEBAPI templates"
                     >
                       <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
-                          <Space direction="vertical" style={{ width: "100%" }} size="small">
-                            <Text strong>Upload database SQL file</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Only .sql files are accepted. Maximum size 100MB.
-                            </Text>
-                          </Space>
-                        </Card>
-                        <Upload
-                          fileList={databaseFileList}
-                          beforeUpload={beforeUploadSql}
-                          onChange={handleDatabaseFileChange}
-                          accept=".sql"
-                          maxCount={1}
+                        <Button
+                          type="primary"
+                          icon={<DatabaseOutlined />}
+                          onClick={() => setIsDatabaseUploadModalOpen(true)}
                         >
-                          <Button icon={<DatabaseOutlined />}>Select Database File</Button>
-                        </Upload>
+                          {databaseFileList.length > 0 ? "Edit Database File" : "Upload Database File"}
+                        </Button>
                         {databaseFileList.length > 0 && (
                           <Card size="small">
+                            <Space direction="vertical" style={{ width: "100%" }} size="small">
                             <Space>
                               <DatabaseOutlined />
-                              <Text>{databaseFileList[0].name}</Text>
+                                <Text strong>{databaseFileName || databaseFileList[0].name}</Text>
+                              </Space>
+                              <Text type="secondary">Database Name: {databaseName}</Text>
                               <Text type="secondary">
-                                ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                                File: {databaseFileList[0].name} ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
                               </Text>
                             </Space>
                           </Card>
@@ -2421,35 +2886,27 @@ export const LecturerTaskContent = ({
                     </Form.Item>
 
                     <Form.Item
-                      label="Upload Postman Collection File (.postman_collection)"
+                      label="Upload Postman Collection File (.postman_collection.json)"
                       required
                       help="Postman collection file is required for WEBAPI templates"
                     >
                       <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                        <Card size="small" style={{ backgroundColor: "#fff7e6" }}>
-                          <Space direction="vertical" style={{ width: "100%" }} size="small">
-                            <Text strong>Upload Postman collection file</Text>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              Only .postman_collection files are accepted. Maximum size 100MB.
-                            </Text>
-                          </Space>
-                        </Card>
-                        <Upload
-                          fileList={postmanFileList}
-                          beforeUpload={beforeUploadPostman}
-                          onChange={handlePostmanFileChange}
-                          accept=".postman_collection"
-                          maxCount={1}
+                        <Button
+                          type="primary"
+                          icon={<UploadOutlined />}
+                          onClick={() => setIsPostmanUploadModalOpen(true)}
                         >
-                          <Button icon={<DatabaseOutlined />}>Select Postman Collection File</Button>
-                        </Upload>
+                          {postmanFileList.length > 0 ? "Edit Postman File" : "Upload Postman File"}
+                        </Button>
                         {postmanFileList.length > 0 && (
                           <Card size="small">
+                            <Space direction="vertical" style={{ width: "100%" }} size="small">
                             <Space>
                               <DatabaseOutlined />
-                              <Text>{postmanFileList[0].name}</Text>
+                                <Text strong>{postmanFileName || postmanFileList[0].name}</Text>
+                              </Space>
                               <Text type="secondary">
-                                ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                                File: {postmanFileList[0].name} ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
                               </Text>
                             </Space>
                           </Card>
@@ -2467,6 +2924,13 @@ export const LecturerTaskContent = ({
                 >
                   Create Template
                 </Button>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    onClick={() => handleDownloadTemplate(null)}
+                    type="default"
+                  >
+                    Download Template
+                  </Button>
                   <Upload
                     fileList={importFileListForNewTemplate}
                     beforeUpload={(file) => {
@@ -2487,6 +2951,34 @@ export const LecturerTaskContent = ({
                   </Upload>
                 </Space>
               </Form>
+
+              {/* Upload Database File Modal (when creating template) */}
+              <UploadFileModal
+                open={isDatabaseUploadModalOpen}
+                onCancel={() => {
+                  setIsDatabaseUploadModalOpen(false);
+                  setDatabaseUploadFileList([]);
+                }}
+                onFinish={handleDatabaseUploadViaModal}
+                fileType={0}
+                templateType={1}
+                fileList={databaseUploadFileList}
+                onFileListChange={setDatabaseUploadFileList}
+              />
+
+              {/* Upload Postman File Modal (when creating template) */}
+              <UploadFileModal
+                open={isPostmanUploadModalOpen}
+                onCancel={() => {
+                  setIsPostmanUploadModalOpen(false);
+                  setPostmanUploadFileList([]);
+                }}
+                onFinish={handlePostmanUploadViaModal}
+                fileType={1}
+                templateType={1}
+                fileList={postmanUploadFileList}
+                onFileListChange={setPostmanUploadFileList}
+              />
             </Card>
           )
         ) : (

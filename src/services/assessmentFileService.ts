@@ -42,6 +42,7 @@ export interface AssessmentFileDeleteResponse {
 export interface CreateAssessmentFilePayload {
   File: File;
   Name: string;
+  DatabaseName?: string;
   FileTemplate: number;
   AssessmentTemplateId: number;
 }
@@ -76,6 +77,9 @@ export class AssessmentFileService {
     const formData = new FormData();
     formData.append("File", payload.File);
     formData.append("Name", payload.Name);
+    if (payload.DatabaseName !== undefined && payload.DatabaseName !== null && payload.DatabaseName !== "") {
+      formData.append("DatabaseName", payload.DatabaseName);
+    }
     formData.append("FileTemplate", payload.FileTemplate.toString());
     formData.append(
       "AssessmentTemplateId",

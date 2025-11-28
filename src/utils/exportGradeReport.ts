@@ -91,9 +91,40 @@ export async function exportGradeReportToExcel(
         totalScore: string;
       }>();
 
-      // Get questions and rubrics from first report (they should be the same for all submissions of same course element)
-      const firstReport = courseElementReports[0];
-      const { questions, rubrics } = firstReport;
+      // Get questions and rubrics - merge from all reports to ensure we have all rubrics
+      // Some reports might have incomplete rubrics, so we need to merge them
+      const allQuestionsMap = new Map<number, AssessmentQuestion>();
+      const allRubricsMap = new Map<number, Map<number, RubricItem>>(); // questionId -> rubricId -> RubricItem
+      
+      for (const report of courseElementReports) {
+        // Collect all questions
+        for (const question of report.questions) {
+          if (!allQuestionsMap.has(question.id)) {
+            allQuestionsMap.set(question.id, question);
+          }
+        }
+        
+        // Collect all rubrics for each question
+        for (const questionId in report.rubrics) {
+          const questionRubrics = report.rubrics[questionId] || [];
+          if (!allRubricsMap.has(Number(questionId))) {
+            allRubricsMap.set(Number(questionId), new Map());
+          }
+          const rubricMap = allRubricsMap.get(Number(questionId))!;
+          for (const rubric of questionRubrics) {
+            if (!rubricMap.has(rubric.id)) {
+              rubricMap.set(rubric.id, rubric);
+            }
+          }
+        }
+      }
+      
+      // Convert maps back to arrays/objects
+      const questions = Array.from(allQuestionsMap.values());
+      const rubrics: { [questionId: number]: RubricItem[] } = {};
+      for (const [questionId, rubricMap] of allRubricsMap.entries()) {
+        rubrics[questionId] = Array.from(rubricMap.values());
+      }
       
       // Calculate max score from all rubrics (for all questions)
       let calculatedMaxScore = 0;

@@ -45,6 +45,8 @@ import styles from "./page.module.css";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { classService } from "@/services/classService";
+import { useAuth } from "@/hooks/useAuth";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -66,6 +68,7 @@ interface QuestionWithRubrics extends AssessmentQuestion {
 export default function AssignmentGradingPage() {
   const router = useRouter();
   const { message } = App.useApp();
+  const { user } = useAuth();
   const [submissionId, setSubmissionId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -1479,6 +1482,7 @@ export default function AssignmentGradingPage() {
       message.error(error?.message || "Failed to save feedback");
     }
   };
+
 
   if (loading) {
     return (

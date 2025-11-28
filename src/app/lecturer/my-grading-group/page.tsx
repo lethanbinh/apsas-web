@@ -20,13 +20,15 @@ import {
   semesterService
 } from "@/services/semesterService";
 import { Submission, submissionService } from "@/services/submissionService";
+import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
 import {
   DownloadOutlined,
-  EditOutlined,
   FileTextOutlined,
   RobotOutlined,
   SearchOutlined,
-  UploadOutlined
+  UploadOutlined,
+  FileExcelOutlined,
+  EditOutlined
 } from "@ant-design/icons";
 import {
   Alert,
@@ -673,10 +675,6 @@ const MySubmissionsPageContent = () => {
     return groups;
   }, [filteredData, semesters]);
 
-  const handleViewDetail = (submission: EnrichedSubmission) => {
-    localStorage.setItem("selectedSubmissionId", submission.id.toString());
-    router.push(`/lecturer/assignment-grading`);
-  };
 
   const handleUploadGradeSheet = (gradingGroup: GradingGroup) => {
     setSelectedGradingGroupForUpload(gradingGroup);
@@ -711,6 +709,160 @@ const MySubmissionsPageContent = () => {
       messageApi.error(errorMessage);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleExportGradeReport = async (gradingGroup: GradingGroup) => {
+    try {
+      messageApi.info("Preparing grade report...");
+
+      // Get all submissions for this grading group
+      const groupSubmissions = await submissionService.getSubmissionList({
+        gradingGroupId: gradingGroup.id,
+      });
+
+      if (groupSubmissions.length === 0) {
+        messageApi.warning("No submissions found for this grading group");
+        return;
+      }
+
+      // Get assessment template
+      if (!gradingGroup.assessmentTemplateId) {
+        messageApi.error("Assessment template not found");
+        return;
+      }
+
+      const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const assessmentTemplate = templatesRes.items.find(
+        (t) => t.id === gradingGroup.assessmentTemplateId
+      );
+
+      if (!assessmentTemplate) {
+        messageApi.error("Assessment template not found");
+        return;
+      }
+
+      // Get course element
+      if (!assessmentTemplate.courseElementId) {
+        messageApi.error("Course element not found");
+        return;
+      }
+
+      const courseElements = await courseElementService.getCourseElements({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const courseElement = courseElements.find(
+        (ce) => ce.id === assessmentTemplate.courseElementId
+      );
+
+      if (!courseElement) {
+        messageApi.error("Course element not found");
+        return;
+      }
+
+      // Fetch questions and rubrics
+      let questions: AssessmentQuestion[] = [];
+      const rubrics: { [questionId: number]: RubricItem[] } = {};
+
+      try {
+        const papersRes = await assessmentPaperService.getAssessmentPapers({
+          assessmentTemplateId: assessmentTemplate.id,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+
+        for (const paper of papersRes.items) {
+          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          questions = [...questions, ...questionsRes.items];
+
+          for (const question of questionsRes.items) {
+            const rubricsRes = await rubricItemService.getRubricsForQuestion({
+              assessmentQuestionId: question.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+            rubrics[question.id] = rubricsRes.items;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch questions/rubrics:", err);
+      }
+
+      // Prepare report data
+      const reportData: GradeReportData[] = [];
+
+      for (const submission of groupSubmissions) {
+        let gradingSession = null;
+        let gradeItems: any[] = [];
+
+        try {
+          const gradingSessionsResult = await gradingService.getGradingSessions({
+            submissionId: submission.id,
+          });
+          if (gradingSessionsResult.items.length > 0) {
+            gradingSession = gradingSessionsResult.items.sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )[0];
+            
+            const gradeItemsResult = await gradeItemService.getGradeItems({
+              gradingSessionId: gradingSession.id,
+            });
+            gradeItems = gradeItemsResult.items;
+          }
+        } catch (err) {
+          console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
+        }
+
+        // Determine assignment type
+        const nameLower = (courseElement.name || "").toLowerCase();
+        const assignmentType: "Assignment" | "Lab" | "Practical Exam" = 
+          nameLower.includes("lab") || nameLower.includes("thực hành") ? "Lab" :
+          nameLower.includes("exam") || nameLower.includes("pe") || nameLower.includes("practical") ||
+          nameLower.includes("thi thực hành") || nameLower.includes("kiểm tra thực hành") ? "Practical Exam" :
+          "Assignment";
+
+        reportData.push({
+          submission,
+          gradingSession,
+          gradeItems,
+          questions,
+          rubrics,
+          feedback: {
+            overallFeedback: "",
+            strengths: "",
+            weaknesses: "",
+            codeQuality: "",
+            algorithmEfficiency: "",
+            suggestionsForImprovement: "",
+            bestPractices: "",
+            errorHandling: "",
+          },
+          courseElementName: courseElement.name,
+          assignmentType: assignmentType,
+        });
+      }
+
+      if (reportData.length === 0) {
+        messageApi.warning("No data available to export");
+        return;
+      }
+
+      await exportGradeReportToExcel(
+        reportData,
+        `Grade_Report_${gradingGroup.assessmentTemplateName || gradingGroup.id}`
+      );
+      messageApi.success("Grade report exported successfully");
+    } catch (err: any) {
+      console.error("Export error:", err);
+      messageApi.error(err.message || "Export failed. Please check browser console for details.");
     }
   };
 
@@ -1138,22 +1290,6 @@ const MySubmissionsPageContent = () => {
         <span>{record.gradingGroup?.assessmentTemplateName || "N/A"}</span>
       ),
     },
-    {
-      title: "Action",
-      key: "action",
-      render: (_: any, record: EnrichedSubmission) => (
-        <Space>
-        <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => handleViewDetail(record)}
-            // Tạm comment lại check học kỳ
-            // disabled={record.isSemesterPassed}
-            // title={record.isSemesterPassed ? "Không thể chỉnh sửa điểm của kỳ học đã qua" : ""}
-        />
-        </Space>
-      ),
-    },
   ];
 
   return (
@@ -1274,17 +1410,41 @@ const MySubmissionsPageContent = () => {
                         {group.courseName} - {group.semesterCode} ({group.submissions.length} submissions)
                       </span>
                       {gradingGroup && (
-                        <Button
-                          type="primary"
-                          icon={<UploadOutlined />}
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleUploadGradeSheet(gradingGroup);
-                          }}
-                        >
-                          Upload Grade Sheet
-                        </Button>
+                        <Space>
+                          <Button
+                            type="default"
+                            icon={<FileExcelOutlined />}
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportGradeReport(gradingGroup);
+                            }}
+                          >
+                            Export Grade Report
+                          </Button>
+                          <Button
+                            type="default"
+                            icon={<EditOutlined />}
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/lecturer/grading-group/${gradingGroup.id}`);
+                            }}
+                          >
+                            Edit Grade
+                          </Button>
+                          <Button
+                            type="primary"
+                            icon={<UploadOutlined />}
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUploadGradeSheet(gradingGroup);
+                            }}
+                          >
+                            Upload Grade Sheet
+                          </Button>
+                        </Space>
                       )}
                     </div>
                   }

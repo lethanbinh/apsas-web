@@ -38,13 +38,19 @@ import { submissionService, Submission } from "@/services/submissionService";
 import { assignRequestService } from "@/services/assignRequestService";
 import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import { gradingService } from "@/services/gradingService";
-import { RobotOutlined } from "@ant-design/icons";
+import { RobotOutlined, FileExcelOutlined } from "@ant-design/icons";
 import { App } from "antd";
 import { semesterService } from "@/services/semesterService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useRouter } from "next/navigation";
+import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
+import { assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { rubricItemService } from "@/services/rubricItemService";
+import { gradeItemService } from "@/services/gradeItemService";
+import { useAuth } from "@/hooks/useAuth";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -458,6 +464,178 @@ const LabsPage = () => {
   }, [fetchData]);
 
   const { message } = App.useApp();
+  const { user } = useAuth();
+
+  const handleExportReport = async () => {
+    if (!selectedClassId || !user?.id) {
+      message.error("Class ID or User ID not found");
+      return;
+    }
+
+    try {
+      message.info("Preparing report...");
+
+      const classData = await classService.getClassById(selectedClassId);
+      if (!classData) {
+        message.error("Class not found");
+        return;
+      }
+
+      // Fetch all course elements for the class
+      const courseElementsRes = await courseElementService.getCourseElements({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+
+      // Fetch all class assessments
+      const classAssessmentRes = await classAssessmentService.getClassAssessments({
+        classId: Number(selectedClassId),
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+
+      // Filter only labs
+      const labElements = courseElementsRes.filter(ce => {
+        const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
+        return classAssessment && classAssessment.classId === Number(selectedClassId) && isLab(ce);
+      });
+
+      const reportData: GradeReportData[] = [];
+
+      // Process each lab
+      for (const courseElement of labElements) {
+        const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === courseElement.id);
+        if (!classAssessment) continue;
+
+        // Fetch all students in the class
+        const allStudents = await classService.getStudentsInClass(Number(selectedClassId)).catch(() => []);
+        
+        // Fetch submissions for this class assessment
+        const submissions = await submissionService.getSubmissionList({
+          classAssessmentId: classAssessment.id,
+        }).catch(() => []);
+
+        // Create a map of studentId to submission for quick lookup
+        const submissionMap = new Map<number, Submission>();
+        for (const submission of submissions) {
+          if (submission.studentId) {
+            submissionMap.set(submission.studentId, submission);
+          }
+        }
+
+        // Fetch questions and rubrics ONCE per course element
+        let questions: any[] = [];
+        const rubrics: { [questionId: number]: any[] } = {};
+
+        try {
+          const assessmentTemplateId = classAssessment.assessmentTemplateId;
+          if (assessmentTemplateId !== null) {
+            // Fetch papers
+            const papersRes = await assessmentPaperService.getAssessmentPapers({
+              assessmentTemplateId: assessmentTemplateId,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+
+            // Fetch questions for each paper
+            for (const paper of papersRes.items) {
+              const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+                assessmentPaperId: paper.id,
+                pageNumber: 1,
+                pageSize: 100,
+              });
+              questions = [...questions, ...questionsRes.items];
+
+              // Fetch rubrics for each question
+              for (const question of questionsRes.items) {
+                const rubricsRes = await rubricItemService.getRubricsForQuestion({
+                  assessmentQuestionId: question.id,
+                  pageNumber: 1,
+                  pageSize: 100,
+                });
+                rubrics[question.id] = rubricsRes.items;
+              }
+            }
+          }
+        } catch (err) {
+          console.error(`Failed to fetch questions/rubrics for lab ${courseElement.id}:`, err);
+        }
+
+        // Process ALL students in the class
+        for (const student of allStudents) {
+          const submission = submissionMap.get(student.studentId) || null;
+          let gradingSession = null;
+          let gradeItems: any[] = [];
+
+          if (submission) {
+            try {
+              const gradingSessionsResult = await gradingService.getGradingSessions({
+                submissionId: submission.id,
+              });
+              if (gradingSessionsResult.items.length > 0) {
+                gradingSession = gradingSessionsResult.items.sort((a, b) => 
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )[0];
+                
+                const gradeItemsResult = await gradeItemService.getGradeItems({
+                  gradingSessionId: gradingSession.id,
+                });
+                gradeItems = gradeItemsResult.items;
+              }
+            } catch (err) {
+              console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
+            }
+          }
+
+          // Create a submission object if it doesn't exist
+          const submissionData: Submission = submission || {
+            id: 0,
+            studentId: student.studentId,
+            studentCode: student.studentCode || "",
+            studentName: student.studentName || "",
+            classAssessmentId: classAssessment.id,
+            submittedAt: "",
+            lastGrade: 0,
+            status: 0,
+            createdAt: "",
+            updatedAt: "",
+            submissionFile: null,
+          };
+
+          reportData.push({
+            submission: submissionData,
+            gradingSession,
+            gradeItems,
+            questions,
+            rubrics,
+            feedback: {
+              overallFeedback: "",
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
+            },
+            courseElementName: courseElement.name,
+            assignmentType: "Lab",
+          });
+        }
+      }
+
+      if (reportData.length === 0) {
+        message.warning("No data available to export");
+        return;
+      }
+
+      await exportGradeReportToExcel(reportData, "Lab_Grade_Report");
+      message.success("Lab grade report exported successfully");
+    } catch (err: any) {
+      console.error("Export error:", err);
+      message.error(err.message || "Export failed. Please check browser console for details.");
+    }
+  };
 
   const handleDeadlineSave = async (
     courseElementId: number, 
@@ -466,28 +644,10 @@ const LabsPage = () => {
   ) => {
     if (!startDate || !endDate || !selectedClassId) return;
 
-    // Validate dates
+    // Validate dates - only check start < end
     if (startDate.isAfter(endDate) || startDate.isSame(endDate)) {
       message.error("Start date must be before end date");
       return;
-    }
-
-    // Validate with semester dates if available
-    if (semesterInfo) {
-      const semesterStart = dayjs.utc(semesterInfo.startDate).tz("Asia/Ho_Chi_Minh");
-      const semesterEnd = dayjs.utc(semesterInfo.endDate).tz("Asia/Ho_Chi_Minh");
-      const startVietnam = startDate.tz("Asia/Ho_Chi_Minh");
-      const endVietnam = endDate.tz("Asia/Ho_Chi_Minh");
-
-      if (startVietnam.isBefore(semesterStart, 'day')) {
-        message.error(`Start date must be on or after semester start date (${semesterStart.format("DD/MM/YYYY")})`);
-        return;
-      }
-
-      if (endVietnam.isAfter(semesterEnd, 'day')) {
-        message.error(`End date must be on or before semester end date (${semesterEnd.format("DD/MM/YYYY")})`);
-        return;
-      }
     }
 
     const classAssessment = classAssessments.get(courseElementId);
@@ -565,16 +725,26 @@ const LabsPage = () => {
 
   return (
     <div className={styles.wrapper}>
-      <Title
-        level={2}
-        style={{
-          fontWeight: 700,
-          color: "#2F327D",
-          marginBottom: "20px",
-        }}
-      >
-        Labs
-      </Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <Title
+          level={2}
+          style={{
+            fontWeight: 700,
+            color: "#2F327D",
+            margin: 0,
+          }}
+        >
+          Labs
+        </Title>
+        <Button
+          type="primary"
+          icon={<FileExcelOutlined />}
+          onClick={handleExportReport}
+          size="large"
+        >
+          Export Grade Report
+        </Button>
+      </div>
       {labs.length === 0 ? (
         <Alert message="No labs found" description="There are no labs for this class." type="info" />
       ) : (

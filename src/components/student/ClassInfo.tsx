@@ -987,20 +987,6 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
 
         <Divider />
 
-        {/* 8. Export Report Button */}
-        <div style={{ marginTop: "30px", marginBottom: "30px" }}>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleExportReport}
-            size="large"
-          >
-            Export Grade Report (Excel)
-          </Button>
-        </div>
-
-        <Divider />
-
         {/* 9. Tác giả (Giảng viên) */}
         <div className={styles.authorBox}>
           <Avatar
@@ -1027,42 +1013,6 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
         </div>
       </div>
 
-      {/* Export Modal */}
-      <Modal
-        title="Select Export Types"
-        open={exportModalVisible}
-        onOk={handleConfirmExport}
-        onCancel={() => setExportModalVisible(false)}
-        okText="Export"
-        cancelText="Cancel"
-      >
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Checkbox
-            checked={exportTypes.assignment}
-            onChange={(e) =>
-              setExportTypes({ ...exportTypes, assignment: e.target.checked })
-            }
-          >
-            Assignment
-          </Checkbox>
-          <Checkbox
-            checked={exportTypes.lab}
-            onChange={(e) =>
-              setExportTypes({ ...exportTypes, lab: e.target.checked })
-            }
-          >
-            Lab
-          </Checkbox>
-          <Checkbox
-            checked={exportTypes.practicalExam}
-            onChange={(e) =>
-              setExportTypes({ ...exportTypes, practicalExam: e.target.checked })
-            }
-          >
-            Practical Exam
-          </Checkbox>
-        </Space>
-      </Modal>
     </div>
   );
 }
