@@ -2732,8 +2732,6 @@ export const LecturerTaskContent = ({
           assignedToHODId={task.assignedByHODId}
           task={task}
           onResetStatus={resetStatusIfRejected}
-          onDownloadTemplate={handleDownloadTemplate}
-          onImportTemplate={(file) => handleImportTemplate(file, template)}
         />
       );
     }

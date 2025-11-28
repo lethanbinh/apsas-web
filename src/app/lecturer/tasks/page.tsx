@@ -11,19 +11,18 @@ import { Spin, Select, App } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
 
 const getStatusTag = (status: number) => {
+  // Map to 3 statuses: Pending (1,2,4), Approved (5), Rejected (3)
   switch (status) {
-    case 1:
+    case 1: // PENDING
+    case 2: // ACCEPTED -> map to Pending
+    case 4: // IN_PROGRESS -> map to Pending
       return <span className={styles["status-tag-pending"]}>Pending</span>;
-    case 2:
-      return <span className={styles["status-tag-accepted"]}>Accepted</span>;
-    case 3:
+    case 5: // COMPLETED -> Approved
+      return <span className={styles["status-tag-completed"]}>Approved</span>;
+    case 3: // REJECTED
       return <span className={styles["status-tag-rejected"]}>Rejected</span>;
-    case 4:
-      return <span className={styles["status-tag-progress"]}>In Progress</span>;
-    case 5:
-      return <span className={styles["status-tag-completed"]}>Completed</span>;
     default:
-      return <span className={styles["status-tag"]}>Unknown</span>;
+      return <span className={styles["status-tag-pending"]}>Pending</span>;
   }
 };
 
