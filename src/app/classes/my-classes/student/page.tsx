@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useStudent } from "@/hooks/useStudent";
 import { semesterService, Semester } from "@/services/semesterService";
 import { queryKeys } from "@/lib/react-query";
+import { Spin } from "antd";
 
 function mapStudentInClassToCardProps(
   studentClasses: StudentInClass[]
@@ -173,10 +174,12 @@ export default function MyClassesPage() {
     }
   };
 
-  if (isLoading || isAuthLoading || isStudentLoading) {
+  if ((isLoading && allCourses.length === 0) || isAuthLoading || (isStudentLoading && !studentId)) {
     return (
       <Layout>
-        <div>Loading...</div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <Spin size="large" />
+        </div>
       </Layout>
     );
   }

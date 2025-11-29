@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Card, Input, Table, Tag, Typography, Spin, Alert } from "antd";
 import type { TableProps } from "antd";
 import { SearchOutlined, DownloadOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "../ui/Button";
 import styles from "./SubmissionHistory.module.css";
 import dayjs from "dayjs";
@@ -13,6 +14,7 @@ import { useStudent } from "@/hooks/useStudent";
 import { classService, ClassInfo, StudentInClass } from "@/services/classService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
+import { queryKeys } from "@/lib/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -117,129 +119,87 @@ const columns: TableProps<SubmissionRow>["columns"] = [
 export default function SubmissionHistory() {
   const { studentId, isLoading: isStudentLoading } = useStudent();
   const [searchText, setSearchText] = useState("");
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  // Data sources used to derive filters
-  const [submissions, setSubmissions] = useState<Submission[] | null>(null);
-  const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(new Map());
-  const [allClassAssessments, setAllClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
-  // Map submission id to classAssessment id
-  const [submissionToClassAssessment, setSubmissionToClassAssessment] = useState<Map<number, number>>(new Map());
-
-  // UI state
-  const [rows, setRows] = useState<SubmissionRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Load base data: student's submissions via classAssessments in their classes
   useEffect(() => {
-    const loadBaseData = async () => {
-      if (!studentId) {
-        if (!isStudentLoading) setLoading(false);
-        return;
-      }
-      
-      // Get selected class ID from localStorage
-      const selectedClassId = localStorage.getItem("selectedClassId");
-      if (!selectedClassId) {
-        setError("No class selected. Please select a class first.");
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Use only the selected class ID
-        const currentClassId = parseInt(selectedClassId, 10);
-        
-        // Fetch classes that student is enrolled in (for validation)
-        const studentClasses = await classService.getClassesByStudentId(studentId);
-        const classIds = studentClasses.map((sc) => sc.classId);
-        
-        // Verify that the selected class is one of the student's classes
-        if (!classIds.includes(currentClassId)) {
-          setError("You are not enrolled in the selected class.");
-          setLoading(false);
-          return;
-        }
-        
-        // Store class info for reference
-        const classInfoMap = new Map<number, ClassInfo>();
-        for (const sc of studentClasses) {
-          classInfoMap.set(sc.classId, {
-            id: sc.classId,
-            classCode: sc.classCode,
-            totalStudent: "",
-            description: sc.classDescription || "",
-            lecturerId: "",
-            semesterCourseId: "",
-            createdAt: "",
-            updatedAt: "",
-            lecturerName: sc.lecturerName,
-            lecturerCode: sc.lecturerCode,
-            courseName: sc.courseName,
-            courseCode: sc.courseCode,
-            semesterName: sc.semesterName,
-            studentCount: "",
-          });
-        }
-        setAllClasses(classInfoMap);
-        
-        // Fetch class assessments only for the selected class
-        const classAssessmentRes = await classAssessmentService.getClassAssessments({
-          classId: currentClassId,
-          pageNumber: 1,
-          pageSize: 1000,
-        }).catch(() => ({ items: [] }));
-        
-        // Filter to only include assessments from the selected class
-        const uniqueClassAssessments = classAssessmentRes.items.filter(
-          (ca) => ca.classId === currentClassId
-        );
-        
-        setAllClassAssessments(new Map(uniqueClassAssessments.map((ca) => [ca.id, ca])));
+    const classId = localStorage.getItem("selectedClassId");
+    setSelectedClassId(classId);
+  }, []);
 
-        // Fetch submissions only for the selected class
-        // This is necessary because API requires both studentId and classId
-        const submissions = await submissionService.getSubmissionList({ 
-          studentId: studentId,
-          classId: currentClassId
-        }).catch(() => []);
-        
-        // Create map from submission id to classAssessment id
-        const submissionToClassAssessmentMap = new Map<number, number>();
-        for (const sub of submissions) {
-          // Map submission to classAssessment if it has one
-          if (sub.classAssessmentId) {
-            submissionToClassAssessmentMap.set(sub.id, sub.classAssessmentId);
-          }
-        }
-        
-        setSubmissionToClassAssessment(submissionToClassAssessmentMap);
-        setSubmissions(submissions);
-      } catch (err: any) {
-        console.error("Failed to load base data:", err);
-        setError(err.message || "Failed to load submissions data");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch student classes for validation
+  const { data: studentClasses = [] } = useQuery({
+    queryKey: queryKeys.studentClasses.byStudentId(studentId!),
+    queryFn: () => classService.getClassesByStudentId(studentId!),
+    enabled: !!studentId,
+  });
 
-    loadBaseData();
-  }, [studentId, isStudentLoading]);
+  // Fetch class assessments
+  const currentClassId = selectedClassId ? parseInt(selectedClassId, 10) : null;
+  const { data: classAssessmentRes } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: currentClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!selectedClassId && !!currentClassId,
+  });
+
+  // Fetch submissions
+  const { data: submissions = [], isLoading: isLoadingSubmissions } = useQuery({
+    queryKey: ['submissions', 'byStudentAndClass', studentId, currentClassId],
+    queryFn: () => submissionService.getSubmissionList({ 
+      studentId: studentId!,
+      classId: currentClassId!
+    }),
+    enabled: !!studentId && !!currentClassId,
+  });
+
+  // Process data
+  const { allClassAssessments, submissionToClassAssessment, error } = useMemo(() => {
+    if (!selectedClassId) {
+      return { 
+        allClassAssessments: new Map(), 
+        submissionToClassAssessment: new Map(), 
+        error: "No class selected. Please select a class first." 
+      };
+    }
+
+    const classIds = studentClasses.map((sc) => sc.classId);
+    if (!classIds.includes(currentClassId!)) {
+      return { 
+        allClassAssessments: new Map(), 
+        submissionToClassAssessment: new Map(), 
+        error: "You are not enrolled in the selected class." 
+      };
+    }
+
+    const uniqueClassAssessments = (classAssessmentRes?.items || []).filter(
+      (ca) => ca.classId === currentClassId
+    );
+    
+    const allClassAssessments = new Map(uniqueClassAssessments.map((ca) => [ca.id, ca]));
+    
+    const submissionToClassAssessmentMap = new Map<number, number>();
+    for (const sub of submissions) {
+      if (sub.classAssessmentId) {
+        submissionToClassAssessmentMap.set(sub.id, sub.classAssessmentId);
+      }
+    }
+
+    return { allClassAssessments, submissionToClassAssessment: submissionToClassAssessmentMap, error: null };
+  }, [selectedClassId, studentClasses, currentClassId, classAssessmentRes, submissions]);
 
   // Build rows from all submissions
-  useEffect(() => {
-    if (!submissions) {
-      setRows([]);
-      return;
+  const rows = useMemo((): SubmissionRow[] => {
+    if (!submissions || submissions.length === 0) {
+      return [];
     }
 
     // For lateness calculation we need classAssessment endAt (using Vietnam time)
-    const mapped: SubmissionRow[] = submissions
+    return submissions
       .sort((a, b) => toVietnamTime(b.submittedAt).valueOf() - toVietnamTime(a.submittedAt).valueOf())
-      .map((sub, idx) => {
+      .map((sub, idx): SubmissionRow => {
         let endAt: dayjs.Dayjs | null = null;
         
         // Get endAt from classAssessment and convert to Vietnam time
@@ -266,11 +226,11 @@ export default function SubmissionHistory() {
           fileName: sub.submissionFile?.name,
         };
       });
-
-    setRows(mapped);
   }, [submissions, allClassAssessments, submissionToClassAssessment]);
 
-  const filteredRows = useMemo(() => {
+  const loading = (isLoadingSubmissions && submissions.length === 0) || (isStudentLoading && !studentId);
+
+  const filteredRows = useMemo((): SubmissionRow[] => {
     const q = searchText.toLowerCase();
     return rows.filter(
       (r) => r.fileSubmit.toLowerCase().includes(q) || r.student.toLowerCase().includes(q)
@@ -299,7 +259,7 @@ export default function SubmissionHistory() {
       </div>
 
       <Card className={styles.historyCard}>
-        {loading || isStudentLoading ? (
+        {loading ? (
           <Spin size="large" style={{ display: "block", textAlign: "center", padding: 50 }} />
         ) : error ? (
           <Alert type="error" message="Error" description={error} showIcon />

@@ -13,7 +13,8 @@ import {
   Alert,
 } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import styles from "@/components/student/AssignmentList.module.css";
 import {
   CourseElement,
@@ -51,6 +52,7 @@ import { assessmentQuestionService } from "@/services/assessmentQuestionService"
 import { rubricItemService } from "@/services/rubricItemService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -91,32 +93,37 @@ const LabDetailItem = ({
 }) => {
   const router = useRouter();
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [assessmentFiles, setAssessmentFiles] = useState<AssessmentFile[]>([]);
-  const [isFilesLoading, setIsFilesLoading] = useState(false);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);
 
-  useEffect(() => {
-    if (template?.id) {
-      const fetchFiles = async () => {
-        setIsFilesLoading(true);
-        try {
-          const response = await assessmentFileService.getFilesForTemplate({
-            assessmentTemplateId: template.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          setAssessmentFiles(response.items);
-        } catch (error) {
-          console.error("Failed to fetch assessment files:", error);
-          setAssessmentFiles([]);
-        } finally {
-          setIsFilesLoading(false);
-        }
-      };
-      fetchFiles();
-    }
-  }, [template]);
+  // Fetch assessment files using TanStack Query
+  const { data: filesResponse, isLoading: isFilesLoading } = useQuery({
+    queryKey: queryKeys.assessmentFiles.byTemplateId(template?.id!),
+    queryFn: () => assessmentFileService.getFilesForTemplate({
+      assessmentTemplateId: template!.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!template?.id,
+  });
+
+  const assessmentFiles = filesResponse?.items || [];
+
+  // Mutation for batch grading
+  const batchGradingMutation = useMutation({
+    mutationFn: async ({ submissionId, assessmentTemplateId }: { submissionId: number; assessmentTemplateId: number }) => {
+      return gradingService.autoGrading({
+        submissionId,
+        assessmentTemplateId,
+      });
+    },
+    onSuccess: () => {
+      // Invalidate submissions queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+    },
+  });
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
@@ -150,24 +157,24 @@ const LabDetailItem = ({
       return;
     }
 
+    setBatchGradingLoading(true);
+    message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
+
+    // Call auto grading for each submission using mutation
+    const gradingPromises = submissions.map(async (submission) => {
+      try {
+        await batchGradingMutation.mutateAsync({
+          submissionId: submission.id,
+          assessmentTemplateId: assessmentTemplateId,
+        });
+        return { success: true, submissionId: submission.id };
+      } catch (err: any) {
+        console.error(`Failed to grade submission ${submission.id}:`, err);
+        return { success: false, submissionId: submission.id, error: err.message };
+      }
+    });
+
     try {
-      setBatchGradingLoading(true);
-      message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
-
-      // Call auto grading for each submission
-      const gradingPromises = submissions.map(async (submission) => {
-        try {
-          await gradingService.autoGrading({
-            submissionId: submission.id,
-            assessmentTemplateId: assessmentTemplateId,
-          });
-          return { success: true, submissionId: submission.id };
-        } catch (err: any) {
-          console.error(`Failed to grade submission ${submission.id}:`, err);
-          return { success: false, submissionId: submission.id, error: err.message };
-        }
-      });
-
       const results = await Promise.all(gradingPromises);
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
@@ -198,6 +205,11 @@ const LabDetailItem = ({
               <Paragraph>{lab.description}</Paragraph>
             </Descriptions.Item>
           </Descriptions>
+          {template && (
+            <Button type="primary" onClick={openModal} style={{ marginTop: 16 }}>
+              View Lab Paper
+            </Button>
+          )}
         </Card>
 
         {onDeadlineSave && (
@@ -289,182 +301,200 @@ const LabDetailItem = ({
 };
 
 const LabsPage = () => {
-  const [labs, setLabs] = useState<CourseElement[]>([]);
-  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
-  const [classAssessments, setClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
-  const [submissions, setSubmissions] = useState<Map<number, Submission[]>>(new Map());
-  const [semesterInfo, setSemesterInfo] = useState<{ startDate: string; endDate: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const classId = localStorage.getItem("selectedClassId");
     setSelectedClassId(classId);
-    if (!classId) {
-      setError("No class selected. Please select a class first.");
-      setIsLoading(false);
-    }
   }, []);
 
-  const fetchData = useCallback(async () => {
-    if (!selectedClassId) return;
+  // Fetch class data
+  const { data: classData, isLoading: isLoadingClass } = useQuery({
+    queryKey: queryKeys.classes.detail(selectedClassId!),
+    queryFn: () => classService.getClassById(selectedClassId!),
+    enabled: !!selectedClassId,
+  });
 
-    try {
-      setIsLoading(true);
-      const classData = await classService.getClassById(selectedClassId);
-      if (!classData) {
-        throw new Error("Class not found");
+  // Fetch all course elements
+  const { data: allElements = [] } = useQuery({
+    queryKey: queryKeys.courseElements.list({}),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch assign requests
+  const { data: assignRequestResponse } = useQuery({
+    queryKey: queryKeys.assignRequests.lists(),
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch templates
+  const { data: templateResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({}),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch class assessments
+  const { data: classAssessmentRes } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: Number(selectedClassId!),
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!selectedClassId,
+  });
+
+  // Process data
+  const { labs, templates, classAssessments, semesterInfo } = useMemo(() => {
+    if (!classData || !allElements.length) {
+      return { labs: [], templates: [], classAssessments: new Map(), semesterInfo: null };
+    }
+
+    // Filter approved assign requests (status = 5)
+    const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
+    const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
+
+    // Filter assessment templates by approved assign request IDs
+    const approvedTemplates = (templateResponse?.items || []).filter(t => 
+      t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
+    );
+    const approvedTemplateMap = new Map<number, AssessmentTemplate>();
+    approvedTemplates.forEach(t => {
+      if (t.courseElementId) {
+        approvedTemplateMap.set(t.courseElementId, t);
       }
+    });
 
-      const [allElements, assignRequestResponse, templateResponse, classAssessmentRes] = await Promise.all([
-        courseElementService.getCourseElements({
-          pageNumber: 1,
-          pageSize: 1000,
-        }),
-        assignRequestService.getAssignRequests({
-          pageNumber: 1,
-          pageSize: 1000,
-        }),
-        assessmentTemplateService.getAssessmentTemplates({
-          pageNumber: 1,
-          pageSize: 1000,
-        }),
-        classAssessmentService.getClassAssessments({
-          classId: Number(selectedClassId),
-          pageNumber: 1,
-          pageSize: 1000,
-        }).catch(() => ({ items: [] })),
-      ]);
+    const allLabs = allElements.filter(
+      (el) => 
+        el.semesterCourseId.toString() === classData.semesterCourseId &&
+        isLab(el)
+    );
 
-      // Filter approved assign requests (status = 5)
-      const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
-      const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-
-      // Filter assessment templates by approved assign request IDs
-      const approvedTemplates = templateResponse.items.filter(t => 
-        t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
-      );
-      const approvedTemplateIds = new Set(approvedTemplates.map(t => t.id));
-      const approvedTemplateMap = new Map<number, AssessmentTemplate>();
-      approvedTemplates.forEach(t => {
-        if (t.courseElementId) {
-          approvedTemplateMap.set(t.courseElementId, t);
-        }
-      });
-
-      const allLabs = allElements.filter(
-        (el) => 
-          el.semesterCourseId.toString() === classData.semesterCourseId &&
-          isLab(el) // Only include labs
-      );
-
-      // Map class assessments by course element
-      const assessmentMap = new Map<number, ClassAssessment>();
-      for (const assessment of classAssessmentRes.items) {
-        if (assessment.courseElementId) {
-          assessmentMap.set(assessment.courseElementId, assessment);
-        }
+    // Map class assessments by course element
+    const assessmentMap = new Map<number, ClassAssessment>();
+    for (const assessment of (classAssessmentRes?.items || [])) {
+      if (assessment.courseElementId) {
+        assessmentMap.set(assessment.courseElementId, assessment);
       }
+    }
 
-      // Don't filter labs - show all course elements
-      // Only approved assessment templates will be used when rendering
-      const filteredLabs = allLabs;
+    // Get semester info
+    let semesterStartDate: string | undefined;
+    let semesterEndDate: string | undefined;
+    const classElement = allElements.find(
+      el => el.semesterCourseId.toString() === classData.semesterCourseId
+    );
+    if (classElement?.semesterCourse?.semester) {
+      semesterStartDate = classElement.semesterCourse.semester.startDate;
+      semesterEndDate = classElement.semesterCourse.semester.endDate;
+    }
 
-      // Fetch submissions for class assessments
-      const classAssessmentIds = Array.from(assessmentMap.values()).map(ca => ca.id);
+    return {
+      labs: allLabs,
+      templates: approvedTemplates,
+      classAssessments: assessmentMap,
+      semesterInfo: semesterStartDate && semesterEndDate ? { startDate: semesterStartDate, endDate: semesterEndDate } : null,
+    };
+  }, [classData, allElements, assignRequestResponse, templateResponse, classAssessmentRes]);
+
+  // Fetch submissions for each class assessment
+  const classAssessmentIds = Array.from(classAssessments.values()).map(ca => ca.id);
+  const { data: submissionsData } = useQuery({
+    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
+    queryFn: async () => {
+      if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
+      
+      const submissionPromises = classAssessmentIds.map(classAssessmentId =>
+        submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
+      );
+      const submissionArrays = await Promise.all(submissionPromises);
+      const allSubmissions = submissionArrays.flat();
+      
       const submissionsByCourseElement = new Map<number, Submission[]>();
       
-      if (classAssessmentIds.length > 0) {
-        try {
-          // Fetch submissions for each class assessment
-          const submissionPromises = classAssessmentIds.map(classAssessmentId =>
-            submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
-          );
-          const submissionArrays = await Promise.all(submissionPromises);
-          const allSubmissions = submissionArrays.flat();
-          
-          // Map submissions by course element via class assessment
-          for (const submission of allSubmissions) {
-            const classAssessment = Array.from(assessmentMap.values()).find(ca => ca.id === submission.classAssessmentId);
-            if (classAssessment && classAssessment.courseElementId) {
-              const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
-              existing.push(submission);
-              submissionsByCourseElement.set(classAssessment.courseElementId, existing);
-            }
-          }
-          
-          // Sort submissions by submittedAt (most recent first) and get latest per student
-          for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
-            // Group by studentId and get latest submission for each student
-            const studentSubmissions = new Map<number, Submission>();
-            for (const sub of subs) {
-              const existing = studentSubmissions.get(sub.studentId);
-              if (!existing || new Date(sub.submittedAt) > new Date(existing.submittedAt)) {
-                studentSubmissions.set(sub.studentId, sub);
-              }
-            }
-            // Convert back to array and sort by submittedAt
-            const latestSubs = Array.from(studentSubmissions.values()).sort(
-              (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
-            );
-            submissionsByCourseElement.set(courseElementId, latestSubs);
-          }
-        } catch (err) {
-          console.error("Failed to fetch submissions:", err);
-          // Continue without submissions
+      // Map submissions by course element via class assessment
+      for (const submission of allSubmissions) {
+        const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
+        if (classAssessment && classAssessment.courseElementId) {
+          const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
+          existing.push(submission);
+          submissionsByCourseElement.set(classAssessment.courseElementId, existing);
         }
       }
-
-      // Fetch semester info from course element
-      let semesterStartDate: string | undefined;
-      let semesterEndDate: string | undefined;
-      try {
-        const classElement = allElements.find(
-          el => el.semesterCourseId.toString() === classData.semesterCourseId
+      
+      // Sort submissions by submittedAt (most recent first) and get latest per student
+      for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
+        const studentSubmissions = new Map<number, Submission>();
+        for (const sub of subs) {
+          const existing = studentSubmissions.get(sub.studentId);
+          if (!existing || new Date(sub.submittedAt) > new Date(existing.submittedAt)) {
+            studentSubmissions.set(sub.studentId, sub);
+          }
+        }
+        const latestSubs = Array.from(studentSubmissions.values()).sort(
+          (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
         );
-        if (classElement?.semesterCourse?.semester) {
-          semesterStartDate = classElement.semesterCourse.semester.startDate;
-          semesterEndDate = classElement.semesterCourse.semester.endDate;
-        } else {
-          // Fallback: fetch all semesters and find by semesterCourseId
-          const semesters = await semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 });
-          if (classElement?.semesterCourse?.semesterId) {
-            const semester = semesters.find(s => s.id === classElement.semesterCourse.semesterId);
-            if (semester) {
-              semesterStartDate = semester.startDate;
-              semesterEndDate = semester.endDate;
-            }
-          }
-        }
-        if (semesterStartDate && semesterEndDate) {
-          setSemesterInfo({
-            startDate: semesterStartDate,
-            endDate: semesterEndDate,
-          });
-        }
-      } catch (err) {
-        console.error("Failed to fetch semester info:", err);
+        submissionsByCourseElement.set(courseElementId, latestSubs);
       }
+      
+      return submissionsByCourseElement;
+    },
+    enabled: classAssessmentIds.length > 0,
+  });
 
-      setLabs(filteredLabs);
-      setTemplates(approvedTemplates);
-      setClassAssessments(assessmentMap);
-      setSubmissions(submissionsByCourseElement);
-    } catch (err: any) {
-      console.error("Failed to fetch data:", err);
-      setError(err.message || "Failed to load labs.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [selectedClassId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const submissions = submissionsData || new Map<number, Submission[]>();
+  const isLoading = isLoadingClass && !classData;
+  const error = !selectedClassId ? "No class selected. Please select a class first." : null;
 
   const { message } = App.useApp();
   const { user } = useAuth();
+
+  // Mutation for updating class assessment deadline
+  const updateDeadlineMutation = useMutation({
+    mutationFn: async ({ classAssessmentId, payload }: { classAssessmentId: number; payload: any }) => {
+      return classAssessmentService.updateClassAssessment(classAssessmentId, payload);
+    },
+    onSuccess: () => {
+      // Invalidate class assessments query to refetch updated data
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
+      }
+      message.success("Deadline updated successfully!");
+    },
+    onError: (err: any) => {
+      console.error("Failed to update deadline:", err);
+      message.error(err.message || "Failed to update deadline");
+    },
+  });
+
+  // Mutation for creating class assessment
+  const createDeadlineMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      return classAssessmentService.createClassAssessment(payload);
+    },
+    onSuccess: () => {
+      // Invalidate class assessments query to refetch updated data
+      if (selectedClassId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
+      }
+      message.success("Deadline created successfully!");
+    },
+    onError: (err: any) => {
+      console.error("Failed to create deadline:", err);
+      message.error(err.message || "Failed to create deadline");
+    },
+  });
 
   const handleExportReport = async () => {
     if (!selectedClassId || !user?.id) {
@@ -656,27 +686,15 @@ const LabsPage = () => {
 
     // If classAssessment exists, update it
     if (classAssessment) {
-      try {
-        await classAssessmentService.updateClassAssessment(classAssessment.id, {
+      updateDeadlineMutation.mutate({
+        classAssessmentId: classAssessment.id,
+        payload: {
           classId: Number(selectedClassId),
           assessmentTemplateId: classAssessment.assessmentTemplateId,
           startAt: startDate.toISOString(),
           endAt: endDate.toISOString(),
-        });
-
-        // Update local state
-        const updated = new Map(classAssessments);
-        updated.set(courseElementId, {
-          ...classAssessment,
-          startAt: startDate.toISOString(),
-          endAt: endDate.toISOString(),
-        });
-        setClassAssessments(updated);
-        message.success("Deadline updated successfully!");
-      } catch (err: any) {
-        console.error("Failed to update deadline:", err);
-        message.error(err.message || "Failed to update deadline");
-      }
+        },
+      });
     } else {
       // If classAssessment doesn't exist, create a new one
       if (!matchingTemplate) {
@@ -684,26 +702,12 @@ const LabsPage = () => {
         return;
       }
 
-      try {
-        const newClassAssessment = await classAssessmentService.createClassAssessment({
-          classId: Number(selectedClassId),
-          assessmentTemplateId: matchingTemplate.id,
-          startAt: startDate.toISOString(),
-          endAt: endDate.toISOString(),
-        });
-
-        // Update local state
-        const updated = new Map(classAssessments);
-        updated.set(courseElementId, newClassAssessment);
-        setClassAssessments(updated);
-        message.success("Deadline created successfully!");
-        
-        // Refresh data to get the new classAssessment
-        await fetchData();
-      } catch (err: any) {
-        console.error("Failed to create deadline:", err);
-        message.error(err.message || "Failed to create deadline");
-      }
+      createDeadlineMutation.mutate({
+        classId: Number(selectedClassId),
+        assessmentTemplateId: matchingTemplate.id,
+        startAt: startDate.toISOString(),
+        endAt: endDate.toISOString(),
+      });
     }
   };
 

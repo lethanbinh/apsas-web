@@ -19,7 +19,9 @@ import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import styles from "./ScoreFeedbackModal.module.css";
 import { AssignmentData } from "./data";
 
@@ -54,11 +56,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 }) => {
   const { studentId } = useStudent();
   const { message } = App.useApp();
-  const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
-  const [totalScore, setTotalScore] = useState<number>(0);
+  const queryClient = useQueryClient();
 
   // Initialize with empty feedback data (will be populated from API)
   const defaultEmptyFeedback: FeedbackData = {
@@ -72,111 +70,97 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     errorHandling: "",
   };
 
-  const [feedback, setFeedback] = useState<FeedbackData>(defaultEmptyFeedback);
-  const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
-  const [latestGradeItems, setLatestGradeItems] = useState<GradingServiceGradeItem[]>([]);
-  const [hasMappedGradeItems, setHasMappedGradeItems] = useState(false);
+  // Fetch submissions
+  const { data: submissionsData = [], isLoading: isLoadingSubmissions } = useQuery({
+    queryKey: ['submissions', 'byStudentAndClassAssessment', studentId, data.classAssessmentId],
+    queryFn: () => submissionService.getSubmissionList({
+      studentId: studentId!,
+      classAssessmentId: data.classAssessmentId ?? undefined,
+    }),
+    enabled: open && !!studentId && !!data.classAssessmentId,
+  });
 
-  useEffect(() => {
-    if (open) {
-      // Reset state when modal opens
-      setFeedback(defaultEmptyFeedback);
-      setQuestions([]);
-      setLastSubmission(null);
-      setLatestGradingSession(null);
-      setTotalScore(0);
-      setLatestGradeItems([]);
-      setHasMappedGradeItems(false);
+  // Get latest submission
+  const lastSubmission = useMemo(() => {
+    if (!submissionsData || submissionsData.length === 0) return null;
+    const sorted = [...submissionsData].sort(
+      (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+    return sorted[0];
+  }, [submissionsData]);
+
+  // Fetch latest grading session
+  const { data: gradingSessionsData, isLoading: isLoadingGradingSessions } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId: lastSubmission?.id!, pageNumber: 1, pageSize: 1 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: lastSubmission!.id,
+      pageNumber: 1,
+      pageSize: 1, // Only fetch latest
+    }),
+    enabled: open && !!lastSubmission?.id,
+  });
+
+  const latestGradingSession = useMemo(() => {
+    if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
+    return gradingSessionsData.items[0]; // Already sorted by API (latest first)
+  }, [gradingSessionsData]);
+
+  // Fetch grade items for latest session
+  const { data: gradeItemsData, isLoading: isLoadingGradeItems } = useQuery({
+    queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
+    queryFn: async () => {
+      if (!latestGradingSession) return { items: [] };
       
-      // Then try to fetch real data if available
-      if (studentId && data.classAssessmentId) {
-        fetchSubmissionData();
-      } else {
-        // If no studentId or classAssessmentId, still try to fetch template questions
-        fetchQuestionsAndRubricsForNoSubmission();
-      }
-    }
-  }, [open, studentId, data.classAssessmentId]);
-
-  // Map grade items to questions when both are available (only once)
-  useEffect(() => {
-    if (questions.length > 0 && latestGradeItems.length > 0 && !hasMappedGradeItems) {
-      setQuestions((prevQuestions) => {
-        return prevQuestions.map((question) => {
-          const newRubricScores = { ...question.rubricScores };
-          const newRubricComments = { ...(question.rubricComments || {}) };
-          let questionComment = "";
-
-          // Find grade items that match this question's rubrics
-          question.rubrics.forEach((rubric) => {
-            const matchingGradeItem = latestGradeItems.find(
-              (item) => item.rubricItemId === rubric.id
-            );
-            if (matchingGradeItem) {
-              newRubricScores[rubric.id] = matchingGradeItem.score;
-              newRubricComments[rubric.id] = matchingGradeItem.comments || "";
-              // Get comment from first grade item (all grade items in a question share the same comment)
-              if (!questionComment && matchingGradeItem.comments) {
-                questionComment = matchingGradeItem.comments;
-              }
-            }
-          });
-
-          return {
-            ...question,
-            rubricScores: newRubricScores,
-            rubricComments: newRubricComments,
-            questionComment,
-          };
-        });
-      });
-      setHasMappedGradeItems(true);
-    }
-  }, [questions.length, latestGradeItems.length, hasMappedGradeItems]);
-
-  const fetchSubmissionData = async () => {
-    try {
-      setLoading(true);
-      if (!studentId) {
-        await fetchQuestionsAndRubricsForNoSubmission();
-        return;
+      // Check if gradeItems are already in the session response
+      if (latestGradingSession.gradeItems && latestGradingSession.gradeItems.length > 0) {
+        return { items: latestGradingSession.gradeItems };
       }
       
-      const submissions = await submissionService.getSubmissionList({
-        studentId: studentId,
-        classAssessmentId: data.classAssessmentId ?? undefined,
+      // Fallback: fetch grade items separately
+      const gradeItemsResult = await gradeItemService.getGradeItems({
+        gradingSessionId: latestGradingSession.id,
+        pageNumber: 1,
+        pageSize: 1000,
       });
+      
+      // Convert to GradingServiceGradeItem format
+      return {
+        items: gradeItemsResult.items.map((item) => ({
+          id: item.id,
+          score: item.score,
+          comments: item.comments,
+          rubricItemId: item.rubricItemId,
+          rubricItemDescription: item.rubricItemDescription,
+          rubricItemMaxScore: item.rubricItemMaxScore,
+        })),
+      };
+    },
+    enabled: open && !!latestGradingSession?.id,
+  });
 
-      if (submissions.length > 0) {
-        // Get the most recent submission
-        const sorted = submissions.sort(
-          (a, b) =>
-            new Date(b.submittedAt).getTime() -
-            new Date(a.submittedAt).getTime()
-        );
-        const latest = sorted[0];
-        setLastSubmission(latest);
-
-        // Fetch latest grading session and grade items (similar to lecturer)
-        await fetchLatestGradingData(latest.id);
-
-        // Fetch questions and rubrics
-        await fetchQuestionsAndRubrics(latest);
-        
-        // Fetch feedback independently after main data is loaded
-        fetchFeedback(latest.id);
-      } else {
-        // No submissions found - still try to fetch template questions if template is approved
-        await fetchQuestionsAndRubricsForNoSubmission();
+  // Get latest grade items (deduplicated by rubricItemId)
+  const latestGradeItems = useMemo(() => {
+    if (!gradeItemsData?.items || gradeItemsData.items.length === 0) return [];
+    const latestGradeItemsMap = new Map<number, GradingServiceGradeItem>();
+    gradeItemsData.items.forEach((item) => {
+      const rubricId = item.rubricItemId;
+      if (!latestGradeItemsMap.has(rubricId)) {
+        latestGradeItemsMap.set(rubricId, item);
       }
-    } catch (err) {
-      console.error("Failed to fetch submission:", err);
-      // On error, try to fetch template questions if template is approved
-      await fetchQuestionsAndRubricsForNoSubmission();
-    } finally {
-      setLoading(false);
+    });
+    return Array.from(latestGradeItemsMap.values());
+  }, [gradeItemsData]);
+
+  // Calculate total score
+  const totalScore = useMemo(() => {
+    if (latestGradeItems.length > 0) {
+      return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
     }
-  };
+    if (latestGradingSession?.grade !== undefined && latestGradingSession.grade !== null) {
+      return latestGradingSession.grade;
+    }
+    return 0;
+  }, [latestGradeItems, latestGradingSession]);
 
   /**
    * Deserialize JSON string to feedback data
@@ -207,464 +191,236 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     }
   };
 
-  /**
-   * Fetch existing feedback from API
-   */
-  const fetchFeedback = async (submissionId: number) => {
-    try {
-      setLoadingFeedback(true);
+  // Fetch feedback
+  const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
+    queryKey: ['submissionFeedback', 'bySubmissionId', lastSubmission?.id],
+    queryFn: async () => {
+      if (!lastSubmission?.id) return [];
       const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
-        submissionId: submissionId,
+        submissionId: lastSubmission.id,
       });
+      return feedbackList;
+    },
+    enabled: open && !!lastSubmission?.id,
+  });
 
-      if (feedbackList.length > 0) {
-        // Get the first feedback (assuming one feedback per submission)
-        const existingFeedback = feedbackList[0];
-        
-        // Try to deserialize feedback
-        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-        
-        // If deserialize returns null, it means it's plain text/markdown
-        // Use Gemini to parse it into structured format
-        if (parsedFeedback === null) {
-          try {
-            parsedFeedback = await geminiService.formatFeedback(existingFeedback.feedbackText);
-          } catch (error: any) {
-            console.error("Failed to parse feedback with Gemini:", error);
-            // Fallback: put entire text into overallFeedback
-            parsedFeedback = {
-              overallFeedback: existingFeedback.feedbackText,
-              strengths: "",
-              weaknesses: "",
-              codeQuality: "",
-              algorithmEfficiency: "",
-              suggestionsForImprovement: "",
-              bestPractices: "",
-              errorHandling: "",
-            };
-          }
-        }
-        
-        if (parsedFeedback) {
-          setFeedback(parsedFeedback);
-        }
-      }
-    } catch (error: any) {
-      console.error("Failed to fetch feedback:", error);
-      // Don't show error to user, just log it
-    } finally {
-      setLoadingFeedback(false);
+  // Process feedback
+  const feedback = useMemo(() => {
+    if (!feedbackList || feedbackList.length === 0) return defaultEmptyFeedback;
+    
+    const existingFeedback = feedbackList[0];
+    let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+    
+    // If deserialize returns null, it means it's plain text/markdown
+    // For now, put entire text into overallFeedback (Gemini parsing can be done later if needed)
+    if (parsedFeedback === null) {
+      parsedFeedback = {
+        overallFeedback: existingFeedback.feedbackText,
+        strengths: "",
+        weaknesses: "",
+        codeQuality: "",
+        algorithmEfficiency: "",
+        suggestionsForImprovement: "",
+        bestPractices: "",
+        errorHandling: "",
+      };
     }
-  };
+    
+    return parsedFeedback || defaultEmptyFeedback;
+  }, [feedbackList]);
 
-  // Fetch latest grading session and grade items (similar to lecturer logic)
-  const fetchLatestGradingData = async (submissionId: number) => {
-    try {
-      // Fetch latest grading session for this submission
-      const gradingSessionsResult = await gradingService.getGradingSessions({
-        submissionId: submissionId,
-        pageNumber: 1,
-        pageSize: 100, // Get multiple to find the latest
-      });
+  // Determine assessmentTemplateId (similar to RequirementModal)
+  const effectiveClassId = useMemo(() => {
+    if (data.classId) return data.classId;
+    const stored = localStorage.getItem("selectedClassId");
+    return stored ? Number(stored) : null;
+  }, [data.classId]);
 
-      if (gradingSessionsResult.items.length > 0) {
-        // Sort by createdAt desc to get the latest session
-        const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA; // Descending order
-        });
+  // Fetch class assessments to find assessmentTemplateId
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId?.toString()!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: effectiveClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
+  });
 
-        const latestSession = sortedSessions[0];
-        setLatestGradingSession(latestSession);
-
-        // Use gradeItems from the session response (already included in API response)
-        // If gradeItems are not in the response, fetch them separately
-        let gradeItems: GradingServiceGradeItem[] = [];
-
-        if (latestSession.gradeItems && latestSession.gradeItems.length > 0) {
-          // Use gradeItems from response
-          gradeItems = latestSession.gradeItems;
-        } else {
-          // Fallback: fetch grade items separately if not in response
-          try {
-            const gradeItemsResult = await gradeItemService.getGradeItems({
-              gradingSessionId: latestSession.id,
-              pageNumber: 1,
-              pageSize: 1000, // Get all grade items
-            });
-            // Convert GradeItem from gradeItemService to GradingServiceGradeItem format
-            gradeItems = gradeItemsResult.items.map((item) => ({
-              id: item.id,
-              score: item.score,
-              comments: item.comments,
-              rubricItemId: item.rubricItemId,
-              rubricItemDescription: item.rubricItemDescription,
-              rubricItemMaxScore: item.rubricItemMaxScore,
-            }));
-          } catch (err) {
-            console.error("Failed to fetch grade items separately:", err);
-            gradeItems = [];
-          }
-        }
-
-        // Filter to get only the latest grade item for each rubricItemId
-        // Since gradeItems from API are already the latest, we just need to deduplicate by rubricItemId
-        const latestGradeItemsMap = new Map<number, GradingServiceGradeItem>();
-        gradeItems.forEach((item) => {
-          const rubricId = item.rubricItemId;
-          if (!latestGradeItemsMap.has(rubricId)) {
-            latestGradeItemsMap.set(rubricId, item);
-          }
-        });
-
-        const latestGradeItems = Array.from(latestGradeItemsMap.values());
-        setLatestGradeItems(latestGradeItems);
-
-        // Calculate total score
-        if (latestGradeItems.length > 0) {
-          const total = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
-          setTotalScore(total);
-        } else {
-          // If no grade items, use the grade from session
-          setTotalScore(latestSession.grade);
-        }
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch latest grading data:", err);
-      // Don't show error to user, just log it
+  // Determine assessmentTemplateId
+  const assessmentTemplateId = useMemo(() => {
+    if (data.assessmentTemplateId) {
+      return data.assessmentTemplateId;
     }
-  };
-
-
-  const createSampleQuestionsForNoSubmission = () => {
-    // Don't create sample questions - just show empty list
-    setQuestions([]);
-  };
-
-  const fetchQuestionsAndRubricsForNoSubmission = async () => {
-    // Use a dummy submission object for fetching template questions
-    const dummySubmission: Submission = {
-      id: 0,
-      studentId: studentId || 0,
-      studentName: "",
-      studentCode: "",
-      classAssessmentId: data.classAssessmentId || 0,
-      lastGrade: 0,
-      status: 0,
-      submissionFile: null,
-      submittedAt: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    await fetchQuestionsAndRubrics(dummySubmission, true);
-  };
-
-  const fetchQuestionsAndRubrics = async (submission: Submission, skipSampleIfNoTemplate = false) => {
-    let templateFound = false; // Flag to track if approved template was found
-    try {
-      let assessmentTemplateId: number | null = null;
-
-      // First, try to use assessmentTemplateId from data if available
-      if (data.assessmentTemplateId) {
-        assessmentTemplateId = data.assessmentTemplateId;
-        console.log("ScoreFeedbackModal: Using assessmentTemplateId from data:", assessmentTemplateId);
+    
+    if (data.classAssessmentId && classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId);
+      if (classAssessment?.assessmentTemplateId) {
+        return classAssessment.assessmentTemplateId;
       }
-
-      // Try to get assessmentTemplateId from classAssessmentId
-      if (!assessmentTemplateId && data.classAssessmentId && data.classId) {
-        try {
-          // First try with classId from data
-        const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-          classId: data.classId,
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        const classAssessment = classAssessmentsRes.items.find(
-          (ca) => ca.id === data.classAssessmentId
-        );
-        if (classAssessment?.assessmentTemplateId) {
-          assessmentTemplateId = classAssessment.assessmentTemplateId;
-            console.log("ScoreFeedbackModal: Found assessmentTemplateId from classAssessment:", assessmentTemplateId);
-          }
-
-          // If not found, try to fetch all class assessments
-          if (!assessmentTemplateId) {
-            try {
-              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
-                pageNumber: 1,
-                pageSize: 10000,
-              });
-              const classAssessment = allClassAssessmentsRes.items.find(
-                (ca) => ca.id === data.classAssessmentId
-              );
-              if (classAssessment?.assessmentTemplateId) {
-                assessmentTemplateId = classAssessment.assessmentTemplateId;
-                console.log("ScoreFeedbackModal: Found assessmentTemplateId from all class assessments:", assessmentTemplateId);
-              }
-            } catch (err) {
-              console.error("ScoreFeedbackModal: Failed to fetch all class assessments:", err);
-            }
-          }
-        } catch (err) {
-          console.error("ScoreFeedbackModal: Failed to fetch from classAssessment:", err);
-        }
+    }
+    
+    if (data.courseElementId && classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId);
+      if (classAssessment?.assessmentTemplateId) {
+        return classAssessment.assessmentTemplateId;
       }
+    }
+    
+    return null;
+  }, [data.assessmentTemplateId, data.classAssessmentId, data.courseElementId, classAssessmentsData]);
 
-      // If still not found, try to get from localStorage classId
-      if (!assessmentTemplateId && data.classAssessmentId) {
-        try {
-          const localStorageClassId = localStorage.getItem("selectedClassId");
-          if (localStorageClassId && data.classId && localStorageClassId !== data.classId.toString()) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(localStorageClassId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.id === data.classAssessmentId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("ScoreFeedbackModal: Found assessmentTemplateId from localStorage classId:", assessmentTemplateId);
-            }
-          }
-        } catch (err) {
-          console.error("ScoreFeedbackModal: Failed to fetch from localStorage classId:", err);
-        }
-      }
+  // Fetch assign requests to filter approved templates
+  const { data: assignRequestsData } = useQuery({
+    queryKey: queryKeys.assignRequests.all,
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!assessmentTemplateId,
+  });
 
-      // Try to get assessmentTemplateId from courseElementId via classAssessment
-      if (!assessmentTemplateId && data.courseElementId) {
-        try {
-          const localStorageClassId = localStorage.getItem("selectedClassId");
-          if (localStorageClassId) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(localStorageClassId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.courseElementId === data.courseElementId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("ScoreFeedbackModal: Found assessmentTemplateId from courseElementId:", assessmentTemplateId);
-            }
-          }
-        } catch (err) {
-          console.error("ScoreFeedbackModal: Failed to fetch from courseElementId:", err);
-        }
-      }
+  const approvedAssignRequestIds = useMemo(() => {
+    if (!assignRequestsData?.items) return new Set<number>();
+    const approved = assignRequestsData.items.filter(ar => ar.status === 5);
+    return new Set(approved.map(ar => ar.id));
+  }, [assignRequestsData]);
 
-      if (!assessmentTemplateId) {
-        console.warn("ScoreFeedbackModal: Could not find assessmentTemplateId. Data:", {
-          assessmentTemplateId: data.assessmentTemplateId,
-          classAssessmentId: data.classAssessmentId,
-          classId: data.classId,
-          courseElementId: data.courseElementId,
-        });
-        if (!skipSampleIfNoTemplate) {
-        createSampleQuestions(submission);
-        } else {
-          setQuestions([]);
-        }
-        setLoading(false);
-        return;
-      }
+  // Fetch assessment templates
+  const { data: templatesData } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!assessmentTemplateId,
+  });
 
-      const finalAssessmentTemplateId = assessmentTemplateId;
+  // Find approved template
+  const template = useMemo(() => {
+    if (!templatesData?.items || !assessmentTemplateId) return null;
+    return templatesData.items.find((t) => {
+      if (t.id !== assessmentTemplateId) return false;
+      if (!t.assignRequestId) return false;
+      return approvedAssignRequestIds.has(t.assignRequestId);
+    });
+  }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
 
-      // Fetch approved assign requests (status = 5)
-      let approvedAssignRequestIds = new Set<number>();
-      try {
-        const assignRequestResponse = await assignRequestService.getAssignRequests({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        // Only include assign requests with status = 5 (Approved/COMPLETED)
-        const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
-        approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-      } catch (err) {
-        console.error("ScoreFeedbackModal: Failed to fetch assign requests:", err);
-        // Continue without filtering if assign requests cannot be fetched
-      }
+  // Fetch papers
+  const { data: papersData } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: open && !!assessmentTemplateId && !!template,
+  });
 
-      // Fetch template and verify it has an approved assign request
-      const templates = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-
-      // Only get template if it has an approved assign request (status = 5)
-      const template = templates.items.find((t) => {
-        if (t.id !== finalAssessmentTemplateId) {
-          return false;
-        }
-        // Check if template has assignRequestId and it's in approved assign requests
-        if (!t.assignRequestId) {
-          return false; // Skip templates without assignRequestId
-        }
-        return approvedAssignRequestIds.has(t.assignRequestId);
-      });
-
-      // If template is not found or not approved, create sample data and return
-      if (!template) {
-        console.warn("ScoreFeedbackModal: Template not found or not approved:", finalAssessmentTemplateId);
-        if (!skipSampleIfNoTemplate) {
-        createSampleQuestions(submission);
-        } else {
-          setQuestions([]);
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Template found and approved - set flag and continue to fetch papers/questions even if empty
-      templateFound = true;
-
-      // Fetch papers
-      let papersData: any[] = [];
-      try {
-        const papersRes = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: finalAssessmentTemplateId,
+  // Fetch questions for each paper
+  const questionsQueries = useQueries({
+    queries: (papersData?.items || []).map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
         pageSize: 100,
-      });
-        papersData = papersRes.items || [];
-        console.log("ScoreFeedbackModal: Fetched papers:", papersData.length);
-      } catch (err) {
-        console.error("ScoreFeedbackModal: Failed to fetch papers:", err);
-        papersData = [];
-      }
+      }),
+      enabled: open && !!template,
+    })),
+  });
 
-      // Fetch questions and rubrics for each paper
-      const allQuestions: QuestionWithRubrics[] = [];
-      
-      // Process papers if available, but don't require them
-      if (papersData.length === 0) {
-        console.warn("ScoreFeedbackModal: No papers found for template:", template.id);
-        // Don't return - continue to display template even without papers/questions
-        setQuestions([]);
-        setLoading(false);
-        return;
+  // Fetch rubrics for each question
+  const allQuestionIds = useMemo(() => {
+    const ids: number[] = [];
+    questionsQueries.forEach((query) => {
+      if (query.data?.items) {
+        query.data.items.forEach((q) => ids.push(q.id));
       }
+    });
+    return ids;
+  }, [questionsQueries]);
 
-      for (const paper of papersData) {
-        try {
-        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-          assessmentPaperId: paper.id,
-          pageNumber: 1,
-          pageSize: 100,
+  const rubricsQueries = useQueries({
+    queries: allQuestionIds.map((questionId) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(questionId),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: questionId,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: open && !!template && allQuestionIds.length > 0,
+    })),
+  });
+
+  // Build questions with rubrics and map grade items
+  const questions = useMemo(() => {
+    if (!papersData?.items || !template) return [];
+    
+    const allQuestions: QuestionWithRubrics[] = [];
+    let questionIndex = 0;
+
+    papersData.items.forEach((paper, paperIndex) => {
+      const paperQuestionsQuery = questionsQueries[paperIndex];
+      if (!paperQuestionsQuery?.data?.items) return;
+
+      const paperQuestions = [...paperQuestionsQuery.data.items].sort(
+        (a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)
+      );
+
+      paperQuestions.forEach((question) => {
+        // Find rubrics for this question
+        const rubricQuery = rubricsQueries[questionIndex];
+        const questionRubrics = rubricQuery?.data?.items || [];
+
+        // Initialize rubric scores and comments
+        const rubricScores: { [rubricId: number]: number } = {};
+        const rubricComments: { [rubricId: number]: string } = {};
+        let questionComment = "";
+
+        questionRubrics.forEach((rubric) => {
+          rubricScores[rubric.id] = 0;
+          rubricComments[rubric.id] = "";
+
+          // Map grade items to rubrics
+          const matchingGradeItem = latestGradeItems.find(
+            (item) => item.rubricItemId === rubric.id
+          );
+          if (matchingGradeItem) {
+            rubricScores[rubric.id] = matchingGradeItem.score;
+            rubricComments[rubric.id] = matchingGradeItem.comments || "";
+            if (!questionComment && matchingGradeItem.comments) {
+              questionComment = matchingGradeItem.comments;
+            }
+          }
         });
 
-        const paperQuestions = questionsRes.items.length > 0
-          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
-            : [];
+        allQuestions.push({
+          ...question,
+          rubrics: questionRubrics,
+          rubricScores,
+          rubricComments,
+          questionComment,
+        });
 
-          console.log(`ScoreFeedbackModal: Fetched ${paperQuestions.length} questions for paper ${paper.id}`);
+        questionIndex++;
+      });
+    });
 
-          // Only process questions if we have real questions (not sample)
-          if (paperQuestions.length === 0) {
-            console.warn(`ScoreFeedbackModal: No questions found for paper ${paper.id}`);
-            continue; // Skip this paper if no questions
-          }
+    return allQuestions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
+  }, [papersData, template, questionsQueries, rubricsQueries, latestGradeItems]);
 
-        for (const question of paperQuestions) {
-            try {
-          const rubricsRes = await rubricItemService.getRubricsForQuestion({
-            assessmentQuestionId: question.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-
-              const questionRubrics = rubricsRes.items || [];
-              console.log(`ScoreFeedbackModal: Fetched ${questionRubrics.length} rubrics for question ${question.id}`);
-
-              // Initialize rubric scores and comments (will be populated by useEffect when grade items are available)
-          const rubricScores: { [rubricId: number]: number } = {};
-              const rubricComments: { [rubricId: number]: string } = {};
-              let questionComment = "";
-
-          questionRubrics.forEach((rubric) => {
-                rubricScores[rubric.id] = 0;
-                rubricComments[rubric.id] = "";
-          });
-
-          allQuestions.push({
-            ...question,
-            rubrics: questionRubrics,
-            rubricScores,
-                rubricComments,
-                questionComment,
-              });
-            } catch (err) {
-              console.error(`ScoreFeedbackModal: Failed to fetch rubrics for question ${question.id}:`, err);
-              // Continue with next question even if rubrics fetch fails
-              // Add question without rubrics (or with empty rubrics)
-              allQuestions.push({
-                ...question,
-                rubrics: [],
-                rubricScores: {},
-                rubricComments: {},
-          });
-        }
-      }
-        } catch (err) {
-          console.error(`ScoreFeedbackModal: Failed to fetch questions for paper ${paper.id}:`, err);
-          // Continue with next paper even if questions fetch fails
-        }
-      }
-      if (allQuestions.length === 0) {
-        // No questions found - but template is approved, so display empty questions list
-        console.warn("ScoreFeedbackModal: No questions found for approved template");
-        setQuestions([]);
-      } else {
-        // Sort questions by questionNumber
-        const sortedQuestions = [...allQuestions].sort((a, b) => 
-          (a.questionNumber || 0) - (b.questionNumber || 0)
-        );
-
-        console.log(`ScoreFeedbackModal: Setting ${sortedQuestions.length} questions`);
-        setQuestions(sortedQuestions);
-
-        // Grade items will be mapped to questions via useEffect when both are available
-      }
-
-      // Try to load feedback from grading session if available
-      if (latestGradingSession) {
-        // Try to get feedback from grading logs or other sources
-        // For now, we'll keep feedback empty if not available
-        // The feedback might be stored in grading logs or separate feedback API
-      }
-
-      setLoading(false);
-    } catch (err) {
-      console.error("Failed to fetch questions and rubrics:", err);
-      // Only create sample data if template was not found/approved
-      // If template was found but error happened during fetch papers/questions,
-      // display template with empty questions instead of sample data
-      if (!templateFound) {
-        // Template not found/approved - create sample data only if not skipping
-        if (!skipSampleIfNoTemplate) {
-      createSampleQuestions(submission);
-        } else {
-          setQuestions([]);
-        }
-      } else {
-        // Template found but error in fetch papers/questions - display with empty questions
-        console.warn("ScoreFeedbackModal: Template approved but error fetching papers/questions, displaying with empty questions");
-        setQuestions([]);
-      }
-      setLoading(false);
-    }
-  };
-
-  const createSampleQuestions = (submission: Submission) => {
-    // Don't create sample questions - just show empty list
-    setQuestions([]);
-  };
-
+  // Calculate loading state (after all queries are declared)
+  const loading = useMemo(() => {
+    return (
+      isLoadingSubmissions ||
+      isLoadingGradingSessions ||
+      isLoadingGradeItems ||
+      isLoadingFeedback ||
+      questionsQueries.some(q => q.isLoading) ||
+      rubricsQueries.some(q => q.isLoading)
+    );
+  }, [isLoadingSubmissions, isLoadingGradingSessions, isLoadingGradeItems, isLoadingFeedback, questionsQueries, rubricsQueries]);
 
   // Check if score is available
   const hasScore = () => {
@@ -1103,11 +859,11 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
             )}
 
             <Card className={styles.feedbackCard}>
-              <Spin spinning={loadingFeedback}>
+              <Spin spinning={isLoadingFeedback}>
               <Title level={3}>Detailed Feedback</Title>
               <Divider />
 
-                {!hasFeedback() && !loadingFeedback ? (
+                {!hasFeedback() && !isLoadingFeedback ? (
                 <Alert
                   message="No feedback available"
                   description="No feedback has been provided for this submission yet. Please wait for the lecturer to review your work."

@@ -27,6 +27,7 @@ import {
   CheckCircleFilled,
   HistoryOutlined
 } from '@ant-design/icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { appDownloadService, AppDownloadLink } from '@/services/appDownloadService';
 import { QueryParamsHandler } from '@/components/common/QueryParamsHandler';
 import { convertGoogleDriveToDirectDownload } from '@/lib/utils';
@@ -36,64 +37,54 @@ const { TextArea } = Input;
 
 const AppDownloadManagementPage = () => {
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
-  const [currentLink, setCurrentLink] = useState<AppDownloadLink | null>(null);
   const [driveShareUrl, setDriveShareUrl] = useState<string>('');
   const [convertedUrl, setConvertedUrl] = useState<string>('');
   const [isValidDriveLink, setIsValidDriveLink] = useState<boolean>(false);
   const [historyVisible, setHistoryVisible] = useState(false);
-  const [versionHistory, setVersionHistory] = useState<AppDownloadLink[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // Fetch current download link using TanStack Query
+  const { data: currentLink, isLoading: fetching } = useQuery({
+    queryKey: ['appDownload', 'current'],
+    queryFn: () => appDownloadService.getCurrentDownloadLink(),
+  });
+
+  // Fetch version history using TanStack Query
+  const { data: versionHistory = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ['appDownload', 'history'],
+    queryFn: () => appDownloadService.getVersionHistory(),
+    enabled: historyVisible, // Only fetch when modal is visible
+  });
+
+  // Update form when currentLink changes
   useEffect(() => {
-    fetchCurrentLink();
-  }, []);
-
-  const fetchCurrentLink = async () => {
-    try {
-      setFetching(true);
-      const link = await appDownloadService.getCurrentDownloadLink();
-      setCurrentLink(link);
-
-      if (link) {
-        form.setFieldsValue({
-          downloadUrl: link.downloadUrl,
-          appName: link.appName,
-          version: link.version || '',
-          description: link.description || '',
-        });
-        // Check if it's a Google Drive link
-        if (link.downloadUrl?.includes('drive.google.com')) {
-          // Try to extract file ID and convert back to share URL format
-          // If it's already a direct download link, we can still use it
-          const fileIdMatch = link.downloadUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-          if (fileIdMatch) {
-            const fileId = fileIdMatch[1];
-            // Convert back to share URL format for display
-            const shareUrl = `https://drive.google.com/file/d/${fileId}/view`;
-            setDriveShareUrl(shareUrl);
-            setConvertedUrl(link.downloadUrl);
-            setIsValidDriveLink(true);
-            // Also set the share URL to form field to pass validation
-            form.setFieldsValue({ driveShareUrl: shareUrl });
-          } else {
-            // If can't extract, just use the download URL
-            setDriveShareUrl(link.downloadUrl);
-            setConvertedUrl(link.downloadUrl);
-            setIsValidDriveLink(true);
-            form.setFieldsValue({ driveShareUrl: link.downloadUrl });
-          }
+    if (currentLink) {
+      form.setFieldsValue({
+        downloadUrl: currentLink.downloadUrl,
+        appName: currentLink.appName,
+        version: currentLink.version || '',
+        description: currentLink.description || '',
+      });
+      // Check if it's a Google Drive link
+      if (currentLink.downloadUrl?.includes('drive.google.com')) {
+        const fileIdMatch = currentLink.downloadUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch) {
+          const fileId = fileIdMatch[1];
+          const shareUrl = `https://drive.google.com/file/d/${fileId}/view`;
+          setDriveShareUrl(shareUrl);
+          setConvertedUrl(currentLink.downloadUrl);
+          setIsValidDriveLink(true);
+          form.setFieldsValue({ driveShareUrl: shareUrl });
+        } else {
+          setDriveShareUrl(currentLink.downloadUrl);
+          setConvertedUrl(currentLink.downloadUrl);
+          setIsValidDriveLink(true);
+          form.setFieldsValue({ driveShareUrl: currentLink.downloadUrl });
         }
       }
-    } catch (error: any) {
-      console.error('Error fetching download link:', error);
-      message.error('Failed to load information. Please try again.');
-    } finally {
-      setFetching(false);
     }
-  };
+  }, [currentLink, form]);
 
   // Generate next version (e.g., v1.0.0 -> v1.0.1)
   const generateNextVersion = (currentVersion?: string): string => {
@@ -151,42 +142,46 @@ const AppDownloadManagementPage = () => {
     }
   };
 
-  const handleSubmit = async (values: any) => {
-    try {
-      setLoading(true);
-
-      // Check if download URL exists
-      if (!values.downloadUrl) {
-        message.error('Please enter a Google Drive share link first.');
-        return;
-      }
-
-      // Auto-generate version if not provided
-      const latestLink = await appDownloadService.getCurrentDownloadLink();
-      const currentVersion = values.version || latestLink?.version || null;
-      const nextVersion = generateNextVersion(currentVersion || undefined);
-
-      const linkData: Omit<AppDownloadLink, 'id' | 'createdAt' | 'updatedAt'> = {
-        downloadUrl: values.downloadUrl,
-        appName: values.appName || 'APSAS App',
-        version: nextVersion,
-        description: values.description || undefined,
-        isActive: true, // Always active
-      };
-
-      const saved = await appDownloadService.saveDownloadLink(linkData);
-      setCurrentLink(saved);
-
+  // Mutation for saving download link
+  const saveLinkMutation = useMutation({
+    mutationFn: async (linkData: Omit<AppDownloadLink, 'id' | 'createdAt' | 'updatedAt'>) => {
+      return appDownloadService.saveDownloadLink(linkData);
+    },
+    onSuccess: () => {
+      // Invalidate queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['appDownload'] });
       message.success('Download link configuration saved successfully!');
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       console.error('Error saving download link:', error);
-      
       const errorMessage = error.message || 'Failed to save configuration. Please try again.';
       message.error(errorMessage, 5);
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  const handleSubmit = async (values: any) => {
+    // Check if download URL exists
+    if (!values.downloadUrl) {
+      message.error('Please enter a Google Drive share link first.');
+      return;
     }
+
+    // Auto-generate version if not provided
+    const currentVersion = values.version || currentLink?.version || null;
+    const nextVersion = generateNextVersion(currentVersion || undefined);
+
+    const linkData: Omit<AppDownloadLink, 'id' | 'createdAt' | 'updatedAt'> = {
+      downloadUrl: values.downloadUrl,
+      appName: values.appName || 'APSAS App',
+      version: nextVersion,
+      description: values.description || undefined,
+      isActive: true,
+    };
+
+    saveLinkMutation.mutate(linkData);
   };
+
+  const loading = saveLinkMutation.isPending;
 
   const handleTestDownload = () => {
     if (currentLink?.downloadUrl) {
@@ -196,18 +191,9 @@ const AppDownloadManagementPage = () => {
     }
   };
 
-  const handleViewHistory = async () => {
+  const handleViewHistory = () => {
     setHistoryVisible(true);
-    try {
-      setLoadingHistory(true);
-      const history = await appDownloadService.getVersionHistory();
-      setVersionHistory(history);
-    } catch (error: any) {
-      console.error('Error loading history:', error);
-      message.error('Failed to load version history.');
-    } finally {
-      setLoadingHistory(false);
-    }
+    // Query will automatically fetch when historyVisible becomes true
   };
 
   const historyColumns = [

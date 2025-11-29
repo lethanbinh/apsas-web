@@ -40,7 +40,9 @@ import {
   Typography
 } from "antd";
 import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState, useRef } from "react";
+import { ReactNode, useEffect, useState, useRef, useMemo } from "react";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import styles from "./page.module.css";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -71,26 +73,19 @@ export default function AssignmentGradingPage() {
   const { user } = useAuth();
   const [submissionId, setSubmissionId] = useState<number | null>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [submission, setSubmission] = useState<Submission | null>(null);
-  const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
-  const [totalScore, setTotalScore] = useState(0);
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
   const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
   const [isSemesterPassed, setIsSemesterPassed] = useState(false);
   const [semesterInfo, setSemesterInfo] = useState<{ startDate: string; endDate: string } | null>(null);
-  const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
-  const [latestGradeItems, setLatestGradeItems] = useState<GradeItem[]>([]);
-  const [gradingHistory, setGradingHistory] = useState<GradingSession[]>([]);
-  const [loadingGradingHistory, setLoadingGradingHistory] = useState(false);
-  const [feedbackHistory, setFeedbackHistory] = useState<SubmissionFeedback[]>([]);
-  const [loadingFeedbackHistory, setLoadingFeedbackHistory] = useState(false);
+  const [userEdits, setUserEdits] = useState<{ rubricScores: Record<string, number>; rubricComments: Record<number, string>; }>({
+    rubricScores: {},
+    rubricComments: {},
+  });
+  const [totalScore, setTotalScore] = useState(0);
   const [autoGradingLoading, setAutoGradingLoading] = useState(false);
   const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const queryClient = useQueryClient();
   const [feedback, setFeedback] = useState<FeedbackData>({
     overallFeedback: "",
     strengths: "",
@@ -131,541 +126,394 @@ export default function AssignmentGradingPage() {
         errorHandling: "",
       });
       setSubmissionFeedbackId(null);
-      fetchData();
     }
   }, [submissionId]);
 
-  const fetchData = async () => {
-    let currentSubmissionId: number | null = null;
-    
-    try {
-      setLoading(true);
+  // Fetch class assessments to find submission
+  const classIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: Number(classIdFromStorage!),
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!classIdFromStorage && !!submissionId,
+  });
 
-      // Fetch submission by ID - need to get from classAssessment or examSession
-      // For now, try to fetch all submissions and find the one with matching ID
-      let sub: Submission | null = null;
-      
-      // Try to fetch from classAssessment first
-      const classId = localStorage.getItem("selectedClassId");
-      if (classId) {
-        try {
-          const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-            classId: Number(classId),
-            pageNumber: 1,
-            pageSize: 1000,
-          });
+  // Fetch submissions for all class assessments
+  const classAssessmentIds = classAssessmentsData?.items.map(ca => ca.id) || [];
+  const submissionsQueries = useQueries({
+    queries: classAssessmentIds.map((classAssessmentId) => ({
+      queryKey: ['submissions', 'byClassAssessmentId', classAssessmentId],
+      queryFn: () => submissionService.getSubmissionList({
+        classAssessmentId: classAssessmentId,
+      }),
+      enabled: classAssessmentIds.length > 0 && !!submissionId,
+    })),
+  });
 
-          for (const classAssessment of classAssessmentsRes.items) {
-            const submissions = await submissionService.getSubmissionList({
-              classAssessmentId: classAssessment.id,
-            });
-            const found = submissions.find((s) => s.id === submissionId);
-            if (found) {
-              sub = found;
-              break;
-            }
-          }
-        } catch (err) {
-          console.error("Failed to fetch from classAssessment:", err);
-        }
+  // Find submission from class assessments
+  const submissionFromClass = useMemo(() => {
+    if (!submissionId) return null;
+    for (const query of submissionsQueries) {
+      if (query.data) {
+        const found = query.data.find((s: Submission) => s.id === submissionId);
+        if (found) return found;
       }
+    }
+    return null;
+  }, [submissionsQueries, submissionId]);
 
-      // If not found, try examSession
-      if (!sub) {
-        try {
-          const allSubmissions = await submissionService.getSubmissionList({});
-          sub = allSubmissions.find((s) => s.id === submissionId) || null;
-        } catch (err) {
-          console.error("Failed to fetch submission:", err);
-        }
-      }
+  // Fallback: fetch all submissions if not found in class assessments
+  const { data: allSubmissionsData = [], isLoading: isLoadingAllSubmissions } = useQuery({
+    queryKey: ['submissions', 'all'],
+    queryFn: () => submissionService.getSubmissionList({}),
+    enabled: !!submissionId && !submissionFromClass,
+  });
 
-      if (!sub) {
-        message.error("Submission not found");
-        router.back();
-        return;
-      }
+  const submission = useMemo(() => {
+    if (!submissionId) return null;
+    if (submissionFromClass) return submissionFromClass;
+    return allSubmissionsData.find((s: Submission) => s.id === submissionId) || null;
+  }, [submissionId, submissionFromClass, allSubmissionsData]);
 
-      currentSubmissionId = sub.id;
-      setSubmission(sub);
-      // Don't set score from lastGrade here - it will be calculated from grade items in fetchLatestGradingData
+  // Check if any submission query is still loading
+  const isLoadingSubmissions = submissionsQueries.some((q: any) => q.isLoading) || isLoadingAllSubmissions;
 
-      // Check if semester has passed
-      await checkSemesterStatus(sub);
+  // Handle submission not found - only redirect after all queries have finished loading
+  useEffect(() => {
+    if (!submission && submissionId && !isLoadingSubmissions) {
+      // Only show error and redirect if we've finished loading and still can't find it
+      message.error("Submission not found");
+      router.back();
+    }
+  }, [submission, submissionId, isLoadingSubmissions, message, router]);
 
-      // Clear any existing feedback in localStorage to prevent sample data
-      // Feedback will only be loaded from AI or entered manually
+  // Clear feedback localStorage when submissionId changes
+  useEffect(() => {
+    if (submissionId) {
       localStorage.removeItem(`feedback_${submissionId}`);
-      
-      // Always start with empty feedback (no sample data, no localStorage)
-      setFeedback({
-        overallFeedback: "",
-        strengths: "",
-        weaknesses: "",
-        codeQuality: "",
-        algorithmEfficiency: "",
-        suggestionsForImprovement: "",
-        bestPractices: "",
-        errorHandling: "",
-      });
-      setSubmissionFeedbackId(null);
+    }
+  }, [submissionId]);
 
-      // Fetch questions and rubrics
-      await fetchQuestionsAndRubrics(sub);
-      
-      // Fetch latest grading session and grade items
-      await fetchLatestGradingData(sub.id);
-    } catch (err: any) {
-      console.error("Failed to fetch data:", err);
-      message.error(err.message || "Failed to load data");
-    } finally {
-      setLoading(false);
-      // Fetch feedback independently after main data is loaded
-      // This prevents the entire page from loading while parsing feedback
-      if (currentSubmissionId) {
-        fetchFeedback(currentSubmissionId);
+  // Fetch latest grading session using TanStack Query
+  const { data: gradingSessionsData } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: submissionId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!submissionId,
+  });
+
+  const latestGradingSession = useMemo(() => {
+    if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
+    const sorted = [...gradingSessionsData.items].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+    return sorted[0];
+  }, [gradingSessionsData]);
+
+  // Fetch grade items for latest session
+  const { data: gradeItemsData } = useQuery({
+    queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
+    queryFn: () => gradeItemService.getGradeItems({
+      gradingSessionId: latestGradingSession!.id,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!latestGradingSession?.id,
+  });
+
+  const latestGradeItems = gradeItemsData?.items || [];
+
+  // Determine assessmentTemplateId from submission
+  const { data: gradingGroupsData } = useQuery({
+    queryKey: queryKeys.grading.groups.list({}),
+    queryFn: async () => {
+      const { gradingGroupService } = await import("@/services/gradingGroupService");
+      return gradingGroupService.getGradingGroups({});
+    },
+    enabled: !!submission?.gradingGroupId,
+  });
+
+  // Also fetch all class assessments as fallback
+  const { data: allClassAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 10000 }),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      pageNumber: 1,
+      pageSize: 10000,
+    }),
+    enabled: !!submission?.classAssessmentId && !classAssessmentsData,
+  });
+
+  // Determine assessmentTemplateId
+  const assessmentTemplateId = useMemo(() => {
+    if (!submission) return null;
+
+    // Try to get from gradingGroupId first (most reliable)
+    if (submission.gradingGroupId && gradingGroupsData) {
+      const gradingGroup = gradingGroupsData.find((gg) => gg.id === submission.gradingGroupId);
+      if (gradingGroup?.assessmentTemplateId) {
+        return gradingGroup.assessmentTemplateId;
       }
     }
-  };
 
-  const fetchLatestGradingData = async (submissionId: number) => {
-    try {
-      // Fetch latest grading session for this submission
-      const gradingSessionsResult = await gradingService.getGradingSessions({
-        submissionId: submissionId,
+    // Try to get from classAssessmentId
+    if (submission.classAssessmentId) {
+      if (classAssessmentsData?.items) {
+        const classAssessment = classAssessmentsData.items.find(
+          (ca) => ca.id === submission.classAssessmentId
+        );
+        if (classAssessment?.assessmentTemplateId) {
+          return classAssessment.assessmentTemplateId;
+        }
+      }
+
+      if (allClassAssessmentsData?.items) {
+        const classAssessment = allClassAssessmentsData.items.find(
+          (ca) => ca.id === submission.classAssessmentId
+        );
+        if (classAssessment?.assessmentTemplateId) {
+          return classAssessment.assessmentTemplateId;
+        }
+      }
+    }
+
+    return null;
+  }, [submission, gradingGroupsData, classAssessmentsData, allClassAssessmentsData]);
+
+  // Fetch papers
+  const { data: papersData } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!assessmentTemplateId,
+  });
+
+  const papers = papersData?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
-        pageSize: 100, // Get multiple to find the latest
+        pageSize: 100,
+      }),
+      enabled: papers.length > 0,
+    })),
+  });
+
+  // Get all questions from queries
+  const allQuestionsFromQueries = useMemo(() => {
+    const questions: AssessmentQuestion[] = [];
+    questionsQueries.forEach((query) => {
+      if (query.data?.items) {
+        questions.push(...query.data.items);
+      }
+    });
+    return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
+  }, [questionsQueries]);
+
+  // Fetch rubrics for all questions
+  const rubricsQueries = useQueries({
+    queries: allQuestionsFromQueries.map((question) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(question.id),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: question.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: allQuestionsFromQueries.length > 0,
+    })),
+  });
+
+  // Combine questions with rubrics
+  const questionsWithRubrics = useMemo(() => {
+    const result: QuestionWithRubrics[] = [];
+    allQuestionsFromQueries.forEach((question, index) => {
+      const rubrics = rubricsQueries[index]?.data?.items || [];
+      if (rubrics.length > 0) {
+        result.push({
+          ...question,
+          rubrics,
+          rubricScores: {},
+          rubricComments: {},
+        });
+      }
+    });
+    return result;
+  }, [allQuestionsFromQueries, rubricsQueries]);
+
+  // Reset user edits when submissionId changes
+  useEffect(() => {
+    setUserEdits({
+      rubricScores: {},
+      rubricComments: {},
+    });
+  }, [submissionId]);
+
+  // Derive questions from queries and grade items
+  const questions = useMemo(() => {
+    if (questionsWithRubrics.length === 0) return [];
+    
+    if (latestGradeItems.length > 0) {
+      const sortedItems = [...latestGradeItems].sort((a, b) => {
+        const dateA = new Date(a.updatedAt).getTime();
+        const dateB = new Date(b.updatedAt).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        const createdA = new Date(a.createdAt).getTime();
+        const createdB = new Date(b.createdAt).getTime();
+        return createdB - createdA;
       });
 
-      if (gradingSessionsResult.items.length > 0) {
-        // Sort by createdAt desc to get the latest session
-        const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA; // Descending order
-        });
-        
-        const latestSession = sortedSessions[0];
-        setLatestGradingSession(latestSession);
-        
-        // Fetch grade items for this grading session
-        const gradeItemsResult = await gradeItemService.getGradeItems({
-          gradingSessionId: latestSession.id,
-        pageNumber: 1,
-          pageSize: 1000, // Get all grade items
-        });
-        
-        // Get all grade items (like grading history does)
-        const allGradeItems = gradeItemsResult.items;
-        setLatestGradeItems(allGradeItems);
-        
-        // Filter to get only the latest grade item for each rubricItemId (not description)
-        // Sort by updatedAt descending, then group by rubricItemId and take the first one
-        const sortedItems = [...allGradeItems].sort((a, b) => {
-          const dateA = new Date(a.updatedAt).getTime();
-          const dateB = new Date(b.updatedAt).getTime();
-          if (dateB !== dateA) {
-            return dateB - dateA; // Descending order by updatedAt
-          }
-          // If updatedAt is same, sort by createdAt descending
-          const createdA = new Date(a.createdAt).getTime();
-          const createdB = new Date(b.createdAt).getTime();
-          return createdB - createdA;
-        });
-        
-        // Group by rubricItemId (not description) to get latest grade item for each rubric
-        const latestGradeItemsMap = new Map<number, GradeItem>();
-        sortedItems.forEach((item) => {
-          if (item.rubricItemId) {
-            if (!latestGradeItemsMap.has(item.rubricItemId)) {
-              latestGradeItemsMap.set(item.rubricItemId, item);
+      const latestGradeItemsMap = new Map<number, GradeItem>();
+      sortedItems.forEach((item) => {
+        if (item.rubricItemId && !latestGradeItemsMap.has(item.rubricItemId)) {
+          latestGradeItemsMap.set(item.rubricItemId, item);
+        }
+      });
+
+      const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
+
+      return questionsWithRubrics.map((question) => {
+        const newRubricScores = { ...question.rubricScores };
+        const newRubricComments = { ...(question.rubricComments || {}) };
+
+        let questionComment = "";
+        question.rubrics.forEach((rubric) => {
+          const matchingGradeItem = latestGradeItemsForDisplay.find(
+            (item) => item.rubricItemId === rubric.id
+          );
+          if (matchingGradeItem) {
+            // Use user edit if exists, otherwise use grade item score
+            const editKey = `${question.id}_${rubric.id}`;
+            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined 
+              ? userEdits.rubricScores[editKey] 
+              : matchingGradeItem.score;
+            if (!questionComment && matchingGradeItem.comments) {
+              questionComment = matchingGradeItem.comments;
+            }
+          } else {
+            // Check if user has edited this rubric
+            const editKey = `${question.id}_${rubric.id}`;
+            if (userEdits.rubricScores[editKey] !== undefined) {
+              newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
             }
           }
         });
-        
-        const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
-        
-        // Map grade items to rubric scores and comments
-        if (latestGradeItemsForDisplay.length > 0) {
-          setQuestions((prevQuestions) => {
-            return prevQuestions.map((question) => {
-              const newRubricScores = { ...question.rubricScores };
-              const newRubricComments = { ...(question.rubricComments || {}) };
-              
-              // Find grade items that match this question's rubrics
-              let questionComment = "";
-              question.rubrics.forEach((rubric) => {
-                const matchingGradeItem = latestGradeItemsForDisplay.find(
-                  (item) => item.rubricItemId === rubric.id
-                );
-                if (matchingGradeItem) {
-                  newRubricScores[rubric.id] = matchingGradeItem.score;
-                  // Get comment from first grade item (all grade items in a question share the same comment)
-                  if (!questionComment && matchingGradeItem.comments) {
-                    questionComment = matchingGradeItem.comments;
-                  }
-                }
-              });
-              
-              // Set comment for the question (using question.id as key)
-              newRubricComments[question.id] = questionComment;
-              
-              return { 
-                ...question, 
-                rubricScores: newRubricScores,
-                rubricComments: newRubricComments
-              };
-            });
-          });
-        }
-          
-        // Calculate total score from ALL grade items (like grading history does)
-        if (allGradeItems.length > 0) {
-          const total = allGradeItems.reduce((sum, item) => sum + item.score, 0);
-          setTotalScore(total);
-        } else {
-          // If no grade items, use the grade from session
-          setTotalScore(latestSession.grade);
-        }
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch latest grading data:", err);
-      // Don't show error to user, just log it
+
+        // Use user edit comment if exists, otherwise use from grade item
+        newRubricComments[question.id] = userEdits.rubricComments[question.id] !== undefined
+          ? userEdits.rubricComments[question.id]
+          : questionComment;
+
+        return {
+          ...question,
+          rubricScores: newRubricScores,
+          rubricComments: newRubricComments,
+        };
+      });
     }
-  };
+    
+    // If no grade items, still apply user edits
+    return questionsWithRubrics.map((question) => {
+      const newRubricScores = { ...question.rubricScores };
+      const newRubricComments = { ...(question.rubricComments || {}) };
 
-  const checkSemesterStatus = async (submission: Submission) => {
-    try {
-      let semesterStartDate: string | undefined;
-      let semesterEndDate: string | undefined;
-
-      // Try to get semester info from classAssessment
-      if (submission.classAssessmentId) {
-        const classId = localStorage.getItem("selectedClassId");
-        if (classId) {
-          try {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(classId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.id === submission.classAssessmentId
-            );
-            if (classAssessment?.courseElementId) {
-              // Fetch course element to get semesterCourse
-              const courseElements = await courseElementService.getCourseElements({
-                pageNumber: 1,
-                pageSize: 1000,
-              });
-              const courseElement = courseElements.find(
-                (el) => el.id === classAssessment.courseElementId
-              );
-              if (courseElement?.semesterCourse?.semester) {
-                semesterStartDate = courseElement.semesterCourse.semester.startDate;
-                semesterEndDate = courseElement.semesterCourse.semester.endDate;
-              }
-            }
-          } catch (err) {
-            console.error("Failed to fetch from classAssessment:", err);
-          }
+      question.rubrics.forEach((rubric) => {
+        const editKey = `${question.id}_${rubric.id}`;
+        if (userEdits.rubricScores[editKey] !== undefined) {
+          newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
         }
+      });
+
+      if (userEdits.rubricComments[question.id] !== undefined) {
+        newRubricComments[question.id] = userEdits.rubricComments[question.id];
       }
 
-      if (semesterStartDate && semesterEndDate) {
-        setSemesterInfo({
-          startDate: semesterStartDate,
-          endDate: semesterEndDate,
-        });
+      return {
+        ...question,
+        rubricScores: newRubricScores,
+        rubricComments: newRubricComments,
+      };
+    });
+  }, [questionsWithRubrics, latestGradeItems, userEdits]);
 
-        // Check if semester has passed
-        const now = dayjs().tz("Asia/Ho_Chi_Minh");
-        const semesterEnd = toVietnamTime(semesterEndDate);
-        const hasPassed = now.isAfter(semesterEnd, 'day');
-        setIsSemesterPassed(hasPassed);
-      } else {
-        setIsSemesterPassed(false);
-      }
-    } catch (err) {
-      console.error("Failed to check semester status:", err);
-      // On error, allow editing (default to false)
+  // Calculate total score from questions
+  useEffect(() => {
+    const calculatedTotal = questions.reduce((sum, q) => {
+      const questionTotal = Object.values(q.rubricScores).reduce(
+        (qSum, score) => qSum + (score || 0),
+        0
+      );
+      return sum + questionTotal;
+    }, 0);
+    setTotalScore(calculatedTotal);
+  }, [questions]);
+
+  // Get class assessment for semester info
+  const classAssessmentForSemester = useMemo(() => {
+    if (!submission?.classAssessmentId) return null;
+    if (classAssessmentsData?.items) {
+      return classAssessmentsData.items.find(ca => ca.id === submission.classAssessmentId);
+    }
+    if (allClassAssessmentsData?.items) {
+      return allClassAssessmentsData.items.find(ca => ca.id === submission.classAssessmentId);
+    }
+    return null;
+  }, [submission, classAssessmentsData, allClassAssessmentsData]);
+
+  // Fetch course elements for semester info
+  const { data: courseElementsData } = useQuery({
+    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!classAssessmentForSemester?.courseElementId,
+  });
+
+  // Determine semester info
+  const semesterInfoFromQuery = useMemo(() => {
+    if (!classAssessmentForSemester?.courseElementId || !courseElementsData) return null;
+    const courseElement = courseElementsData.find(
+      (el) => el.id === classAssessmentForSemester.courseElementId
+    );
+    if (courseElement?.semesterCourse?.semester) {
+      return {
+        startDate: courseElement.semesterCourse.semester.startDate,
+        endDate: courseElement.semesterCourse.semester.endDate,
+      };
+    }
+    return null;
+  }, [classAssessmentForSemester, courseElementsData]);
+
+  // Update semester info and check if passed
+  useEffect(() => {
+    if (semesterInfoFromQuery) {
+      setSemesterInfo(semesterInfoFromQuery);
+      const now = dayjs().tz("Asia/Ho_Chi_Minh");
+      const semesterEnd = toVietnamTime(semesterInfoFromQuery.endDate);
+      const hasPassed = now.isAfter(semesterEnd, 'day');
+      setIsSemesterPassed(hasPassed);
+    } else {
+      setSemesterInfo(null);
       setIsSemesterPassed(false);
     }
-  };
+  }, [semesterInfoFromQuery]);
 
-  const fetchQuestionsAndRubrics = async (submission: Submission) => {
-    // Declare allQuestions outside try-catch so it's accessible in catch block
-    const allQuestions: QuestionWithRubrics[] = [];
-    
-    try {
-      let assessmentTemplateId: number | null = null;
-
-      // Try to get assessmentTemplateId from gradingGroupId first (most reliable)
-      if (submission.gradingGroupId) {
-        try {
-          const { gradingGroupService } = await import("@/services/gradingGroupService");
-          const gradingGroups = await gradingGroupService.getGradingGroups({});
-          const gradingGroup = gradingGroups.find((gg) => gg.id === submission.gradingGroupId);
-          if (gradingGroup?.assessmentTemplateId) {
-            assessmentTemplateId = gradingGroup.assessmentTemplateId;
-            console.log("Found assessmentTemplateId from gradingGroup:", assessmentTemplateId);
-          }
-        } catch (err) {
-          console.error("Failed to fetch from gradingGroup:", err);
-        }
-      }
-
-      // Try to get assessmentTemplateId from classAssessmentId
-      if (!assessmentTemplateId && submission.classAssessmentId) {
-        try {
-          // First try with classId from localStorage
-          const classId = localStorage.getItem("selectedClassId");
-          if (classId) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(classId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.id === submission.classAssessmentId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
-            }
-          }
-
-          // If not found, try to fetch classAssessment by ID directly
-          // First, try fetching without classId filter (if API supports it)
-          if (!assessmentTemplateId) {
-            try {
-              // Try fetching with just the classAssessmentId (if API supports filtering by ID)
-              // Since we don't have a direct getById, try fetching all and filtering
-              // But first, let's try to get it from the submission's classAssessmentId
-              // by fetching all class assessments without classId filter
-              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
-                pageNumber: 1,
-                pageSize: 10000, // Large page size to get all
-              });
-              const classAssessment = allClassAssessmentsRes.items.find(
-                (ca) => ca.id === submission.classAssessmentId
-              );
-              if (classAssessment?.assessmentTemplateId) {
-                assessmentTemplateId = classAssessment.assessmentTemplateId;
-                console.log("Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
-              }
-            } catch (err) {
-              // If that fails, try fetching from multiple classes
-              console.log("Trying to fetch from multiple classes...");
-              const { classService } = await import("@/services/classService");
-              try {
-                // Try to get all classes first
-                const classes = await classService.getClassList({ pageNumber: 1, pageSize: 100 });
-                for (const classItem of classes.classes || []) {
-                  try {
-                    const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-                      classId: classItem.id,
-                      pageNumber: 1,
-                      pageSize: 1000,
-                    });
-                    const classAssessment = classAssessmentsRes.items.find(
-                      (ca) => ca.id === submission.classAssessmentId
-                    );
-                    if (classAssessment?.assessmentTemplateId) {
-                      assessmentTemplateId = classAssessment.assessmentTemplateId;
-                      console.log(`Found assessmentTemplateId from classAssessment (classId ${classItem.id}):`, assessmentTemplateId);
-                      break;
-                    }
-                  } catch (err) {
-                    // Continue to next class
-                  }
-                }
-              } catch (err) {
-                console.error("Failed to fetch from multiple classes:", err);
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Failed to fetch from classAssessment:", err);
-        }
-      }
-
-      // Note: examSessionId is no longer used to fetch templates
-      // Templates are now fetched via classAssessmentId or courseElementId through approved assign requests
-
-      if (!assessmentTemplateId) {
-        console.warn("Could not find assessmentTemplateId for submission:", submission.id);
-        setQuestions([]);
-        return;
-      }
-
-      // Fetch template
-      const templates = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const template = templates.items.find((t) => t.id === assessmentTemplateId);
-
-      if (!template) {
-        setQuestions([]);
-        return;
-      }
-
-      // Fetch questions and rubrics for each paper
-      // Fetch papers - try to get all papers first
-      let papersData;
-      try {
-        const papers = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: template.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        papersData = papers.items.length > 0 ? papers.items : null;
-      } catch (err) {
-        console.error("Failed to fetch papers:", err);
-        papersData = null;
-      }
-
-      // If no papers found, return empty
-      if (!papersData || papersData.length === 0) {
-        setQuestions([]);
-        return;
-      }
-
-      for (const paper of papersData) {
-        // Fetch questions for this paper
-        let paperQuestions;
-        try {
-          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-            assessmentPaperId: paper.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          paperQuestions = questionsRes.items.length > 0
-            ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
-            : null;
-        } catch (err) {
-          console.error(`Failed to fetch questions for paper ${paper.id}:`, err);
-          paperQuestions = null;
-        }
-
-        // If no questions found, skip this paper
-        if (!paperQuestions || paperQuestions.length === 0) {
-          continue;
-        }
-
-        for (const question of paperQuestions) {
-          // Fetch rubrics for this question
-          let questionRubrics;
-          try {
-            const rubricsRes = await rubricItemService.getRubricsForQuestion({
-              assessmentQuestionId: question.id,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-            questionRubrics = rubricsRes.items.length > 0 ? rubricsRes.items : null;
-          } catch (err) {
-            console.error(`Failed to fetch rubrics for question ${question.id}:`, err);
-            questionRubrics = null;
-          }
-
-          // If no rubrics found, skip this question
-          if (!questionRubrics || questionRubrics.length === 0) {
-            continue;
-          }
-
-          // Initialize rubric scores and comments as empty
-          const rubricScores: { [rubricId: number]: number } = {};
-          const rubricComments: { [rubricId: number]: string } = {};
-
-          allQuestions.push({
-            ...question,
-            rubrics: questionRubrics,
-            rubricScores,
-            rubricComments,
-          });
-        }
-      }
-
-      if (allQuestions.length === 0) {
-        setQuestions([]);
-      } else {
-        // Sort questions by questionNumber and ensure rubricComments exists
-        const sortedQuestions = [...allQuestions].sort((a, b) => 
-          (a.questionNumber || 0) - (b.questionNumber || 0)
-        ).map(q => ({
-          ...q,
-          rubricComments: { ...(q.rubricComments || {}) },
-        }));
-        setQuestions(sortedQuestions);
-        // Recalculate total score
-        let calculatedTotal = 0;
-        allQuestions.forEach((q) => {
-          const questionTotal = Object.values(q.rubricScores).reduce(
-            (sum, score) => sum + (score || 0),
-            0
-          );
-          calculatedTotal += questionTotal;
-        });
-        if (calculatedTotal > 0) {
-          setTotalScore(calculatedTotal);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch questions and rubrics:", err);
-      if (allQuestions.length > 0) {
-        // Load rubric scores from localStorage if available
-        const savedRubricScores = localStorage.getItem(`rubricScores_${submission.id}`);
-        let finalQuestions = allQuestions;
-        
-        if (savedRubricScores) {
-          try {
-            const parsedScores = JSON.parse(savedRubricScores);
-            finalQuestions = allQuestions.map((q) => {
-              const savedScores = parsedScores[q.id];
-              if (savedScores) {
-                return {
-                  ...q,
-                  rubricScores: { ...q.rubricScores, ...savedScores },
-                  rubricComments: { ...(q.rubricComments || {}) },
-                };
-              }
-              return {
-                ...q,
-                rubricComments: { ...(q.rubricComments || {}) },
-              };
-            });
-          } catch (err) {
-            console.error("Failed to parse saved rubric scores:", err);
-          }
-        }
-        
-        // We have some questions from partial fetches, use them
-        const sortedQuestions = [...finalQuestions].sort((a, b) => 
-          (a.questionNumber || 0) - (b.questionNumber || 0)
-        ).map(q => ({
-          ...q,
-          rubricComments: { ...(q.rubricComments || {}) },
-        }));
-        setQuestions(sortedQuestions);
-        
-        // Recalculate total score
-        let calculatedTotal = 0;
-        sortedQuestions.forEach((q) => {
-          const questionTotal = Object.values(q.rubricScores).reduce(
-            (sum: number, score: number | undefined) => sum + (score || 0),
-            0
-          );
-          calculatedTotal += questionTotal;
-        });
-        if (calculatedTotal > 0 || savedRubricScores) {
-          setTotalScore(calculatedTotal);
-        }
-        } else {
-        setQuestions([]);
-      }
-    }
-  };
 
   const handleRubricScoreChange = (
     questionId: number,
@@ -681,29 +529,14 @@ export default function AssignmentGradingPage() {
       return;
     }
     
-    setQuestions((prev) => {
-      const updated = prev.map((q) => {
-        if (q.id === questionId) {
-          const newRubricScores = { ...q.rubricScores };
-          newRubricScores[rubricId] = scoreValue;
-          return { ...q, rubricScores: newRubricScores };
-        }
-        return q;
-      });
-
-      // Calculate total score after update
-      let total = 0;
-      updated.forEach((q) => {
-        const questionTotal = Object.values(q.rubricScores).reduce(
-          (sum, score) => sum + (score || 0),
-          0
-        );
-        total += questionTotal;
-      });
-      setTotalScore(total);
-
-      return updated;
-    });
+    const editKey = `${questionId}_${rubricId}`;
+    setUserEdits((prev) => ({
+      ...prev,
+      rubricScores: {
+        ...prev.rubricScores,
+        [editKey]: scoreValue,
+      },
+    }));
   };
 
   const handleRubricCommentChange = (
@@ -711,16 +544,13 @@ export default function AssignmentGradingPage() {
     rubricId: number,
     comment: string
   ) => {
-    setQuestions((prev) => {
-      return prev.map((q) => {
-        if (q.id === questionId) {
-          const newRubricComments = { ...(q.rubricComments || {}) };
-          newRubricComments[rubricId] = comment;
-          return { ...q, rubricComments: newRubricComments };
-        }
-        return q;
-      });
-    });
+    setUserEdits((prev) => ({
+      ...prev,
+      rubricComments: {
+        ...prev.rubricComments,
+        [questionId]: comment,
+      },
+    }));
   };
 
   /**
@@ -776,33 +606,36 @@ export default function AssignmentGradingPage() {
     }
   };
 
-  /**
-   * Fetch existing feedback from API
-   */
-  const fetchFeedback = async (submissionId: number) => {
-    try {
-      setLoadingFeedback(true);
-      const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
+  // Fetch feedback using TanStack Query
+  const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
+    queryKey: ['submissionFeedback', 'bySubmissionId', submissionId],
+    queryFn: async () => {
+      if (!submissionId) return [];
+      const list = await submissionFeedbackService.getSubmissionFeedbackList({
         submissionId: submissionId,
       });
+      return list;
+    },
+    enabled: !!submissionId,
+  });
 
-      if (feedbackList.length > 0) {
-        // Get the first feedback (assuming one feedback per submission)
-        const existingFeedback = feedbackList[0];
-        setSubmissionFeedbackId(existingFeedback.id);
-        
-        // Try to deserialize feedback
-        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-        
-        // If deserialize returns null, it means it's plain text/markdown
-        // Use Gemini to parse it into structured format
-        if (parsedFeedback === null) {
-          try {
-            parsedFeedback = await geminiService.formatFeedback(existingFeedback.feedbackText);
-          } catch (error: any) {
+  // Parse and set feedback
+  useEffect(() => {
+    if (feedbackList.length > 0) {
+      const existingFeedback = feedbackList[0];
+      setSubmissionFeedbackId(existingFeedback.id);
+      
+      let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+      
+      if (parsedFeedback === null) {
+        // Try to format with Gemini (async, but we'll handle it)
+        geminiService.formatFeedback(existingFeedback.feedbackText)
+          .then((formatted) => {
+            setFeedback(formatted);
+          })
+          .catch((error) => {
             console.error("Failed to parse feedback with Gemini:", error);
-            // Fallback: put entire text into overallFeedback
-            parsedFeedback = {
+            setFeedback({
               overallFeedback: existingFeedback.feedbackText,
               strengths: "",
               weaknesses: "",
@@ -811,195 +644,148 @@ export default function AssignmentGradingPage() {
               suggestionsForImprovement: "",
               bestPractices: "",
               errorHandling: "",
-            };
-          }
-        }
-        
-        if (parsedFeedback) {
-          setFeedback(parsedFeedback);
-        }
+            });
+          });
+      } else {
+        setFeedback(parsedFeedback);
       }
-    } catch (error: any) {
-      console.error("Failed to fetch feedback:", error);
-      // Don't show error to user, just log it
-    } finally {
-      setLoadingFeedback(false);
     }
-  };
+  }, [feedbackList]);
 
-  /**
-   * Save or update feedback
-   */
+  const loadingFeedback = isLoadingFeedback;
+
+  // Mutation for saving feedback
+  const saveFeedbackMutation = useMutation({
+    mutationFn: async (feedbackData: FeedbackData) => {
+      if (!submissionId) {
+        throw new Error("No submission selected");
+      }
+
+      const feedbackText = serializeFeedback(feedbackData);
+
+      if (submissionFeedbackId) {
+        return submissionFeedbackService.updateSubmissionFeedback(submissionFeedbackId, {
+          feedbackText: feedbackText,
+        });
+      } else {
+        const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
+          submissionId: submissionId,
+          feedbackText: feedbackText,
+        });
+        setSubmissionFeedbackId(newFeedback.id);
+        return newFeedback;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submissionId] });
+      message.success("Feedback saved successfully");
+    },
+    onError: (error: any) => {
+      console.error("Failed to save feedback:", error);
+      message.error(error?.message || "Failed to save feedback");
+    },
+  });
+
   const saveFeedback = async (feedbackData: FeedbackData) => {
-    if (!submissionId) {
-      throw new Error("No submission selected");
-    }
-
-    const feedbackText = serializeFeedback(feedbackData);
-
-    if (submissionFeedbackId) {
-      // Update existing feedback
-      await submissionFeedbackService.updateSubmissionFeedback(submissionFeedbackId, {
-        feedbackText: feedbackText,
-      });
-    } else {
-      // Create new feedback
-      const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
-        submissionId: submissionId,
-        feedbackText: feedbackText,
-      });
-      setSubmissionFeedbackId(newFeedback.id);
-    }
+    saveFeedbackMutation.mutate(feedbackData);
   };
 
-  const handleGetAiFeedback = async () => {
-    if (!submissionId) {
-      message.error("No submission selected");
-      return;
-    }
-
-    try {
-      setLoadingAiFeedback(true);
-
-      const formattedFeedback = await gradingService.getFormattedAiFeedback(submissionId, "OpenAI");
-
-      // Update feedback state with AI feedback
+  // Mutation for getting AI feedback
+  const getAiFeedbackMutation = useMutation({
+    mutationFn: async () => {
+      if (!submissionId) {
+        throw new Error("No submission selected");
+      }
+      return gradingService.getFormattedAiFeedback(submissionId, "OpenAI");
+    },
+    onSuccess: (formattedFeedback) => {
       setFeedback(formattedFeedback);
-
-      // Save feedback to database
-      await saveFeedback(formattedFeedback);
-
+      saveFeedbackMutation.mutate(formattedFeedback);
       message.success("AI feedback retrieved and saved successfully!");
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       console.error("Failed to get AI feedback:", error);
-      console.error("Error details:", {
-        message: error?.message,
-        response: error?.response?.data,
-        apiResponse: error?.apiResponse,
-        isApiError: error?.isApiError
-      });
-
-      // Extract error message from API response or use default
       let errorMessage = "Failed to get AI feedback. Please try again.";
-
-      // Check if error has API response data (from our service)
       if (error?.apiResponse?.errorMessages && error.apiResponse.errorMessages.length > 0) {
         errorMessage = error.apiResponse.errorMessages.join(", ");
-      }
-      // Check if it's an axios error with response data
-      else if (error?.response?.data) {
+      } else if (error?.response?.data) {
         const apiError = error.response.data;
         if (apiError.errorMessages && apiError.errorMessages.length > 0) {
           errorMessage = apiError.errorMessages.join(", ");
         } else if (apiError.message) {
           errorMessage = apiError.message;
         }
-      }
-      // Check if error has message
-      else if (error?.message) {
+      } else if (error?.message) {
         errorMessage = error.message;
       }
-
       message.error(errorMessage);
-    } finally {
-      setLoadingAiFeedback(false);
-    }
-  };
+    },
+  });
 
-  const handleOpenGradingHistory = async () => {
+  const handleGetAiFeedback = async () => {
     if (!submissionId) {
       message.error("No submission selected");
       return;
     }
+    getAiFeedbackMutation.mutate();
+  };
 
+  const loadingAiFeedback = getAiFeedbackMutation.isPending;
+
+  const handleOpenGradingHistory = () => {
+    if (!submissionId) {
+      message.error("No submission selected");
+      return;
+    }
     setGradingHistoryModalVisible(true);
-    await fetchGradingHistory();
   };
 
-  const handleOpenFeedbackHistory = async () => {
+  const handleOpenFeedbackHistory = () => {
     if (!submissionId) {
       message.error("No submission selected");
       return;
     }
-
     setFeedbackHistoryModalVisible(true);
-    await fetchFeedbackHistory();
   };
 
-  const fetchFeedbackHistory = async () => {
-    if (!submissionId) {
-      console.error("No submissionId for feedback history");
-      return;
-    }
+  // Fetch grading history using TanStack Query (for modal)
+  const { data: gradingHistoryData, isLoading: loadingGradingHistory } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: submissionId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: gradingHistoryModalVisible && !!submissionId,
+  });
 
-    try {
-      setLoadingFeedbackHistory(true);
-      const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
+  const gradingHistory = useMemo(() => {
+    if (!gradingHistoryData?.items) return [];
+    return [...gradingHistoryData.items].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+  }, [gradingHistoryData]);
+
+  // Fetch feedback history using TanStack Query (for modal)
+  const { data: feedbackHistoryData, isLoading: loadingFeedbackHistory } = useQuery({
+    queryKey: ['submissionFeedbackHistory', 'bySubmissionId', submissionId],
+    queryFn: async () => {
+      if (!submissionId) return [];
+      const list = await submissionFeedbackService.getSubmissionFeedbackList({
         submissionId: submissionId,
       });
-      
-      // Sort by createdAt desc (newest first)
-      const sortedHistory = [...feedbackList].sort((a, b) => {
+      return [...list].sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
         const dateB = new Date(b.createdAt).getTime();
-        return dateB - dateA; // Descending order
+        return dateB - dateA;
       });
-      
-      setFeedbackHistory(sortedHistory);
-    } catch (err: any) {
-      console.error("Failed to fetch feedback history:", err);
-      message.error(err?.message || "Failed to load feedback history");
-      setFeedbackHistory([]);
-    } finally {
-      setLoadingFeedbackHistory(false);
-    }
-  };
+    },
+    enabled: feedbackHistoryModalVisible && !!submissionId,
+  });
 
-  const fetchGradingHistory = async () => {
-    if (!submissionId) {
-      console.error("No submissionId for grading history");
-      return;
-    }
-
-    try {
-      setLoadingGradingHistory(true);
-      console.log("Fetching grading history for submissionId:", submissionId);
-      
-      const result = await gradingService.getGradingSessions({
-        submissionId: submissionId,
-        pageNumber: 1,
-        pageSize: 1000, // Get all grading sessions
-      });
-      
-      console.log("Grading history result:", result);
-      
-      if (result && result.items && result.items.length > 0) {
-        // Sort by createdAt desc (newest first)
-        const sortedHistory = [...result.items].sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA; // Descending order
-        });
-        
-        console.log("Sorted grading history:", sortedHistory);
-        setGradingHistory(sortedHistory);
-      } else {
-        console.log("No grading sessions found");
-        setGradingHistory([]);
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch grading history:", err);
-      console.error("Error details:", {
-        message: err?.message,
-        response: err?.response?.data,
-        stack: err?.stack
-      });
-      message.error(err?.message || "Failed to load grading history");
-      setGradingHistory([]);
-    } finally {
-      setLoadingGradingHistory(false);
-    }
-  };
+  const feedbackHistory = feedbackHistoryData || [];
 
   // Render feedback fields - always show all input fields (empty or with content)
   const renderFeedbackFields = (feedbackData: FeedbackData) => {
@@ -1231,7 +1017,9 @@ export default function AssignmentGradingPage() {
         assessmentTemplateId: assessmentTemplateId,
       });
 
-      setLatestGradingSession(gradingSession);
+      // Invalidate queries to refresh (including grading history modal)
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
 
       // If status is 0 (PROCESSING), start polling
       if (gradingSession.status === 0) {
@@ -1254,7 +1042,6 @@ export default function AssignmentGradingPage() {
               });
 
               const latestSession = sortedSessions[0];
-              setLatestGradingSession(latestSession);
 
               // If status is no longer PROCESSING (0), stop polling
               if (latestSession.status !== 0) {
@@ -1265,8 +1052,11 @@ export default function AssignmentGradingPage() {
                 message.destroy();
                 setAutoGradingLoading(false);
                 
-                // Refresh grading data
-                await fetchLatestGradingData(submissionId);
+                // Invalidate queries to refresh data (including grading history modal)
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 1000 }) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 100 }) });
+                queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+                queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
                 
                 if (latestSession.status === 1) {
                   message.success("Auto grading completed successfully");
@@ -1301,7 +1091,11 @@ export default function AssignmentGradingPage() {
       } else {
         // Status is not PROCESSING, grading completed immediately
         setAutoGradingLoading(false);
-        await fetchLatestGradingData(submissionId);
+        // Invalidate queries to refresh data (including grading history modal)
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId, pageNumber: 1, pageSize: 1000 }) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId, pageNumber: 1, pageSize: 100 }) });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+        queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
         
         if (gradingSession.status === 1) {
           message.success("Auto grading completed successfully");
@@ -1317,36 +1111,16 @@ export default function AssignmentGradingPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!submissionId || !submission) {
-      message.error("No submission selected");
-      return;
-    }
-
-    // Check if semester has passed
-    if (isSemesterPassed) {
-      message.warning("Cannot edit grades when the semester has ended.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      
-      // Validate all scores before saving
-      for (const question of questions) {
-        for (const rubric of question.rubrics) {
-          const score = question.rubricScores[rubric.id] || 0;
-          if (score > rubric.score) {
-            message.error(`Score for "${rubric.description || rubric.id}" cannot exceed maximum score of ${rubric.score.toFixed(2)}`);
-            setSaving(false);
-            return;
-          }
-        }
+  // Mutation for saving grades
+  const saveGradeMutation = useMutation({
+    mutationFn: async () => {
+      if (!submissionId || !submission) {
+        throw new Error("No submission selected");
       }
 
       // Calculate total score from all rubric scores
       let calculatedTotal = 0;
-        questions.forEach((q) => {
+      questions.forEach((q) => {
         const questionTotal = Object.values(q.rubricScores).reduce(
           (sum, score) => sum + (score || 0),
           0
@@ -1378,9 +1152,7 @@ export default function AssignmentGradingPage() {
         }
 
         if (!assessmentTemplateId) {
-          message.error("Cannot find assessment template. Please contact administrator.");
-          setSaving(false);
-          return;
+          throw new Error("Cannot find assessment template. Please contact administrator.");
         }
 
         // Create grading session
@@ -1403,11 +1175,8 @@ export default function AssignmentGradingPage() {
             return dateB - dateA;
           });
           gradingSessionId = sortedSessions[0].id;
-          setLatestGradingSession(sortedSessions[0]);
         } else {
-          message.error("Failed to create grading session");
-          setSaving(false);
-          return;
+          throw new Error("Failed to create grading session");
         }
       }
       
@@ -1446,16 +1215,46 @@ export default function AssignmentGradingPage() {
         status: 1, // COMPLETED
       });
 
+      return { gradingSessionId, calculatedTotal };
+    },
+    onSuccess: () => {
       message.success("Grade saved successfully");
-      
-      // Refresh latest grading data
-      await fetchLatestGradingData(submissionId);
-    } catch (err: any) {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }) });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      // Invalidate feedback queries
+      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submissionId] });
+    },
+    onError: (err: any) => {
       console.error("Failed to save grade:", err);
       message.error(err.message || "Failed to save grade");
-    } finally {
-      setSaving(false);
+    },
+  });
+
+  const handleSave = async () => {
+    if (!submissionId || !submission) {
+      message.error("No submission selected");
+      return;
     }
+
+    // Check if semester has passed
+    if (isSemesterPassed) {
+      message.warning("Cannot edit grades when the semester has ended.");
+      return;
+    }
+
+    // Validate all scores before saving
+    for (const question of questions) {
+      for (const rubric of question.rubrics) {
+        const score = question.rubricScores[rubric.id] || 0;
+        if (score > rubric.score) {
+          message.error(`Score for "${rubric.description || rubric.id}" cannot exceed maximum score of ${rubric.score.toFixed(2)}`);
+          return;
+        }
+      }
+    }
+
+    saveGradeMutation.mutate();
   };
 
   const handleFeedbackChange = (field: keyof FeedbackData, value: string) => {
@@ -1484,7 +1283,9 @@ export default function AssignmentGradingPage() {
   };
 
 
-  if (loading) {
+  const isLoadingSubmissionData = isLoadingSubmissions && !submission && !!submissionId;
+
+  if (isLoadingSubmissionData) {
     return (
       <div className={styles.loadingContainer}>
         <Spin size="large" />
@@ -1711,7 +1512,7 @@ export default function AssignmentGradingPage() {
                               type="primary"
                               icon={<SaveOutlined />}
                               onClick={handleSave}
-                              loading={saving}
+                              loading={saveGradeMutation.isPending}
                               disabled={isSemesterPassed}
                               block
                             >
@@ -1843,18 +1644,14 @@ export default function AssignmentGradingPage() {
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
           onClose={() => setGradingHistoryModalVisible(false)}
-          gradingHistory={gradingHistory}
-          loading={loadingGradingHistory}
           submissionId={submissionId}
-            />
+        />
 
         <FeedbackHistoryModal
           visible={feedbackHistoryModalVisible}
           onClose={() => setFeedbackHistoryModalVisible(false)}
-          feedbackHistory={feedbackHistory}
-          loading={loadingFeedbackHistory}
           submissionId={submissionId}
-            />
+        />
           </div>
     </App>
   );
@@ -1869,139 +1666,159 @@ function ViewExamModal({
   submission: Submission | null;
 }) {
   const { message } = App.useApp();
-  const [loading, setLoading] = useState(false);
-  const [papers, setPapers] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
-  const [rubrics, setRubrics] = useState<{ [questionId: number]: RubricItem[] }>({});
   const { Title, Text } = Typography;
 
-  useEffect(() => {
-    if (visible && submission) {
-      fetchExamData();
+  // Determine assessmentTemplateId using queries
+  const localStorageClassId = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
+  const effectiveClassId = localStorageClassId ? Number(localStorageClassId) : undefined;
+
+  // Fetch grading groups if submission has gradingGroupId
+  const { data: gradingGroupsData } = useQuery({
+    queryKey: queryKeys.grading.groups.list({}),
+    queryFn: async () => {
+      const { gradingGroupService } = await import("@/services/gradingGroupService");
+      return gradingGroupService.getGradingGroups({});
+    },
+    enabled: visible && !!submission?.gradingGroupId,
+  });
+
+  // Fetch class assessments if submission has classAssessmentId
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: effectiveClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: visible && !!submission?.classAssessmentId && !!effectiveClassId,
+  });
+
+  // Also fetch all class assessments as fallback
+  const { data: allClassAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 10000 }),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      pageNumber: 1,
+      pageSize: 10000,
+    }),
+    enabled: visible && !!submission?.classAssessmentId && (!effectiveClassId || !classAssessmentsData),
+  });
+
+  // Determine assessmentTemplateId
+  const assessmentTemplateId = useMemo(() => {
+    if (!submission) return null;
+
+    // Try to get from gradingGroupId first (most reliable)
+    if (submission.gradingGroupId && gradingGroupsData) {
+      const gradingGroup = gradingGroupsData.find((gg) => gg.id === submission.gradingGroupId);
+      if (gradingGroup?.assessmentTemplateId) {
+        return gradingGroup.assessmentTemplateId;
+      }
     }
-  }, [visible, submission]);
 
-  const fetchExamData = async () => {
-    try {
-      setLoading(true);
-
-      if (!submission) return;
-
-      let assessmentTemplateId: number | null = null;
-
-      // Try to get assessmentTemplateId from gradingGroupId first (most reliable)
-      if (submission.gradingGroupId) {
-        try {
-          const { gradingGroupService } = await import("@/services/gradingGroupService");
-          const gradingGroups = await gradingGroupService.getGradingGroups({});
-          const gradingGroup = gradingGroups.find((gg) => gg.id === submission.gradingGroupId);
-          if (gradingGroup?.assessmentTemplateId) {
-            assessmentTemplateId = gradingGroup.assessmentTemplateId;
-            console.log("ViewExamModal: Found assessmentTemplateId from gradingGroup:", assessmentTemplateId);
-          }
-        } catch (err) {
-          console.error("ViewExamModal: Failed to fetch from gradingGroup:", err);
+    // Try to get from classAssessmentId
+    if (submission.classAssessmentId) {
+      if (classAssessmentsData?.items) {
+        const classAssessment = classAssessmentsData.items.find(
+          (ca) => ca.id === submission.classAssessmentId
+        );
+        if (classAssessment?.assessmentTemplateId) {
+          return classAssessment.assessmentTemplateId;
         }
       }
 
-      // Try to get assessmentTemplateId from classAssessmentId
-      if (!assessmentTemplateId && submission.classAssessmentId) {
-        try {
-          // First try with classId from localStorage
-          const classId = localStorage.getItem("selectedClassId");
-          if (classId) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(classId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.id === submission.classAssessmentId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("ViewExamModal: Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
-            }
-          }
-
-          // If not found, try to fetch classAssessment by ID directly
-          if (!assessmentTemplateId) {
-            try {
-              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
-                pageNumber: 1,
-                pageSize: 10000,
-              });
-              const classAssessment = allClassAssessmentsRes.items.find(
-                (ca) => ca.id === submission.classAssessmentId
-              );
-              if (classAssessment?.assessmentTemplateId) {
-                assessmentTemplateId = classAssessment.assessmentTemplateId;
-                console.log("ViewExamModal: Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
-              }
-            } catch (err) {
-              console.error("ViewExamModal: Failed to fetch all class assessments:", err);
-            }
-          }
-        } catch (err) {
-          console.error("ViewExamModal: Failed to fetch from classAssessment:", err);
+      if (allClassAssessmentsData?.items) {
+        const classAssessment = allClassAssessmentsData.items.find(
+          (ca) => ca.id === submission.classAssessmentId
+        );
+        if (classAssessment?.assessmentTemplateId) {
+          return classAssessment.assessmentTemplateId;
         }
       }
+    }
 
-      // Note: examSessionId is no longer used to fetch templates
-      // Templates are now fetched via classAssessmentId or courseElementId through approved assign requests
+    return null;
+  }, [submission, gradingGroupsData, classAssessmentsData, allClassAssessmentsData]);
 
-      if (!assessmentTemplateId) {
-        console.warn("ViewExamModal: Could not find assessmentTemplateId for submission:", submission.id);
-        setLoading(false);
-        return;
-      }
+  // Fetch papers
+  const { data: papersData } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: visible && !!assessmentTemplateId,
+  });
 
-      // Fetch papers
-      const papersRes = await assessmentPaperService.getAssessmentPapers({
-        assessmentTemplateId: assessmentTemplateId,
+  const papers = papersData?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
         pageSize: 100,
-      });
+      }),
+      enabled: visible && papers.length > 0,
+    })),
+  });
 
-      const papersData = papersRes.items.length > 0 ? papersRes.items : [];
-      setPapers(papersData);
-
-      // Fetch questions for each paper
-      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-      for (const paper of papersData) {
-        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-          assessmentPaperId: paper.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-
-        const paperQuestions = questionsRes.items.length > 0
-          ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
-          : [];
-
-        questionsMap[paper.id] = paperQuestions;
-
-        // Fetch rubrics for each question
-        const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-        for (const question of paperQuestions) {
-          const rubricsRes = await rubricItemService.getRubricsForQuestion({
-            assessmentQuestionId: question.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-
-          rubricsMap[question.id] = rubricsRes.items.length > 0 ? rubricsRes.items : [];
-        }
-        setRubrics((prev) => ({ ...prev, ...rubricsMap }));
+  // Map questions by paperId
+  const questions = useMemo(() => {
+    const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+    papers.forEach((paper, index) => {
+      const query = questionsQueries[index];
+      if (query.data?.items) {
+        const sortedQuestions = [...query.data.items].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        questionsMap[paper.id] = sortedQuestions;
       }
-      setQuestions(questionsMap);
-    } catch (err: any) {
-      console.error("Failed to fetch exam data:", err);
-      message.error("Failed to load exam data");
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+    return questionsMap;
+  }, [papers, questionsQueries]);
+
+  // Get all question IDs for fetching rubrics
+  const allQuestionIds = useMemo(() => {
+    return Object.values(questions).flat().map(q => q.id);
+  }, [questions]);
+
+  // Fetch rubrics for all questions
+  const rubricsQueries = useQueries({
+    queries: allQuestionIds.map((questionId) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(questionId),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: questionId,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: visible && allQuestionIds.length > 0,
+    })),
+  });
+
+  // Map rubrics by questionId
+  const rubrics = useMemo(() => {
+    const rubricsMap: { [questionId: number]: RubricItem[] } = {};
+    allQuestionIds.forEach((questionId, index) => {
+      const query = rubricsQueries[index];
+      if (query.data?.items) {
+        rubricsMap[questionId] = query.data.items;
+      }
+    });
+    return rubricsMap;
+  }, [allQuestionIds, rubricsQueries]);
+
+  // Calculate loading state
+  const loading = (
+    (!!submission?.gradingGroupId && !gradingGroupsData) ||
+    (!!submission?.classAssessmentId && !!effectiveClassId && !classAssessmentsData) ||
+    (!!submission?.classAssessmentId && !effectiveClassId && !allClassAssessmentsData) ||
+    (!!assessmentTemplateId && !papersData) ||
+    questionsQueries.some(q => q.isLoading) ||
+    rubricsQueries.some(q => q.isLoading)
+  );
 
   return (
     <Modal
@@ -2095,19 +1912,58 @@ function ViewExamModal({
 function GradingHistoryModal({
   visible,
   onClose,
-  gradingHistory,
-  loading,
   submissionId,
 }: {
   visible: boolean;
   onClose: () => void;
-  gradingHistory: GradingSession[];
-  loading: boolean;
   submissionId: number | null;
 }) {
   const { message } = App.useApp();
   const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set());
-  const [sessionGradeItems, setSessionGradeItems] = useState<{ [sessionId: number]: GradeItem[] }>({});
+
+  // Fetch grading history using TanStack Query
+  const { data: gradingHistoryData, isLoading: loading } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: submissionId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: visible && !!submissionId,
+  });
+
+  const gradingHistory = useMemo(() => {
+    if (!gradingHistoryData?.items) return [];
+    return [...gradingHistoryData.items].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+  }, [gradingHistoryData]);
+
+  // Fetch grade items for expanded sessions
+  const expandedSessionIds = Array.from(expandedSessions);
+  const gradeItemsQueries = useQueries({
+    queries: expandedSessionIds.map((sessionId) => ({
+      queryKey: ['gradeItems', 'byGradingSessionId', sessionId],
+      queryFn: () => gradeItemService.getGradeItems({
+        gradingSessionId: sessionId,
+        pageNumber: 1,
+        pageSize: 1000,
+      }),
+      enabled: visible && expandedSessions.has(sessionId),
+    })),
+  });
+
+  const sessionGradeItems = useMemo(() => {
+    const map: { [sessionId: number]: GradeItem[] } = {};
+    expandedSessionIds.forEach((sessionId, index) => {
+      if (gradeItemsQueries[index]?.data?.items) {
+        map[sessionId] = gradeItemsQueries[index].data.items;
+      }
+    });
+    return map;
+  }, [expandedSessionIds, gradeItemsQueries]);
 
   const { Title, Text } = Typography;
 
@@ -2137,95 +1993,54 @@ function GradingHistoryModal({
     }
   };
 
-  const handleExpandSession = async (sessionId: number) => {
+  const handleExpandSession = (sessionId: number) => {
     const newExpanded = new Set(expandedSessions);
-    const isCurrentlyExpanded = newExpanded.has(sessionId);
-    
-    if (isCurrentlyExpanded) {
-      // Collapse
+    if (newExpanded.has(sessionId)) {
       newExpanded.delete(sessionId);
-      setExpandedSessions(newExpanded);
-      return;
-    }
-
-    // Expand - fetch or use cached data
-    if (sessionGradeItems[sessionId]) {
-      // Already loaded, just expand
+    } else {
       newExpanded.add(sessionId);
-      setExpandedSessions(newExpanded);
-      return;
     }
-
-    // Fetch grade items for this session
-    try {
-      const result = await gradeItemService.getGradeItems({
-        gradingSessionId: sessionId,
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      
-      // Don't filter duplicates - show all grade items
-      setSessionGradeItems((prev) => ({
-        ...prev,
-        [sessionId]: result.items,
-      }));
-      
-      newExpanded.add(sessionId);
-      setExpandedSessions(newExpanded);
-    } catch (err: any) {
-      console.error("Failed to fetch grade items:", err);
-      message.error("Failed to load grade items");
-    }
+    setExpandedSessions(newExpanded);
   };
 
   const [gradeItemHistoryModalVisible, setGradeItemHistoryModalVisible] = useState(false);
   const [selectedGradeItem, setSelectedGradeItem] = useState<GradeItem | null>(null);
-  const [gradeItemHistory, setGradeItemHistory] = useState<GradeItem[]>([]);
-  const [loadingGradeItemHistory, setLoadingGradeItemHistory] = useState(false);
 
-  const handleOpenGradeItemHistory = async (gradeItem: GradeItem) => {
+  const handleOpenGradeItemHistory = (gradeItem: GradeItem) => {
     setSelectedGradeItem(gradeItem);
     setGradeItemHistoryModalVisible(true);
-    await fetchGradeItemHistory(gradeItem.rubricItemDescription, gradeItem.gradingSessionId);
   };
 
-  const fetchGradeItemHistory = async (rubricItemDescription: string, gradingSessionId: number) => {
-    setLoadingGradeItemHistory(true);
-    try {
-      // Fetch all grade items for this session, then filter by rubricItemDescription
+  // Fetch grade item history using TanStack Query
+  const { data: gradeItemHistoryData, isLoading: loadingGradeItemHistory } = useQuery({
+    queryKey: ['gradeItemHistory', selectedGradeItem?.gradingSessionId, selectedGradeItem?.rubricItemDescription],
+    queryFn: async () => {
+      if (!selectedGradeItem) return { items: [] };
       const result = await gradeItemService.getGradeItems({
-        gradingSessionId: gradingSessionId,
+        gradingSessionId: selectedGradeItem.gradingSessionId,
         pageNumber: 1,
         pageSize: 1000,
       });
-      
-      // Filter by rubricItemDescription
       const filteredItems = result.items.filter(
-        (item) => item.rubricItemDescription === rubricItemDescription
+        (item) => item.rubricItemDescription === selectedGradeItem.rubricItemDescription
       );
-      
-      // Sort by updatedAt descending to show latest first
-      const sortedHistory = [...filteredItems].sort((a, b) => {
-        const dateA = new Date(a.updatedAt).getTime();
-        const dateB = new Date(b.updatedAt).getTime();
-        if (dateB !== dateA) {
-          return dateB - dateA; // Descending order by updatedAt
-        }
-        // If updatedAt is same, sort by createdAt descending
-        const createdA = new Date(a.createdAt).getTime();
-        const createdB = new Date(b.createdAt).getTime();
-        return createdB - createdA;
-      });
-      
-      setGradeItemHistory(sortedHistory);
-    } catch (err: any) {
-      console.error("Failed to fetch grade item history:", err);
-      message.error("Failed to load grade item history");
-      setGradeItemHistory([]);
-    } finally {
-      setLoadingGradeItemHistory(false);
-    }
-  };
+      return {
+        items: [...filteredItems].sort((a, b) => {
+          const dateA = new Date(a.updatedAt).getTime();
+          const dateB = new Date(b.updatedAt).getTime();
+          if (dateB !== dateA) {
+            return dateB - dateA;
+          }
+          const createdA = new Date(a.createdAt).getTime();
+          const createdB = new Date(b.createdAt).getTime();
+          return createdB - createdA;
+        }),
+      };
+    },
+    enabled: gradeItemHistoryModalVisible && !!selectedGradeItem,
+  });
+
+  const gradeItemHistory = gradeItemHistoryData?.items || [];
 
   const columns = [
     {
@@ -2413,13 +2228,11 @@ function GradingHistoryModal({
         onCancel={() => {
           setGradeItemHistoryModalVisible(false);
           setSelectedGradeItem(null);
-          setGradeItemHistory([]);
         }}
         footer={[
           <Button key="close" onClick={() => {
             setGradeItemHistoryModalVisible(false);
             setSelectedGradeItem(null);
-            setGradeItemHistory([]);
           }}>
             Close
           </Button>,
@@ -2513,16 +2326,30 @@ function GradingHistoryModal({
 function FeedbackHistoryModal({
   visible,
   onClose,
-  feedbackHistory,
-  loading,
   submissionId,
 }: {
   visible: boolean;
   onClose: () => void;
-  feedbackHistory: SubmissionFeedback[];
-  loading: boolean;
   submissionId: number | null;
 }) {
+  // Fetch feedback history using TanStack Query
+  const { data: feedbackHistoryData, isLoading: loading } = useQuery({
+    queryKey: ['submissionFeedbackHistory', 'bySubmissionId', submissionId],
+    queryFn: async () => {
+      if (!submissionId) return [];
+      const list = await submissionFeedbackService.getSubmissionFeedbackList({
+        submissionId: submissionId,
+      });
+      return [...list].sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA;
+      });
+    },
+    enabled: visible && !!submissionId,
+  });
+
+  const feedbackHistory = feedbackHistoryData || [];
   const { message } = App.useApp();
   const [expandedFeedbacks, setExpandedFeedbacks] = useState<Set<number>>(new Set());
   const { Title, Text } = Typography;

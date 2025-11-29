@@ -3,44 +3,33 @@
 import ClassInfo from "@/components/student/ClassInfo";
 import { ClassInfo as ClassInfoType, classService } from "@/services/classService";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
+import { Spin } from "antd";
 
 export default function ClassDetailPage() {
-  const [classData, setClassData] = useState<ClassInfoType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchClassData = async () => {
-      let storedClassId = localStorage.getItem("selectedClassId");
-      
-      if (!storedClassId) {
-        console.error("No class ID found in localStorage");
-        setIsLoading(false);
-        return;
-      }
-
-      localStorage.setItem("selectedClassId", storedClassId);
-
-      try {
-        setIsLoading(true);
-        const data = await classService.getClassById(storedClassId);
-        setClassData(data);
-        localStorage.setItem("selectedClassId", storedClassId);
-      } catch (error) {
-        console.error("Failed to fetch class data:", error);
-        setClassData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchClassData();
+    const storedClassId = localStorage.getItem("selectedClassId");
+    setSelectedClassId(storedClassId);
   }, []);
 
-  if (isLoading) {
-    return <div>Loading...</div>;
+  const { data: classData, isLoading, error } = useQuery({
+    queryKey: queryKeys.classes.detail(selectedClassId!),
+    queryFn: () => classService.getClassById(selectedClassId!),
+    enabled: !!selectedClassId,
+  });
+
+  if (isLoading && !classData) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <Spin size="large" />
+      </div>
+    );
   }
 
-  if (!classData) {
+  if (error || !classData) {
     return <div>Class not found. Please select a class from My Classes.</div>;
   }
 

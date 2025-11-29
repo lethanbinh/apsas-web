@@ -18,42 +18,26 @@ import {
   Typography,
 } from "antd";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import styles from "./Submissions.module.css";
 
 const { Title } = Typography;
 
 
 const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState("");
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchSubmissions = async () => {
-      if (!shiftId) {
-        setLoading(false);
-        setError("No Exam Session ID provided.");
-        return;
-      }
-      setLoading(true);
-      try {
-        const response = await submissionService.getSubmissionList({
-          examSessionId: Number(shiftId),
-        });
-        setSubmissions(response);
-      } catch (err: any) {
-        console.error("Failed to fetch submissions:", err);
-        setError(err.message || "Failed to load data.");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data: submissions = [], isLoading: loading, error: queryError } = useQuery({
+    queryKey: ['submissions', 'byExamSessionId', shiftId],
+    queryFn: () => submissionService.getSubmissionList({
+      examSessionId: Number(shiftId),
+    }),
+    enabled: !!shiftId,
+  });
 
-    fetchSubmissions();
-  }, [shiftId]);
+  const error = queryError ? (queryError as any).message || "Failed to load data." : null;
 
   const handleBack = () => {
     router.back();
@@ -136,7 +120,7 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
         />
       </div>
 
-      {loading ? (
+      {loading && submissions.length === 0 ? (
         <div className={styles.spinner}>
           <Spin size="large" />
         </div>

@@ -250,7 +250,7 @@ export function middleware(request: NextRequest) {
 // Get default route for a role
 function getDefaultRouteForRole(role: number, baseUrl: string): URL {
   const defaultRoutes: Record<number, string> = {
-    0: "/admin/dashboard", // Admin
+    0: "/admin/manage-users", // Admin
     1: "/home/lecturer", // Lecturer
     2: "/home/student", // Student
     3: "/hod/semester-plans", // HOD

@@ -82,6 +82,8 @@ export const queryKeys = {
     all: ['semesters'] as const,
     lists: () => ['semesters', 'list'] as const,
     list: (filters?: Record<string, unknown>) => ['semesters', 'list', filters || {}] as const,
+    details: () => ['semesters', 'detail'] as const,
+    detail: (semesterCode: string) => ['semesters', 'detail', semesterCode] as const,
   },
 
   // Lecturer related queries
@@ -163,5 +165,18 @@ export const queryKeys = {
     list: (filters: Record<string, unknown>) => ['classAssessments', 'list', filters] as const,
     details: () => ['classAssessments', 'detail'] as const,
     detail: (id: number | string) => ['classAssessments', 'detail', id] as const,
+    byClassId: (classId: number | string) => ['classAssessments', 'list', 'byClassId', classId] as const,
+  },
+
+  // Students in class related queries
+  studentsInClass: {
+    all: ['studentsInClass'] as const,
+    byClassId: (classId: number | string) => ['studentsInClass', 'byClassId', classId] as const,
+  },
+
+  // Student detail related queries
+  studentDetail: {
+    all: ['studentDetail'] as const,
+    byStudentId: (studentId: number | string) => ['studentDetail', 'byStudentId', studentId] as const,
   },
 } as const;

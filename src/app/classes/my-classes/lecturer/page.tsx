@@ -10,6 +10,7 @@ import { SimpleCourseCardProps } from "@/components/classes/SimpleCourseCard";
 import { useAuth } from "@/hooks/useAuth";
 import { semesterService, Semester } from "@/services/semesterService";
 import { queryKeys } from "@/lib/react-query";
+import { Spin } from "antd";
 
 function mapApiDataToCardProps(classes: ClassInfo[]): SimpleCourseCardProps[] {
   return classes.map((cls) => ({
@@ -180,10 +181,12 @@ export default function MyClassesPage() {
     }
   };
 
-  if (isLoading || isAuthLoading) {
+  if ((isLoading && allCourses.length === 0) || isAuthLoading) {
     return (
       <Layout>
-        <div>Loading...</div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <Spin size="large" />
+        </div>
       </Layout>
     );
   }

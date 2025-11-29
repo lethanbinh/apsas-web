@@ -49,6 +49,7 @@ const TasksPageContent = () => {
 
   const allTasks = tasksResponse?.items || [];
   const error = queryError ? "Failed to load tasks." : null;
+  const isLoadingData = isLoading && !tasksResponse;
 
   const semesterOptions = useMemo(() => {
     const uniqueSemesters = [
@@ -89,7 +90,7 @@ const TasksPageContent = () => {
     setOpenAssignments((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
   };
 
-  if (isLoading || isLecturerLoading) {
+  if ((isLoading && !tasksResponse) || isLecturerLoading) {
     return (
       <div className={styles.container}>
         <div style={{ textAlign: "center", marginTop: "50px" }}>
@@ -253,3 +254,4 @@ export default function TasksPage() {
     </App>
   );
 }
+

@@ -44,10 +44,12 @@ import {
   Collapse,
 } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import styles from "./GradingGroups.module.css";
+import { queryKeys } from "@/lib/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -61,18 +63,7 @@ const toVietnamTime = (dateString: string | null) => {
 const { Title, Text } = Typography;
 
 const GradingGroupsPageContent = () => {
-  const [allGroups, setAllGroups] = useState<GradingGroup[]>([]);
-  const [allLecturers, setAllLecturers] = useState<Lecturer[]>([]);
-  const [allSubmissions, setAllSubmissions] = useState<Submission[]>([]);
-  const [allClassAssessments, setAllClassAssessments] = useState<Map<number, ClassAssessment>>(new Map());
-  const [allClasses, setAllClasses] = useState<Map<number, ClassInfo>>(new Map());
-  const [allAssessmentTemplates, setAllAssessmentTemplates] = useState<Map<number, AssessmentTemplate>>(new Map());
-  const [allCourseElements, setAllCourseElements] = useState<Map<number, CourseElement>>(new Map());
-  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
-  const [gradingGroupToSemesterMap, setGradingGroupToSemesterMap] = useState<Map<number, string>>(new Map());
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -85,132 +76,164 @@ const GradingGroupsPageContent = () => {
 
   const { message } = App.useApp();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [groupRes, lecturerRes, semesterList] = await Promise.all([
-        gradingGroupService.getGradingGroups({}),
-        lecturerService.getLecturerList(),
-        semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }).catch(() => []),
-      ]);
-      
-      setAllSemesters(semesterList);
+  // Fetch grading groups using TanStack Query
+  const { data: allGroups = [], isLoading: isLoadingGroups } = useQuery({
+    queryKey: queryKeys.grading.groups.all,
+    queryFn: () => gradingGroupService.getGradingGroups({}),
+  });
 
-      setAllGroups(groupRes);
-      setAllLecturers(lecturerRes);
+  // Fetch lecturers
+  const { data: allLecturers = [] } = useQuery({
+    queryKey: queryKeys.lecturers.list(),
+    queryFn: () => lecturerService.getLecturerList(),
+  });
 
-      // Fetch all submissions for all grading groups
-      const allSubmissionPromises = groupRes.map(group =>
-        submissionService.getSubmissionList({ gradingGroupId: group.id }).catch(() => [])
+  // Fetch semesters
+  const { data: allSemesters = [] } = useQuery({
+    queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+  });
+
+  // Fetch submissions for all grading groups
+  const gradingGroupIds = allGroups.map(g => g.id);
+  const { data: allSubmissionsData } = useQuery({
+    queryKey: ['submissions', 'byGradingGroups', gradingGroupIds],
+    queryFn: async () => {
+      if (gradingGroupIds.length === 0) return [];
+      const allSubmissionPromises = gradingGroupIds.map(groupId =>
+        submissionService.getSubmissionList({ gradingGroupId: groupId }).catch(() => [])
       );
       const allSubmissionResults = await Promise.all(allSubmissionPromises);
-      const submissions = allSubmissionResults.flat();
-      setAllSubmissions(submissions);
+      return allSubmissionResults.flat();
+    },
+    enabled: gradingGroupIds.length > 0,
+  });
 
-      // Get unique classAssessmentIds from submissions
-      const classAssessmentIds = Array.from(
-        new Set(submissions.filter(s => s.classAssessmentId).map(s => s.classAssessmentId!))
-      );
+  const allSubmissions = allSubmissionsData || [];
 
-      // Fetch all class assessments (we'll filter by IDs we need)
-      const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
-        pageNumber: 1,
-        pageSize: 1000,
-      }).catch(() => ({ items: [] }));
-      
-      const classAssessmentMap = new Map<number, ClassAssessment>();
-      allClassAssessmentsRes.items.forEach(ca => {
-        if (classAssessmentIds.includes(ca.id)) {
-          classAssessmentMap.set(ca.id, ca);
-        }
-      });
-      setAllClassAssessments(classAssessmentMap);
+  // Get unique classAssessmentIds from submissions
+  const classAssessmentIds = Array.from(
+    new Set(allSubmissions.filter(s => s.classAssessmentId).map(s => s.classAssessmentId!))
+  );
 
-      // Get unique assessmentTemplateIds from class assessments AND grading groups
-      const assessmentTemplateIdsFromClassAssessments = Array.from(
-        new Set(Array.from(classAssessmentMap.values()).map(ca => ca.assessmentTemplateId))
-      );
-      const assessmentTemplateIdsFromGroups = Array.from(
-        new Set(groupRes.filter(g => g.assessmentTemplateId !== null).map(g => g.assessmentTemplateId!))
-      );
-      const allAssessmentTemplateIds = Array.from(
-        new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
-      );
+  // Fetch class assessments
+  const { data: allClassAssessmentsRes } = useQuery({
+    queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-      // Fetch all assessment templates
-      const allAssessmentTemplatesRes = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      }).catch(() => ({ items: [] }));
+  const allClassAssessments = useMemo(() => {
+    const map = new Map<number, ClassAssessment>();
+    (allClassAssessmentsRes?.items || []).forEach(ca => {
+      if (classAssessmentIds.includes(ca.id)) {
+        map.set(ca.id, ca);
+      }
+    });
+    return map;
+  }, [allClassAssessmentsRes, classAssessmentIds]);
 
-      const assessmentTemplateMap = new Map<number, AssessmentTemplate>();
-      allAssessmentTemplatesRes.items.forEach(template => {
-        if (allAssessmentTemplateIds.includes(template.id)) {
-          assessmentTemplateMap.set(template.id, template);
-        }
-      });
-      setAllAssessmentTemplates(assessmentTemplateMap);
+  // Get unique assessmentTemplateIds
+  const assessmentTemplateIdsFromClassAssessments = Array.from(
+    new Set(Array.from(allClassAssessments.values()).map(ca => ca.assessmentTemplateId))
+  );
+  const assessmentTemplateIdsFromGroups = Array.from(
+    new Set(allGroups.filter(g => g.assessmentTemplateId !== null).map(g => g.assessmentTemplateId!))
+  );
+  const allAssessmentTemplateIds = Array.from(
+    new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
+  );
 
-      // Get unique courseElementIds from all assessment templates (not just filtered ones)
-      const courseElementIds = Array.from(
-        new Set(Array.from(assessmentTemplateMap.values()).map(t => t.courseElementId))
-      );
+  // Fetch assessment templates
+  const { data: allAssessmentTemplatesRes } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-      // Fetch all course elements
-      const allCourseElementsRes = await courseElementService.getCourseElements({
-        pageNumber: 1,
-        pageSize: 1000,
-      }).catch(() => []);
+  const allAssessmentTemplates = useMemo(() => {
+    const map = new Map<number, AssessmentTemplate>();
+    (allAssessmentTemplatesRes?.items || []).forEach(template => {
+      if (allAssessmentTemplateIds.includes(template.id)) {
+        map.set(template.id, template);
+      }
+    });
+    return map;
+  }, [allAssessmentTemplatesRes, allAssessmentTemplateIds]);
 
-      const courseElementMap = new Map<number, CourseElement>();
-      allCourseElementsRes.forEach(element => {
-        if (courseElementIds.includes(element.id)) {
-          courseElementMap.set(element.id, element);
-        }
-      });
-      setAllCourseElements(courseElementMap);
+  // Get unique courseElementIds
+  const courseElementIds = Array.from(
+    new Set(Array.from(allAssessmentTemplates.values()).map(t => t.courseElementId))
+  );
 
-      // Map grading groups to semester codes using assessmentTemplateId
-      const groupToSemesterMap = new Map<number, string>();
-      groupRes.forEach(group => {
-        if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
-          const assessmentTemplate = assessmentTemplateMap.get(Number(group.assessmentTemplateId));
-          if (assessmentTemplate) {
-            const courseElement = courseElementMap.get(Number(assessmentTemplate.courseElementId));
-            if (courseElement && courseElement.semesterCourse && courseElement.semesterCourse.semester) {
-              const semesterCode = courseElement.semesterCourse.semester.semesterCode;
-              groupToSemesterMap.set(Number(group.id), semesterCode);
-            }
+  // Fetch course elements
+  const { data: allCourseElementsRes = [] } = useQuery({
+    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  const allCourseElements = useMemo(() => {
+    const map = new Map<number, CourseElement>();
+    allCourseElementsRes.forEach(element => {
+      if (courseElementIds.includes(element.id)) {
+        map.set(element.id, element);
+      }
+    });
+    return map;
+  }, [allCourseElementsRes, courseElementIds]);
+
+  // Map grading groups to semester codes
+  const gradingGroupToSemesterMap = useMemo(() => {
+    const map = new Map<number, string>();
+    allGroups.forEach(group => {
+      if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
+        const assessmentTemplate = allAssessmentTemplates.get(Number(group.assessmentTemplateId));
+        if (assessmentTemplate) {
+          const courseElement = allCourseElements.get(Number(assessmentTemplate.courseElementId));
+          if (courseElement && courseElement.semesterCourse && courseElement.semesterCourse.semester) {
+            const semesterCode = courseElement.semesterCourse.semester.semesterCode;
+            map.set(Number(group.id), semesterCode);
           }
         }
-      });
-      setGradingGroupToSemesterMap(groupToSemesterMap);
+      }
+    });
+    return map;
+  }, [allGroups, allAssessmentTemplates, allCourseElements]);
 
-      // Get unique classIds from class assessments
-      const classIds = Array.from(new Set(Array.from(classAssessmentMap.values()).map(ca => ca.classId)));
+  // Get unique classIds
+  const classIds = Array.from(new Set(Array.from(allClassAssessments.values()).map(ca => ca.classId)));
 
-      // Fetch classes
+  // Fetch classes
+  const { data: classesData } = useQuery({
+    queryKey: ['classes', 'byIds', classIds],
+    queryFn: async () => {
+      if (classIds.length === 0) return [];
       const classPromises = classIds.map(classId =>
         classService.getClassById(classId).catch(() => null)
       );
       const classResults = await Promise.all(classPromises);
-      const classMap = new Map<number, ClassInfo>();
-      classResults.forEach(cls => {
-        if (cls) classMap.set(cls.id, cls);
-      });
-      setAllClasses(classMap);
-    } catch (err: any) {
-      setError(err.message || "Failed to load data.");
-      message.error(err.message || "Failed to load data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [message]);
+      return classResults.filter(cls => cls !== null) as ClassInfo[];
+    },
+    enabled: classIds.length > 0,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const allClasses = useMemo(() => {
+    const map = new Map<number, ClassInfo>();
+    (classesData || []).forEach(cls => {
+      if (cls) map.set(cls.id, cls);
+    });
+    return map;
+  }, [classesData]);
+
+  const loading = isLoadingGroups && allGroups.length === 0; // Only show loading if fetching and no data yet
+  const error = null; // useQuery handles errors
 
   // Map submission to enriched data with submission URL
   const enrichedSubmissionsMap = useMemo(() => {
@@ -448,23 +471,33 @@ const GradingGroupsPageContent = () => {
     setSelectedGroup(null);
   };
 
+  // Mutation for deleting grading group
+  const deleteGradingGroupMutation = useMutation({
+    mutationFn: async (groupId: number) => {
+      return gradingGroupService.deleteGradingGroup(groupId);
+    },
+    onSuccess: () => {
+      // Invalidate queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+      message.success("Assignment deleted successfully");
+    },
+    onError: (err: any) => {
+      console.error("Failed to delete grading group:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete assignment.";
+      message.error(errorMsg);
+    },
+  });
+
   const handleModalOk = () => {
     setIsCreateModalOpen(false);
     setIsAssignModalOpen(false);
     setSelectedGroup(null);
-    fetchData();
+    // Queries will automatically refetch
   };
 
   const handleDeleteGroup = async (group: GradingGroup) => {
-    try {
-      await gradingGroupService.deleteGradingGroup(group.id);
-      message.success(`Assignment deleted successfully for ${group.lecturerName}`);
-      fetchData();
-    } catch (err: any) {
-      console.error("Failed to delete grading group:", err);
-      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete assignment.";
-      message.error(errorMsg);
-    }
+    deleteGradingGroupMutation.mutate(group.id);
   };
 
   const handleDownloadAll = async () => {
@@ -872,7 +905,7 @@ const GradingGroupsPageContent = () => {
           type="error"
           showIcon
           action={
-            <Button size="small" onClick={fetchData}>
+            <Button size="small" onClick={() => queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all })}>
               Retry
             </Button>
           }

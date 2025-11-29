@@ -3,7 +3,8 @@
 import { LinkOutlined } from "@ant-design/icons";
 import { Alert, App, Collapse, Spin, Typography } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import styles from "./AssignmentList.module.css";
 
 import { AssessmentFile, assessmentFileService } from "@/services/assessmentFileService";
@@ -14,6 +15,7 @@ import { assessmentTemplateService, AssessmentTemplate } from "@/services/assess
 import { assignRequestService } from "@/services/assignRequestService";
 import { AssignmentItem } from "./AssignmentItem";
 import { AssignmentData } from "./data";
+import { queryKeys } from "@/lib/react-query";
 
 const { Title, Text } = Typography;
 
@@ -111,206 +113,174 @@ function mapCourseElementToAssignmentData(
 }
 
 export default function AssignmentList() {
-  const [assignments, setAssignments] = useState<AssignmentData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+
   useEffect(() => {
-    const fetchAssignments = async () => {
-      const classId = localStorage.getItem("selectedClassId");
-      
-      if (!classId) {
-        setError("No class selected. Please select a class first.");
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // 1) Get class info to find semesterCourseId
-        const cls = await classService.getClassById(classId);
-        const semesterCourseId = parseInt(cls.semesterCourseId, 10);
-
-        // 2) Get all course elements and filter by this class's semesterCourseId
-        const allElements = await courseElementService.getCourseElements({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        const classElements = allElements.filter(
-          (el) => el.semesterCourseId === semesterCourseId && !isPracticalExam(el) && !isLab(el)
-        );
-
-        // 3) Fetch assign requests and filter by status = 5 (Approved)
-        let approvedAssignRequestIds = new Set<number>();
-        let approvedCourseElementIds = new Set<number>();
-        let approvedAssignRequestByCourseElementMap = new Map<number, number>();
-        try {
-          const assignRequestResponse = await assignRequestService.getAssignRequests({
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          // Only include assign requests with status = 5 (Approved/COMPLETED)
-          const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
-          approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-          // Create map of courseElementIds that have approved assign requests
-          approvedAssignRequests.forEach(ar => {
-            if (ar.courseElementId) {
-              approvedCourseElementIds.add(ar.courseElementId);
-              approvedAssignRequestByCourseElementMap.set(ar.courseElementId, ar.id);
-            }
-          });
-        } catch (err) {
-          console.error("Failed to fetch assign requests:", err);
-          // Continue without filtering if assign requests cannot be fetched
-        }
-
-        // 4) Fetch assessment templates and filter by approved assign request IDs
-        let approvedTemplateIds = new Set<number>();
-        let approvedTemplates: AssessmentTemplate[] = [];
-        let approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
-        let approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
-        let templateToFilesMap = new Map<number, AssessmentFile[]>();
-        
-        try {
-          const templateResponse = await assessmentTemplateService.getAssessmentTemplates({
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          // Only include templates with assignRequestId in approved assign requests (status = 5)
-          // Must have assignRequestId AND it must be in the approved assign requests list
-          approvedTemplates = templateResponse.items.filter(t => {
-            if (!t.assignRequestId) {
-              return false; // Skip templates without assignRequestId
-            }
-            return approvedAssignRequestIds.has(t.assignRequestId);
-          });
-          approvedTemplateIds = new Set(approvedTemplates.map(t => t.id));
-          
-          // Create map by courseElementId for quick lookup (same as lecturer)
-          approvedTemplates.forEach(t => {
-            if (t.courseElementId) {
-              approvedTemplateByCourseElementMap.set(t.courseElementId, t);
-            }
-            // Also create map by template id for quick lookup
-            approvedTemplateByIdMap.set(t.id, t);
-          });
-          
-          // Fetch files for all approved templates
-          const filesPromises = approvedTemplates.map(async (template) => {
-          try {
-            const filesRes = await assessmentFileService.getFilesForTemplate({
-                assessmentTemplateId: template.id,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-              return { templateId: template.id, files: filesRes.items };
-          } catch (err) {
-              console.error(`Failed to fetch files for template ${template.id}:`, err);
-              return { templateId: template.id, files: [] };
-          }
-        });
-        
-        const filesResults = await Promise.all(filesPromises);
-        filesResults.forEach(({ templateId, files }) => {
-          templateToFilesMap.set(templateId, files);
-        });
-        } catch (err) {
-          console.error("Failed to fetch assessment templates:", err);
-          // Continue without filtering if templates cannot be fetched
-        }
-
-        // 5) Fetch class assessments for this class
-        let classAssessmentMap = new Map<number, ClassAssessment>();
-        try {
-          const classAssessmentRes = await classAssessmentService.getClassAssessments({
-            classId: Number(cls.id),
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          for (const assessment of classAssessmentRes.items) {
-            if (assessment.courseElementId) {
-              classAssessmentMap.set(assessment.courseElementId, assessment);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to fetch class assessments:", err);
-          // Continue without class assessments
-        }
-
-        // 6) Map all course elements and files (don't filter course elements)
-        // Logic same as lecturer: find template by classAssessment.assessmentTemplateId or courseElementId
-        const filesByCourseElement = new Map<number, AssessmentFile[]>();
-        
-        for (const element of classElements) {
-          const classAssessment = classAssessmentMap.get(element.id);
-          let approvedTemplate: AssessmentTemplate | undefined;
-          
-          // Find approved template (same logic as lecturer)
-          if (classAssessment?.assessmentTemplateId) {
-            // First try: find template by classAssessment's assessmentTemplateId in approved templates
-            approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
-          }
-          
-          // Second try: if no template found via classAssessment, find by courseElementId
-          if (!approvedTemplate) {
-            approvedTemplate = approvedTemplateByCourseElementMap.get(element.id);
-          }
-          
-          // Map files from the approved template if found
-          if (approvedTemplate) {
-            const files = templateToFilesMap.get(approvedTemplate.id) || [];
-            filesByCourseElement.set(element.id, files);
-          }
-          }
-          
-        // 7) Map all course elements to AssignmentData
-        // Logic same as lecturer: 
-        // 1. If classAssessment exists, find template by classAssessment.assessmentTemplateId in approved templates
-        // 2. If no classAssessment or template not found, find template by courseElementId in approved templates
-        // Only use classAssessment if approved template exists AND matches classAssessment's template
-        const mappedAssignments = classElements.map((el) => {
-          const classAssessment = classAssessmentMap.get(el.id);
-          let approvedTemplate: AssessmentTemplate | undefined;
-          
-          // Find approved template (same logic as lecturer)
-          if (classAssessment?.assessmentTemplateId) {
-            // First try: find template by classAssessment's assessmentTemplateId in approved templates
-            approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
-          }
-          
-          // Second try: if no template found via classAssessment, find by courseElementId
-          if (!approvedTemplate) {
-            approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
-              }
-          
-          // Only use classAssessment if approved template exists AND matches classAssessment's template
-          if (approvedTemplate) {
-            // Use classAssessment only if it matches the approved template
-            if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
-              return mapCourseElementToAssignmentData(el, filesByCourseElement, classAssessmentMap, Number(cls.id));
-            } else {
-              // If approved template exists but classAssessment doesn't match, don't use classAssessment
-              // But still show the course element (just without deadline)
-              return mapCourseElementToAssignmentData(el, filesByCourseElement, new Map(), Number(cls.id));
-            }
-          } else {
-            // If no approved template found, don't use classAssessment
-            return mapCourseElementToAssignmentData(el, filesByCourseElement, new Map(), Number(cls.id));
-          }
-        });
-
-        setAssignments(mappedAssignments);
-      } catch (err: any) {
-        console.error("Failed to fetch assignments:", err);
-        setError(err.message || "Failed to load assignments.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAssignments();
+    const classId = localStorage.getItem("selectedClassId");
+    setSelectedClassId(classId);
   }, []);
+
+  // Fetch class data
+  const { data: classData, isLoading: isLoadingClass } = useQuery({
+    queryKey: queryKeys.classes.detail(selectedClassId!),
+    queryFn: () => classService.getClassById(selectedClassId!),
+    enabled: !!selectedClassId,
+  });
+
+  // Fetch all course elements
+  const { data: allElements = [] } = useQuery({
+    queryKey: queryKeys.courseElements.list({}),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch assign requests
+  const { data: assignRequestResponse } = useQuery({
+    queryKey: queryKeys.assignRequests.lists(),
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch templates
+  const { data: templateResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({}),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  // Fetch class assessments
+  const { data: classAssessmentRes } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: Number(selectedClassId!),
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!selectedClassId,
+  });
+
+  // Process approved assign requests
+  const { approvedAssignRequestIds, approvedTemplateByCourseElementMap, approvedTemplateByIdMap } = useMemo(() => {
+    const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
+    const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
+    
+    const approvedTemplates = (templateResponse?.items || []).filter(t => 
+      t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
+    );
+    
+    const approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
+    const approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
+    
+    approvedTemplates.forEach(t => {
+      if (t.courseElementId) {
+        approvedTemplateByCourseElementMap.set(t.courseElementId, t);
+      }
+      approvedTemplateByIdMap.set(t.id, t);
+    });
+    
+    return { approvedAssignRequestIds, approvedTemplateByCourseElementMap, approvedTemplateByIdMap };
+  }, [assignRequestResponse, templateResponse]);
+
+  // Fetch files for approved templates
+  const approvedTemplateIds = Array.from(approvedTemplateByIdMap.keys());
+  const { data: filesData } = useQuery({
+    queryKey: ['assessmentFiles', 'byTemplateIds', approvedTemplateIds],
+    queryFn: async () => {
+      const filesPromises = approvedTemplateIds.map(async (templateId) => {
+        try {
+          const filesRes = await assessmentFileService.getFilesForTemplate({
+            assessmentTemplateId: templateId,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          return { templateId, files: filesRes.items };
+        } catch (err) {
+          console.error(`Failed to fetch files for template ${templateId}:`, err);
+          return { templateId, files: [] };
+        }
+      });
+      const filesResults = await Promise.all(filesPromises);
+      const templateToFilesMap = new Map<number, AssessmentFile[]>();
+      filesResults.forEach(({ templateId, files }) => {
+        templateToFilesMap.set(templateId, files);
+      });
+      return templateToFilesMap;
+    },
+    enabled: approvedTemplateIds.length > 0,
+  });
+
+  const templateToFilesMap = filesData || new Map<number, AssessmentFile[]>();
+
+  // Process data
+  const { assignments, error } = useMemo(() => {
+    if (!classData || !allElements.length) {
+      return { assignments: [], error: !selectedClassId ? "No class selected. Please select a class first." : null };
+    }
+
+    const semesterCourseId = parseInt(classData.semesterCourseId, 10);
+    const classElements = allElements.filter(
+      (el) => el.semesterCourseId === semesterCourseId && !isPracticalExam(el) && !isLab(el)
+    );
+
+    const classAssessmentMap = new Map<number, ClassAssessment>();
+    for (const assessment of (classAssessmentRes?.items || [])) {
+      if (assessment.courseElementId) {
+        classAssessmentMap.set(assessment.courseElementId, assessment);
+      }
+    }
+
+    const filesByCourseElement = new Map<number, AssessmentFile[]>();
+    for (const element of classElements) {
+      const classAssessment = classAssessmentMap.get(element.id);
+      let approvedTemplate: AssessmentTemplate | undefined;
+      
+      if (classAssessment?.assessmentTemplateId) {
+        approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
+      }
+      
+      if (!approvedTemplate) {
+        approvedTemplate = approvedTemplateByCourseElementMap.get(element.id);
+      }
+      
+      if (approvedTemplate) {
+        const files = templateToFilesMap.get(approvedTemplate.id) || [];
+        filesByCourseElement.set(element.id, files);
+      }
+    }
+
+    const mappedAssignments = classElements.map((el) => {
+      const classAssessment = classAssessmentMap.get(el.id);
+      let approvedTemplate: AssessmentTemplate | undefined;
+      
+      if (classAssessment?.assessmentTemplateId) {
+        approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
+      }
+      
+      if (!approvedTemplate) {
+        approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
+      }
+      
+      if (approvedTemplate) {
+        if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
+          return mapCourseElementToAssignmentData(el, filesByCourseElement, classAssessmentMap, Number(classData.id));
+        } else {
+          return mapCourseElementToAssignmentData(el, filesByCourseElement, new Map(), Number(classData.id));
+        }
+      } else {
+        return mapCourseElementToAssignmentData(el, filesByCourseElement, new Map(), Number(classData.id));
+      }
+    });
+
+    return { assignments: mappedAssignments, error: null };
+  }, [classData, allElements, classAssessmentRes, approvedTemplateByCourseElementMap, approvedTemplateByIdMap, templateToFilesMap, selectedClassId]);
+
+  const isLoading = isLoadingClass && !classData;
   if (isLoading) {
     return (
       <div className={styles.wrapper}>

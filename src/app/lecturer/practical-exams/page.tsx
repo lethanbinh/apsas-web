@@ -317,7 +317,7 @@ const PracticalExamsPage = () => {
     fetchData();
   }, [fetchData]);
 
-  if (isLoading) {
+  if (isLoading && exams.length === 0) {
     return (
       <div className={styles.wrapper}>
         <Spin size="large" style={{ display: "block", textAlign: "center", padding: "50px" }} />

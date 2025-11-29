@@ -30,7 +30,9 @@ import {
   Tag,
   Typography,
 } from "antd";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import styles from "./Templates.module.css";
 
 const { Title, Text } = Typography;
@@ -54,190 +56,164 @@ function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
 }
 
 const TemplatesPageContent = () => {
-  const [allTemplates, setAllTemplates] = useState<AssessmentTemplate[]>([]);
-  const [filteredTemplates, setFilteredTemplates] = useState<AssessmentTemplate[]>([]);
-  const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [courses, setCourses] = useState<SemesterCourse[]>([]);
-  const [courseElements, setCourseElements] = useState<CourseElement[]>([]);
-  const [allCourseElementsMap, setAllCourseElementsMap] = useState<Map<number, CourseElement>>(new Map());
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const queryClient = useQueryClient();
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
   const [selectedCourseElementId, setSelectedCourseElementId] = useState<number | null>(null);
-
-  const [loadingCourses, setLoadingCourses] = useState(false);
-  const [loadingCourseElements, setLoadingCourseElements] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<AssessmentTemplate | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const { message } = App.useApp();
 
-  const fetchData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Fetch semesters
+  const { data: semesters = [] } = useQuery({
+    queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => semesterService.getSemesters({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-      // Fetch semesters
-      const semesterList = await semesterService.getSemesters({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      setSemesters(semesterList);
+  // Fetch assign requests
+  const { data: assignRequestResponse } = useQuery({
+    queryKey: queryKeys.assignRequests.lists(),
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-      // Fetch assign requests to get approved ones (status = 5)
-      let approvedCourseElementIds = new Set<number>();
-      try {
-        const assignRequestResponse = await assignRequestService.getAssignRequests({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        // Only include assign requests with status = 5 (Approved/COMPLETED)
-        const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
-        // Create set of courseElementIds that have approved assign requests
-        approvedAssignRequests.forEach(ar => {
-          if (ar.courseElementId) {
-            approvedCourseElementIds.add(ar.courseElementId);
-          }
-        });
-      } catch (err) {
-        console.error("Failed to fetch assign requests:", err);
-        // Continue without filtering if assign requests cannot be fetched
-      }
-
-      // Fetch all assessment templates
-      const response = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      
-      // Filter only PE (Practical Exam) templates that have approved assign requests
-      const peTemplates = response.items.filter(template => {
-        if (!isPracticalExamTemplate(template)) return false;
-        // Only include templates whose courseElementId has an approved assign request
-        if (approvedCourseElementIds.size > 0) {
-          return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
+  // Get approved course element IDs
+  const approvedCourseElementIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (assignRequestResponse?.items) {
+      const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+      approvedAssignRequests.forEach(ar => {
+        if (ar.courseElementId) {
+          ids.add(ar.courseElementId);
         }
-        // If no approved assign requests found, return all PE templates (fallback)
-        return true;
       });
-      setAllTemplates(peTemplates);
-      setFilteredTemplates(peTemplates);
-
-      // Fetch all course elements for filtering and create a map
-      const allCourseElementsRes = await courseElementService.getCourseElements({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const courseElementMap = new Map<number, CourseElement>();
-      allCourseElementsRes.forEach(ce => {
-        courseElementMap.set(ce.id, ce);
-      });
-      setAllCourseElementsMap(courseElementMap);
-    } catch (err: any) {
-      console.error("Failed to fetch data:", err);
-      setError(err.message || "Failed to load data.");
-      message.error(err.message || "Failed to load data.");
-    } finally {
-      setLoading(false);
     }
-  }, [message]);
+    return ids;
+  }, [assignRequestResponse]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // Fetch assessment templates
+  const { data: templatesResponse, isLoading: loadingTemplates, error: templatesError } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-  const fetchCourses = useCallback(async (semesterCode: string) => {
-    setLoadingCourses(true);
-    try {
-      const semesterDetail: SemesterPlanDetail = await semesterService.getSemesterPlanDetail(semesterCode);
-      setCourses(semesterDetail.semesterCourses || []);
-    } catch (err) {
-      console.error("Failed to fetch courses:", err);
-      setCourses([]);
-    } finally {
-      setLoadingCourses(false);
-    }
-  }, []);
+  const loading = loadingTemplates && !templatesResponse;
+  const error = templatesError ? (templatesError as any).message || "Failed to load data." : null;
+  
+  // Show loading spinner when loading and no data
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
-  const fetchCourseElements = useCallback(async (semesterCode: string, courseId?: number) => {
-    setLoadingCourseElements(true);
-    try {
-      const courseElementsRes = await courseElementService.getCourseElements({
-        pageNumber: 1,
-        pageSize: 1000,
-        semesterCode: semesterCode,
-      });
-      
-      let filtered = courseElementsRes;
-      if (courseId) {
-        filtered = courseElementsRes.filter(ce => ce.semesterCourse?.courseId === courseId);
+  // Filter PE templates
+  const allTemplates = useMemo(() => {
+    if (!templatesResponse?.items) return [];
+    const peTemplates = templatesResponse.items.filter(template => {
+      if (!isPracticalExamTemplate(template)) return false;
+      if (approvedCourseElementIds.size > 0) {
+        return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
       }
-      
-      setCourseElements(filtered);
-    } catch (err) {
-      console.error("Failed to fetch course elements:", err);
-      setCourseElements([]);
-    } finally {
-      setLoadingCourseElements(false);
-    }
-  }, []);
+      return true;
+    });
+    return peTemplates;
+  }, [templatesResponse, approvedCourseElementIds]);
 
-  useEffect(() => {
-    if (selectedSemesterCode) {
-      fetchCourses(selectedSemesterCode);
-      fetchCourseElements(selectedSemesterCode, selectedCourseId || undefined);
-    } else {
-      setCourses([]);
-      setCourseElements([]);
-      setSelectedCourseId(null);
-      setSelectedCourseElementId(null);
-    }
-  }, [selectedSemesterCode, fetchCourses, fetchCourseElements]);
+  // Fetch all course elements
+  const { data: allCourseElementsRes = [] } = useQuery({
+    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
 
-  useEffect(() => {
-    if (selectedSemesterCode) {
-      fetchCourseElements(selectedSemesterCode, selectedCourseId || undefined);
-    }
-    setSelectedCourseElementId(null);
-  }, [selectedCourseId, selectedSemesterCode, fetchCourseElements]);
+  const allCourseElementsMap = useMemo(() => {
+    const map = new Map<number, CourseElement>();
+    allCourseElementsRes.forEach(ce => {
+      map.set(ce.id, ce);
+    });
+    return map;
+  }, [allCourseElementsRes]);
+
+  // Fetch courses for selected semester
+  const { data: semesterDetail, isLoading: loadingCourses } = useQuery({
+    queryKey: ['semesterPlanDetail', selectedSemesterCode],
+    queryFn: () => semesterService.getSemesterPlanDetail(selectedSemesterCode!),
+    enabled: !!selectedSemesterCode,
+  });
+
+  const courses = semesterDetail?.semesterCourses || [];
+
+  // Fetch course elements for selected semester
+  const { data: courseElementsRes = [], isLoading: loadingCourseElements } = useQuery({
+    queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+      semesterCode: selectedSemesterCode!,
+    }),
+    enabled: !!selectedSemesterCode,
+  });
+
+  const courseElements = useMemo(() => {
+    if (!selectedCourseId) return courseElementsRes;
+    return courseElementsRes.filter(ce => ce.semesterCourse?.courseId === selectedCourseId);
+  }, [courseElementsRes, selectedCourseId]);
 
   // Filter templates based on selected filters
-  useEffect(() => {
+  const filteredTemplates = useMemo(() => {
     let filtered = [...allTemplates];
 
     if (selectedSemesterCode) {
-      // Filter by semester through courseElement
-      // Sử dụng courseElements đã fetch (có semesterCode filter) thay vì allCourseElementsMap
       const semesterCourseElementIds = courseElements.map(ce => ce.id);
-      
       filtered = filtered.filter(template => 
         semesterCourseElementIds.includes(template.courseElementId)
       );
     }
 
     if (selectedCourseId) {
-      // Filter by course through courseElement
       const courseElementIds = courseElements
         .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
         .map(ce => ce.id);
-      
       filtered = filtered.filter(template => 
         courseElementIds.includes(template.courseElementId)
       );
     }
 
     if (selectedCourseElementId) {
-      // Filter by course element
       filtered = filtered.filter(template => 
         template.courseElementId === selectedCourseElementId
       );
     }
 
-    setFilteredTemplates(filtered);
+    return filtered;
   }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, courseElements]);
+
+  useEffect(() => {
+    if (!selectedSemesterCode) {
+      setSelectedCourseId(null);
+      setSelectedCourseElementId(null);
+    }
+  }, [selectedSemesterCode]);
+
+  useEffect(() => {
+    if (selectedSemesterCode) {
+      setSelectedCourseElementId(null);
+    }
+  }, [selectedCourseId, selectedSemesterCode]);
 
   const handleSemesterChange = (value: string | null) => {
     setSelectedSemesterCode(value);
@@ -351,7 +327,9 @@ const TemplatesPageContent = () => {
           <Space>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={fetchData}
+                onClick={() => {
+                  queryClient.invalidateQueries({ queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }) });
+                }}
                 loading={loading}
               >
                 Refresh
@@ -369,7 +347,6 @@ const TemplatesPageContent = () => {
               type="error"
               showIcon
               closable
-              onClose={() => setError(null)}
             />
           )}
 
@@ -489,96 +466,98 @@ function TemplateDetailModal({
   onClose: () => void;
   template: AssessmentTemplate;
 }) {
-  const [loading, setLoading] = useState(false);
-  const [papers, setPapers] = useState<AssessmentPaper[]>([]);
-  const [questions, setQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
-  const [rubrics, setRubrics] = useState<{ [questionId: number]: RubricItem[] }>({});
-  const [files, setFiles] = useState<AssessmentFile[]>([]);
   const { message } = App.useApp();
 
-  useEffect(() => {
-    if (open && template) {
-      fetchTemplateData();
-    }
-  }, [open, template]);
+  // Fetch files using TanStack Query
+  const { data: filesData, isLoading: loadingFiles } = useQuery({
+    queryKey: queryKeys.assessmentFiles.byTemplateId(template.id),
+    queryFn: () => assessmentFileService.getFilesForTemplate({
+      assessmentTemplateId: template.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: open && !!template.id,
+  });
 
-  const fetchTemplateData = async () => {
-    try {
-      setLoading(true);
+  const files = filesData?.items || [];
 
-      // Fetch files
-      try {
-        const filesRes = await assessmentFileService.getFilesForTemplate({
-          assessmentTemplateId: template.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        setFiles(filesRes.items);
-      } catch (err) {
-        console.error("Failed to fetch files:", err);
-        setFiles([]);
+  // Fetch papers using TanStack Query
+  const { data: papersData, isLoading: loadingPapers } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(template.id),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: template.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: open && !!template.id,
+  });
+
+  const papers = papersData?.items || [];
+
+  // Fetch questions for all papers using useQueries
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: open && !!template.id && papers.length > 0,
+    })),
+  });
+
+  // Process questions data
+  const questions = useMemo(() => {
+    const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+    papers.forEach((paper, index) => {
+      if (questionsQueries[index]?.data?.items) {
+        const sortedQuestions = [...questionsQueries[index].data.items].sort(
+          (a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        questionsMap[paper.id] = sortedQuestions;
       }
+    });
+    return questionsMap;
+  }, [papers, questionsQueries]);
 
-      // Fetch papers
-      let papersData: AssessmentPaper[] = [];
-      try {
-        const papersRes = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: template.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        papersData = papersRes.items || [];
-      } catch (err) {
-        console.error("Failed to fetch papers:", err);
-        papersData = [];
+  // Get all question IDs from all papers
+  const allQuestionIds = useMemo(() => {
+    const ids: number[] = [];
+    Object.values(questions).forEach((paperQuestions) => {
+      paperQuestions.forEach((q) => ids.push(q.id));
+    });
+    return ids;
+  }, [questions]);
+
+  // Fetch rubrics for all questions using useQueries
+  const rubricsQueries = useQueries({
+    queries: allQuestionIds.map((questionId) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(questionId),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: questionId,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: open && !!template.id && allQuestionIds.length > 0,
+    })),
+  });
+
+  // Process rubrics data
+  const rubrics = useMemo(() => {
+    const rubricsMap: { [questionId: number]: RubricItem[] } = {};
+    allQuestionIds.forEach((questionId, index) => {
+      if (rubricsQueries[index]?.data?.items) {
+        rubricsMap[questionId] = rubricsQueries[index].data.items;
       }
-      setPapers(papersData);
+    });
+    return rubricsMap;
+  }, [allQuestionIds, rubricsQueries]);
 
-      // Fetch questions for each paper
-      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-      const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-
-      for (const paper of papersData) {
-        try {
-          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-            assessmentPaperId: paper.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          const sortedQuestions = [...questionsRes.items].sort(
-            (a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)
-          );
-          questionsMap[paper.id] = sortedQuestions;
-
-          // Fetch rubrics for each question
-          for (const question of sortedQuestions) {
-            try {
-              const rubricsRes = await rubricItemService.getRubricsForQuestion({
-                assessmentQuestionId: question.id,
-                pageNumber: 1,
-                pageSize: 100,
-              });
-              rubricsMap[question.id] = rubricsRes.items || [];
-            } catch (err) {
-              console.error(`Failed to fetch rubrics for question ${question.id}:`, err);
-              rubricsMap[question.id] = [];
-            }
-          }
-        } catch (err) {
-          console.error(`Failed to fetch questions for paper ${paper.id}:`, err);
-          questionsMap[paper.id] = [];
-        }
-      }
-
-      setQuestions(questionsMap);
-      setRubrics(rubricsMap);
-    } catch (err: any) {
-      console.error("Failed to fetch template data:", err);
-      message.error("Failed to load template details");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Calculate loading state
+  const loading = loadingFiles || loadingPapers || 
+    questionsQueries.some(q => q.isLoading) || 
+    rubricsQueries.some(q => q.isLoading);
 
   const getTypeText = (type: number) => {
     const typeMap: Record<number, string> = {

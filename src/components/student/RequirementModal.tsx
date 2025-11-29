@@ -1,7 +1,7 @@
 // Tên file: components/AssignmentList/RequirementModal.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Modal, Typography, Image as AntImage, Spin, Collapse, Divider, List } from "antd";
 import { Button } from "../ui/Button";
 import styles from "./AssignmentList.module.css";
@@ -13,6 +13,8 @@ import { assessmentQuestionService, AssessmentQuestion } from "@/services/assess
 import { assessmentFileService } from "@/services/assessmentFileService";
 import { assignRequestService } from "@/services/assignRequestService";
 import { PaperClipOutlined } from "@ant-design/icons";
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -67,235 +69,144 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   courseElementId,
   examSessionId,
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [papers, setPapers] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
-  const [files, setFiles] = useState<any[]>([]);
-  const [templateDescription, setTemplateDescription] = useState<string>("");
+  // Determine assessmentTemplateId using queries
+  const localStorageClassId = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
+  const effectiveClassId = classId || (localStorageClassId ? Number(localStorageClassId) : undefined);
 
-  useEffect(() => {
-    if (open && (propAssessmentTemplateId || classAssessmentId || courseElementId || examSessionId)) {
-      fetchRequirementData();
+  // Fetch class assessments if needed
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: effectiveClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!effectiveClassId && (!!classAssessmentId || !!courseElementId),
+  });
+
+  // Determine assessmentTemplateId
+  const assessmentTemplateId = useMemo(() => {
+    if (propAssessmentTemplateId) {
+      return propAssessmentTemplateId;
     }
-  }, [open, classAssessmentId, classId, propAssessmentTemplateId, courseElementId, examSessionId]);
-
-  const fetchRequirementData = async () => {
-    try {
-      setLoading(true);
-
-      let assessmentTemplateId: number | null = null;
-
-      // First, try to use assessmentTemplateId from props if available
-      if (propAssessmentTemplateId) {
-        assessmentTemplateId = propAssessmentTemplateId;
-        console.log("RequirementModal: Using assessmentTemplateId from props:", assessmentTemplateId);
+    
+    if (classAssessmentId && classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
+      if (classAssessment?.assessmentTemplateId) {
+        return classAssessment.assessmentTemplateId;
       }
-
-      // Try to get assessmentTemplateId from classAssessmentId
-      if (classAssessmentId && classId) {
-        try {
-          // First try with classId from props
-          const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-            classId: classId,
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-          const classAssessment = classAssessmentsRes.items.find(
-            (ca) => ca.id === classAssessmentId
-          );
-          if (classAssessment?.assessmentTemplateId) {
-            assessmentTemplateId = classAssessment.assessmentTemplateId;
-            console.log("RequirementModal: Found assessmentTemplateId from classAssessment:", assessmentTemplateId);
-          }
-
-          // If not found, try to fetch all class assessments
-          if (!assessmentTemplateId) {
-            try {
-              const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
-                pageNumber: 1,
-                pageSize: 10000,
-              });
-              const classAssessment = allClassAssessmentsRes.items.find(
-                (ca) => ca.id === classAssessmentId
-              );
-              if (classAssessment?.assessmentTemplateId) {
-                assessmentTemplateId = classAssessment.assessmentTemplateId;
-                console.log("RequirementModal: Found assessmentTemplateId from all class assessments:", assessmentTemplateId);
-              }
-            } catch (err) {
-              console.error("RequirementModal: Failed to fetch all class assessments:", err);
-            }
-          }
-        } catch (err) {
-          console.error("RequirementModal: Failed to fetch from classAssessment:", err);
-        }
+    }
+    
+    if (courseElementId && classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === courseElementId);
+      if (classAssessment?.assessmentTemplateId) {
+        return classAssessment.assessmentTemplateId;
       }
+    }
+    
+    return null;
+  }, [propAssessmentTemplateId, classAssessmentId, courseElementId, classAssessmentsData]);
 
-      // If still not found, try to get from localStorage classId
-      if (!assessmentTemplateId && classAssessmentId) {
-        try {
-          const localStorageClassId = localStorage.getItem("selectedClassId");
-          if (localStorageClassId && localStorageClassId !== classId?.toString()) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(localStorageClassId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.id === classAssessmentId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("RequirementModal: Found assessmentTemplateId from localStorage classId:", assessmentTemplateId);
-            }
-          }
-        } catch (err) {
-          console.error("RequirementModal: Failed to fetch from localStorage classId:", err);
-        }
-      }
+  // Fetch assign requests to filter approved templates
+  const { data: assignRequestsData } = useQuery({
+    queryKey: queryKeys.assignRequests.all,
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!assessmentTemplateId,
+  });
 
-      // Note: examSessionId is no longer used to fetch templates
-      // Templates are now fetched via classAssessmentId or courseElementId
+  const approvedAssignRequestIds = useMemo(() => {
+    if (!assignRequestsData?.items) return new Set<number>();
+    const approved = assignRequestsData.items.filter(ar => ar.status === 5);
+    return new Set(approved.map(ar => ar.id));
+  }, [assignRequestsData]);
 
-      // Try to get assessmentTemplateId from courseElementId via classAssessment
-      if (!assessmentTemplateId && courseElementId) {
-        try {
-          const localStorageClassId = localStorage.getItem("selectedClassId");
-          if (localStorageClassId) {
-            const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-              classId: Number(localStorageClassId),
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const classAssessment = classAssessmentsRes.items.find(
-              (ca) => ca.courseElementId === courseElementId
-            );
-            if (classAssessment?.assessmentTemplateId) {
-              assessmentTemplateId = classAssessment.assessmentTemplateId;
-              console.log("RequirementModal: Found assessmentTemplateId from courseElementId:", assessmentTemplateId);
-            }
-          }
-        } catch (err) {
-          console.error("RequirementModal: Failed to fetch from courseElementId:", err);
-        }
-      }
+  // Fetch assessment templates
+  const { data: templatesData } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!assessmentTemplateId,
+  });
 
-      if (!assessmentTemplateId) {
-        console.warn("RequirementModal: Could not find assessmentTemplateId. Props:", {
-          propAssessmentTemplateId,
-          classAssessmentId,
-          classId,
-          courseElementId,
-          examSessionId,
-        });
-        setLoading(false);
-        return;
-      }
+  // Find the approved template
+  const template = useMemo(() => {
+    if (!templatesData?.items || !assessmentTemplateId) return null;
+    return templatesData.items.find((t) => {
+      if (t.id !== assessmentTemplateId) return false;
+      if (!t.assignRequestId) return false;
+      return approvedAssignRequestIds.has(t.assignRequestId);
+    }) || null;
+  }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
 
-      const finalAssessmentTemplateId = assessmentTemplateId;
+  const templateDescription = template?.description || "";
 
-      // Fetch approved assign requests (status = 5)
-      let approvedAssignRequestIds = new Set<number>();
-      try {
-        const assignRequestResponse = await assignRequestService.getAssignRequests({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        // Only include assign requests with status = 5 (Approved/COMPLETED)
-        const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
-        approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-      } catch (err) {
-        console.error("RequirementModal: Failed to fetch assign requests:", err);
-        // Continue without filtering if assign requests cannot be fetched
-      }
+  // Fetch files
+  const { data: filesData } = useQuery({
+    queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentFileService.getFilesForTemplate({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: open && !!assessmentTemplateId && !!template,
+  });
 
-      // Fetch template and verify it has an approved assign request
-      const templates = await assessmentTemplateService.getAssessmentTemplates({
+  const files = filesData?.items || [];
+
+  // Fetch papers
+  const { data: papersData } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: open && !!assessmentTemplateId && !!template,
+  });
+
+  const papers = papersData?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
-        pageSize: 1000,
-      });
-      
-      // Only get template if it has an approved assign request (status = 5)
-      const template = templates.items.find((t) => {
-        if (t.id !== finalAssessmentTemplateId) {
-          return false;
-        }
-        // Check if template has assignRequestId and it's in approved assign requests
-        if (!t.assignRequestId) {
-          return false; // Skip templates without assignRequestId
-        }
-        return approvedAssignRequestIds.has(t.assignRequestId);
-      });
-      
-      if (template) {
-        setTemplateDescription(template.description || "");
-      } else {
-        // Template not found or not approved - don't show template data
-        console.warn("RequirementModal: Template not found or not approved:", finalAssessmentTemplateId);
-        setTemplateDescription("");
-        setPapers([]);
-        setQuestions({});
-        setFiles([]);
-        setLoading(false);
-        return;
-      }
+        pageSize: 100,
+      }),
+      enabled: open && papers.length > 0,
+    })),
+  });
 
-      // Fetch files
-      try {
-        const filesRes = await assessmentFileService.getFilesForTemplate({
-          assessmentTemplateId: finalAssessmentTemplateId,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        setFiles(filesRes.items);
-      } catch (err) {
-        console.error("Failed to fetch files:", err);
+  // Map questions by paperId
+  const questions = useMemo(() => {
+    const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+    papers.forEach((paper, index) => {
+      const query = questionsQueries[index];
+      if (query.data?.items) {
+        const sortedQuestions = [...query.data.items].sort((a, b) => 
+          (a.questionNumber || 0) - (b.questionNumber || 0)
+        );
+        questionsMap[paper.id] = sortedQuestions;
       }
+    });
+    return questionsMap;
+  }, [papers, questionsQueries]);
 
-      // Fetch papers
-      let papersData: any[] = [];
-      try {
-        const papersRes = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: finalAssessmentTemplateId,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        papersData = papersRes.items || [];
-        console.log("RequirementModal: Fetched papers:", papersData.length);
-      } catch (err) {
-        console.error("RequirementModal: Failed to fetch papers:", err);
-        papersData = [];
-      }
-      setPapers(papersData);
-
-      // Fetch questions for each paper
-      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-      for (const paper of papersData) {
-        try {
-          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-            assessmentPaperId: paper.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          // Sort questions by questionNumber
-          const sortedQuestions = [...questionsRes.items].sort((a, b) => 
-            (a.questionNumber || 0) - (b.questionNumber || 0)
-          );
-          questionsMap[paper.id] = sortedQuestions;
-          console.log(`RequirementModal: Fetched ${sortedQuestions.length} questions for paper ${paper.id}`);
-        } catch (err) {
-          console.error(`RequirementModal: Failed to fetch questions for paper ${paper.id}:`, err);
-          questionsMap[paper.id] = [];
-        }
-      }
-      setQuestions(questionsMap);
-    } catch (err) {
-      console.error("Failed to fetch requirement data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Calculate loading state
+  const loading = (
+    (!!effectiveClassId && (!!classAssessmentId || !!courseElementId) && !classAssessmentsData) ||
+    (!!assessmentTemplateId && !templatesData) ||
+    (!!assessmentTemplateId && !!template && !filesData) ||
+    (!!assessmentTemplateId && !!template && !papersData) ||
+    questionsQueries.some(q => q.isLoading)
+  );
 
   return (
     <Modal

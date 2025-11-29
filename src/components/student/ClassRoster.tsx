@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Card, Input, Table, Tag, Typography, Spin } from "antd";
 import type { TableProps } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
 import styles from "./ClassRoster.module.css";
 import { classService } from "@/services/classService";
+import { queryKeys } from "@/lib/react-query";
 
 const { Title } = Typography;
 
@@ -63,51 +65,45 @@ const columns: TableProps<Member>["columns"] = [
 
 export default function ClassRoster({ classId }: { classId: string | number }) {
   const [searchText, setSearchText] = useState("");
-  const [memberData, setMemberData] = useState<Member[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      if (!classId) return;
+  // Fetch students in class
+  const { data: studentGroup = [], isLoading: isLoadingStudents } = useQuery({
+    queryKey: queryKeys.studentsInClass.byClassId(classId),
+    queryFn: () => classService.getStudentsInClass(classId),
+    enabled: !!classId,
+  });
 
-      try {
-        setIsLoading(true);
-        const studentGroup = await classService.getStudentsInClass(classId);
+  // Fetch student details for all students
+  const { data: studentDetails = [], isLoading: isLoadingDetails } = useQuery({
+    queryKey: ['studentDetails', 'byStudentIds', studentGroup.map(s => s.studentId)],
+    queryFn: async () => {
+      const detailPromises = studentGroup.map((s) =>
+        classService.getStudentById(s.studentId)
+      );
+      return Promise.all(detailPromises);
+    },
+    enabled: studentGroup.length > 0,
+  });
 
-        const detailPromises = studentGroup.map((s) =>
-          classService.getStudentById(s.studentId)
-        );
-        const studentDetails = await Promise.all(detailPromises);
+  const memberData: Member[] = useMemo(() => {
+    return studentGroup.map((enrolledStudent, index) => {
+      const detail = studentDetails.find(
+        (d) => d.studentId === enrolledStudent.studentId.toString()
+      );
 
-        const combinedData: Member[] = studentGroup.map(
-          (enrolledStudent, index) => {
-            const detail = studentDetails.find(
-              (d) => d.studentId === enrolledStudent.studentId.toString()
-            );
+      return {
+        key: enrolledStudent.id.toString(),
+        no: index + 1,
+        email: detail ? detail.email : "N/A",
+        fullName: detail ? detail.fullName : enrolledStudent.studentName,
+        date: enrolledStudent.enrollmentDate.split(" ")[0],
+        role: "Student",
+        class: enrolledStudent.classCode,
+      };
+    });
+  }, [studentGroup, studentDetails]);
 
-            return {
-              key: enrolledStudent.id.toString(),
-              no: index + 1,
-              email: detail ? detail.email : "N/A",
-              fullName: detail ? detail.fullName : enrolledStudent.studentName,
-              date: enrolledStudent.enrollmentDate.split(" ")[0],
-              role: "Student",
-              class: enrolledStudent.classCode,
-            };
-          }
-        );
-
-        setMemberData(combinedData);
-      } catch (error) {
-        console.error("Failed to fetch class members:", error);
-        setMemberData([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMembers();
-  }, [classId]);
+  const isLoading = (isLoadingStudents && studentGroup.length === 0) || (isLoadingDetails && studentDetails.length === 0);
 
   const filteredData = memberData.filter((member) =>
     member.fullName.toLowerCase().includes(searchText.toLowerCase())

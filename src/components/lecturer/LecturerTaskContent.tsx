@@ -1345,6 +1345,9 @@ export const LecturerTaskContent = ({
     number | undefined
   >(undefined);
   const [paperToEdit, setPaperToEdit] = useState<AssessmentPaper | null>(null);
+  const [papers, setPapers] = useState<AssessmentPaper[]>([]);
+  const [allQuestions, setAllQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
+  const [files, setFiles] = useState<AssessmentFile[]>([]);
 
   const { modal, notification } = App.useApp();
 
@@ -1433,7 +1436,7 @@ export const LecturerTaskContent = ({
   };
 
   // Fetch templates using TanStack Query
-  const { data: templatesResponse, isLoading: isLoadingTemplates } = useQuery({
+  const { data: templatesResponse, isLoading: isLoadingTemplates, refetch: refetchTemplates } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
     queryFn: async () => {
       const response = await assessmentTemplateService.getAssessmentTemplates({
@@ -1448,6 +1451,23 @@ export const LecturerTaskContent = ({
 
   const templates = templatesResponse || [];
   const isLoading = isLoadingTemplates;
+
+  // Auto-select template that belongs to current task
+  useEffect(() => {
+    if (templates.length > 0 && !template) {
+      // Find template that belongs to current assign request
+      const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
+      if (taskTemplate) {
+        setTemplate(taskTemplate);
+        fetchAllData(taskTemplate.id);
+      } else if (templates.length === 1) {
+        // If only one template exists, use it
+        setTemplate(templates[0]);
+        fetchAllData(templates[0].id);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templates, task.id]);
 
   const refreshPapers = async (shouldResetStatus = false) => {
     if (!template) return;
@@ -1522,8 +1542,8 @@ export const LecturerTaskContent = ({
   };
 
   useEffect(() => {
-    fetchTemplates();
-  }, [task.id, task.courseElementId, lecturerId]);
+    refetchTemplates();
+  }, [task.id, task.courseElementId, lecturerId, refetchTemplates]);
 
   // Handle template selection change
   const handleTemplateChange = async (templateId: number) => {
@@ -1644,12 +1664,13 @@ export const LecturerTaskContent = ({
 
   const handleCreateTemplate = async () => {
     try {
-      // Validate: Check if there's already a template for this course element
+      // Validate: Check if there's already a template for this task (not rejected)
       // If rejected, allow creating a new template or editing existing one
-      if (templates.length > 0 && !isRejected) {
+      const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
+      if (taskTemplate && !isRejected) {
         notification.error({
           message: "Template Already Exists",
-          description: `This course element already has a template. Only one template is allowed per course element.`,
+          description: `This task already has a template. Please edit the existing template instead.`,
         });
         return;
       }
@@ -1810,7 +1831,7 @@ export const LecturerTaskContent = ({
         });
       }
       
-      fetchTemplates();
+      await refetchTemplates();
     } catch (error: any) {
       console.error("Failed to create template:", error);
       notification.error({
@@ -1825,7 +1846,7 @@ export const LecturerTaskContent = ({
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
       // Refresh templates list after deletion
-      await fetchTemplates();
+      await refetchTemplates();
       await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
@@ -2408,7 +2429,7 @@ export const LecturerTaskContent = ({
       }
 
       // Refresh all data
-      await fetchTemplates(); // Refresh templates list to get the new/updated template
+      await refetchTemplates(); // Refresh templates list to get the new/updated template
       await fetchAllData(currentTemplate.id);
       await resetStatusIfRejected();
 
@@ -2677,7 +2698,7 @@ export const LecturerTaskContent = ({
 
   const refreshTemplate = async (shouldResetStatus = false) => {
     // Refresh toàn bộ templates và các dữ liệu liên quan
-    await fetchTemplates();
+    await refetchTemplates();
     
     // Reset status if needed
     if (shouldResetStatus) {
@@ -2774,17 +2795,42 @@ export const LecturerTaskContent = ({
       )}
       {!template ? (
         isEditable ? (
-          templates.length > 0 && !isRejected ? (
-            // If there are templates but current assign request doesn't have one (and not rejected)
-            <Alert
-              message="Template Already Exists"
-              description={`This course element already has ${templates.length} template(s). Only one template is allowed per course element. Please select an existing template or contact the administrator.`}
-              type="warning"
-              showIcon
-            />
-          ) : (
+          (() => {
+            // Check if there's a template for this task
+            const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
+            // Check if there are other templates (not for this task)
+            const otherTemplates = templates.filter((t) => t.assignRequestId !== task.id);
+            
+            if (otherTemplates.length > 0 && !isRejected && !taskTemplate) {
+              // If there are templates for other tasks but not for this task (and not rejected)
+              // Allow selecting existing template
+              return (
+                <Card title="Select Existing Template">
+                  <Alert
+                    message="Template Already Exists"
+                    description={`This course element already has ${otherTemplates.length} template(s) for other tasks. Please select an existing template to use.`}
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                  <Select
+                    value={undefined}
+                    onChange={handleTemplateChange}
+                    style={{ width: "100%" }}
+                    placeholder="Select a template"
+                  >
+                    {otherTemplates.map((t) => (
+                      <Select.Option key={t.id} value={t.id}>
+                        {t.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Card>
+              );
+            }
             // No template exists, allow creation
-            <Card title="No Template Found. Create one.">
+            return (
+              <Card title="No Template Found. Create one.">
               <Form layout="vertical">
                 <Form.Item label="Template Name" required>
                   <Input
@@ -2950,11 +2996,13 @@ export const LecturerTaskContent = ({
                 fileList={postmanUploadFileList}
                 onFileListChange={setPostmanUploadFileList}
               />
-            </Card>
-          )
+              </Card>
+            );
+          })()
         ) : (
           <Alert
             message="No template created for this task."
+            description="You do not have permission to create a template. Please contact the administrator."
             type="info"
             showIcon
           />

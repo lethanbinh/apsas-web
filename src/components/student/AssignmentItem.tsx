@@ -12,12 +12,14 @@ import {
   DatabaseOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/Button";
 import styles from "./AssignmentList.module.css";
 import { AssignmentData } from "./data";
 import { RequirementModal } from "./RequirementModal";
 import { ScoreFeedbackModal } from "./ScoreFeedbackModal";
 import { DeadlineDisplay } from "./DeadlineDisplay";
+import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -26,6 +28,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { studentManagementService } from "@/services/studentManagementService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { gradingService } from "@/services/gradingService";
+import { queryKeys } from "@/lib/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -52,66 +55,43 @@ interface AssignmentItemProps {
 
 export function AssignmentItem({ data, isExam = false, isLab = false, isPracticalExam = false }: AssignmentItemProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [lastSubmission, setLastSubmission] = useState<Submission | null>(null);
-  const [isLoadingSubmission, setIsLoadingSubmission] = useState(false);
-  const [submissionCount, setSubmissionCount] = useState(0);
   const [isRequirementModalVisible, setIsRequirementModalVisible] =
     useState(false);
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
+  const [isPaperModalVisible, setIsPaperModalVisible] = useState(false);
   const { message } = App.useApp();
   const { studentId } = useStudent();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch last submission
-  useEffect(() => {
-    const fetchLastSubmission = async () => {
-      if (!studentId) return;
-
-      try {
-        setIsLoadingSubmission(true);
-        
-        // Fetch submissions by classAssessmentId or examSessionId
-        let submissions: Submission[] = [];
-        if (data.classAssessmentId) {
-          // For assignments, fetch via classAssessmentId
-          submissions = await submissionService.getSubmissionList({
-            studentId: studentId,
-            classAssessmentId: data.classAssessmentId,
-          });
-        } else if (data.examSessionId) {
-          // For exams, fetch via examSessionId
-          submissions = await submissionService.getSubmissionList({
-            studentId: studentId,
-            examSessionId: data.examSessionId,
-          });
-        }
-
-        // Get the most recent submission
-        if (submissions.length > 0) {
-          const sorted = submissions.sort(
-            (a, b) =>
-              new Date(b.submittedAt).getTime() -
-              new Date(a.submittedAt).getTime()
-          );
-          setLastSubmission(sorted[0]);
-          setSubmissionCount(submissions.length);
-        } else {
-          setLastSubmission(null);
-          setSubmissionCount(0);
-        }
-      } catch (err) {
-        console.error("Failed to fetch submissions:", err);
-        setLastSubmission(null);
-        setSubmissionCount(0);
-      } finally {
-        setIsLoadingSubmission(false);
+  // Fetch last submission using TanStack Query
+  const { data: submissions = [] } = useQuery({
+    queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
+    queryFn: async () => {
+      if (!studentId) return [];
+      
+      if (data.classAssessmentId) {
+        return submissionService.getSubmissionList({
+          studentId: studentId,
+          classAssessmentId: data.classAssessmentId,
+        });
+      } else if (data.examSessionId) {
+        return submissionService.getSubmissionList({
+          studentId: studentId,
+          examSessionId: data.examSessionId,
+        });
       }
-    };
+      return [];
+    },
+    enabled: !!studentId && (!!data.classAssessmentId || !!data.examSessionId),
+  });
 
-    fetchLastSubmission();
-  }, [studentId, data.classAssessmentId, data.examSessionId]);
+  const lastSubmission = submissions.length > 0 
+    ? submissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
+    : null;
+  const submissionCount = submissions.length;
+  const isLoadingSubmission = false; // useQuery handles loading state
 
   // Cleanup polling interval on unmount
   useEffect(() => {
@@ -139,6 +119,115 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
   const canSubmit = () => {
     return hasDeadline() && !isDeadlinePassed();
   };
+
+  // Mutation for creating submission
+  const submitMutation = useMutation({
+    mutationFn: async ({ file, studentCode }: { file: File; studentCode: string }) => {
+      const newFileName = studentCode ? `${studentCode}.zip` : file.name;
+      const renamedFile = new File([file], newFileName, { type: file.type });
+      
+      return submissionService.createSubmission({
+        StudentId: studentId!,
+        ClassAssessmentId: data.classAssessmentId,
+        ExamSessionId: data.examSessionId,
+        file: renamedFile,
+      });
+    },
+    onSuccess: async (newSubmission) => {
+      // Invalidate submissions queries
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byStudent', studentId] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byStudentAndClass'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.submissions.all });
+      
+      // For labs, trigger auto grading after submission
+      if (isLab && data.assessmentTemplateId) {
+        try {
+          const gradingSession = await gradingService.autoGrading({
+            submissionId: newSubmission.id,
+            assessmentTemplateId: data.assessmentTemplateId,
+          });
+
+          if (gradingSession.status === 0) {
+            message.loading("Auto grading in progress...", 0);
+            
+            const pollInterval = setInterval(async () => {
+              try {
+                const sessionsResult = await gradingService.getGradingSessions({
+                  submissionId: newSubmission.id,
+                  pageNumber: 1,
+                  pageSize: 100,
+                });
+
+                if (sessionsResult.items.length > 0) {
+                  const sortedSessions = [...sessionsResult.items].sort((a, b) => {
+                    const dateA = new Date(a.createdAt).getTime();
+                    const dateB = new Date(b.createdAt).getTime();
+                    return dateB - dateA;
+                  });
+
+                  const latestSession = sortedSessions[0];
+
+                  if (latestSession.status !== 0) {
+                    if (autoGradingPollIntervalRef.current) {
+                      clearInterval(autoGradingPollIntervalRef.current);
+                      autoGradingPollIntervalRef.current = null;
+                    }
+                    message.destroy();
+                    
+                    // Invalidate grading queries
+                    queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+                    
+                    if (latestSession.status === 1) {
+                      message.success("Auto grading completed successfully");
+                    } else if (latestSession.status === 2) {
+                      message.error("Auto grading failed");
+                    }
+                  }
+                }
+              } catch (err: any) {
+                console.error("Failed to poll grading status:", err);
+                if (autoGradingPollIntervalRef.current) {
+                  clearInterval(autoGradingPollIntervalRef.current);
+                  autoGradingPollIntervalRef.current = null;
+                }
+                message.destroy();
+                message.error(err.message || "Failed to check grading status");
+              }
+            }, 2000);
+
+            autoGradingPollIntervalRef.current = pollInterval;
+
+            setTimeout(() => {
+              if (autoGradingPollIntervalRef.current) {
+                clearInterval(autoGradingPollIntervalRef.current);
+                autoGradingPollIntervalRef.current = null;
+              }
+              message.destroy();
+            }, 300000);
+          } else {
+            if (gradingSession.status === 1) {
+              message.success("Auto grading completed successfully");
+            } else if (gradingSession.status === 2) {
+              message.error("Auto grading failed");
+            }
+            queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+          }
+        } catch (gradingErr: any) {
+          console.error("Failed to start auto grading:", gradingErr);
+          message.destroy();
+          message.warning("Submission submitted, but auto grading failed to start. Please contact your lecturer.");
+        }
+      } else {
+        message.success("Your assignment has been submitted successfully!");
+      }
+
+      setFileList([]);
+    },
+    onError: (err: any) => {
+      console.error("Failed to submit assignment:", err);
+      message.error(err.message || "Failed to submit assignment. Please try again.");
+    },
+  });
 
   const handleSubmit = async () => {
     if (fileList.length === 0 || !studentId) {
@@ -177,159 +266,27 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      
-      // Get studentCode
-      let studentCode = user?.accountCode || "";
-      if (!studentCode) {
-        try {
-          const students = await studentManagementService.getStudentList();
-          const currentUserAccountId = String(user?.id);
-          const matchingStudent = students.find(
-            (stu) => stu.accountId === currentUserAccountId
-          );
-          if (matchingStudent) {
-            studentCode = matchingStudent.accountCode;
-          }
-        } catch (err) {
-          console.error("Failed to fetch student code:", err);
-        }
-      }
-
-      // Rename file to studentCode.zip
-      const newFileName = studentCode ? `${studentCode}.zip` : file.name;
-      const renamedFile = new File([file], newFileName, { type: file.type });
-
-      // Step 1: Create submission
-      const newSubmission = await submissionService.createSubmission({
-        StudentId: studentId,
-        ClassAssessmentId: data.classAssessmentId,
-        ExamSessionId: data.examSessionId,
-        file: renamedFile,
-      });
-
-      // Step 2: For labs, trigger auto grading after submission
-      if (isLab && data.assessmentTemplateId) {
-        try {
-          // Call auto grading API
-          const gradingSession = await gradingService.autoGrading({
-            submissionId: newSubmission.id,
-            assessmentTemplateId: data.assessmentTemplateId,
-          });
-
-          // If status is 0 (PROCESSING), start polling
-          if (gradingSession.status === 0) {
-            message.loading("Auto grading in progress...", 0);
-            
-            // Poll every 2 seconds until status changes
-            const pollInterval = setInterval(async () => {
-              try {
-                const sessionsResult = await gradingService.getGradingSessions({
-                  submissionId: newSubmission.id,
-                  pageNumber: 1,
-                  pageSize: 100,
-                });
-
-                if (sessionsResult.items.length > 0) {
-                  const sortedSessions = [...sessionsResult.items].sort((a, b) => {
-                    const dateA = new Date(a.createdAt).getTime();
-                    const dateB = new Date(b.createdAt).getTime();
-                    return dateB - dateA;
-                  });
-
-                  const latestSession = sortedSessions[0];
-
-                  // If status is no longer PROCESSING (0), stop polling
-                  if (latestSession.status !== 0) {
-                    if (autoGradingPollIntervalRef.current) {
-                      clearInterval(autoGradingPollIntervalRef.current);
-                      autoGradingPollIntervalRef.current = null;
-                    }
-                    message.destroy();
-                    
-                    if (latestSession.status === 1) {
-                      message.success("Auto grading completed successfully");
-                    } else if (latestSession.status === 2) {
-                      message.error("Auto grading failed");
-                    }
-                  }
-                }
-              } catch (err: any) {
-                console.error("Failed to poll grading status:", err);
-                if (autoGradingPollIntervalRef.current) {
-                  clearInterval(autoGradingPollIntervalRef.current);
-                  autoGradingPollIntervalRef.current = null;
-                }
-                message.destroy();
-                message.error(err.message || "Failed to check grading status");
-              }
-            }, 2000); // Poll every 2 seconds
-
-            autoGradingPollIntervalRef.current = pollInterval;
-
-            // Stop polling after 5 minutes (safety timeout)
-            setTimeout(() => {
-              if (autoGradingPollIntervalRef.current) {
-                clearInterval(autoGradingPollIntervalRef.current);
-                autoGradingPollIntervalRef.current = null;
-              }
-              message.destroy();
-            }, 300000); // 5 minutes
-          } else {
-            // Status is not PROCESSING, grading completed immediately
-            if (gradingSession.status === 1) {
-              message.success("Auto grading completed successfully");
-            } else if (gradingSession.status === 2) {
-              message.error("Auto grading failed");
-            }
-          }
-        } catch (gradingErr: any) {
-          console.error("Failed to start auto grading:", gradingErr);
-          message.destroy();
-          message.warning("Submission submitted, but auto grading failed to start. Please contact your lecturer.");
-        }
-      } else {
-        message.success("Your assignment has been submitted successfully!");
-      }
-
-      setFileList([]);
-      
-      // Refresh submissions list to ensure we have the latest
-      let submissions: Submission[] = [];
-      if (data.classAssessmentId) {
-        submissions = await submissionService.getSubmissionList({
-          studentId: studentId,
-          classAssessmentId: data.classAssessmentId,
-        });
-      } else if (data.examSessionId || newSubmission.examSessionId) {
-        const sessionId = newSubmission.examSessionId || data.examSessionId;
-        submissions = await submissionService.getSubmissionList({
-          studentId: studentId,
-          examSessionId: sessionId,
-        });
-      }
-      
-      // Get the most recent submission
-      if (submissions.length > 0) {
-        const sorted = submissions.sort(
-          (a, b) =>
-            new Date(b.submittedAt).getTime() -
-            new Date(a.submittedAt).getTime()
+    // Get studentCode
+    let studentCode = user?.accountCode || "";
+    if (!studentCode) {
+      try {
+        const students = await studentManagementService.getStudentList();
+        const currentUserAccountId = String(user?.id);
+        const matchingStudent = students.find(
+          (stu) => stu.accountId === currentUserAccountId
         );
-        setLastSubmission(sorted[0]);
-        setSubmissionCount(submissions.length);
-      } else {
-        setLastSubmission(newSubmission);
-        setSubmissionCount(1);
+        if (matchingStudent) {
+          studentCode = matchingStudent.accountCode;
+        }
+      } catch (err) {
+        console.error("Failed to fetch student code:", err);
       }
-    } catch (err: any) {
-      console.error("Failed to submit assignment:", err);
-      message.error(err.message || "Failed to submit assignment. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
+
+    submitMutation.mutate({ file, studentCode });
   };
+
+  const isSubmitting = submitMutation.isPending;
 
   const uploadProps = {
     fileList,
@@ -591,6 +548,15 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         onCancel={() => setIsScoreModalVisible(false)}
         data={data}
       />
+
+      {isLab && data.assessmentTemplateId && (
+        <PaperAssignmentModal
+          isOpen={isPaperModalVisible}
+          onClose={() => setIsPaperModalVisible(false)}
+          classAssessmentId={data.classAssessmentId}
+          classId={data.classId}
+        />
+      )}
     </div>
   );
 }

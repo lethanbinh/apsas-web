@@ -17,7 +17,8 @@ import {
   TrophyOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Space, Spin, Tabs, Select, Card } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AcademicTab from "./components/AcademicTab";
 import AssessmentsTab from "./components/AssessmentsTab";
 import GradingTab from "./components/GradingTab";
@@ -29,88 +30,66 @@ import styles from "./DashboardAdmin.module.css";
 import { classService } from "@/services/classService";
 import { semesterService } from "@/services/semesterService";
 import { courseElementService } from "@/services/courseElementService";
+import { queryKeys } from "@/lib/react-query";
 
 const AdminDashboardPage = () => {
-  const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [chartData, setChartData] = useState<ChartData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
   
   // Filters
   const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(undefined);
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | undefined>(undefined);
-  
-  // Filter options
-  const [classes, setClasses] = useState<any[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [semesters, setSemesters] = useState<any[]>([]);
-  const [filtersLoading, setFiltersLoading] = useState(false);
 
-  useEffect(() => {
-    fetchFilterOptions();
-    fetchDashboardData();
-    
-    // Auto-refresh every 5 minutes
-    const interval = setInterval(() => {
-      fetchDashboardData();
-    }, 5 * 60 * 1000);
+  // Fetch filter options using TanStack Query
+  const { data: classesRes } = useQuery({
+    queryKey: queryKeys.classes.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
+  });
 
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
+  const { data: semestersRes = [] } = useQuery({
+    queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
+  });
 
-  const fetchFilterOptions = async () => {
-    try {
-      setFiltersLoading(true);
-      const [classesRes, semestersRes, courseElementsRes] = await Promise.all([
-        classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
-        semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
-        courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
-      ]);
+  const { data: courseElementsRes = [] } = useQuery({
+    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
+  });
 
-      setClasses(classesRes.classes || []);
-      setSemesters(semestersRes || []);
-
-      // Extract unique courses from course elements
-      const uniqueCourses = new Map<number, any>();
-      courseElementsRes.forEach((ce) => {
-        if (ce.semesterCourse?.course) {
-          const course = ce.semesterCourse.course;
-          if (!uniqueCourses.has(course.id)) {
-            uniqueCourses.set(course.id, course);
-          }
+  // Process filter options
+  const classes = classesRes?.classes || [];
+  const semesters = semestersRes || [];
+  const courses = useMemo(() => {
+    const uniqueCourses = new Map<number, any>();
+    courseElementsRes.forEach((ce) => {
+      if (ce.semesterCourse?.course) {
+        const course = ce.semesterCourse.course;
+        if (!uniqueCourses.has(course.id)) {
+          uniqueCourses.set(course.id, course);
         }
-      });
-      setCourses(Array.from(uniqueCourses.values()));
-    } catch (err) {
-      console.error("Error fetching filter options:", err);
-    } finally {
-      setFiltersLoading(false);
-    }
-  };
+      }
+    });
+    return Array.from(uniqueCourses.values());
+  }, [courseElementsRes]);
 
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const filtersLoading = false; // useQuery handles loading
 
-      const [overviewData, chartDataResult] = await Promise.all([
-        adminDashboardService.getDashboardOverview(),
-        adminDashboardService.getChartData(),
-      ]);
+  // Fetch dashboard data using TanStack Query
+  const { data: overview, isLoading: overviewLoading } = useQuery({
+    queryKey: ['adminDashboard', 'overview'],
+    queryFn: () => adminDashboardService.getDashboardOverview(),
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+  });
 
-      setOverview(overviewData);
-      setChartData(chartDataResult);
-    } catch (err: any) {
-      console.error("Error fetching dashboard data:", err);
-      setError(err.message || "Failed to load dashboard data");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: chartData, isLoading: chartLoading } = useQuery({
+    queryKey: ['adminDashboard', 'chartData'],
+    queryFn: () => adminDashboardService.getChartData(),
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+  });
+
+  const loading = overviewLoading || chartLoading;
+  const error = null; // useQuery handles errors
 
   // Filter object to pass to tabs
   const filterProps = {
@@ -120,7 +99,8 @@ const AdminDashboardPage = () => {
   };
 
   const handleRefresh = () => {
-    fetchDashboardData();
+    // Invalidate queries to trigger refetch
+    queryClient.invalidateQueries({ queryKey: ['adminDashboard'] });
   };
 
   const tabItems = [
@@ -134,8 +114,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <OverviewTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
@@ -152,8 +132,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <UsersTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
@@ -170,8 +150,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <AcademicTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
@@ -208,8 +188,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <AssessmentsTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
@@ -226,8 +206,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <SubmissionsTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
@@ -244,8 +224,8 @@ const AdminDashboardPage = () => {
       ),
       children: (
         <GradingTab
-          overview={overview}
-          chartData={chartData}
+          overview={overview ?? null}
+          chartData={chartData ?? null}
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}

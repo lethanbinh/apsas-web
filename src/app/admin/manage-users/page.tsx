@@ -5,25 +5,23 @@ import { Role } from "@/lib/constants";
 import { accountService } from "@/services/accountService";
 import { adminService } from "@/services/adminService";
 import { User, UserUpdatePayload } from "@/types";
-import { App, Button, Upload, Modal, Table, Space, Alert, Input } from "antd";
+import { App, Button, Upload, Modal, Table, Space, Alert, Input, Spin } from "antd";
 import { DownloadOutlined, UploadOutlined, FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import styles from "./ManageUsers.module.css";
+import { queryKeys } from "@/lib/react-query";
 
 const ManageUsersPageContent: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
-  const [totalUsers, setTotalUsers] = useState<number>(0);
   const [isEditModalVisible, setIsEditModalVisible] = useState<boolean>(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreateModalVisible, setIsCreateModalVisible] =
     useState<boolean>(false);
-  const [importLoading, setImportLoading] = useState<boolean>(false);
   const [importResultVisible, setImportResultVisible] = useState<boolean>(false);
   const [importResults, setImportResults] = useState<{
     success: number;
@@ -32,36 +30,21 @@ const ManageUsersPageContent: React.FC = () => {
   }>({ success: 0, failed: 0, errors: [] });
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [allUsers, setAllUsers] = useState<User[]>([]); // Store all users for filtering
 
   const { modal, notification } = App.useApp();
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await accountService.getAccountList(
-        currentPage,
-        pageSize
-      );
-      const fetchedUsers = response.users || [];
-      setUsers(fetchedUsers);
-      setTotalUsers(response.total);
-      // Store all users for search filtering
-      if (currentPage === 1) {
-        setAllUsers(fetchedUsers);
-      } else {
-        setAllUsers(prev => [...prev, ...fetchedUsers]);
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch users:", err);
-      setError(err.message || "Failed to fetch users");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, pageSize]);
+  // Fetch users using TanStack Query
+  const { data: usersResponse, isLoading: loading, error: queryError } = useQuery({
+    queryKey: queryKeys.users.list({ page: currentPage, pageSize }),
+    queryFn: () => accountService.getAccountList(currentPage, pageSize),
+  });
+
+  const users = usersResponse?.users || [];
+  const totalUsers = usersResponse?.total || 0;
+  const error = queryError ? (queryError as any).message || "Failed to fetch users" : null;
 
   // Filter users based on search term
-  const filteredUsers = React.useMemo(() => {
+  const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) {
       return users;
     }
@@ -75,39 +58,43 @@ const ManageUsersPageContent: React.FC = () => {
     );
   }, [users, searchTerm]);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
-
   const showEditModal = (user: User) => {
     setEditingUser(user);
     setIsEditModalVisible(true);
   };
+
+  // Mutation for updating user
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, payload }: { userId: number; payload: UserUpdatePayload }) => {
+      return adminService.updateAccount(userId, payload);
+    },
+    onSuccess: () => {
+      // Invalidate users queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      setIsEditModalVisible(false);
+      setEditingUser(null);
+      notification.success({ message: "User updated successfully" });
+    },
+    onError: (err: any) => {
+      console.error("Failed to update user:", err);
+      notification.error({ 
+        message: "Update Failed", 
+        description: err.message || "Failed to update user" 
+      });
+    },
+  });
 
   const handleEditOk = async (
     values: UserUpdatePayload,
     role: Role
   ) => {
     if (editingUser) {
-      try {
-        setLoading(true);
-        const updatePayload = {
-          phoneNumber: (values as UserUpdatePayload).phoneNumber,
-          fullName: (values as UserUpdatePayload).fullName,
-          address: (values as UserUpdatePayload).address,
-        };
-
-        await adminService.updateAccount(editingUser.id, updatePayload);
-
-        setIsEditModalVisible(false);
-        setEditingUser(null);
-        notification.success({ message: "User updated successfully" });
-        fetchUsers();
-      } catch (err: any) {
-        console.error("Failed to update user:", err);
-        setError(err.message || "Failed to update user");
-        setLoading(false);
-      }
+      const updatePayload = {
+        phoneNumber: (values as UserUpdatePayload).phoneNumber,
+        fullName: (values as UserUpdatePayload).fullName,
+        address: (values as UserUpdatePayload).address,
+      };
+      updateUserMutation.mutate({ userId: editingUser.id, payload: updatePayload });
     }
   };
 
@@ -120,22 +107,31 @@ const ManageUsersPageContent: React.FC = () => {
     setIsCreateModalVisible(true);
   };
 
+  // Mutation for creating user
+  const createUserMutation = useMutation({
+    mutationFn: async (payload: UserUpdatePayload) => {
+      return adminService.createAccount(payload);
+    },
+    onSuccess: () => {
+      // Invalidate users queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      setIsCreateModalVisible(false);
+      notification.success({ message: "User created successfully" });
+    },
+    onError: (err: any) => {
+      console.error("Failed to create user:", err);
+      notification.error({ 
+        message: "Create Failed", 
+        description: err.message || "Failed to create user" 
+      });
+    },
+  });
+
   const handleCreateOk = async (
     values: UserUpdatePayload,
     role: Role
   ) => {
-    try {
-      setLoading(true);
-      await adminService.createAccount(values as UserUpdatePayload);
-
-      setIsCreateModalVisible(false);
-      notification.success({ message: "User created successfully" });
-      fetchUsers();
-    } catch (err: any) {
-      console.error("Failed to create user:", err);
-      setError(err.message || "Failed to create user");
-      setLoading(false);
-    }
+    createUserMutation.mutate(values as UserUpdatePayload);
   };
 
   const handleCreateCancel = () => {
@@ -263,7 +259,25 @@ const ManageUsersPageContent: React.FC = () => {
   const handleExportAllAccounts = async () => {
     try {
       setExportLoading(true);
-      const allUsers = await fetchAllAccounts();
+      // Fetch all accounts
+      const allUsers: User[] = [];
+      let currentPage = 1;
+      const pageSize = 100;
+      let hasMore = true;
+
+      while (hasMore) {
+        const response = await accountService.getAccountList(currentPage, pageSize);
+        if (response.users && response.users.length > 0) {
+          allUsers.push(...response.users);
+          if (allUsers.length >= response.total) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
 
       if (!allUsers || allUsers.length === 0) {
         notification.warning({
@@ -531,19 +545,13 @@ const ManageUsersPageContent: React.FC = () => {
     });
   };
 
-  // Import accounts
-  const handleImportAccounts = async (file: File) => {
-    try {
-      setImportLoading(true);
+  // Mutation for importing accounts
+  const importAccountsMutation = useMutation({
+    mutationFn: async (file: File) => {
       const data = await parseExcelFile(file);
       
       if (!data || data.length === 0) {
-        notification.error({
-          message: "Import Failed",
-          description: "Excel file is empty or invalid.",
-        });
-        setImportLoading(false);
-        return;
+        throw new Error("Excel file is empty or invalid.");
       }
 
       const results = {
@@ -555,7 +563,7 @@ const ManageUsersPageContent: React.FC = () => {
       // Process each row
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
-        const rowNum = i + 2; // +2 because Excel rows start at 1 and we have header
+        const rowNum = i + 2;
 
         // Validate row
         const validationError = validateAccountData(row, i);
@@ -602,6 +610,12 @@ const ManageUsersPageContent: React.FC = () => {
         }
       }
 
+      return results;
+    },
+    onSuccess: (results) => {
+      // Invalidate users queries to refetch updated data
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      
       setImportResults(results);
       setImportResultVisible(true);
       
@@ -610,23 +624,28 @@ const ManageUsersPageContent: React.FC = () => {
           message: "Import Completed",
           description: `Successfully created ${results.success} account(s). ${results.failed > 0 ? `${results.failed} account(s) failed.` : ""}`,
         });
-        fetchUsers(); // Refresh user list
       } else {
         notification.error({
           message: "Import Failed",
           description: `All ${results.failed} account(s) failed to import. Please check the errors.`,
         });
       }
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       console.error("Import error:", error);
       notification.error({
         message: "Import Failed",
         description: error.message || "Failed to import accounts. Please check the file format.",
       });
-    } finally {
-      setImportLoading(false);
-    }
+    },
+  });
+
+  // Import accounts
+  const handleImportAccounts = async (file: File) => {
+    importAccountsMutation.mutate(file);
   };
+
+  const importLoading = importAccountsMutation.isPending;
 
   const uploadProps: UploadProps = {
     beforeUpload: (file) => {
@@ -725,15 +744,23 @@ const ManageUsersPageContent: React.FC = () => {
           </Upload>
         </Space>
       </div>
-      {loading && <p>Loading users...</p>}
-      {error && <p className="!text-red-500">Error: {error}</p>}
-      {!loading && !error && searchTerm && filteredUsers.length === 0 && (
+      {loading && !users ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+          <Spin size="large" />
+        </div>
+      ) : error ? (
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      ) : !loading && !error && searchTerm && filteredUsers.length === 0 ? (
         <p>No users found matching your search.</p>
-      )}
-      {!loading && !error && !searchTerm && (!users || users.length === 0) && (
+      ) : !loading && !error && !searchTerm && (!users || users.length === 0) ? (
         <p>No users found.</p>
-      )}
-      {!loading && !error && (searchTerm ? filteredUsers : users) && (searchTerm ? filteredUsers : users).length > 0 && (
+      ) : (
         <table className={styles.table}>
           <thead className={styles["table-header"]}>
             <tr>
@@ -830,7 +857,7 @@ const ManageUsersPageContent: React.FC = () => {
           onCancel={handleEditCancel}
           onOk={handleEditOk}
           editingUser={editingUser}
-          confirmLoading={loading}
+          confirmLoading={updateUserMutation.isPending}
         />
       )}
       {isCreateModalVisible && (
@@ -839,7 +866,7 @@ const ManageUsersPageContent: React.FC = () => {
           onCancel={handleCreateCancel}
           onOk={handleCreateOk}
           editingUser={null}
-          confirmLoading={loading}
+          confirmLoading={createUserMutation.isPending}
         />
       )}
       <Modal

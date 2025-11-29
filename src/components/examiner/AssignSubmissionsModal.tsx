@@ -27,6 +27,8 @@ import {
 } from "antd";
 import Dragger from "antd/es/upload/Dragger";
 import { useCallback, useEffect, useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -57,57 +59,45 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   group,
   allGroups,
 }) => {
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [activeTab, setActiveTab] = useState<string>("list");
-  const [submissions, setSubmissions] = useState<GradingGroupSubmission[]>([]);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [assessmentTemplate, setAssessmentTemplate] = useState<AssessmentTemplate | null>(null);
   const { message: messageApi } = App.useApp();
 
-  const fetchSubmissions = useCallback(async () => {
-    if (!group?.id) return;
-    
-    setLoadingSubmissions(true);
-    try {
-      // Fetch grading group by ID to get updated submissions
-      const updatedGroup = await gradingGroupService.getGradingGroupById(group.id);
-      setSubmissions(updatedGroup.submissions || []);
+  // Fetch grading group with submissions
+  const { data: updatedGroup, isLoading: loadingSubmissions } = useQuery({
+    queryKey: queryKeys.grading.groups.detail(group.id),
+    queryFn: () => gradingGroupService.getGradingGroupById(group.id),
+    enabled: open && !!group?.id,
+  });
 
-      // Fetch assessment template if assessmentTemplateId exists
-      if (updatedGroup.assessmentTemplateId) {
-        try {
-          const templateResponse = await assessmentTemplateService.getAssessmentTemplates({
+  const submissions = updatedGroup?.submissions || [];
+
+  // Fetch assessment template
+  const { data: templatesResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
             pageNumber: 1,
             pageSize: 1000,
-          });
-          const template = templateResponse.items.find(t => t.id === updatedGroup.assessmentTemplateId);
-          setAssessmentTemplate(template || null);
-        } catch (err) {
-          console.error("Failed to fetch assessment template:", err);
-        }
-      } else {
-        setAssessmentTemplate(null);
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch submissions:", err);
-      messageApi.error("Failed to load submissions");
-    } finally {
-      setLoadingSubmissions(false);
-    }
-  }, [group?.id, messageApi]);
+    }),
+    enabled: open && !!updatedGroup?.assessmentTemplateId,
+  });
+
+  const assessmentTemplate = useMemo(() => {
+    if (!updatedGroup?.assessmentTemplateId || !templatesResponse?.items) return null;
+    return templatesResponse.items.find(t => t.id === updatedGroup.assessmentTemplateId) || null;
+  }, [updatedGroup, templatesResponse]);
 
   useEffect(() => {
-    if (open && group?.id) {
-      fetchSubmissions();
+    if (open) {
       setFileList([]);
       setError(null);
       setActiveTab("list");
       setSelectedRowKeys([]);
     }
-  }, [open, group?.id, fetchSubmissions]);
+  }, [open]);
 
   // Validate file name format: STUXXXXXX.zip (X is digit)
   const validateFileName = (fileName: string): boolean => {
@@ -160,6 +150,53 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     return match ? match[1] : null;
   };
 
+  // Mutation for uploading submissions
+  const uploadSubmissionsMutation = useMutation({
+    mutationFn: async (files: File[]) => {
+      return gradingGroupService.addSubmissionsByFile(group.id, {
+        Files: files,
+      });
+    },
+    onSuccess: (result, files) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+      messageApi.success(
+        `Added ${result.createdSubmissionsCount} submissions from ${files.length} file(s) successfully!`,
+        5
+      );
+      setFileList([]);
+      onOk();
+    },
+    onError: (err: any) => {
+      console.error("Failed to upload files:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to upload files. Please try again.";
+      setError(errorMsg);
+      messageApi.error(errorMsg);
+    },
+  });
+
+  // Mutation for deleting submissions
+  const deleteSubmissionsMutation = useMutation({
+    mutationFn: async (submissionIds: number[]) => {
+      await Promise.all(
+        submissionIds.map((id) => submissionService.deleteSubmission(id))
+      );
+    },
+    onSuccess: (_, submissionIds) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+      messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
+      setSelectedRowKeys([]);
+      onOk();
+    },
+    onError: (err: any) => {
+      console.error("Failed to delete submissions:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submissions.";
+      setError(errorMsg);
+      messageApi.error(errorMsg);
+    },
+  });
+
   const handleUploadZip = async () => {
     if (fileList.length === 0) {
       messageApi.error("Please select at least one ZIP file!");
@@ -203,41 +240,8 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
     setError(null);
-
-    try {
-      // Step 1: Upload submissions
-      const result = await gradingGroupService.addSubmissionsByFile(group.id, {
-        Files: files,
-      });
-
-      messageApi.success(
-        `Added ${result.createdSubmissionsCount} submissions from ${files.length} file(s) successfully!`,
-        5
-      );
-
-      // Step 2: Fetch updated submissions to get the newly created ones
-      let allSubmissions: Submission[] = [];
-      try {
-        allSubmissions = await submissionService.getSubmissionList({
-          gradingGroupId: group.id,
-        });
-      } catch (err) {
-        console.error("Failed to fetch submissions:", err);
-      }
-
-      await fetchSubmissions();
-      setFileList([]);
-      onOk(); // Refresh parent component
-    } catch (err: any) {
-      console.error("Failed to upload files:", err);
-      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to upload files. Please try again.";
-      setError(errorMsg);
-      messageApi.error(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
+    uploadSubmissionsMutation.mutate(files);
   };
 
   const handleDeleteSubmissions = async (submissionIds: number[]) => {
@@ -246,28 +250,11 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
     setError(null);
-
-    try {
-      // Delete each submission using the DELETE API
-      await Promise.all(
-        submissionIds.map((id) => submissionService.deleteSubmission(id))
-      );
-
-      messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
-      await fetchSubmissions();
-      setSelectedRowKeys([]);
-      onOk(); // Refresh parent component
-    } catch (err: any) {
-      console.error("Failed to delete submissions:", err);
-      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submissions.";
-      setError(errorMsg);
-      messageApi.error(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
+    deleteSubmissionsMutation.mutate(submissionIds);
   };
+
+  const isLoading = uploadSubmissionsMutation.isPending || deleteSubmissionsMutation.isPending;
 
   const submissionColumns: TableProps<GradingGroupSubmission>["columns"] = [
     {

@@ -18,14 +18,14 @@ const { Search } = Input;
 // --- Giữ nguyên các mục menu (như bản gốc) ---
 const menuItems = [
   {
-    key: "/admin/dashboard",
-    icon: <DashboardOutlined />,
-    label: <Link href="/admin/dashboard">Dashboard</Link>,
-  },
-  {
     key: "/admin/manage-users",
     icon: <TeamOutlined />,
     label: <Link href="/admin/manage-users">Manage users</Link>,
+  },
+  {
+    key: "/admin/dashboard",
+    icon: <DashboardOutlined />,
+    label: <Link href="/admin/dashboard">Dashboard</Link>,
   },
   {
     key: "/admin/app-download",

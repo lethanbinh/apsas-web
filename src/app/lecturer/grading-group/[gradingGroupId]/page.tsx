@@ -25,8 +25,10 @@ import {
   Card,
   Col,
   Collapse,
+  Descriptions,
   Input,
   InputNumber,
+  Modal,
   Row,
   Space,
   Spin,
@@ -37,7 +39,9 @@ import {
   Divider,
 } from "antd";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import styles from "./page.module.css";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -63,21 +67,24 @@ export default function GradingGroupPage() {
   const { message } = App.useApp();
   const { user } = useAuth();
 
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [autoGradingLoading, setAutoGradingLoading] = useState(false);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [gradingGroup, setGradingGroup] = useState<GradingGroup | null>(null);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
-  const [currentSubmission, setCurrentSubmission] = useState<Submission | null>(null);
-  const [questions, setQuestions] = useState<QuestionWithRubrics[]>([]);
   const [totalScore, setTotalScore] = useState(0);
   const [isSemesterPassed, setIsSemesterPassed] = useState(false);
-  const [latestGradingSession, setLatestGradingSession] = useState<GradingSession | null>(null);
-  const [latestGradeItems, setLatestGradeItems] = useState<GradeItem[]>([]);
   const [autoGradingPollIntervalRef, setAutoGradingPollIntervalRef] = useState<NodeJS.Timeout | null>(null);
+  const pollingSessionIdRef = useRef<number | null>(null);
+  const hasShownCompletionMessageRef = useRef<boolean>(false);
+  // Store user edits separately to avoid conflicts with derived state
+  const [userEdits, setUserEdits] = useState<{
+    rubricScores: Record<string, number>; // key: "questionId_rubricId"
+    rubricComments: Record<number, string>; // key: questionId
+  }>({
+    rubricScores: {},
+    rubricComments: {},
+  });
   const [feedback, setFeedback] = useState<FeedbackData>({
     overallFeedback: "",
     strengths: "",
@@ -89,327 +96,345 @@ export default function GradingGroupPage() {
     errorHandling: "",
   });
   const [submissionFeedbackId, setSubmissionFeedbackId] = useState<number | null>(null);
+  const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
+  const queryClient = useQueryClient();
 
+  // Fetch grading group using TanStack Query
+  const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
+    queryKey: queryKeys.grading.groups.all,
+    queryFn: () => gradingGroupService.getGradingGroups({}),
+    enabled: !!gradingGroupId,
+  });
+
+  const gradingGroup = useMemo(() => {
+    if (!gradingGroupsData || !gradingGroupId) return null;
+    return gradingGroupsData.find(g => g.id === gradingGroupId) || null;
+  }, [gradingGroupsData, gradingGroupId]);
+
+  // Handle grading group not found - only redirect after query has finished loading
   useEffect(() => {
-    if (gradingGroupId) {
-      fetchData();
+    if (!gradingGroup && gradingGroupId && !isLoadingGradingGroups) {
+      message.error("Grading group not found");
+      router.back();
     }
-  }, [gradingGroupId]);
+  }, [gradingGroup, gradingGroupId, isLoadingGradingGroups, message, router]);
 
-  useEffect(() => {
-    if (selectedSubmissionId && submissions.length > 0) {
-      const submission = submissions.find(s => s.id === selectedSubmissionId);
-      if (submission) {
-        setCurrentSubmission(submission);
-        // Reset feedback when switching submissions
-        setFeedback({
-          overallFeedback: "",
-          strengths: "",
-          weaknesses: "",
-          codeQuality: "",
-          algorithmEfficiency: "",
-          suggestionsForImprovement: "",
-          bestPractices: "",
-          errorHandling: "",
-        });
-        setSubmissionFeedbackId(null);
-        fetchSubmissionData(submission);
-      }
-    }
-  }, [selectedSubmissionId, submissions]);
+  // Fetch all submissions in this grading group
+  const { data: allSubmissionsData = [] } = useQuery({
+    queryKey: ['submissions', 'byGradingGroupId', gradingGroupId],
+    queryFn: () => submissionService.getSubmissionList({
+      gradingGroupId: gradingGroupId!,
+    }),
+    enabled: !!gradingGroupId,
+  });
 
-  const fetchData = async () => {
-    if (!gradingGroupId) return;
-
-    try {
-      setLoading(true);
-
-      // Fetch grading group
-      const gradingGroups = await gradingGroupService.getGradingGroups({});
-      const group = gradingGroups.find(g => g.id === gradingGroupId);
-      if (!group) {
-        message.error("Grading group not found");
-        router.back();
-        return;
-      }
-      setGradingGroup(group);
-
-      // Fetch all submissions in this grading group
-      const allSubmissions = await submissionService.getSubmissionList({
-        gradingGroupId: gradingGroupId,
-      });
-      
-      // Group by studentId and get latest submission for each student
-      const studentSubmissions = new Map<number, Submission>();
-      for (const sub of allSubmissions) {
-        if (!sub.studentId) continue;
-        const existing = studentSubmissions.get(sub.studentId);
-        if (!existing) {
+  // Filter to get latest submission for each student
+  const submissions = useMemo(() => {
+    const studentSubmissions = new Map<number, Submission>();
+    for (const sub of allSubmissionsData) {
+      if (!sub.studentId) continue;
+      const existing = studentSubmissions.get(sub.studentId);
+      if (!existing) {
+        studentSubmissions.set(sub.studentId, sub);
+      } else {
+        const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
+        const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+        
+        if (currentDate > existingDate) {
           studentSubmissions.set(sub.studentId, sub);
-        } else {
-          // Compare by submittedAt, if equal or both empty, use the one with larger ID
-          const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-          const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
-          
-          if (currentDate > existingDate) {
-            // Current submission has newer date
-            studentSubmissions.set(sub.studentId, sub);
-          } else if (currentDate < existingDate) {
-            // Existing submission has newer date, keep it
-            // Do nothing, keep existing
-          } else {
-            // Dates are equal (both 0 or same date), keep the one with the largest ID (newest)
-            if (sub.id > existing.id) {
-              studentSubmissions.set(sub.studentId, sub);
-            }
-          }
+        } else if (currentDate === existingDate && sub.id > existing.id) {
+          studentSubmissions.set(sub.studentId, sub);
         }
       }
-      
-      // Convert to array and sort by student code for easier navigation
-      const sortedSubmissions = Array.from(studentSubmissions.values()).sort((a, b) => 
-        (a.studentCode || "").localeCompare(b.studentCode || "")
-      );
-      
-      setSubmissions(sortedSubmissions);
+    }
+    
+    return Array.from(studentSubmissions.values()).sort((a, b) => 
+      (a.studentCode || "").localeCompare(b.studentCode || "")
+    );
+  }, [allSubmissionsData]);
 
-      // Select first submission by default
-      if (sortedSubmissions.length > 0) {
-        setSelectedSubmissionId(sortedSubmissions[0].id);
+  // Set default selected submission
+  useEffect(() => {
+    if (submissions.length > 0 && !selectedSubmissionId) {
+      setSelectedSubmissionId(submissions[0].id);
+    }
+  }, [submissions, selectedSubmissionId]);
+
+  const currentSubmission = useMemo(() => {
+    return submissions.find(s => s.id === selectedSubmissionId) || null;
+  }, [submissions, selectedSubmissionId]);
+
+  // Reset feedback when switching submissions
+  useEffect(() => {
+    if (currentSubmission) {
+      setFeedback({
+        overallFeedback: "",
+        strengths: "",
+        weaknesses: "",
+        codeQuality: "",
+        algorithmEfficiency: "",
+        suggestionsForImprovement: "",
+        bestPractices: "",
+        errorHandling: "",
+      });
+      setSubmissionFeedbackId(null);
+      
+      // Clear polling interval when switching submissions
+      if (autoGradingPollIntervalRef) {
+        clearInterval(autoGradingPollIntervalRef);
+        setAutoGradingPollIntervalRef(null);
       }
-    } catch (err: any) {
-      console.error("Failed to fetch data:", err);
-      message.error(err.message || "Failed to load data");
-    } finally {
-      setLoading(false);
+      hasShownCompletionMessageRef.current = false;
+      pollingSessionIdRef.current = null;
+      message.destroy();
+      setAutoGradingLoading(false);
     }
-  };
+  }, [currentSubmission?.id]);
 
-  const fetchSubmissionData = async (submission: Submission) => {
-    try {
-      // Reset state
-      setQuestions([]);
-      setTotalScore(0);
-      setLatestGradingSession(null);
-      setLatestGradeItems([]);
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (autoGradingPollIntervalRef) {
+        clearInterval(autoGradingPollIntervalRef);
+        setAutoGradingPollIntervalRef(null);
+      }
+      message.destroy();
+    };
+  }, [autoGradingPollIntervalRef]);
 
-      // Check semester status
-      await checkSemesterStatus(submission);
+  const loading = isLoadingGradingGroups && !gradingGroup;
 
-      // Fetch questions and rubrics
-      await fetchQuestionsAndRubrics(submission);
-
-      // Fetch latest grading data
-      await fetchLatestGradingData(submission.id);
-
-      // Fetch feedback
-      await fetchFeedback(submission.id);
-    } catch (err: any) {
-      console.error("Failed to fetch submission data:", err);
-      message.error(err.message || "Failed to load submission data");
+  // Check semester status (simplified for grading group)
+  useEffect(() => {
+    if (currentSubmission?.id) {
+      setIsSemesterPassed(false);
     }
-  };
+  }, [currentSubmission?.id]);
 
-  const fetchLatestGradingData = async (submissionId: number) => {
-    try {
-      const gradingSessionsResult = await gradingService.getGradingSessions({
-        submissionId: submissionId,
+  // Fetch assessment template
+  const { data: templatesResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!gradingGroup?.assessmentTemplateId,
+  });
+
+  const assessmentTemplate = useMemo(() => {
+    if (!templatesResponse?.items || !gradingGroup?.assessmentTemplateId) return null;
+    return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
+  }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
+
+  // Fetch papers
+  const { data: papersResponse } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplate?.id!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplate!.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!assessmentTemplate?.id,
+  });
+
+  const papers = papersResponse?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
         pageSize: 100,
+      }),
+      enabled: papers.length > 0,
+    })),
+  });
+
+  // Fetch rubrics for all questions
+  const allQuestionsFromQueries = useMemo(() => {
+    const questions: AssessmentQuestion[] = [];
+    questionsQueries.forEach((query) => {
+      if (query.data?.items) {
+        questions.push(...query.data.items);
+      }
+    });
+    return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
+  }, [questionsQueries]);
+
+  const rubricsQueries = useQueries({
+    queries: allQuestionsFromQueries.map((question) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(question.id),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: question.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: allQuestionsFromQueries.length > 0,
+    })),
+  });
+
+  // Combine questions with rubrics
+  const questionsWithRubrics = useMemo(() => {
+    const result: QuestionWithRubrics[] = [];
+    allQuestionsFromQueries.forEach((question, index) => {
+      const rubrics = rubricsQueries[index]?.data?.items || [];
+      if (rubrics.length > 0) {
+        result.push({
+          ...question,
+          rubrics,
+          rubricScores: {},
+          rubricComments: {},
+        });
+      }
+    });
+    return result;
+  }, [allQuestionsFromQueries, rubricsQueries]);
+
+  // Fetch latest grading session
+  const { data: gradingSessionsData } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId: selectedSubmissionId!, pageNumber: 1, pageSize: 100 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: selectedSubmissionId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!selectedSubmissionId,
+  });
+
+  const latestGradingSession = useMemo(() => {
+    if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
+    const sorted = [...gradingSessionsData.items].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA;
+    });
+    return sorted[0];
+  }, [gradingSessionsData]);
+
+  // Fetch grade items for latest session
+  const { data: gradeItemsData } = useQuery({
+    queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
+    queryFn: () => gradeItemService.getGradeItems({
+      gradingSessionId: latestGradingSession!.id,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!latestGradingSession?.id,
+  });
+
+  const latestGradeItems = gradeItemsData?.items || [];
+
+  // Reset user edits when submission changes
+  useEffect(() => {
+    setUserEdits({
+      rubricScores: {},
+      rubricComments: {},
+    });
+  }, [selectedSubmissionId]);
+
+  // Update questions with grade items data
+  // Use useMemo to derive questions instead of useEffect to avoid infinite loops
+  const questions = useMemo(() => {
+    if (questionsWithRubrics.length === 0) return [];
+    
+    if (latestGradeItems.length > 0) {
+      const sortedItems = [...latestGradeItems].sort((a, b) => {
+        const dateA = new Date(a.updatedAt).getTime();
+        const dateB = new Date(b.updatedAt).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        const createdA = new Date(a.createdAt).getTime();
+        const createdB = new Date(b.createdAt).getTime();
+        return createdB - createdA;
       });
 
-      if (gradingSessionsResult.items.length > 0) {
-        const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA;
-        });
+      const latestGradeItemsMap = new Map<number, GradeItem>();
+      sortedItems.forEach((item) => {
+        if (item.rubricItemId && !latestGradeItemsMap.has(item.rubricItemId)) {
+          latestGradeItemsMap.set(item.rubricItemId, item);
+        }
+      });
 
-        const latestSession = sortedSessions[0];
-        setLatestGradingSession(latestSession);
+      const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
 
-        const gradeItemsResult = await gradeItemService.getGradeItems({
-          gradingSessionId: latestSession.id,
-          pageNumber: 1,
-          pageSize: 1000,
-        });
+      return questionsWithRubrics.map((question) => {
+        const newRubricScores = { ...question.rubricScores };
+        const newRubricComments = { ...(question.rubricComments || {}) };
 
-        const allGradeItems = gradeItemsResult.items;
-        setLatestGradeItems(allGradeItems);
-
-        const sortedItems = [...allGradeItems].sort((a, b) => {
-          const dateA = new Date(a.updatedAt).getTime();
-          const dateB = new Date(b.updatedAt).getTime();
-          if (dateB !== dateA) {
-            return dateB - dateA;
-          }
-          const createdA = new Date(a.createdAt).getTime();
-          const createdB = new Date(b.createdAt).getTime();
-          return createdB - createdA;
-        });
-
-        const latestGradeItemsMap = new Map<number, GradeItem>();
-        sortedItems.forEach((item) => {
-          if (item.rubricItemId) {
-            if (!latestGradeItemsMap.has(item.rubricItemId)) {
-              latestGradeItemsMap.set(item.rubricItemId, item);
+        let questionComment = "";
+        question.rubrics.forEach((rubric) => {
+          const matchingGradeItem = latestGradeItemsForDisplay.find(
+            (item) => item.rubricItemId === rubric.id
+          );
+          if (matchingGradeItem) {
+            // Use user edit if exists, otherwise use grade item score
+            const editKey = `${question.id}_${rubric.id}`;
+            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined 
+              ? userEdits.rubricScores[editKey] 
+              : matchingGradeItem.score;
+            if (!questionComment && matchingGradeItem.comments) {
+              questionComment = matchingGradeItem.comments;
+            }
+          } else {
+            // Check if user has edited this rubric
+            const editKey = `${question.id}_${rubric.id}`;
+            if (userEdits.rubricScores[editKey] !== undefined) {
+              newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
             }
           }
         });
 
-        const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
+        // Use user edit comment if exists, otherwise use from grade item
+        newRubricComments[question.id] = userEdits.rubricComments[question.id] !== undefined
+          ? userEdits.rubricComments[question.id]
+          : questionComment;
 
-        if (latestGradeItemsForDisplay.length > 0) {
-          setQuestions((prevQuestions) => {
-            return prevQuestions.map((question) => {
-              const newRubricScores = { ...question.rubricScores };
-              const newRubricComments = { ...(question.rubricComments || {}) };
-
-              let questionComment = "";
-              question.rubrics.forEach((rubric) => {
-                const matchingGradeItem = latestGradeItemsForDisplay.find(
-                  (item) => item.rubricItemId === rubric.id
-                );
-                if (matchingGradeItem) {
-                  newRubricScores[rubric.id] = matchingGradeItem.score;
-                  if (!questionComment && matchingGradeItem.comments) {
-                    questionComment = matchingGradeItem.comments;
-                  }
-                }
-              });
-
-              newRubricComments[question.id] = questionComment;
-
-              return {
-                ...question,
-                rubricScores: newRubricScores,
-                rubricComments: newRubricComments,
-              };
-            });
-          });
-        }
-
-        if (allGradeItems.length > 0) {
-          const total = allGradeItems.reduce((sum, item) => sum + item.score, 0);
-          setTotalScore(total);
-        } else {
-          setTotalScore(latestSession.grade);
-        }
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch latest grading data:", err);
-    }
-  };
-
-  const checkSemesterStatus = async (submission: Submission) => {
-    // For grading group, we can skip semester check or implement if needed
-    setIsSemesterPassed(false);
-  };
-
-  const fetchQuestionsAndRubrics = async (submission: Submission) => {
-    const allQuestions: QuestionWithRubrics[] = [];
-
-    try {
-      if (!gradingGroup?.assessmentTemplateId) {
-        setQuestions([]);
-        return;
-      }
-
-      const templates = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
+        return {
+          ...question,
+          rubricScores: newRubricScores,
+          rubricComments: newRubricComments,
+        };
       });
-      const template = templates.items.find((t) => t.id === gradingGroup.assessmentTemplateId);
-
-      if (!template) {
-        setQuestions([]);
-        return;
-      }
-
-      let papersData;
-      try {
-        const papers = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: template.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        papersData = papers.items.length > 0 ? papers.items : null;
-      } catch (err) {
-        console.error("Failed to fetch papers:", err);
-        papersData = null;
-      }
-
-      if (!papersData || papersData.length === 0) {
-        setQuestions([]);
-        return;
-      }
-
-      for (const paper of papersData) {
-        let paperQuestions;
-        try {
-          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-            assessmentPaperId: paper.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          paperQuestions = questionsRes.items.length > 0
-            ? [...questionsRes.items].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0))
-            : null;
-        } catch (err) {
-          console.error(`Failed to fetch questions for paper ${paper.id}:`, err);
-          paperQuestions = null;
-        }
-
-        if (!paperQuestions || paperQuestions.length === 0) {
-          continue;
-        }
-
-        for (const question of paperQuestions) {
-          let questionRubrics;
-          try {
-            const rubricsRes = await rubricItemService.getRubricsForQuestion({
-              assessmentQuestionId: question.id,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-            questionRubrics = rubricsRes.items.length > 0 ? rubricsRes.items : null;
-          } catch (err) {
-            console.error(`Failed to fetch rubrics for question ${question.id}:`, err);
-            questionRubrics = null;
-          }
-
-          if (!questionRubrics || questionRubrics.length === 0) {
-            continue;
-          }
-
-          const rubricScores: { [rubricId: number]: number } = {};
-          const rubricComments: { [rubricId: number]: string } = {};
-
-          allQuestions.push({
-            ...question,
-            rubrics: questionRubrics,
-            rubricScores,
-            rubricComments,
-          });
-        }
-      }
-
-      if (allQuestions.length === 0) {
-        setQuestions([]);
-      } else {
-        const sortedQuestions = [...allQuestions].sort((a, b) =>
-          (a.questionNumber || 0) - (b.questionNumber || 0)
-        ).map(q => ({
-          ...q,
-          rubricComments: { ...(q.rubricComments || {}) },
-        }));
-        setQuestions(sortedQuestions);
-      }
-    } catch (err: any) {
-      console.error("Failed to fetch questions and rubrics:", err);
-      setQuestions([]);
     }
-  };
+    
+    // If no grade items, still apply user edits
+    return questionsWithRubrics.map((question) => {
+      const newRubricScores = { ...question.rubricScores };
+      const newRubricComments = { ...(question.rubricComments || {}) };
+
+      question.rubrics.forEach((rubric) => {
+        const editKey = `${question.id}_${rubric.id}`;
+        if (userEdits.rubricScores[editKey] !== undefined) {
+          newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
+        }
+      });
+
+      if (userEdits.rubricComments[question.id] !== undefined) {
+        newRubricComments[question.id] = userEdits.rubricComments[question.id];
+      }
+
+      return {
+        ...question,
+        rubricScores: newRubricScores,
+        rubricComments: newRubricComments,
+      };
+    });
+  }, [questionsWithRubrics, latestGradeItems, userEdits]);
+
+  // Calculate total score separately
+  useEffect(() => {
+    if (latestGradeItems.length > 0) {
+      const total = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
+      setTotalScore(total);
+    } else if (latestGradingSession) {
+      setTotalScore(latestGradingSession.grade || 0);
+    } else {
+      setTotalScore(0);
+    }
+  }, [latestGradeItems, latestGradingSession]);
 
   const handleSave = async () => {
     if (!currentSubmission || !user?.id) {
@@ -466,7 +491,6 @@ export default function GradingGroupPage() {
             return dateB - dateA;
           });
           gradingSessionId = sortedSessions[0].id;
-          setLatestGradingSession(sortedSessions[0]);
         } else {
           message.error("Failed to create grading session");
           setSaving(false);
@@ -508,8 +532,11 @@ export default function GradingGroupPage() {
 
       message.success("Grade saved successfully");
 
-      // Refresh grading data
-      await fetchLatestGradingData(currentSubmission.id);
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      // Invalidate feedback queries
+      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', currentSubmission.id] });
     } catch (err: any) {
       console.error("Failed to save grade:", err);
       message.error(err.message || "Failed to save grade");
@@ -529,35 +556,133 @@ export default function GradingGroupPage() {
       return;
     }
 
+    // Clear any existing polling interval
+    if (autoGradingPollIntervalRef) {
+      clearInterval(autoGradingPollIntervalRef);
+      setAutoGradingPollIntervalRef(null);
+    }
+    
+    // Reset completion message flag
+    hasShownCompletionMessageRef.current = false;
+
     try {
       setAutoGradingLoading(true);
-      await gradingService.autoGrading({
+
+      // Call auto grading API
+      const gradingSession = await gradingService.autoGrading({
         submissionId: currentSubmission.id,
         assessmentTemplateId: gradingGroup.assessmentTemplateId,
       });
 
-      message.success("Auto grading started. Please wait...");
+      // Invalidate queries immediately (including grading history modal)
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
 
-      // Poll for grading completion
-      const pollInterval = setInterval(async () => {
-        try {
-          await fetchLatestGradingData(currentSubmission.id);
-          // Check if grading is complete (you may need to adjust this logic)
-          // For now, just refresh after a delay
-          setTimeout(() => {
-            if (autoGradingPollIntervalRef) {
-              clearInterval(autoGradingPollIntervalRef);
+      // If status is 0 (PROCESSING), start polling
+      if (gradingSession.status === 0) {
+        // Track the session ID we're polling
+        pollingSessionIdRef.current = gradingSession.id;
+        hasShownCompletionMessageRef.current = false;
+        
+        const loadingMessageKey = `auto-grading-${gradingSession.id}`;
+        message.loading({ content: "Auto grading in progress...", key: loadingMessageKey, duration: 0 });
+        
+        // Poll every 2 seconds until status changes
+        const pollInterval = setInterval(async () => {
+          // Check if we've already shown the message or if session ID changed
+          if (hasShownCompletionMessageRef.current || pollingSessionIdRef.current !== gradingSession.id) {
+            clearInterval(pollInterval);
+            setAutoGradingPollIntervalRef(null);
+            return;
+          }
+
+          try {
+            // Fetch sessions and find the specific one we're polling
+            const sessionsResult = await gradingService.getGradingSessions({
+              submissionId: currentSubmission.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+
+            // Find the session we're polling
+            const targetSession = sessionsResult.items.find(s => s.id === pollingSessionIdRef.current);
+
+            // Only process if we found the session and it's still the one we're polling
+            if (targetSession && pollingSessionIdRef.current === gradingSession.id) {
+              // If status is no longer PROCESSING (0), stop polling and show message
+              if (targetSession.status !== 0) {
+                hasShownCompletionMessageRef.current = true;
+                clearInterval(pollInterval);
+                setAutoGradingPollIntervalRef(null);
+                pollingSessionIdRef.current = null;
+                setAutoGradingLoading(false);
+                
+                // Invalidate queries to refresh data (including grading history modal)
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
+                queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+                queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+                
+                // Replace loading message with success/error message
+                if (targetSession.status === 1) {
+                  message.success({ content: "Auto grading completed successfully", key: loadingMessageKey, duration: 3 });
+                } else if (targetSession.status === 2) {
+                  message.error({ content: "Auto grading failed", key: loadingMessageKey, duration: 3 });
+                }
+              }
+            } else if (!targetSession) {
+              // Session not found, might have been deleted or submission changed
+              hasShownCompletionMessageRef.current = true;
+              clearInterval(pollInterval);
               setAutoGradingPollIntervalRef(null);
+              pollingSessionIdRef.current = null;
+              message.destroy(loadingMessageKey);
+              setAutoGradingLoading(false);
             }
-            setAutoGradingLoading(false);
-            message.success("Auto grading completed");
-          }, 5000);
-        } catch (err) {
-          console.error("Failed to poll grading status:", err);
-        }
-      }, 2000);
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+            if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
+              hasShownCompletionMessageRef.current = true;
+              clearInterval(pollInterval);
+              setAutoGradingPollIntervalRef(null);
+              message.destroy(loadingMessageKey);
+              setAutoGradingLoading(false);
+              message.error(err.message || "Failed to check grading status");
+            }
+          }
+        }, 2000); // Poll every 2 seconds
 
-      setAutoGradingPollIntervalRef(pollInterval);
+        setAutoGradingPollIntervalRef(pollInterval);
+
+        // Stop polling after 5 minutes (safety timeout)
+        setTimeout(() => {
+          if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
+            hasShownCompletionMessageRef.current = true;
+            clearInterval(pollInterval);
+            setAutoGradingPollIntervalRef(null);
+            pollingSessionIdRef.current = null;
+            message.destroy(loadingMessageKey);
+            setAutoGradingLoading(false);
+            message.warning("Auto grading is taking longer than expected. Please check the status manually.");
+          }
+        }, 300000); // 5 minutes
+      } else {
+        // Status is not PROCESSING, grading completed immediately
+        setAutoGradingLoading(false);
+        // Invalidate queries to refresh data (including grading history modal)
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+        queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+        
+        if (gradingSession.status === 1) {
+          message.success("Auto grading completed successfully");
+        } else if (gradingSession.status === 2) {
+          message.error("Auto grading failed");
+        }
+      }
     } catch (err: any) {
       console.error("Failed to start auto grading:", err);
       message.error(err.message || "Failed to start auto grading");
@@ -854,37 +979,24 @@ export default function GradingGroupPage() {
   };
 
   const updateRubricScore = (questionId: number, rubricId: number, score: number) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((question) => {
-        if (question.id === questionId) {
-          return {
-            ...question,
-            rubricScores: {
-              ...question.rubricScores,
-              [rubricId]: score,
-            },
-          };
-        }
-        return question;
-      })
-    );
+    const editKey = `${questionId}_${rubricId}`;
+    setUserEdits((prev) => ({
+      ...prev,
+      rubricScores: {
+        ...prev.rubricScores,
+        [editKey]: score,
+      },
+    }));
   };
 
   const updateQuestionComment = (questionId: number, comment: string) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((question) => {
-        if (question.id === questionId) {
-          return {
-            ...question,
-            rubricComments: {
-              ...(question.rubricComments || {}),
-              [questionId]: comment,
-            },
-          };
-        }
-        return question;
-      })
-    );
+    setUserEdits((prev) => ({
+      ...prev,
+      rubricComments: {
+        ...prev.rubricComments,
+        [questionId]: comment,
+      },
+    }));
   };
 
   if (loading) {
@@ -1050,6 +1162,14 @@ export default function GradingGroupPage() {
                                 block
                               >
                                 Get AI Feedback
+                              </Button>
+                              <Button
+                                type="default"
+                                icon={<HistoryOutlined />}
+                                onClick={() => setGradingHistoryModalVisible(true)}
+                                block
+                              >
+                                Grading History
                               </Button>
                             </Space>
                           </div>
@@ -1226,7 +1346,432 @@ export default function GradingGroupPage() {
           </Card>
         </Space>
       </Card>
+
+      {/* Grading History Modal */}
+      {currentSubmission && (
+        <GradingHistoryModal
+          visible={gradingHistoryModalVisible}
+          onClose={() => setGradingHistoryModalVisible(false)}
+          submissionId={currentSubmission.id}
+        />
+      )}
     </div>
+  );
+}
+
+// Grading History Modal Component
+function GradingHistoryModal({
+  visible,
+  onClose,
+  submissionId,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  submissionId: number;
+}) {
+  const { message } = App.useApp();
+  const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set());
+  const [gradeItemHistoryModalVisible, setGradeItemHistoryModalVisible] = useState(false);
+  const [selectedGradeItem, setSelectedGradeItem] = useState<GradeItem | null>(null);
+
+  // Fetch grading history using TanStack Query
+  const { data: gradingHistoryData, isLoading: loadingGradingHistory } = useQuery({
+    queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => gradingService.getGradingSessions({
+      submissionId: submissionId,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: visible && !!submissionId,
+  });
+
+  const gradingHistory = useMemo(() => {
+    if (!gradingHistoryData?.items) return [];
+    return [...gradingHistoryData.items].sort((a, b) => {
+      const dateA = new Date(a.createdAt).getTime();
+      const dateB = new Date(b.createdAt).getTime();
+      return dateB - dateA; // Descending order
+    });
+  }, [gradingHistoryData]);
+
+  // Fetch grade items for expanded sessions
+  const expandedSessionIds = Array.from(expandedSessions);
+  const gradeItemsQueries = useQueries({
+    queries: expandedSessionIds.map((sessionId) => ({
+      queryKey: ['gradeItems', 'byGradingSessionId', sessionId],
+      queryFn: () => gradeItemService.getGradeItems({
+        gradingSessionId: sessionId,
+        pageNumber: 1,
+        pageSize: 1000,
+      }),
+      enabled: visible && expandedSessions.has(sessionId),
+    })),
+  });
+
+  const sessionGradeItems = useMemo(() => {
+    const map: { [sessionId: number]: GradeItem[] } = {};
+    expandedSessionIds.forEach((sessionId, index) => {
+      if (gradeItemsQueries[index]?.data?.items) {
+        map[sessionId] = gradeItemsQueries[index].data.items;
+      }
+    });
+    return map;
+  }, [expandedSessionIds, gradeItemsQueries]);
+
+  // Fetch grade item history
+  const { data: gradeItemHistoryData, isLoading: loadingGradeItemHistory } = useQuery({
+    queryKey: ['gradeItemHistory', selectedGradeItem?.gradingSessionId, selectedGradeItem?.rubricItemDescription],
+    queryFn: async () => {
+      if (!selectedGradeItem) return { items: [] };
+      const result = await gradeItemService.getGradeItems({
+        gradingSessionId: selectedGradeItem.gradingSessionId,
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const filteredItems = result.items.filter(
+        (item) => item.rubricItemDescription === selectedGradeItem.rubricItemDescription
+      );
+      return {
+        items: [...filteredItems].sort((a, b) => {
+          const dateA = new Date(a.updatedAt).getTime();
+          const dateB = new Date(b.updatedAt).getTime();
+          if (dateB !== dateA) {
+            return dateB - dateA;
+          }
+          const createdA = new Date(a.createdAt).getTime();
+          const createdB = new Date(b.createdAt).getTime();
+          return createdB - createdA;
+        }),
+      };
+    },
+    enabled: visible && gradeItemHistoryModalVisible && !!selectedGradeItem,
+  });
+
+  const gradeItemHistory = gradeItemHistoryData?.items || [];
+
+  const { Title, Text } = Typography;
+
+  const getGradingTypeLabel = (type: number) => {
+    switch (type) {
+      case 0:
+        return "AI";
+      case 1:
+        return "LECTURER";
+      case 2:
+        return "BOTH";
+      default:
+        return "UNKNOWN";
+    }
+  };
+
+  const getStatusLabel = (status: number) => {
+    switch (status) {
+      case 0:
+        return <Tag color="processing">PROCESSING</Tag>;
+      case 1:
+        return <Tag color="success">COMPLETED</Tag>;
+      case 2:
+        return <Tag color="error">FAILED</Tag>;
+      default:
+        return <Tag>UNKNOWN</Tag>;
+    }
+  };
+
+  const toVietnamTime = (dateString: string) => {
+    return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+  };
+
+  const handleExpandSession = (sessionId: number) => {
+    const newExpanded = new Set(expandedSessions);
+    if (newExpanded.has(sessionId)) {
+      newExpanded.delete(sessionId);
+    } else {
+      newExpanded.add(sessionId);
+    }
+    setExpandedSessions(newExpanded);
+  };
+
+  const handleOpenGradeItemHistory = (gradeItem: GradeItem) => {
+    setSelectedGradeItem(gradeItem);
+    setGradeItemHistoryModalVisible(true);
+  };
+
+  const columns = [
+    {
+      title: "Rubric Item",
+      dataIndex: "rubricItemDescription",
+      key: "rubricItemDescription",
+      width: "25%",
+    },
+    {
+      title: "Question",
+      dataIndex: "questionText",
+      key: "questionText",
+      width: "15%",
+      render: (text: string) => text || "N/A",
+    },
+    {
+      title: "Max Score",
+      dataIndex: "rubricItemMaxScore",
+      key: "rubricItemMaxScore",
+      width: "12%",
+      align: "center" as const,
+      render: (score: number) => <Tag color="blue">{score.toFixed(2)}</Tag>,
+    },
+    {
+      title: "Score",
+      dataIndex: "score",
+      key: "score",
+      width: "12%",
+      align: "center" as const,
+      render: (score: number) => <Tag color={score > 0 ? "green" : "default"}>{score.toFixed(2)}</Tag>,
+    },
+    {
+      title: "Comments",
+      dataIndex: "comments",
+      key: "comments",
+      width: "20%",
+      render: (text: string) => (
+        <Text
+          style={{
+            fontSize: "12px",
+            whiteSpace: "normal",
+            wordWrap: "break-word",
+            wordBreak: "break-word"
+          }}
+        >
+          {text || "N/A"}
+        </Text>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: "16%",
+      align: "center" as const,
+      render: (_: any, record: GradeItem) => (
+        <Button
+          type="link"
+          size="small"
+          icon={<HistoryOutlined />}
+          onClick={() => handleOpenGradeItemHistory(record)}
+        >
+          Edit History
+        </Button>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <Modal
+        title="Grading History"
+        open={visible}
+        onCancel={onClose}
+        footer={[
+          <Button key="close" onClick={onClose}>
+            Close
+          </Button>,
+        ]}
+        width={1200}
+      >
+        <Spin spinning={loadingGradingHistory}>
+          {gradingHistory.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <Text type="secondary">No grading history available</Text>
+            </div>
+          ) : (
+            <Collapse
+              items={gradingHistory.map((session) => {
+                const isExpanded = expandedSessions.has(session.id);
+                const gradeItems = sessionGradeItems[session.id] || [];
+
+                const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
+
+                return {
+                  key: session.id.toString(),
+                  label: (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
+                      <div>
+                        <Text strong>Session #{session.id}</Text>
+                        <Space style={{ marginLeft: 16 }}>
+                          {getStatusLabel(session.status)}
+                          <Tag>{getGradingTypeLabel(session.gradingType)}</Tag>
+                          <Tag color="blue">Grade: {session.grade}</Tag>
+                          {gradeItems.length > 0 && (
+                            <Tag color="green">Total: {totalScore.toFixed(2)}</Tag>
+                          )}
+                        </Space>
+                      </div>
+                      <Text type="secondary" style={{ fontSize: "12px" }}>
+                        {toVietnamTime(session.createdAt).format("DD/MM/YYYY HH:mm:ss")}
+                      </Text>
+                    </div>
+                  ),
+                  children: (
+                    <div>
+                      <Descriptions bordered size="small" column={2} style={{ marginBottom: 16 }}>
+                        <Descriptions.Item label="Grading Session ID">{session.id}</Descriptions.Item>
+                        <Descriptions.Item label="Status">{getStatusLabel(session.status)}</Descriptions.Item>
+                        <Descriptions.Item label="Grading Type">
+                          <Tag>{getGradingTypeLabel(session.gradingType)}</Tag>
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Grade">{session.grade}</Descriptions.Item>
+                        <Descriptions.Item label="Grade Item Count">{session.gradeItemCount}</Descriptions.Item>
+                        <Descriptions.Item label="Created At">
+                          {toVietnamTime(session.createdAt).format("DD/MM/YYYY HH:mm:ss")}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Updated At">
+                          {toVietnamTime(session.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
+                        </Descriptions.Item>
+                      </Descriptions>
+
+                      {!isExpanded ? (
+                        <Button
+                          type="link"
+                          onClick={() => handleExpandSession(session.id)}
+                          style={{ padding: 0 }}
+                        >
+                          View grade items details
+                        </Button>
+                      ) : (
+                        <div>
+                          <Title level={5} style={{ marginTop: 16, marginBottom: 8 }}>
+                            Grade Items ({gradeItems.length})
+                          </Title>
+                          {gradeItems.length === 0 ? (
+                            <Text type="secondary">No grade items</Text>
+                          ) : (
+                            <Table
+                              columns={columns}
+                              dataSource={gradeItems}
+                              rowKey="id"
+                              pagination={false}
+                              size="small"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ),
+                };
+              })}
+            />
+          )}
+        </Spin>
+      </Modal>
+
+      {/* Grade Item History Modal */}
+      <Modal
+        title={
+          <div>
+            <Text strong>Grade Item Edit History</Text>
+            {selectedGradeItem && (
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  Rubric: {selectedGradeItem.rubricItemDescription} |
+                  Total edits: {gradeItemHistory.length}
+                </Text>
+              </div>
+            )}
+          </div>
+        }
+        open={gradeItemHistoryModalVisible}
+        onCancel={() => {
+          setGradeItemHistoryModalVisible(false);
+          setSelectedGradeItem(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setGradeItemHistoryModalVisible(false);
+            setSelectedGradeItem(null);
+          }}>
+            Close
+          </Button>,
+        ]}
+        width={900}
+      >
+        <Spin spinning={loadingGradeItemHistory}>
+          {gradeItemHistory.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <Text type="secondary">No edit history available</Text>
+            </div>
+          ) : (
+            <Table
+              columns={[
+                {
+                  title: "Edit #",
+                  key: "index",
+                  width: "8%",
+                  align: "center" as const,
+                  render: (_: any, __: any, index: number) => (
+                    <Tag color={index === 0 ? "green" : "default"}>
+                      {index + 1}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Score",
+                  dataIndex: "score",
+                  key: "score",
+                  width: "15%",
+                  align: "center" as const,
+                  render: (score: number) => (
+                    <Tag color={score > 0 ? "green" : "default"}>
+                      {score.toFixed(2)}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: "Comments",
+                  dataIndex: "comments",
+                  key: "comments",
+                  width: "35%",
+                  render: (text: string) => (
+                    <Text
+                      style={{
+                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        wordWrap: "break-word",
+                        wordBreak: "break-word"
+                      }}
+                    >
+                      {text || "N/A"}
+                    </Text>
+                  ),
+                },
+                {
+                  title: "Updated At",
+                  dataIndex: "updatedAt",
+                  key: "updatedAt",
+                  width: "21%",
+                  render: (date: string) => (
+                    <Text style={{ fontSize: "12px" }}>
+                      {toVietnamTime(date).format("DD/MM/YYYY HH:mm:ss")}
+                    </Text>
+                  ),
+                },
+                {
+                  title: "Created At",
+                  dataIndex: "createdAt",
+                  key: "createdAt",
+                  width: "21%",
+                  render: (date: string) => (
+                    <Text style={{ fontSize: "12px" }}>
+                      {toVietnamTime(date).format("DD/MM/YYYY HH:mm:ss")}
+                    </Text>
+                  ),
+                },
+              ]}
+              dataSource={gradeItemHistory}
+              rowKey="id"
+              pagination={false}
+              size="small"
+            />
+          )}
+        </Spin>
+      </Modal>
+    </>
   );
 }
 

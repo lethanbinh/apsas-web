@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useMemo } from "react";
 import { Modal, Typography, Spin, Collapse, Table, Tag, Space, Divider, List } from "antd";
 import { Button } from "../ui/Button";
 import styles from "./PaperAssignmentModal.module.css";
@@ -15,6 +15,8 @@ import type { ColumnsType } from "antd/es/table";
 import {
   AssessmentTemplate,
 } from "@/services/assessmentTemplateService";
+import { useQuery, useQueries } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -33,121 +35,149 @@ export default function PaperAssignmentModal({
   classAssessmentId,
   classId,
 }: PaperAssignmentModalProps) {
-  const [loading, setLoading] = useState(false);
-  const [papers, setPapers] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
-  const [rubrics, setRubrics] = useState<{ [questionId: number]: RubricItem[] }>({});
-  const [files, setFiles] = useState<any[]>([]);
-  const [templateDescription, setTemplateDescription] = useState<string>("");
-  const [assessmentTemplateId, setAssessmentTemplateId] = useState<number | null>(null);
+  // Determine assessmentTemplateId
+  const effectiveClassId = classId || (typeof window !== 'undefined' ? Number(localStorage.getItem("selectedClassId")) : undefined);
 
-  useEffect(() => {
-    if (isOpen) {
-      if (template?.id) {
-        setAssessmentTemplateId(template.id);
-        fetchRequirementData(template.id);
-      } else if (classAssessmentId && classId) {
-        fetchRequirementDataFromClassAssessment();
+  // Fetch class assessments if needed
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: effectiveClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: isOpen && !!classAssessmentId && !!effectiveClassId && !template?.id,
+  });
+
+  // Determine assessmentTemplateId
+  const assessmentTemplateId = useMemo(() => {
+    if (template?.id) {
+      return template.id;
+    }
+    
+    if (classAssessmentId && classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
+      if (classAssessment?.assessmentTemplateId) {
+        return classAssessment.assessmentTemplateId;
       }
     }
-  }, [isOpen, template, classAssessmentId, classId]);
+    
+    return null;
+  }, [template?.id, classAssessmentId, classAssessmentsData]);
 
-  const fetchRequirementDataFromClassAssessment = async () => {
-    try {
-      setLoading(true);
+  // Fetch template details
+  const { data: templatesData } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: isOpen && !!assessmentTemplateId,
+  });
 
-      // Get assessmentTemplateId from classAssessment
-      const classAssessmentsRes = await classAssessmentService.getClassAssessments({
-        classId: classId!,
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const classAssessment = classAssessmentsRes.items.find(
-        (ca) => ca.id === classAssessmentId
-      );
-
-      if (!classAssessment?.assessmentTemplateId) {
-        setLoading(false);
-        return;
-      }
-
-      const templateId = classAssessment.assessmentTemplateId;
-      setAssessmentTemplateId(templateId);
-      await fetchRequirementData(templateId);
-    } catch (err) {
-      console.error("Failed to fetch requirement data:", err);
-      setLoading(false);
+  const templateData = useMemo(() => {
+    if (template) return template;
+    if (templatesData?.items && assessmentTemplateId) {
+      return templatesData.items.find(t => t.id === assessmentTemplateId);
     }
-  };
+    return null;
+  }, [template, templatesData, assessmentTemplateId]);
 
-  const fetchRequirementData = async (templateId: number) => {
-    try {
-      setLoading(true);
+  const templateDescription = templateData?.description || "";
 
-      // Fetch template
-      const templates = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const templateData = templates.items.find((t) => t.id === templateId);
-      
-      if (templateData) {
-        setTemplateDescription(templateData.description || "");
-      }
+  // Fetch files
+  const { data: filesData } = useQuery({
+    queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentFileService.getFilesForTemplate({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: isOpen && !!assessmentTemplateId,
+  });
 
-      // Fetch files
-      try {
-        const filesRes = await assessmentFileService.getFilesForTemplate({
-          assessmentTemplateId: templateId,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        setFiles(filesRes.items);
-      } catch (err) {
-        console.error("Failed to fetch files:", err);
-      }
+  const files = filesData?.items || [];
 
-      // Fetch papers
-      const papersRes = await assessmentPaperService.getAssessmentPapers({
-        assessmentTemplateId: templateId,
+  // Fetch papers
+  const { data: papersData } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplateId!,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: isOpen && !!assessmentTemplateId,
+  });
+
+  const papers = papersData?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
         pageNumber: 1,
         pageSize: 100,
-      });
-      setPapers(papersRes.items);
+      }),
+      enabled: isOpen && papers.length > 0,
+    })),
+  });
 
-      // Fetch questions for each paper
-      const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-      for (const paper of papersRes.items) {
-        const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-          assessmentPaperId: paper.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        // Sort questions by questionNumber
-        const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+  // Map questions by paperId
+  const questions = useMemo(() => {
+    const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
+    papers.forEach((paper, index) => {
+      const query = questionsQueries[index];
+      if (query.data?.items) {
+        const sortedQuestions = [...query.data.items].sort((a, b) => 
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         questionsMap[paper.id] = sortedQuestions;
-
-        // Fetch rubrics for each question (LECTURER CAN SEE RUBRICS)
-        const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-        for (const question of questionsRes.items) {
-          const rubricsRes = await rubricItemService.getRubricsForQuestion({
-            assessmentQuestionId: question.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          rubricsMap[question.id] = rubricsRes.items;
-        }
-        setRubrics((prev) => ({ ...prev, ...rubricsMap }));
       }
-      setQuestions(questionsMap);
-    } catch (err) {
-      console.error("Failed to fetch requirement data:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    });
+    return questionsMap;
+  }, [papers, questionsQueries]);
+
+  // Get all question IDs for fetching rubrics
+  const allQuestionIds = useMemo(() => {
+    return Object.values(questions).flat().map(q => q.id);
+  }, [questions]);
+
+  // Fetch rubrics for all questions
+  const rubricsQueries = useQueries({
+    queries: allQuestionIds.map((questionId) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(questionId),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: questionId,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: isOpen && allQuestionIds.length > 0,
+    })),
+  });
+
+  // Map rubrics by questionId
+  const rubrics = useMemo(() => {
+    const rubricsMap: { [questionId: number]: RubricItem[] } = {};
+    allQuestionIds.forEach((questionId, index) => {
+      const query = rubricsQueries[index];
+      if (query.data?.items) {
+        rubricsMap[questionId] = query.data.items;
+      }
+    });
+    return rubricsMap;
+  }, [allQuestionIds, rubricsQueries]);
+
+  // Calculate loading state
+  const loading = (
+    (!!classAssessmentId && !!effectiveClassId && !template?.id && !classAssessmentsData) ||
+    (!!assessmentTemplateId && !templatesData) ||
+    (!!assessmentTemplateId && !filesData) ||
+    (!!assessmentTemplateId && !papersData) ||
+    questionsQueries.some(q => q.isLoading) ||
+    rubricsQueries.some(q => q.isLoading)
+  );
 
   const getQuestionColumns = (question: AssessmentQuestion): ColumnsType<RubricItem> => [
     {
@@ -192,7 +222,7 @@ export default function PaperAssignmentModal({
     <Modal
       title={
         <Title level={4} style={{ margin: 0 }}>
-          {template?.name || "Assignment Paper"}
+          {templateData?.name || template?.name || "Assignment Paper"}
         </Title>
       }
       open={isOpen}
