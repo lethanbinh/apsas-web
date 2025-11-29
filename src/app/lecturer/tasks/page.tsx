@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import styles from "./Tasks.module.css";
 import { useLecturer } from "@/hooks/useLecturer";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/services/assignRequestService";
 import { Spin, Select, App } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
+import { queryKeys } from "@/lib/react-query";
 
 const getStatusTag = (status: number) => {
   // Map to 3 statuses: Pending (1,2,4), Approved (5), Rejected (3)
@@ -32,39 +34,21 @@ const TasksPageContent = () => {
     Record<string, boolean>
   >({});
   const { lecturerId, isLoading: isLecturerLoading } = useLecturer();
-  const [allTasks, setAllTasks] = useState<AssignRequestItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
 
-  useEffect(() => {
-    if (isLecturerLoading) {
-      return;
-    }
-    if (!lecturerId) {
-      setIsLoading(false);
-      return;
-    }
+  // Fetch tasks using TanStack Query
+  const { data: tasksResponse, isLoading, error: queryError } = useQuery({
+    queryKey: queryKeys.assignRequests.byLecturerId(Number(lecturerId!)),
+    queryFn: () => assignRequestService.getAssignRequests({
+      lecturerId: Number(lecturerId!),
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!lecturerId && !isLecturerLoading,
+  });
 
-    const fetchTasks = async () => {
-      try {
-        setIsLoading(true);
-        const response = await assignRequestService.getAssignRequests({
-          lecturerId: Number(lecturerId),
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        setAllTasks(response.items);
-      } catch (err: any) {
-        console.error("Failed to fetch tasks:", err);
-        setError("Failed to load tasks.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchTasks();
-  }, [lecturerId, isLecturerLoading]);
+  const allTasks = tasksResponse?.items || [];
+  const error = queryError ? "Failed to load tasks." : null;
 
   const semesterOptions = useMemo(() => {
     const uniqueSemesters = [

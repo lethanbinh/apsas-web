@@ -20,6 +20,7 @@ import {
   Select,
 } from "antd";
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import styles from "./Tasks.module.css";
 import "./TasksGlobal.css";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
@@ -41,6 +42,8 @@ import {
   AssessmentFile,
 } from "@/services/assessmentFileService";
 import { gradingService } from "@/services/gradingService";
+import { queryKeys } from "@/lib/react-query";
+import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { DatabaseOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import {
@@ -1332,14 +1335,8 @@ export const LecturerTaskContent = ({
   task: AssignRequestItem;
   lecturerId: number;
 }) => {
-  const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
+  const queryClient = useCustomQueryClient();
   const [template, setTemplate] = useState<AssessmentTemplate | null>(null);
-  const [papers, setPapers] = useState<AssessmentPaper[]>([]);
-  const [allQuestions, setAllQuestions] = useState<{
-    [paperId: number]: AssessmentQuestion[];
-  }>({});
-  const [files, setFiles] = useState<AssessmentFile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedKey, setSelectedKey] = useState<string>("template-details");
 
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
@@ -1435,46 +1432,22 @@ export const LecturerTaskContent = ({
     }
   };
 
-  const fetchTemplates = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch all templates for this lecturer
+  // Fetch templates using TanStack Query
+  const { data: templatesResponse, isLoading: isLoadingTemplates } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
+    queryFn: async () => {
       const response = await assessmentTemplateService.getAssessmentTemplates({
         lecturerId: lecturerId,
         pageNumber: 1,
         pageSize: 1000,
       });
-      
-      // Filter templates by courseElementId (all templates for this course element)
-      const courseElementTemplates = response.items.filter(
-        (t) => t.courseElementId === task.courseElementId
-      );
-      
-      setTemplates(courseElementTemplates);
-      
-      // Find template for current assign request (default selected template)
-      const currentTemplate = courseElementTemplates.find(
-        (t) => t.assignRequestId === task.id
-      );
-      
-      // If found, set it as selected template
-      if (currentTemplate) {
-        setTemplate(currentTemplate);
-        await fetchAllData(currentTemplate.id);
-      } else if (courseElementTemplates.length > 0) {
-        // If no template for current assign request, use the first one
-        setTemplate(courseElementTemplates[0]);
-        await fetchAllData(courseElementTemplates[0].id);
-      } else {
-        // No templates found
-        setTemplate(null);
-      }
-    } catch (error) {
-      console.error("Failed to fetch templates:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      // Filter templates by courseElementId
+      return response.items.filter((t) => t.courseElementId === task.courseElementId);
+    },
+  });
+
+  const templates = templatesResponse || [];
+  const isLoading = isLoadingTemplates;
 
   const refreshPapers = async (shouldResetStatus = false) => {
     if (!template) return;

@@ -193,6 +193,42 @@ const ManageUsersPageContent: React.FC = () => {
     }
   };
 
+  // Generate pagination items (max 6 pages, with ellipsis for remaining)
+  const getPaginationItems = (): (number | string)[] => {
+    if (totalPages <= 6) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const items: (number | string)[] = [];
+    
+    if (currentPage <= 4) {
+      // Show: 1, 2, 3, 4, 5, 6, ..., totalPages
+      for (let i = 1; i <= 6; i++) {
+        items.push(i);
+      }
+      items.push('...');
+      items.push(totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      // Show: 1, ..., totalPages-5, totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages
+      items.push(1);
+      items.push('...');
+      for (let i = totalPages - 5; i <= totalPages; i++) {
+        items.push(i);
+      }
+    } else {
+      // Show: 1, ..., currentPage-1, currentPage, currentPage+1, ..., totalPages
+      items.push(1);
+      items.push('...');
+      items.push(currentPage - 1);
+      items.push(currentPage);
+      items.push(currentPage + 1);
+      items.push('...');
+      items.push(totalPages);
+    }
+
+    return items;
+  };
+
   // Fetch all accounts for export
   const fetchAllAccounts = async (): Promise<User[]> => {
     const allUsers: User[] = [];
@@ -259,7 +295,6 @@ const ManageUsersPageContent: React.FC = () => {
           "Email": user.email || "",
           "Phone Number": user.phoneNumber || "",
           "Full Name": user.fullName || "",
-          "Avatar URL": user.avatar || "",
           "Address": user.address || "",
           "Gender": user.gender !== undefined ? genderMap[user.gender] || user.gender.toString() : "",
           "Date of Birth": user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
@@ -280,7 +315,6 @@ const ManageUsersPageContent: React.FC = () => {
         { wch: 25 }, // Email
         { wch: 15 }, // Phone Number
         { wch: 20 }, // Full Name
-        { wch: 30 }, // Avatar URL
         { wch: 40 }, // Address
         { wch: 10 }, // Gender
         { wch: 15 }, // Date of Birth
@@ -354,7 +388,6 @@ const ManageUsersPageContent: React.FC = () => {
         const day = Math.floor(Math.random() * 28) + 1;
         const dateOfBirth = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         
-        const avatarUrl = i % 3 === 0 ? `https://example.com/avatar${i}.jpg` : "";
         const password = `Pass${i}@123`;
 
         sampleAccounts.push({
@@ -363,7 +396,6 @@ const ManageUsersPageContent: React.FC = () => {
           "Email": email,
           "Phone Number": phoneNumber,
           "Full Name": fullName,
-          "Avatar URL": avatarUrl,
           "Address": address,
           "Gender": gender,
           "Date of Birth": dateOfBirth,
@@ -383,7 +415,6 @@ const ManageUsersPageContent: React.FC = () => {
         { wch: 25 }, // Email
         { wch: 15 }, // Phone Number
         { wch: 20 }, // Full Name
-        { wch: 30 }, // Avatar URL
         { wch: 40 }, // Address
         { wch: 10 }, // Gender
         { wch: 15 }, // Date of Birth
@@ -473,14 +504,6 @@ const ManageUsersPageContent: React.FC = () => {
     if (row["Password"].toString().trim().length < 6) {
       return `Row ${rowNum}: Password must be at least 6 characters`;
     }
-    // Optional: Avatar URL validation
-    if (row["Avatar URL"] && row["Avatar URL"].toString().trim()) {
-      try {
-        new URL(row["Avatar URL"].toString().trim());
-      } catch {
-        return `Row ${rowNum}: Invalid Avatar URL format`;
-      }
-    }
 
     return null;
   };
@@ -560,10 +583,6 @@ const ManageUsersPageContent: React.FC = () => {
           role: parseInt(row["Role"].toString().trim()),
           password: row["Password"].toString().trim(),
         };
-
-        if (row["Avatar URL"] && row["Avatar URL"].toString().trim()) {
-          accountData.avatar = row["Avatar URL"].toString().trim();
-        }
 
         // Create account
         try {
@@ -782,15 +801,24 @@ const ManageUsersPageContent: React.FC = () => {
           <button onClick={prevPage} disabled={currentPage === 1}>
             Previous
           </button>
-          {[...Array(totalPages)].map((_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => paginate(i + 1)}
-              className={currentPage === i + 1 ? styles.activePage : ""}
-            >
-              {i + 1}
-            </button>
-          ))}
+          {getPaginationItems().map((item, index) => {
+            if (item === '...') {
+              return (
+                <span key={`ellipsis-${index}`} className={styles.ellipsis}>
+                  ...
+                </span>
+              );
+            }
+            return (
+              <button
+                key={item}
+                onClick={() => paginate(item as number)}
+                className={currentPage === item ? styles.activePage : ""}
+              >
+                {item}
+              </button>
+            );
+          })}
           <button onClick={nextPage} disabled={currentPage === totalPages}>
             Next
           </button>

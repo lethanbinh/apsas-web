@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MyCoursesGrid from "@/components/classes/MyCoursesGrid";
 import { Layout } from "@/components/layout/Layout";
 import { classService, StudentInClass } from "@/services/classService";
@@ -8,6 +9,7 @@ import { SimpleCourseCardProps } from "@/components/classes/SimpleCourseCard";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudent } from "@/hooks/useStudent";
 import { semesterService, Semester } from "@/services/semesterService";
+import { queryKeys } from "@/lib/react-query";
 
 function mapStudentInClassToCardProps(
   studentClasses: StudentInClass[]
@@ -25,62 +27,42 @@ function mapStudentInClassToCardProps(
 export default function MyClassesPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
   const { studentId, isLoading: isStudentLoading } = useStudent();
-  const [isLoading, setIsLoading] = useState(true);
-  const [allCourses, setAllCourses] = useState<StudentInClass[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [currentSemesterCode, setCurrentSemesterCode] = useState<string | null>(null);
-  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Fetch all semesters for sorting
-  useEffect(() => {
-    const fetchSemesters = async () => {
-      try {
-        const semesters = await semesterService.getSemesters({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        setAllSemesters(semesters);
-        
-        const now = new Date();
-        const activeSemester = semesters.find((sem) => {
-          const startDate = new Date(sem.startDate);
-          const endDate = new Date(sem.endDate);
-          return now >= startDate && now <= endDate;
-        });
-        if (activeSemester) {
-          setCurrentSemesterCode(activeSemester.semesterCode);
-        }
-      } catch (error) {
-        console.error("Failed to fetch semesters:", error);
+  // Fetch all semesters
+  const { data: allSemesters = [], isLoading: isLoadingSemesters } = useQuery({
+    queryKey: queryKeys.semesters.list(),
+    queryFn: async () => {
+      const semesters = await semesterService.getSemesters({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      
+      // Find current active semester
+      const now = new Date();
+      const activeSemester = semesters.find((sem) => {
+        const startDate = new Date(sem.startDate);
+        const endDate = new Date(sem.endDate);
+        return now >= startDate && now <= endDate;
+      });
+      if (activeSemester) {
+        setCurrentSemesterCode(activeSemester.semesterCode);
       }
-    };
-    fetchSemesters();
-  }, []);
+      
+      return semesters;
+    },
+  });
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!user || !studentId) {
-        setIsLoading(false);
-        return;
-      }
+  // Fetch classes by student ID
+  const { data: allCourses = [], isLoading: isLoadingClasses } = useQuery({
+    queryKey: queryKeys.studentClasses.byStudentId(studentId!),
+    queryFn: () => classService.getClassesByStudentId(studentId!),
+    enabled: !!user && !!studentId,
+  });
 
-      try {
-        setIsLoading(true);
-        const studentClasses = await classService.getClassesByStudentId(
-          studentId
-        );
-        setAllCourses(studentClasses);
-      } catch (error) {
-        console.error("Failed to fetch courses:", error);
-        setAllCourses([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCourses();
-  }, [user, studentId]);
+  const isLoading = isLoadingSemesters || isLoadingClasses;
 
   // Set default semester to current active semester (only once on initial load)
   useEffect(() => {
@@ -195,6 +177,14 @@ export default function MyClassesPage() {
     return (
       <Layout>
         <div>Loading...</div>
+      </Layout>
+    );
+  }
+
+  if (!user || !studentId) {
+    return (
+      <Layout>
+        <div>No student profile found.</div>
       </Layout>
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MyCoursesGrid from "@/components/classes/MyCoursesGrid";
 import { Layout } from "@/components/layout/Layout";
 import { ClassInfo, classService } from "@/services/classService";
@@ -8,6 +9,7 @@ import { lecturerService } from "@/services/lecturerService";
 import { SimpleCourseCardProps } from "@/components/classes/SimpleCourseCard";
 import { useAuth } from "@/hooks/useAuth";
 import { semesterService, Semester } from "@/services/semesterService";
+import { queryKeys } from "@/lib/react-query";
 
 function mapApiDataToCardProps(classes: ClassInfo[]): SimpleCourseCardProps[] {
   return classes.map((cls) => ({
@@ -22,85 +24,66 @@ function mapApiDataToCardProps(classes: ClassInfo[]): SimpleCourseCardProps[] {
 
 export default function MyClassesPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [allCourses, setAllCourses] = useState<ClassInfo[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [currentSemesterCode, setCurrentSemesterCode] = useState<string | null>(null);
-  const [allSemesters, setAllSemesters] = useState<Semester[]>([]);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Fetch all semesters for sorting
-  useEffect(() => {
-    const fetchSemesters = async () => {
-      try {
-        const semesters = await semesterService.getSemesters({
-          pageNumber: 1,
-          pageSize: 1000,
-        });
-        setAllSemesters(semesters);
-        
-        const now = new Date();
-        const activeSemester = semesters.find((sem) => {
-          const startDate = new Date(sem.startDate);
-          const endDate = new Date(sem.endDate);
-          return now >= startDate && now <= endDate;
-        });
-        if (activeSemester) {
-          setCurrentSemesterCode(activeSemester.semesterCode);
-        }
-      } catch (error) {
-        console.error("Failed to fetch semesters:", error);
+  // Fetch all semesters
+  const { data: allSemesters = [], isLoading: isLoadingSemesters } = useQuery({
+    queryKey: queryKeys.semesters.list(),
+    queryFn: async () => {
+      const semesters = await semesterService.getSemesters({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      
+      // Find current active semester
+      const now = new Date();
+      const activeSemester = semesters.find((sem) => {
+        const startDate = new Date(sem.startDate);
+        const endDate = new Date(sem.endDate);
+        return now >= startDate && now <= endDate;
+      });
+      if (activeSemester) {
+        setCurrentSemesterCode(activeSemester.semesterCode);
       }
-    };
-    fetchSemesters();
-  }, []);
+      
+      return semesters;
+    },
+  });
 
-  useEffect(() => {
-    const fetchCourses = async () => {
-      if (!user) {
-        return;
-      }
+  // Fetch lecturers list
+  const { data: lecturers = [] } = useQuery({
+    queryKey: queryKeys.lecturers.list(),
+    queryFn: () => lecturerService.getLecturerList(),
+    enabled: !!user,
+  });
 
-      try {
-        setIsLoading(true);
+  // Get current lecturer ID
+  const currentLecturerId = useMemo(() => {
+    if (!user || !lecturers.length) return null;
+    const currentUserAccountId = String(user.id);
+    const matchingLecturer = lecturers.find(
+      (lec) => lec.accountId === currentUserAccountId
+    );
+    if (!matchingLecturer) return null;
+    const lecturerId = parseInt(matchingLecturer.lecturerId, 10);
+    return isNaN(lecturerId) ? null : lecturerId;
+  }, [user, lecturers]);
 
-        const lecturers = await lecturerService.getLecturerList();
-        const currentUserAccountId = String(user.id);
+  // Fetch classes by lecturer ID
+  const { data: classesResponse, isLoading: isLoadingClasses } = useQuery({
+    queryKey: queryKeys.lecturerClasses.byLecturerId(currentLecturerId!),
+    queryFn: () => classService.getClassList({
+      pageNumber: 1,
+      pageSize: 1000,
+      lecturerId: currentLecturerId!,
+    }),
+    enabled: !!currentLecturerId,
+  });
 
-        const matchingLecturer = lecturers.find(
-          (lec) => lec.accountId === currentUserAccountId
-        );
-
-        if (!matchingLecturer) {
-          console.error("No matching lecturer profile found for account ID.");
-          setAllCourses([]);
-          return;
-        }
-
-        const currentLecturerId = parseInt(matchingLecturer.lecturerId, 10);
-
-        if (isNaN(currentLecturerId)) {
-          console.error("Invalid lecturer ID.");
-          setAllCourses([]);
-          return;
-        }
-
-        const { classes } = await classService.getClassList({
-          pageNumber: 1,
-          pageSize: 1000,
-          lecturerId: currentLecturerId,
-        });
-
-        setAllCourses(classes);
-      } catch (error) {
-        console.error("Failed to fetch courses:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchCourses();
-  }, [user]);
+  const allCourses = classesResponse?.classes || [];
+  const isLoading = isLoadingSemesters || isLoadingClasses;
 
   // Set default semester to current active semester (only once on initial load)
   useEffect(() => {
@@ -201,6 +184,14 @@ export default function MyClassesPage() {
     return (
       <Layout>
         <div>Loading...</div>
+      </Layout>
+    );
+  }
+
+  if (!user || !currentLecturerId) {
+    return (
+      <Layout>
+        <div>No lecturer profile found.</div>
       </Layout>
     );
   }

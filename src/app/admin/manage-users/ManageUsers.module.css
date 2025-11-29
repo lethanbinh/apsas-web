@@ -153,3 +153,11 @@
   border-color: #4cbfb6;
   font-weight: 600;
 }
+
+.pagination .ellipsis {
+  padding: 0.5rem 0.5rem;
+  color: #4b5563;
+  /* text-gray-700 */
+  user-select: none;
+  cursor: default;
+}
