@@ -57,6 +57,13 @@ export interface GradeItem {
   rubricItemMaxScore: number;
 }
 
+export interface GradingLog {
+  id: number;
+  action: string;
+  details: string;
+  timestamp: string;
+}
+
 export interface GradingSession {
   id: number;
   grade: number;
@@ -69,7 +76,7 @@ export interface GradingSession {
   updatedAt: string;
   gradeItemCount: number;
   gradeItems: GradeItem[];
-  gradingLogs: any[];
+  gradingLogs: GradingLog[];
 }
 
 export interface PaginatedGradingSessionsResponse {

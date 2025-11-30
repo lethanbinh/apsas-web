@@ -78,8 +78,8 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
       classId: effectiveClassId!,
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: open && !!effectiveClassId && (!!classAssessmentId || !!courseElementId),
   });
@@ -88,18 +88,18 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   const assessmentTemplateId = useMemo(() => {
     if (propAssessmentTemplateId) {
       return propAssessmentTemplateId;
-    }
-    
+          }
+
     if (classAssessmentId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
-      if (classAssessment?.assessmentTemplateId) {
+              if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
-      }
+              }
     }
     
     if (courseElementId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === courseElementId);
-      if (classAssessment?.assessmentTemplateId) {
+            if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
@@ -111,8 +111,8 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
     queryFn: () => assignRequestService.getAssignRequests({
-      pageNumber: 1,
-      pageSize: 1000,
+              pageNumber: 1,
+              pageSize: 1000,
     }),
     enabled: open && !!assessmentTemplateId,
   });
@@ -127,8 +127,8 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
-      pageNumber: 1,
-      pageSize: 1000,
+          pageNumber: 1,
+          pageSize: 1000,
     }),
     enabled: open && !!assessmentTemplateId,
   });
@@ -139,32 +139,32 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     return templatesData.items.find((t) => {
       if (t.id !== assessmentTemplateId) return false;
       if (!t.assignRequestId) return false;
-      return approvedAssignRequestIds.has(t.assignRequestId);
+        return approvedAssignRequestIds.has(t.assignRequestId);
     }) || null;
   }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
 
   const templateDescription = template?.description || "";
 
-  // Fetch files
+      // Fetch files
   const { data: filesData } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
       assessmentTemplateId: assessmentTemplateId!,
-      pageNumber: 1,
-      pageSize: 100,
+          pageNumber: 1,
+          pageSize: 100,
     }),
     enabled: open && !!assessmentTemplateId && !!template,
   });
 
   const files = filesData?.items || [];
 
-  // Fetch papers
+      // Fetch papers
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
       assessmentTemplateId: assessmentTemplateId!,
-      pageNumber: 1,
-      pageSize: 100,
+          pageNumber: 1,
+          pageSize: 100,
     }),
     enabled: open && !!assessmentTemplateId && !!template,
   });
@@ -176,13 +176,13 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
       queryFn: () => assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 100,
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
       }),
       enabled: open && papers.length > 0,
     })),
-  });
+          });
 
   // Map questions by paperId
   const questions = useMemo(() => {
@@ -191,9 +191,9 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
       const query = questionsQueries[index];
       if (query.data?.items) {
         const sortedQuestions = [...query.data.items].sort((a, b) => 
-          (a.questionNumber || 0) - (b.questionNumber || 0)
-        );
-        questionsMap[paper.id] = sortedQuestions;
+            (a.questionNumber || 0) - (b.questionNumber || 0)
+          );
+          questionsMap[paper.id] = sortedQuestions;
       }
     });
     return questionsMap;

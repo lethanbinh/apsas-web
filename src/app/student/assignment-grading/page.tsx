@@ -17,6 +17,7 @@ import {
   HistoryOutlined,
 } from "@ant-design/icons";
 import {
+  Alert,
   App,
   Button,
   Card,
@@ -680,6 +681,33 @@ export default function AssignmentGradingPage() {
                 ),
                 children: (
                   <div>
+                    {/* Grading Logs Section */}
+                    {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
+                      <Alert
+                        message="Grading Warnings"
+                        description={
+                          <div>
+                            {latestGradingSession.gradingLogs.map((log, index) => (
+                              <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
+                                <div style={{ marginBottom: 4 }}>
+                                  <Tag color="orange">{log.action}</Tag>
+                                  <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
+                                    {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
+                                  </Text>
+                                </div>
+                                <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
+                                  {log.details}
+                                </Text>
+                                {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
+                              </div>
+                            ))}
+                          </div>
+                        }
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                      />
+                    )}
                     <Row gutter={16}>
                       <Col xs={24} md={6} lg={6}>
                         <div>
@@ -1202,6 +1230,39 @@ function GradingHistoryModal({
                         {toVietnamTime(session.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
                       </Descriptions.Item>
                     </Descriptions>
+
+                    {/* Grading Logs Section */}
+                    {session.gradingLogs && session.gradingLogs.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <Title level={5} style={{ marginBottom: 8 }}>
+                          Grading Logs ({session.gradingLogs.length})
+                        </Title>
+                        <Alert
+                          message="Grading Warnings"
+                          description={
+                            <div>
+                              {session.gradingLogs.map((log, index) => (
+                                <div key={log.id} style={{ marginBottom: index < session.gradingLogs.length - 1 ? 12 : 0 }}>
+                                  <div style={{ marginBottom: 4 }}>
+                                    <Tag color="orange">{log.action}</Tag>
+                                    <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
+                                      {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
+                                    </Text>
+                                  </div>
+                                  <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
+                                    {log.details}
+                                  </Text>
+                                  {index < session.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
+                                </div>
+                              ))}
+                            </div>
+                          }
+                          type="warning"
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      </div>
+                    )}
 
                     {!isExpanded ? (
                       <Button

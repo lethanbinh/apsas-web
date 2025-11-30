@@ -110,7 +110,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: async () => {
       if (!latestGradingSession) return { items: [] };
-      
+
       // Check if gradeItems are already in the session response
       if (latestGradingSession.gradeItems && latestGradingSession.gradeItems.length > 0) {
         return { items: latestGradingSession.gradeItems };
@@ -124,7 +124,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       });
       
       // Convert to GradingServiceGradeItem format
-      return {
+          return {
         items: gradeItemsResult.items.map((item) => ({
           id: item.id,
           score: item.score,
@@ -158,7 +158,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     }
     if (latestGradingSession?.grade !== undefined && latestGradingSession.grade !== null) {
       return latestGradingSession.grade;
-    }
+      }
     return 0;
   }, [latestGradeItems, latestGradingSession]);
 
@@ -202,29 +202,29 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       return feedbackList;
     },
     enabled: open && !!lastSubmission?.id,
-  });
+      });
 
   // Process feedback
   const feedback = useMemo(() => {
     if (!feedbackList || feedbackList.length === 0) return defaultEmptyFeedback;
     
-    const existingFeedback = feedbackList[0];
-    let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-    
-    // If deserialize returns null, it means it's plain text/markdown
+        const existingFeedback = feedbackList[0];
+        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+        
+        // If deserialize returns null, it means it's plain text/markdown
     // For now, put entire text into overallFeedback (Gemini parsing can be done later if needed)
-    if (parsedFeedback === null) {
-      parsedFeedback = {
-        overallFeedback: existingFeedback.feedbackText,
-        strengths: "",
-        weaknesses: "",
-        codeQuality: "",
-        algorithmEfficiency: "",
-        suggestionsForImprovement: "",
-        bestPractices: "",
-        errorHandling: "",
-      };
-    }
+        if (parsedFeedback === null) {
+            parsedFeedback = {
+              overallFeedback: existingFeedback.feedbackText,
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
+            };
+          }
     
     return parsedFeedback || defaultEmptyFeedback;
   }, [feedbackList]);
@@ -241,7 +241,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId?.toString()!),
     queryFn: () => classAssessmentService.getClassAssessments({
       classId: effectiveClassId!,
-      pageNumber: 1,
+              pageNumber: 1,
       pageSize: 1000,
     }),
     enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
@@ -249,20 +249,20 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
   // Determine assessmentTemplateId
   const assessmentTemplateId = useMemo(() => {
-    if (data.assessmentTemplateId) {
+      if (data.assessmentTemplateId) {
       return data.assessmentTemplateId;
-    }
-    
+      }
+
     if (data.classAssessmentId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId);
-      if (classAssessment?.assessmentTemplateId) {
+        if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
-      }
+          }
     }
     
     if (data.courseElementId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId);
-      if (classAssessment?.assessmentTemplateId) {
+            if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
@@ -274,8 +274,8 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
     queryFn: () => assignRequestService.getAssignRequests({
-      pageNumber: 1,
-      pageSize: 1000,
+              pageNumber: 1,
+              pageSize: 1000,
     }),
     enabled: open && !!assessmentTemplateId,
   });
@@ -290,8 +290,8 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
-      pageNumber: 1,
-      pageSize: 1000,
+          pageNumber: 1,
+          pageSize: 1000,
     }),
     enabled: open && !!assessmentTemplateId,
   });
@@ -302,17 +302,17 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return templatesData.items.find((t) => {
       if (t.id !== assessmentTemplateId) return false;
       if (!t.assignRequestId) return false;
-      return approvedAssignRequestIds.has(t.assignRequestId);
-    });
+        return approvedAssignRequestIds.has(t.assignRequestId);
+      });
   }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
 
-  // Fetch papers
+      // Fetch papers
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
       assessmentTemplateId: assessmentTemplateId!,
-      pageNumber: 1,
-      pageSize: 100,
+        pageNumber: 1,
+        pageSize: 100,
     }),
     enabled: open && !!assessmentTemplateId && !!template,
   });
@@ -322,9 +322,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     queries: (papersData?.items || []).map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
       queryFn: () => assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 100,
+          assessmentPaperId: paper.id,
+          pageNumber: 1,
+          pageSize: 100,
       }),
       enabled: open && !!template,
     })),
@@ -346,8 +346,8 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       queryKey: queryKeys.rubricItems.byQuestionId(questionId),
       queryFn: () => rubricItemService.getRubricsForQuestion({
         assessmentQuestionId: questionId,
-        pageNumber: 1,
-        pageSize: 100,
+            pageNumber: 1,
+            pageSize: 100,
       }),
       enabled: open && !!template && allQuestionIds.length > 0,
     })),
@@ -374,13 +374,13 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         const questionRubrics = rubricQuery?.data?.items || [];
 
         // Initialize rubric scores and comments
-        const rubricScores: { [rubricId: number]: number } = {};
-        const rubricComments: { [rubricId: number]: string } = {};
-        let questionComment = "";
+          const rubricScores: { [rubricId: number]: number } = {};
+              const rubricComments: { [rubricId: number]: string } = {};
+              let questionComment = "";
 
-        questionRubrics.forEach((rubric) => {
-          rubricScores[rubric.id] = 0;
-          rubricComments[rubric.id] = "";
+          questionRubrics.forEach((rubric) => {
+                rubricScores[rubric.id] = 0;
+                rubricComments[rubric.id] = "";
 
           // Map grade items to rubrics
           const matchingGradeItem = latestGradeItems.find(
@@ -393,15 +393,15 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               questionComment = matchingGradeItem.comments;
             }
           }
-        });
+          });
 
-        allQuestions.push({
-          ...question,
-          rubrics: questionRubrics,
-          rubricScores,
-          rubricComments,
-          questionComment,
-        });
+          allQuestions.push({
+            ...question,
+            rubrics: questionRubrics,
+            rubricScores,
+                rubricComments,
+                questionComment,
+              });
 
         questionIndex++;
       });
@@ -735,6 +735,38 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Descriptions>
             </Card>
 
+            {/* Grading Logs Section */}
+            {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
+              <Card className={styles.headerCard} style={{ marginTop: 16 }}>
+                <Title level={4} style={{ marginBottom: 12 }}>
+                  Grading Logs ({latestGradingSession.gradingLogs.length})
+                </Title>
+                <Alert
+                  message="Grading Warnings"
+                  description={
+                    <div>
+                      {latestGradingSession.gradingLogs.map((log, index) => (
+                        <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
+                          <div style={{ marginBottom: 4 }}>
+                            <Tag color="orange">{log.action}</Tag>
+                            <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
+                              {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
+                            </Text>
+                          </div>
+                          <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
+                            {log.details}
+                          </Text>
+                          {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
+                        </div>
+                      ))}
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                />
+              </Card>
+            )}
+
             {/* Grading Details Card - Questions and Rubrics */}
             {questions.length > 0 && hasScore() && (
               <Card className={styles.questionsCard}>
@@ -744,6 +776,36 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   {questions.reduce((sum, q) => sum + q.score, 0)}
                 </Text>
                 <Divider />
+                
+                {/* Grading Logs Section */}
+                {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <Alert
+                      message="Grading Warnings"
+                      description={
+                        <div>
+                          {latestGradingSession.gradingLogs.map((log, index) => (
+                            <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
+                              <div style={{ marginBottom: 4 }}>
+                                <Tag color="orange">{log.action}</Tag>
+                                <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
+                                  {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
+                                </Text>
+                              </div>
+                              <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
+                                {log.details}
+                              </Text>
+                              {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
+                            </div>
+                          ))}
+                        </div>
+                      }
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                    />
+                  </div>
+                )}
 
                 <Collapse 
                   defaultActiveKey={questions.map((_, i) => i.toString())}

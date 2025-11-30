@@ -157,7 +157,7 @@ export default function SubmissionHistory() {
 
   // Process data
   const { allClassAssessments, submissionToClassAssessment, error } = useMemo(() => {
-    if (!selectedClassId) {
+      if (!selectedClassId) {
       return { 
         allClassAssessments: new Map(), 
         submissionToClassAssessment: new Map(), 
@@ -165,7 +165,7 @@ export default function SubmissionHistory() {
       };
     }
 
-    const classIds = studentClasses.map((sc) => sc.classId);
+        const classIds = studentClasses.map((sc) => sc.classId);
     if (!classIds.includes(currentClassId!)) {
       return { 
         allClassAssessments: new Map(), 
@@ -175,18 +175,18 @@ export default function SubmissionHistory() {
     }
 
     const uniqueClassAssessments = (classAssessmentRes?.items || []).filter(
-      (ca) => ca.classId === currentClassId
-    );
-    
+          (ca) => ca.classId === currentClassId
+        );
+        
     const allClassAssessments = new Map(uniqueClassAssessments.map((ca) => [ca.id, ca]));
     
-    const submissionToClassAssessmentMap = new Map<number, number>();
-    for (const sub of submissions) {
-      if (sub.classAssessmentId) {
-        submissionToClassAssessmentMap.set(sub.id, sub.classAssessmentId);
-      }
-    }
-
+        const submissionToClassAssessmentMap = new Map<number, number>();
+        for (const sub of submissions) {
+          if (sub.classAssessmentId) {
+            submissionToClassAssessmentMap.set(sub.id, sub.classAssessmentId);
+          }
+        }
+        
     return { allClassAssessments, submissionToClassAssessment: submissionToClassAssessmentMap, error: null };
   }, [selectedClassId, studentClasses, currentClassId, classAssessmentRes, submissions]);
 

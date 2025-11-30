@@ -60,26 +60,26 @@ const AppDownloadManagementPage = () => {
   // Update form when currentLink changes
   useEffect(() => {
     if (currentLink) {
-      form.setFieldsValue({
+        form.setFieldsValue({
         downloadUrl: currentLink.downloadUrl,
         appName: currentLink.appName,
         version: currentLink.version || '',
         description: currentLink.description || '',
-      });
-      // Check if it's a Google Drive link
+        });
+        // Check if it's a Google Drive link
       if (currentLink.downloadUrl?.includes('drive.google.com')) {
         const fileIdMatch = currentLink.downloadUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-        if (fileIdMatch) {
-          const fileId = fileIdMatch[1];
-          const shareUrl = `https://drive.google.com/file/d/${fileId}/view`;
-          setDriveShareUrl(shareUrl);
+          if (fileIdMatch) {
+            const fileId = fileIdMatch[1];
+            const shareUrl = `https://drive.google.com/file/d/${fileId}/view`;
+            setDriveShareUrl(shareUrl);
           setConvertedUrl(currentLink.downloadUrl);
-          setIsValidDriveLink(true);
-          form.setFieldsValue({ driveShareUrl: shareUrl });
-        } else {
+            setIsValidDriveLink(true);
+            form.setFieldsValue({ driveShareUrl: shareUrl });
+          } else {
           setDriveShareUrl(currentLink.downloadUrl);
           setConvertedUrl(currentLink.downloadUrl);
-          setIsValidDriveLink(true);
+            setIsValidDriveLink(true);
           form.setFieldsValue({ driveShareUrl: currentLink.downloadUrl });
         }
       }
@@ -160,23 +160,23 @@ const AppDownloadManagementPage = () => {
   });
 
   const handleSubmit = async (values: any) => {
-    // Check if download URL exists
-    if (!values.downloadUrl) {
-      message.error('Please enter a Google Drive share link first.');
-      return;
-    }
+      // Check if download URL exists
+      if (!values.downloadUrl) {
+        message.error('Please enter a Google Drive share link first.');
+        return;
+      }
 
-    // Auto-generate version if not provided
+      // Auto-generate version if not provided
     const currentVersion = values.version || currentLink?.version || null;
-    const nextVersion = generateNextVersion(currentVersion || undefined);
+      const nextVersion = generateNextVersion(currentVersion || undefined);
 
-    const linkData: Omit<AppDownloadLink, 'id' | 'createdAt' | 'updatedAt'> = {
-      downloadUrl: values.downloadUrl,
-      appName: values.appName || 'APSAS App',
-      version: nextVersion,
-      description: values.description || undefined,
+      const linkData: Omit<AppDownloadLink, 'id' | 'createdAt' | 'updatedAt'> = {
+        downloadUrl: values.downloadUrl,
+        appName: values.appName || 'APSAS App',
+        version: nextVersion,
+        description: values.description || undefined,
       isActive: true,
-    };
+      };
 
     saveLinkMutation.mutate(linkData);
   };

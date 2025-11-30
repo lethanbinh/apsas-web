@@ -101,7 +101,7 @@ export default function Labs() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   useEffect(() => {
-    const classId = localStorage.getItem("selectedClassId");
+      const classId = localStorage.getItem("selectedClassId");
     setSelectedClassId(classId);
   }, []);
 
@@ -116,8 +116,8 @@ export default function Labs() {
   const { data: allElements = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({}),
     queryFn: () => courseElementService.getCourseElements({
-      pageNumber: 1,
-      pageSize: 1000,
+          pageNumber: 1,
+          pageSize: 1000,
     }),
   });
 
@@ -125,8 +125,8 @@ export default function Labs() {
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
   });
 
@@ -144,8 +144,8 @@ export default function Labs() {
     queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
       classId: Number(selectedClassId!),
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: !!selectedClassId,
   });
@@ -162,12 +162,12 @@ export default function Labs() {
     const approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
     const approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
     
-    approvedTemplates.forEach(t => {
-      if (t.courseElementId) {
-        approvedTemplateByCourseElementMap.set(t.courseElementId, t);
-      }
-      approvedTemplateByIdMap.set(t.id, t);
-    });
+          approvedTemplates.forEach(t => {
+            if (t.courseElementId) {
+              approvedTemplateByCourseElementMap.set(t.courseElementId, t);
+            }
+            approvedTemplateByIdMap.set(t.id, t);
+          });
     
     return { approvedTemplateByCourseElementMap, approvedTemplateByIdMap };
   }, [assignRequestResponse, templateResponse]);
@@ -185,33 +185,33 @@ export default function Labs() {
 
     const classAssessmentMap = new Map<number, ClassAssessment>();
     for (const assessment of (classAssessmentRes?.items || [])) {
-      if (assessment.courseElementId) {
-        classAssessmentMap.set(assessment.courseElementId, assessment);
-      }
-    }
-
-    const mappedLabs = classElements.map((el) => {
-      const classAssessment = classAssessmentMap.get(el.id);
-      let approvedTemplate: AssessmentTemplate | undefined;
-      
-      if (classAssessment?.assessmentTemplateId) {
-        approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
-      }
-      
-      if (!approvedTemplate) {
-        approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
-      }
-      
-      if (approvedTemplate) {
-        if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
-          return mapCourseElementToLabData(el, classAssessmentMap);
-        } else {
-          return mapCourseElementToLabData(el, new Map());
+            if (assessment.courseElementId) {
+              classAssessmentMap.set(assessment.courseElementId, assessment);
+            }
         }
-      } else {
-        return mapCourseElementToLabData(el, new Map());
-      }
-    });
+
+        const mappedLabs = classElements.map((el) => {
+          const classAssessment = classAssessmentMap.get(el.id);
+          let approvedTemplate: AssessmentTemplate | undefined;
+          
+          if (classAssessment?.assessmentTemplateId) {
+            approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
+          }
+          
+          if (!approvedTemplate) {
+            approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
+          }
+          
+          if (approvedTemplate) {
+            if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
+              return mapCourseElementToLabData(el, classAssessmentMap);
+            } else {
+              return mapCourseElementToLabData(el, new Map());
+            }
+          } else {
+            return mapCourseElementToLabData(el, new Map());
+          }
+        });
 
     return { labs: mappedLabs, error: null };
   }, [classData, allElements, classAssessmentRes, approvedTemplateByCourseElementMap, approvedTemplateByIdMap, selectedClassId]);
