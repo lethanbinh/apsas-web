@@ -53,7 +53,6 @@ const parseExcelSheet = (sheet: XLSX.WorkSheet): any[] => {
 
 function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
   const [fileListExcel, setFileListExcel] = useState<UploadFile[]>([]);
-  const [fileListPdf, setFileListPdf] = useState<UploadFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [livePreviewData, setLivePreviewData] = useState<PreviewData | null>(
@@ -61,7 +60,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
   );
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [currentStep, setCurrentStep] = useState(0);
 
   const { user } = useAuth();
   const { notification } = App.useApp();
@@ -82,29 +80,12 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }
   };
 
-  const handleDownloadClassStudentTemplate = async () => {
-    try {
-      const blob = await adminService.downloadClassStudentTemplate();
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", "ClassStudentTemplate.xlsx");
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download class student template error:", error);
-    }
-  };
+  // Removed handleDownloadClassStudentTemplate - moved to ImportClassStudentModal
 
   const handleCreate = async () => {
     const semesterCodePlaceholder = `NEW_SEMESTER_${Date.now()}`;
 
     if (fileListExcel.length === 0) {
-      return;
-    }
-    if (fileListPdf.length === 0) {
       return;
     }
 
@@ -124,35 +105,27 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         semesterFormData
       );
 
-      const classFormData = new FormData();
-      if (fileListPdf[0]) {
-        const file = fileListPdf[0].originFileObj || fileListPdf[0];
-        classFormData.append("file", file as File);
-      } else {
-        setIsCreating(false);
-        return;
-      }
-
-      const classResponse = await adminService.uploadClassStudentData(
-        semesterCodePlaceholder,
-        classFormData
-      );
-
       if (semesterResponse.warnings && semesterResponse.warnings.length > 0) {
         semesterResponse.warnings.forEach((warning: string) => {
           console.warn(warning);
         });
       }
-      if (classResponse.warnings && classResponse.warnings.length > 0) {
-        classResponse.warnings.forEach((warning: string) => {
-          console.warn(warning);
-        });
-      }
+
+      notification.success({
+        message: "Semester Plan Created",
+        description: "Semester course data has been imported successfully. You can now import class student data from the detail page.",
+        placement: "topRight",
+      });
 
       handleClose();
       onCreate({});
     } catch (error: any) {
       console.error("Error uploading semester plan:", error);
+      notification.error({
+        message: "Import Failed",
+        description: error.message || "Failed to import semester course data.",
+        placement: "topRight",
+      });
     } finally {
       setIsCreating(false);
     }
@@ -162,21 +135,11 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     onCancel();
     setTimeout(() => {
       setFileListExcel([]);
-      setFileListPdf([]);
       setLivePreviewData(null);
-      setCurrentStep(0);
     }, 300);
   };
 
-  const handleContinue = () => {
-    if (fileListExcel.length > 0) {
-      setCurrentStep(1);
-    }
-  };
-
-  const handleBack = () => {
-    setCurrentStep(0);
-  };
+  // Removed handleContinue and handleBack - no longer needed with single step
 
   const mapToKeys = (
     data: any[],
@@ -298,97 +261,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }
   };
 
-  const handlePreviewClassStudent = async () => {
-    if (fileListPdf.length === 0) {
-      return;
-    }
-
-    setIsPreviewLoading(true);
-    setIsPreviewModalOpen(true);
-    setPreviewError(null);
-
-    try {
-      const fileRoster = getNativeFile(fileListPdf[0]);
-      const rosterBuffer = await readFileAsArrayBuffer(fileRoster);
-      const rosterWb = XLSX.read(rosterBuffer);
-      const rosterSheet = rosterWb.Sheets[rosterWb.SheetNames[0]];
-
-      if (!rosterSheet) {
-        throw new Error("The Excel file is empty or invalid.");
-      }
-
-      const rosterJson = parseExcelSheet(rosterSheet);
-
-      if (!rosterJson || rosterJson.length === 0) {
-        throw new Error("The Excel file is empty or has no data.");
-      }
-
-      const classRosterKeys = [
-        "ClassCode",
-        "ClassDescription",
-        "SemesterCourseId",
-        "LecturerAccountCode",
-        "StudentAccountCode",
-        "EnrollmentDescription",
-      ];
-
-      const classRosterData = mapToKeys(rosterJson, classRosterKeys);
-
-      // If semester course file is also uploaded, include it in preview
-      let semesterPlanData: any[] = [];
-      if (fileListExcel.length > 0) {
-        try {
-          const filePlan = getNativeFile(fileListExcel[0]);
-          const planBuffer = await readFileAsArrayBuffer(filePlan);
-          const planWb = XLSX.read(planBuffer);
-          const planSheet = planWb.Sheets[planWb.SheetNames[0]];
-
-          if (planSheet) {
-            const planJson = parseExcelSheet(planSheet);
-            if (planJson && planJson.length > 0) {
-              const semesterPlanKeys = [
-                "SemesterCode",
-                "AcademicYear",
-                "SemesterNote",
-                "StartDate",
-                "EndDate",
-                "CourseCode",
-                "CourseName",
-                "CourseDescription",
-                "CourseElementName",
-                "CourseElementDescription",
-                "CourseElementWeight",
-                "LecturerAccountCode",
-              ];
-              semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
-            }
-          }
-        } catch (err) {
-          console.warn("Could not parse semester course file:", err);
-        }
-      }
-
-      setLivePreviewData({
-        semesterPlan: semesterPlanData,
-        classRoster: classRosterData as any,
-      });
-      setPreviewError(null);
-    } catch (err: any) {
-      console.error("Error parsing Excel for preview:", err);
-      const errorMessage = err.message || "Failed to parse Excel file. Please check the file format.";
-      setPreviewError(errorMessage);
-      setLivePreviewData({
-        semesterPlan: [],
-        classRoster: [],
-      });
-      notification.error({
-        message: "Preview Error",
-        description: errorMessage,
-      });
-    } finally {
-      setIsPreviewLoading(false);
-    }
-  };
+  // Removed handlePreviewClassStudent - moved to ImportClassStudentModal
 
   const uploadPropsExcel = {
     fileList: fileListExcel,
@@ -402,20 +275,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     },
   };
 
-  const uploadPropsPdf = {
-    fileList: fileListPdf,
-    maxCount: 1,
-    accept: ".xlsx, .xls",
-    showUploadList: false,
-    disabled: currentStep < 1,
-    onRemove: () => setFileListPdf([]),
-    beforeUpload: (file: UploadFile) => {
-      if (currentStep >= 1) {
-        setFileListPdf([file]);
-      }
-      return false;
-    },
-  };
+  // Removed uploadPropsPdf - no longer needed
 
   const fileNameStyle: React.CSSProperties = {
     fontSize: "16px",
@@ -431,136 +291,66 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     textAlign: "center",
   };
 
-  const steps = [
-    {
-      title: "Upload Semester Course File",
-      content: (
-        <div className={styles.stepContent}>
-          <div style={{ marginBottom: "24px" }}>
-            <Title level={5}>Template Actions</Title>
-            <Space direction="horizontal" style={{ width: "100%" }} wrap>
-              <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-                Download Template
-              </Button>
-              <Button
-                icon={<EyeOutlined />}
-                variant="outline"
-                className={styles.previewButton}
-                onClick={handlePreviewSemesterCourse}
-                style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
-                disabled={fileListExcel.length === 0}
-              >
-                Preview Semester Course Data
-              </Button>
-            </Space>
-          </div>
+  // Single step content - only Semester Course import
+  const stepContent = (
+    <div className={styles.stepContent}>
+      <div style={{ marginBottom: "24px" }}>
+        <Title level={5}>Template Actions</Title>
+        <Space direction="horizontal" style={{ width: "100%" }} wrap>
+          <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
+            Download Template
+          </Button>
+          <Button
+            icon={<EyeOutlined />}
+            variant="outline"
+            className={styles.previewButton}
+            onClick={handlePreviewSemesterCourse}
+            style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
+            disabled={fileListExcel.length === 0}
+          >
+            Preview Semester Course Data
+          </Button>
+        </Space>
+      </div>
 
-          <div>
-            <Title level={5}>Upload Semester Course File</Title>
-            <Dragger {...uploadPropsExcel} className={styles.dragger}>
-              {fileListExcel.length > 0 ? (
-                <div className={styles.filePreview}>
-                  <FileExcelOutlined className={styles.filePreviewIcon} />
-                  <p style={fileNameStyle} title={fileListExcel[0].name}>
-                    {fileListExcel[0].name}
-                  </p>
-                  <p className={styles.filePreviewHint}>
-                    Click or drag again to replace
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">Click here to Upload</p>
-                  <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
-                </>
-              )}
-            </Dragger>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Upload Class Student File",
-      content: (
-        <div className={styles.stepContent}>
-          <div style={{ marginBottom: "24px" }}>
-            <Title level={5}>Template Actions</Title>
-            <Space direction="horizontal" style={{ width: "100%" }} wrap>
-              <Button
-                icon={<DownloadOutlined />}
-                onClick={handleDownloadClassStudentTemplate}
-              >
-                Download Template
-              </Button>
-              <Button
-                icon={<EyeOutlined />}
-                variant="outline"
-                className={styles.previewButton}
-                onClick={handlePreviewClassStudent}
-                style={{ borderColor: "#6D28D9", color: "#6D28D9" }}
-                disabled={fileListPdf.length === 0}
-              >
-                Preview Class Student Data
-              </Button>
-            </Space>
-          </div>
-
-          <div>
-            <Title level={5}>Upload Class Student File</Title>
-            <Dragger {...uploadPropsPdf} className={styles.dragger}>
-              {fileListPdf.length > 0 ? (
-                <div className={styles.filePreview}>
-                  <FileExcelOutlined className={styles.filePreviewIcon} />
-                  <p style={fileNameStyle} title={fileListPdf[0].name}>
-                    {fileListPdf[0].name}
-                  </p>
-                  <p className={styles.filePreviewHint}>
-                    Click or drag again to replace
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">Click here to Upload</p>
-                  <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
-                </>
-              )}
-            </Dragger>
-          </div>
-        </div>
-      ),
-    },
-  ];
+      <div>
+        <Title level={5}>Upload Semester Course File</Title>
+        <Dragger {...uploadPropsExcel} className={styles.dragger}>
+          {fileListExcel.length > 0 ? (
+            <div className={styles.filePreview}>
+              <FileExcelOutlined className={styles.filePreviewIcon} />
+              <p style={fileNameStyle} title={fileListExcel[0].name}>
+                {fileListExcel[0].name}
+              </p>
+              <p className={styles.filePreviewHint}>
+                Click or drag again to replace
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="ant-upload-drag-icon">
+                <UploadOutlined />
+              </p>
+              <p className="ant-upload-text">Click here to Upload</p>
+              <p className="ant-upload-hint">Excel file (Max 10Mb)</p>
+            </>
+          )}
+        </Dragger>
+      </div>
+    </div>
+  );
 
   const renderFooter = () => (
     <Space>
       <Button onClick={handleClose}>Cancel</Button>
-      {currentStep === 0 ? (
-        <Button
-          variant="primary"
-          onClick={handleContinue}
-          disabled={fileListExcel.length === 0}
-        >
-          Continue
-        </Button>
-      ) : (
-        <>
-          <Button onClick={handleBack}>Back</Button>
-          <Button
-            variant="primary"
-            onClick={handleCreate}
-            loading={isCreating}
-            disabled={fileListExcel.length === 0 || fileListPdf.length === 0}
-          >
-            {isCreating ? "Creating..." : "Create Plan"}
-          </Button>
-        </>
-      )}
+      <Button
+        variant="primary"
+        onClick={handleCreate}
+        loading={isCreating}
+        disabled={fileListExcel.length === 0}
+      >
+        {isCreating ? "Creating..." : "Create Plan"}
+      </Button>
     </Space>
   );
 
@@ -577,12 +367,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         footer={renderFooter()}
         width={700}
       >
-        <Steps
-          current={currentStep}
-          items={steps.map((step) => ({ title: step.title }))}
-          className={styles.steps}
-        />
-        <div>{steps[currentStep].content}</div>
+        <div>{stepContent}</div>
       </Modal>
 
       <PreviewPlanModal

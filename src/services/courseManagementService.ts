@@ -99,6 +99,13 @@ export class CourseService {
   }
 }
 
+export interface SemesterCourseListApiResponse {
+  statusCode: number;
+  isSuccess: boolean;
+  errorMessages: any[];
+  result: SemesterCourseBasic[];
+}
+
 export class SemesterCourseService {
   async createSemesterCourse(
     payload: CreateSemesterCoursePayload
@@ -123,6 +130,13 @@ export class SemesterCourseService {
 
   async deleteSemesterCourse(semesterCourseId: string | number): Promise<void> {
     await apiService.delete(`/SemesterCourse/${semesterCourseId}`);
+  }
+
+  async getSemesterCourseList(pageNumber: number = 1, pageSize: number = 10): Promise<SemesterCourseBasic[]> {
+    const response = await apiService.get<SemesterCourseListApiResponse>(
+      `/SemesterCourse?pageNumber=${pageNumber}&pageSize=${pageSize}`
+    );
+    return response.result || [];
   }
 }
 
