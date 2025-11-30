@@ -51,6 +51,11 @@ import { useAuth } from "@/hooks/useAuth";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Helper function to convert UTC to Vietnam time (UTC+7)
+const toVietnamTime = (dateString: string) => {
+  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
+
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
