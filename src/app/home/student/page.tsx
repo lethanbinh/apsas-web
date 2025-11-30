@@ -33,10 +33,10 @@ export default function HomePage() {
               <div className="hero-image-wrapper">
                 <div className="hero-image-inner-wrapper">
                   <Image
-                    src="https://png.pngtree.com/png-vector/20250121/ourmid/pngtree-a-cheerful-young-student-with-long-wavy-brown-hair-png-image_15291628.png"
+                    src="/images/beautiful-female-student-showing-v-sign-smiling-happy-holding-notebooks-with-study-material-attendin.webp"
                     alt="Hero Illustration"
-                    width={700}
-                    height={600}
+                    width={1200}
+                    height={1100}
                     className="hero-image"
                     priority
                     unoptimized

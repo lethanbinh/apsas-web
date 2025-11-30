@@ -32,14 +32,13 @@ export default function HomePage() {
               <div className="hero-image-wrapper">
                 <div className="hero-image-inner-wrapper">
                   <Image
-                    src="https://assets.setmore.com/website/v2/images/industry-pages/teachers/setmore-customer-teacher.png"
-                    alt="Hero Illustration"
-                    width={700}
-                    height={700}
+                    src="/images/beautiful-female-student-showing-v-sign-smiling-happy-holding-notebooks-with-study-material-attendin.webp"
+                    alt="Smiling student holding notebooks"
+                    width={1152}
+                    height={768}
                     className="hero-image"
                     priority
                     unoptimized
-                    style={{ objectFit: "cover" }}
                   />
 
                   {/* Floating badges */}
@@ -226,6 +225,7 @@ export default function HomePage() {
               width={500}
               height={300}
               className="image-card-img"
+              style={{ width: "100%", height: "auto" }}
             />
             <div className="image-card-overlay-text">FOR INSTRUCTORS</div>
           </div>
@@ -238,6 +238,7 @@ export default function HomePage() {
               width={500}
               height={300}
               className="image-card-img"
+              style={{ width: "100%", height: "auto" }}
             />
             <div className="image-card-overlay-text">FOR STUDENTS</div>
           </div>
