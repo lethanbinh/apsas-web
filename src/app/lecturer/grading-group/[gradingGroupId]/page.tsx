@@ -1129,13 +1129,13 @@ export default function GradingGroupPage() {
                       {/* Grading Logs Section */}
                       {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
                         <Alert
-                          message="Grading Warnings"
+                          message="Grading Notes"
                           description={
                             <div>
                               {latestGradingSession.gradingLogs.map((log, index) => (
                                 <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
                                   <div style={{ marginBottom: 4 }}>
-                                    <Tag color="orange">{log.action}</Tag>
+                                    <Tag color="blue">{log.action}</Tag>
                                     <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
                                       {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
                                     </Text>
@@ -1148,7 +1148,7 @@ export default function GradingGroupPage() {
                               ))}
                             </div>
                           }
-                          type="warning"
+                          type="info"
                           showIcon
                           style={{ marginBottom: 16 }}
                         />
@@ -1665,13 +1665,13 @@ function GradingHistoryModal({
                             Grading Logs ({session.gradingLogs.length})
                           </Title>
                           <Alert
-                            message="Grading Warnings"
+                            message="Grading Notes"
                             description={
                               <div>
                                 {session.gradingLogs.map((log, index) => (
                                   <div key={log.id} style={{ marginBottom: index < session.gradingLogs.length - 1 ? 12 : 0 }}>
                                     <div style={{ marginBottom: 4 }}>
-                                      <Tag color="orange">{log.action}</Tag>
+                                      <Tag color="blue">{log.action}</Tag>
                                       <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
                                         {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
                                       </Text>
@@ -1684,7 +1684,7 @@ function GradingHistoryModal({
                                 ))}
                               </div>
                             }
-                            type="warning"
+                            type="info"
                             showIcon
                             style={{ marginBottom: 16 }}
                           />

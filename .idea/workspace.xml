@@ -4,43 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix paper">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/app-download/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/app-download/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/dashboard/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/dashboard/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/classes/my-classes/lecturer/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/classes/my-classes/lecturer/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/classes/my-classes/student/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/classes/my-classes/student/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/grading-groups/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/grading-groups/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/submissions/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/submissions/[id]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/examiner/templates/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/examiner/templates/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/assignment-grading/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/detail-assignment/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/grading-group/[gradingGroupId]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/grading-group/[gradingGroupId]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/info/[id]/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/labs/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/labs/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/my-grading-group/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/my-grading-group/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/practical-exams/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/practical-exams/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/lecturer/tasks/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/lecturer/tasks/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/student/assignment-grading/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/student/assignment-grading/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/student/class-detail/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/student/class-detail/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/student/members/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/student/members/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app/student/my-grading-group/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/student/my-grading-group/page.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/AssignSubmissionsModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/examiner/CreateGradingGroupModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/LoginForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/features/PaperAssignmentModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/features/PaperAssignmentModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/layout/SidebarAdmin.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/AssignmentItem.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/AssignmentItem.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/AssignmentList.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/ClassRoster.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/ClassRoster.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/Labs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/Labs.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/RequirementModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/RequirementModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/ScoreFeedbackModal.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/student/SubmissionHistory.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/student/SubmissionHistory.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib/react-query/queryKeys.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/react-query/queryKeys.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/middleware.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/middleware.ts" afterDir="false" />
-    </list>
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix paper" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -160,6 +124,7 @@
       <workItem from="1764137363439" duration="2000" />
       <workItem from="1764206185848" duration="147000" />
       <workItem from="1764384150183" duration="2565000" />
+      <workItem from="1764555160880" duration="790000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
