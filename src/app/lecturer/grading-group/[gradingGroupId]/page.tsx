@@ -1105,7 +1105,12 @@ export default function GradingGroupPage() {
                   <Text type="secondary">Total Score:</Text>
                   <br />
                   <Text strong style={{ fontSize: 18, color: "#52c41a" }}>
-                    {totalScore.toFixed(2)}
+                    {(() => {
+                      const maxScore = questions.reduce((sum, q) => {
+                        return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+                      }, 0);
+                      return maxScore > 0 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}` : totalScore.toFixed(2);
+                    })()}
                   </Text>
                 </Col>
               </Row>
@@ -1619,6 +1624,7 @@ function GradingHistoryModal({
                 const gradeItems = sessionGradeItems[session.id] || [];
 
                 const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
+                const maxScore = gradeItems.reduce((sum, item) => sum + (item.rubricItemMaxScore || 0), 0);
 
                 return {
                   key: session.id.toString(),
@@ -1631,7 +1637,7 @@ function GradingHistoryModal({
                           <Tag>{getGradingTypeLabel(session.gradingType)}</Tag>
                           <Tag color="blue">Grade: {session.grade}</Tag>
                           {gradeItems.length > 0 && (
-                            <Tag color="green">Total: {totalScore.toFixed(2)}</Tag>
+                            <Tag color="green">Total: {maxScore > 0 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}` : totalScore.toFixed(2)}</Tag>
                           )}
                         </Space>
                       </div>

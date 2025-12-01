@@ -25,6 +25,20 @@ export interface LecturerListApiResponse {
   result: Lecturer[];
 }
 
+export interface CreateLecturerPayload {
+  username: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+  fullName: string;
+  avatar?: string;
+  address: string;
+  gender: number;
+  dateOfBirth: string;
+  department: string;
+  specialization: string;
+}
+
 export class LecturerService {
   async getLecturerList(): Promise<Lecturer[]> {
     const response = await apiService.get<LecturerListApiResponse>(
@@ -32,6 +46,14 @@ export class LecturerService {
     );
 
     return response.result;
+  }
+
+  async createLecturer(payload: CreateLecturerPayload): Promise<Lecturer> {
+    const response = await apiService.post<LecturerListApiResponse>(
+      "/Lecturer/create",
+      payload
+    );
+    return response.result as any;
   }
 }
 export const lecturerService = new LecturerService();

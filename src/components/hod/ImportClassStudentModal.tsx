@@ -35,7 +35,9 @@ interface ImportClassStudentModalProps {
   onCancel: () => void;
   onImport: () => void;
   semesterCode: string;
-  semesterCourses: SemesterCourse[];
+  semesterCourseId: number;
+  courseCode: string;
+  courseName: string;
 }
 
 const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
@@ -120,7 +122,9 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
   onCancel,
   onImport,
   semesterCode,
-  semesterCourses,
+  semesterCourseId,
+  courseCode,
+  courseName,
 }) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isImporting, setIsImporting] = useState(false);
@@ -175,6 +179,7 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
 
       const classResponse = await adminService.uploadClassStudentData(
         semesterCode,
+        semesterCourseId,
         classFormData
       );
 
@@ -241,8 +246,7 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       const classRosterKeys = [
         "ClassCode",
         "ClassDescription",
-        "SemesterCourseId",
-        "LecturerAccountCode",
+        "AssignedLecturerAccountCode",
         "StudentAccountCode",
         "EnrollmentDescription",
       ];
@@ -324,21 +328,17 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       >
         <div style={{ marginBottom: "24px" }}>
           <Text type="secondary">
-            Import class student data for semester: <strong>{semesterCode}</strong>
+            Import class student data for course: <strong>{courseCode} - {courseName}</strong>
           </Text>
           <div style={{ marginTop: "12px" }}>
             <Text type="secondary" style={{ fontSize: "12px" }}>
-              Available Semester Courses: {semesterCourses.length}
+              Semester: <strong>{semesterCode}</strong>
             </Text>
-            {semesterCourses.length > 0 && (
-              <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#f5f5f5", borderRadius: "4px" }}>
-                {semesterCourses.map((sc) => (
-                  <div key={sc.id} style={{ fontSize: "12px", marginBottom: "4px" }}>
-                    • {sc.course.code} - {sc.course.name} (ID: {sc.id})
-                  </div>
-                ))}
-              </div>
-            )}
+            <div style={{ marginTop: "4px" }}>
+              <Text type="secondary" style={{ fontSize: "12px" }}>
+                Semester Course ID: <strong>{semesterCourseId}</strong>
+              </Text>
+            </div>
           </div>
         </div>
 

@@ -57,36 +57,14 @@ const toVietnamTime = (dateString: string) => {
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
 
-// Helper function to check if a course element is a Practical Exam based on name
+// Helper function to check if a course element is a Practical Exam based on elementType
 function isPracticalExam(element: CourseElement): boolean {
-  const name = (element.name || "").toLowerCase();
-  const keywords = [
-    "exam",
-    "pe",
-    "practical exam",
-    "practical",
-    "test",
-    "kiểm tra thực hành",
-    "thi thực hành",
-    "bài thi",
-    "bài kiểm tra",
-    "thực hành",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
+  return element.elementType === 2; // 2: PE
 }
 
-// Helper function to check if a course element is a Lab based on name
+// Helper function to check if a course element is a Lab based on elementType
 function isLab(element: CourseElement): boolean {
-  const name = (element.name || "").toLowerCase();
-  const keywords = [
-    "lab",
-    "laboratory",
-    "thực hành",
-    "bài thực hành",
-    "lab session",
-    "lab work",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
+  return element.elementType === 1; // 1: Lab
 }
 
 const convertToDate = (dateString?: string): Date | null => {
@@ -433,8 +411,7 @@ const DetailAssignmentPage = () => {
       const allAssignments = allElements.filter(
         (el) => 
           el.semesterCourseId.toString() === classData.semesterCourseId &&
-        !isPracticalExam(el) &&
-        !isLab(el)
+          el.elementType === 0 // 0: Assignment
       );
 
       // Map class assessments by course element
@@ -577,11 +554,11 @@ const DetailAssignmentPage = () => {
         pageSize: 1000,
       });
 
-      // Filter only assignments (not labs, not PE)
+      // Filter only assignments (elementType === 0)
       const assignmentElements = courseElementsRes.filter(ce => {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
         return classAssessment && classAssessment.classId === Number(selectedClassId) &&
-          !isPracticalExam(ce) && !isLab(ce);
+          ce.elementType === 0; // 0: Assignment
       });
 
       const reportData: GradeReportData[] = [];

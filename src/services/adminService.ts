@@ -65,6 +65,16 @@ export class AdminService {
     await apiService.post(API_ENDPOINTS.ADMIN.CREATE, newUserData);
   }
 
+  async createAdmin(payload: CreateAdminPayload): Promise<any> {
+    const response = await apiService.post("/Admin/create", payload);
+    return response;
+  }
+
+  async createHOD(payload: CreateHODPayload): Promise<any> {
+    const response = await apiService.post("/HoD/create", payload);
+    return response;
+  }
+
   async downloadExcelTemplate(): Promise<Blob> {
     const response = await apiService.get(API_ENDPOINTS.IMPORT.EXCEL_TEMPLATE, {
       responseType: 'blob',
@@ -106,9 +116,9 @@ export class AdminService {
     return response;
   }
 
-  async uploadClassStudentData(semester: string, formData: FormData): Promise<any> {
+  async uploadClassStudentData(semester: string, semesterCourseId: number, formData: FormData): Promise<any> {
     const response = await apiService.post(
-      `${API_ENDPOINTS.IMPORT.CLASS_STUDENT_DATA}?semester=${semester}`,
+      `${API_ENDPOINTS.IMPORT.CLASS_STUDENT_DATA}?semester=${semester}&semesterCourseId=${semesterCourseId}`,
       formData,
       {
         headers: {
@@ -179,6 +189,30 @@ export class AdminService {
       payload
     );
   }
+}
+
+export interface CreateAdminPayload {
+  username: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+  fullName: string;
+  avatar?: string;
+  address: string;
+  gender: number;
+  dateOfBirth: string;
+}
+
+export interface CreateHODPayload {
+  username: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+  fullName: string;
+  avatar?: string;
+  address: string;
+  gender: number;
+  dateOfBirth: string;
 }
 
 export const adminService = new AdminService();

@@ -15,22 +15,9 @@ import { AssignmentData } from "./data";
 
 const { Title, Text } = Typography;
 
-// Helper function to check if a course element is a Practical Exam based on name
+// Helper function to check if a course element is a Practical Exam based on elementType
 function isPracticalExam(element: CourseElement): boolean {
-  const name = (element.name || "").toLowerCase();
-  const keywords = [
-    "exam",
-    "pe",
-    "practical exam",
-    "practical",
-    "test",
-    "kiểm tra thực hành",
-    "thi thực hành",
-    "bài thi",
-    "bài kiểm tra",
-    "thực hành",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
+  return element.elementType === 2; // 2: PE
 }
 
 function mapCourseElementToExamData(

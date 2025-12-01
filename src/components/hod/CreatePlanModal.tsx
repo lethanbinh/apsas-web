@@ -233,8 +233,9 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         "CourseDescription",
         "CourseElementName",
         "CourseElementDescription",
+        "ElementType",
         "CourseElementWeight",
-        "LecturerAccountCode",
+        "AssignedLecturerAccountCode",
       ];
 
       const semesterPlanData = mapToKeys(planJson, semesterPlanKeys);

@@ -4,7 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix paper" />
+    <list default="true" id="55c2a2ea-14a6-419e-8d9a-44362c500483" name="Changes" comment="Fix grading logs">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/admin/manage-users/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/hod/semester-plans/detail/[semesterCode]/page.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/admin/UserDetailFormModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/admin/UserDetailFormModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/CreatePlanModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/CreatePlanModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/ImportClassStudentModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/ImportClassStudentModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/hod/PreviewPlanModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/hod/PreviewPlanModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/modals/CourseElementCrudModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/lib/constants/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib/constants/index.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/adminService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/adminService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/courseElementManagementService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/courseElementManagementService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/courseElementService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/courseElementService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/examinerService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/examinerService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/lecturerService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/lecturerService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/semesterService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/semesterService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/services/studentManagementService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/services/studentManagementService.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -125,6 +142,7 @@
       <workItem from="1764206185848" duration="147000" />
       <workItem from="1764384150183" duration="2565000" />
       <workItem from="1764555160880" duration="790000" />
+      <workItem from="1764561918527" duration="3694000" />
     </task>
     <task id="LOCAL-00001" summary="Optimize speed and fix deploy">
       <option name="closed" value="true" />
@@ -334,7 +352,15 @@
       <option name="project" value="LOCAL" />
       <updated>1763998850071</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="Fix grading logs">
+      <option name="closed" value="true" />
+      <created>1764562125480</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1764562125480</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -386,6 +412,7 @@
     <MESSAGE value="Fix some bugs admin" />
     <MESSAGE value="Fix some UI" />
     <MESSAGE value="Fix paper" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix paper" />
+    <MESSAGE value="Fix grading logs" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix grading logs" />
   </component>
 </project>

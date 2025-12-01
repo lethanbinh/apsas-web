@@ -105,28 +105,10 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
           pageSize: 1000,
         });
 
-        // Helper to check if course element is assignment, lab, or PE
-        const isAssignment = (ce: CourseElement) => {
-          const name = (ce.name || "").toLowerCase();
-          return !name.includes("exam") && !name.includes("pe") && !name.includes("practical") && 
-                 !name.includes("lab") && !name.includes("thực hành") && !name.includes("thi");
-        };
-
-        const isLab = (ce: CourseElement) => {
-          const name = (ce.name || "").toLowerCase();
-          return name.includes("lab") || name.includes("thực hành");
-        };
-
-        const isPracticalExam = (ce: CourseElement) => {
-          const name = (ce.name || "").toLowerCase();
-          return name.includes("exam") || name.includes("pe") || name.includes("practical") || 
-                 name.includes("thi thực hành") || name.includes("kiểm tra thực hành");
-        };
-
-        // Get all course elements for this class (excluding PE)
+        // Get all course elements for this class (excluding PE, elementType === 2)
         const allCourseElements = courseElementsRes.filter(ce => {
           const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
-          return classAssessment && classAssessment.classId === Number(selectedClassId) && !isPracticalExam(ce);
+          return classAssessment && classAssessment.classId === Number(selectedClassId) && ce.elementType !== 2; // Exclude PE (2)
         });
 
         const reportData: GradeReportData[] = [];
@@ -301,7 +283,7 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
 
           // Determine assignment type
           let assignmentType: "Assignment" | "Lab" | "Practical Exam" = "Assignment";
-          if (isLab(courseElement)) {
+          if (courseElement.elementType === 1) { // 1: Lab
             assignmentType = "Lab";
           }
 

@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { Modal, Steps, Typography, Space, Spin, Alert } from "antd";
+import React from "react";
+import { Modal, Typography, Space, Spin, Alert } from "antd";
 import { Button } from "../ui/Button";
 import { PreviewTable } from "./PreviewTable";
-import styles from "./PreviewPlanModal.module.css";
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
 
 interface CourseElementData {
   key: string;
@@ -21,15 +19,15 @@ interface CourseElementData {
   CourseDescription: string;
   CourseElementName: string;
   CourseElementDescription: string;
+  ElementType: string;
   CourseElementWeight: string;
-  LecturerAccountCode: string;
+  AssignedLecturerAccountCode: string;
 }
 interface ClassStudentData {
   key: string;
   ClassCode: string;
   ClassDescription: string;
-  SemesterCourseId: string;
-  LecturerAccountCode: string;
+  AssignedLecturerAccountCode: string;
   StudentAccountCode: string;
   EnrollmentDescription: string;
 }
@@ -60,6 +58,7 @@ const semesterPlanColumns = [
   { title: "EndDate", dataIndex: "EndDate", key: "EndDate" },
   { title: "CourseCode", dataIndex: "CourseCode", key: "CourseCode" },
   { title: "CourseName", dataIndex: "CourseName", key: "CourseName" },
+  { title: "CourseDescription", dataIndex: "CourseDescription", key: "CourseDescription" },
   {
     title: "CourseElementName",
     dataIndex: "CourseElementName",
@@ -71,14 +70,19 @@ const semesterPlanColumns = [
     key: "CourseElementDescription",
   },
   {
+    title: "ElementType",
+    dataIndex: "ElementType",
+    key: "ElementType",
+  },
+  {
     title: "CourseElementWeight",
     dataIndex: "CourseElementWeight",
     key: "CourseElementWeight",
   },
   {
-    title: "LecturerAccountCode",
-    dataIndex: "LecturerAccountCode",
-    key: "LecturerAccountCode",
+    title: "AssignedLecturerAccountCode",
+    dataIndex: "AssignedLecturerAccountCode",
+    key: "AssignedLecturerAccountCode",
   },
 ];
 
@@ -90,14 +94,9 @@ const classRosterColumns = [
     key: "ClassDescription",
   },
   {
-    title: "SemesterCourseId",
-    dataIndex: "SemesterCourseId",
-    key: "SemesterCourseId",
-  },
-  {
-    title: "LecturerAccountCode",
-    dataIndex: "LecturerAccountCode",
-    key: "LecturerAccountCode",
+    title: "AssignedLecturerAccountCode",
+    dataIndex: "AssignedLecturerAccountCode",
+    key: "AssignedLecturerAccountCode",
   },
   {
     title: "StudentAccountCode",
@@ -119,8 +118,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   isLoading,
   error,
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
-
   const finalPreviewData = previewData || emptyPreviewData;
 
   const {
@@ -128,97 +125,74 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
     classRoster: classRosterDataSource,
   } = finalPreviewData;
 
-  const steps = [
-    {
-      title: `1. Semester Plan Data (${
-        isLoading ? "..." : semesterPlanDataSource.length
-      } items)`,
-      content: (
-        <Space direction="vertical" style={{ width: "100%", gap: "15px" }}>
-          <Title level={4}>Semester Plan Details</Title>
-          {semesterPlanDataSource.length === 0 && previewData !== null ? (
-            <Text type="warning">
-              No semester plan data found in the uploaded file.
-            </Text>
-          ) : (
-            <PreviewTable
-              columns={semesterPlanColumns}
-              dataSource={semesterPlanDataSource}
-            />
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: `2. Class List Data (${
-        isLoading ? "..." : classRosterDataSource.length
-      } items)`,
-      content: (
-        <Space direction="vertical" style={{ width: "100%", gap: "15px" }}>
-          <Title level={4}>Class List Details</Title>
-          {classRosterDataSource.length === 0 && previewData !== null ? (
-            <Text type="warning">
-              No class List data found in the uploaded file.
-            </Text>
-          ) : (
-            <PreviewTable
-              columns={classRosterColumns}
-              dataSource={classRosterDataSource}
-            />
-          )}
-        </Space>
-      ),
-    },
-  ];
-  const handleNext = () => {
-    setCurrentStep(currentStep + 1);
-  };
-
-  const handleBack = () => {
-    setCurrentStep(currentStep - 1);
-  };
+  // Determine which data type to show
+  const hasSemesterPlan = semesterPlanDataSource.length > 0;
+  const hasClassRoster = classRosterDataSource.length > 0;
 
   const handleClose = () => {
     onCancel();
-    setTimeout(() => {
-      setCurrentStep(0);
-    }, 300);
   };
 
-  const renderFooter = () => {
-    if (currentStep < steps.length - 1) {
+  const renderContent = () => {
+    if (hasSemesterPlan) {
       return (
-        <Space>
-          {currentStep > 0 && <Button onClick={handleBack}>Back</Button>}
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleNext} disabled={isLoading}>
-            Continue
-          </Button>
+        <Space direction="vertical" style={{ width: "100%", gap: "15px" }}>
+          <Title level={4}>
+            Semester Plan Data ({semesterPlanDataSource.length} items)
+          </Title>
+          <PreviewTable
+            columns={semesterPlanColumns}
+            dataSource={semesterPlanDataSource}
+          />
         </Space>
       );
     }
+
+    if (hasClassRoster) {
+      return (
+        <Space direction="vertical" style={{ width: "100%", gap: "15px" }}>
+          <Title level={4}>
+            Class Student Data ({classRosterDataSource.length} items)
+          </Title>
+          <PreviewTable
+            columns={classRosterColumns}
+            dataSource={classRosterDataSource}
+          />
+        </Space>
+      );
+    }
+
     return (
-      <Space>
-        <Button onClick={handleBack} disabled={isLoading}>
-          Back
-        </Button>
-        <Button variant="primary" onClick={onConfirm} loading={isLoading}>
-          Close
-        </Button>
-      </Space>
+      <Text type="warning">
+        No data found in the uploaded file.
+      </Text>
     );
+  };
+
+  const getModalTitle = () => {
+    if (hasSemesterPlan) {
+      return "Preview Semester Plan";
+    }
+    if (hasClassRoster) {
+      return "Preview Class Student Data";
+    }
+    return "Preview Data";
   };
 
   return (
     <Modal
       title={
         <Title level={3} style={{ margin: 0, textAlign: "center" }}>
-          Preview semester plan
+          {getModalTitle()}
         </Title>
       }
       open={open}
       onCancel={handleClose}
-      footer={renderFooter()}
+      footer={
+        <Space>
+          <Button onClick={handleClose}>Close</Button>
+        </Space>
+      }
       width={1000}
     >
       {error && !isLoading && (
@@ -231,11 +205,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
         />
       )}
 
-      <Steps current={currentStep} className={styles.steps}>
-        {steps.map((item) => (
-          <Step key={item.title} title={item.title} />
-        ))}
-      </Steps>
       {isLoading ? (
         <div style={{ padding: "50px", textAlign: "center" }}>
           <Spin />
@@ -244,7 +213,7 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
           </Text>
         </div>
       ) : (
-        <div className={styles.stepContent}>{steps[currentStep].content}</div>
+        <div style={{ marginTop: "20px" }}>{renderContent()}</div>
       )}
     </Modal>
   );

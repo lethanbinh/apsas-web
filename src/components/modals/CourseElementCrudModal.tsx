@@ -6,7 +6,7 @@ import {
   UpdateCourseElementPayload,
 } from "@/services/courseElementManagementService";
 import { CourseElement } from "@/services/semesterService";
-import { Alert, App, Form, Input, InputNumber, Modal } from "antd";
+import { Alert, App, Form, Input, InputNumber, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
 
 interface CourseElementCrudModalProps {
@@ -39,6 +39,7 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
         form.setFieldsValue({
           ...initialData,
           weight: initialData.weight * 100,
+          elementType: initialData.elementType,
         });
       } else {
         form.resetFields();
@@ -77,6 +78,7 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
       name: values.name,
       description: values.description,
       weight: newWeight,
+      elementType: Number(values.elementType),
     };
 
     try {
@@ -166,6 +168,17 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
           ]}
         >
           <Input.TextArea rows={4} />
+        </Form.Item>
+        <Form.Item
+          name="elementType"
+          label="Element Type"
+          rules={[{ required: true, message: "Please select element type" }]}
+        >
+          <Select placeholder="Select element type">
+            <Select.Option value={0}>Assignment</Select.Option>
+            <Select.Option value={1}>Lab</Select.Option>
+            <Select.Option value={2}>PE</Select.Option>
+          </Select>
         </Form.Item>
         <Form.Item
           name="weight"

@@ -17,18 +17,9 @@ import { queryKeys } from "@/lib/react-query";
 
 const { Title, Text } = Typography;
 
-// Helper function to check if a course element is a Lab based on name
+// Helper function to check if a course element is a Lab based on elementType
 function isLab(element: CourseElement): boolean {
-  const name = (element.name || "").toLowerCase();
-  const keywords = [
-    "lab",
-    "laboratory",
-    "thực hành",
-    "bài thực hành",
-    "lab session",
-    "lab work",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
+  return element.elementType === 1; // 1: Lab
 }
 
 function mapCourseElementToLabData(

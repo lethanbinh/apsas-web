@@ -1,12 +1,15 @@
 "use client";
 
-import { UserDetailFormModal } from "@/components/admin/UserDetailFormModal";
-import { Role } from "@/lib/constants";
+import { CreateUserFormModal } from "@/components/admin/CreateUserFormModal";
+import { Role, ROLES } from "@/lib/constants";
 import { accountService } from "@/services/accountService";
 import { adminService } from "@/services/adminService";
+import { lecturerService } from "@/services/lecturerService";
+import { studentManagementService } from "@/services/studentManagementService";
+import { examinerService } from "@/services/examinerService";
 import { User, UserUpdatePayload } from "@/types";
 import { App, Button, Upload, Modal, Table, Space, Alert, Input, Spin } from "antd";
-import { DownloadOutlined, UploadOutlined, FileExcelOutlined, SearchOutlined } from "@ant-design/icons";
+import { DownloadOutlined, UploadOutlined, FileExcelOutlined, SearchOutlined, EditOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import React, { useCallback, useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -109,8 +112,21 @@ const ManageUsersPageContent: React.FC = () => {
 
   // Mutation for creating user
   const createUserMutation = useMutation({
-    mutationFn: async (payload: UserUpdatePayload) => {
-      return adminService.createAccount(payload);
+    mutationFn: async ({ payload, role }: { payload: any; role: Role }) => {
+      switch (role) {
+        case ROLES.ADMIN:
+          return adminService.createAdmin(payload);
+        case ROLES.LECTURER:
+          return lecturerService.createLecturer(payload);
+        case ROLES.STUDENT:
+          return studentManagementService.createStudent(payload);
+        case ROLES.HOD:
+          return adminService.createHOD(payload);
+        case ROLES.EXAMINER:
+          return examinerService.createExaminer(payload);
+        default:
+          throw new Error("Invalid role");
+      }
     },
     onSuccess: () => {
       // Invalidate users queries to refetch updated data
@@ -120,18 +136,19 @@ const ManageUsersPageContent: React.FC = () => {
     },
     onError: (err: any) => {
       console.error("Failed to create user:", err);
+      const errorMessage = err.response?.data?.errorMessages?.[0] || err.message || "Failed to create user";
       notification.error({ 
         message: "Create Failed", 
-        description: err.message || "Failed to create user" 
+        description: errorMessage
       });
     },
   });
 
   const handleCreateOk = async (
-    values: UserUpdatePayload,
+    values: any,
     role: Role
   ) => {
-    createUserMutation.mutate(values as UserUpdatePayload);
+    createUserMutation.mutate({ payload: values, role });
   };
 
   const handleCreateCancel = () => {
@@ -160,14 +177,16 @@ const ManageUsersPageContent: React.FC = () => {
     const roleNumber = typeof role === "string" ? parseInt(role, 10) : role;
 
     switch (roleNumber) {
-      case 0:
+      case ROLES.ADMIN:
         return "Admin";
-      case 1:
+      case ROLES.LECTURER:
         return "Lecturer";
-      case 2:
+      case ROLES.STUDENT:
         return "Student";
-      case 3:
+      case ROLES.HOD:
         return "HOD";
+      case ROLES.EXAMINER:
+        return "Examiner";
       default:
         return `Unknown (${role})`;
     }
@@ -290,10 +309,11 @@ const ManageUsersPageContent: React.FC = () => {
       // Map users to Excel format
       const excelData = allUsers.map((user, index) => {
         const roleMap: Record<number, string> = {
-          0: "Admin",
-          1: "Lecturer",
-          2: "Student",
-          3: "HOD",
+          [ROLES.ADMIN]: "Admin",
+          [ROLES.LECTURER]: "Lecturer",
+          [ROLES.STUDENT]: "Student",
+          [ROLES.HOD]: "HOD",
+          [ROLES.EXAMINER]: "Examiner",
         };
 
         const genderMap: Record<number, string> = {
@@ -364,8 +384,11 @@ const ManageUsersPageContent: React.FC = () => {
         { value: "1", name: "Lecturer" },
         { value: "2", name: "Student" },
         { value: "3", name: "HOD" },
+        { value: "4", name: "Examiner" },
       ];
-      const genders = ["0", "1", "2"]; // Male, Female, Other
+      const genders = ["0", "1"]; // Male, Female
+      const departments = ["Computer Science", "Information Technology", "Software Engineering", "Data Science", "Cybersecurity", "Network Engineering", "Artificial Intelligence", "Web Development", "Mobile Development", "Database Systems"];
+      const specializations = ["Web Development", "Mobile Development", "Data Science", "Machine Learning", "Cybersecurity", "Cloud Computing", "Database Management", "Software Architecture", "Network Security", "AI & Robotics"];
       const firstNames = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Vu", "Vo", "Dang", "Bui", "Do"];
       const middleNames = ["Van", "Thi", "Duc", "Minh", "Thanh", "Quang", "Duy", "Hoang", "Tuan", "Anh"];
       const lastNames = ["An", "Binh", "Chi", "Dung", "Em", "Giang", "Hoa", "Khanh", "Linh", "Mai", "Nam", "Oanh", "Phuong", "Quan", "Son", "Thao", "Uyen", "Vy", "Xuan", "Yen"];
@@ -404,8 +427,7 @@ const ManageUsersPageContent: React.FC = () => {
         
         const password = `Pass${i}@123`;
 
-        sampleAccounts.push({
-          "Account Code": accountCode,
+        const accountData: any = {
           "Username": username,
           "Email": email,
           "Phone Number": phoneNumber,
@@ -415,7 +437,15 @@ const ManageUsersPageContent: React.FC = () => {
           "Date of Birth": dateOfBirth,
           "Role": role.value,
           "Password": password
-        });
+        };
+
+        // Add Department and Specialization for Lecturer role
+        if (role.value === "1") {
+          accountData["Department"] = departments[Math.floor(Math.random() * departments.length)];
+          accountData["Specialization"] = specializations[Math.floor(Math.random() * specializations.length)];
+        }
+
+        sampleAccounts.push(accountData);
       }
 
       const ws = XLSX.utils.json_to_sheet(sampleAccounts);
@@ -424,7 +454,6 @@ const ManageUsersPageContent: React.FC = () => {
 
       // Set column widths
       ws["!cols"] = [
-        { wch: 15 }, // Account Code
         { wch: 15 }, // Username
         { wch: 25 }, // Email
         { wch: 15 }, // Phone Number
@@ -434,6 +463,8 @@ const ManageUsersPageContent: React.FC = () => {
         { wch: 15 }, // Date of Birth
         { wch: 10 }, // Role
         { wch: 15 }, // Password
+        { wch: 20 }, // Department (for Lecturer)
+        { wch: 20 }, // Specialization (for Lecturer)
       ];
 
       XLSX.writeFile(wb, "Account_Import_Template.xlsx");
@@ -455,9 +486,6 @@ const ManageUsersPageContent: React.FC = () => {
     const rowNum = rowIndex + 2; // +2 because Excel rows start at 1 and we have header
 
     // Required fields
-    if (!row["Account Code"] || !row["Account Code"].toString().trim()) {
-      return `Row ${rowNum}: Account Code is required`;
-    }
     if (!row["Username"] || !row["Username"].toString().trim()) {
       return `Row ${rowNum}: Username is required`;
     }
@@ -492,11 +520,11 @@ const ManageUsersPageContent: React.FC = () => {
       return `Row ${rowNum}: Address must be at least 5 characters`;
     }
     if (row["Gender"] === undefined || row["Gender"] === null || row["Gender"].toString().trim() === "") {
-      return `Row ${rowNum}: Gender is required (0=Male, 1=Female, 2=Other)`;
+      return `Row ${rowNum}: Gender is required (0=Male, 1=Female)`;
     }
     const gender = parseInt(row["Gender"].toString().trim());
-    if (isNaN(gender) || gender < 0 || gender > 2) {
-      return `Row ${rowNum}: Gender must be 0 (Male), 1 (Female), or 2 (Other)`;
+    if (isNaN(gender) || gender < 0 || gender > 1) {
+      return `Row ${rowNum}: Gender must be 0 (Male) or 1 (Female)`;
     }
     if (!row["Date of Birth"] || !row["Date of Birth"].toString().trim()) {
       return `Row ${rowNum}: Date of Birth is required (format: YYYY-MM-DD)`;
@@ -506,11 +534,29 @@ const ManageUsersPageContent: React.FC = () => {
       return `Row ${rowNum}: Invalid Date of Birth format (use YYYY-MM-DD)`;
     }
     if (!row["Role"] || row["Role"].toString().trim() === "") {
-      return `Row ${rowNum}: Role is required (0=Admin, 1=Lecturer, 2=Student, 3=HOD)`;
+      return `Row ${rowNum}: Role is required (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
     }
     const role = parseInt(row["Role"].toString().trim());
-    if (isNaN(role) || role < 0 || role > 3) {
-      return `Row ${rowNum}: Role must be 0-3 (0=Admin, 1=Lecturer, 2=Student, 3=HOD)`;
+    if (isNaN(role) || role < 0 || role > 4) {
+      return `Row ${rowNum}: Role must be 0-4 (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
+    }
+    // Validate Lecturer-specific fields
+    if (role === ROLES.LECTURER) {
+      if (!row["Department"] || !row["Department"].toString().trim()) {
+        return `Row ${rowNum}: Department is required for Lecturer role`;
+      }
+      if (!row["Specialization"] || !row["Specialization"].toString().trim()) {
+        return `Row ${rowNum}: Specialization is required for Lecturer role`;
+      }
+    }
+    // Validate Lecturer-specific fields
+    if (role === ROLES.LECTURER) {
+      if (!row["Department"] || !row["Department"].toString().trim()) {
+        return `Row ${rowNum}: Department is required for Lecturer role`;
+      }
+      if (!row["Specialization"] || !row["Specialization"].toString().trim()) {
+        return `Row ${rowNum}: Specialization is required for Lecturer role`;
+      }
     }
     if (!row["Password"] || !row["Password"].toString().trim()) {
       return `Row ${rowNum}: Password is required`;
@@ -557,7 +603,7 @@ const ManageUsersPageContent: React.FC = () => {
       const results = {
         success: 0,
         failed: 0,
-        errors: [] as Array<{ row: number; accountCode?: string; email?: string; error: string }>,
+        errors: [] as Array<{ row: number; email?: string; error: string }>,
       };
 
       // Process each row
@@ -571,7 +617,6 @@ const ManageUsersPageContent: React.FC = () => {
           results.failed++;
           results.errors.push({
             row: rowNum,
-            accountCode: row["Account Code"]?.toString(),
             email: row["Email"]?.toString(),
             error: validationError,
           });
@@ -579,8 +624,8 @@ const ManageUsersPageContent: React.FC = () => {
         }
 
         // Prepare account data
-        const accountData: any = {
-          accountCode: row["Account Code"].toString().trim(),
+        const role = parseInt(row["Role"].toString().trim());
+        const baseData: any = {
           username: row["Username"].toString().trim(),
           email: row["Email"].toString().trim(),
           phoneNumber: row["Phone Number"].toString().trim(),
@@ -588,13 +633,38 @@ const ManageUsersPageContent: React.FC = () => {
           address: row["Address"].toString().trim(),
           gender: parseInt(row["Gender"].toString().trim()),
           dateOfBirth: new Date(row["Date of Birth"].toString().trim()).toISOString(),
-          role: parseInt(row["Role"].toString().trim()),
           password: row["Password"].toString().trim(),
+          avatar: row["Avatar"]?.toString().trim() || "",
         };
 
-        // Create account
+        // Add role-specific fields
+        let accountData: any = { ...baseData };
+        if (role === ROLES.LECTURER) {
+          accountData.department = row["Department"]?.toString().trim() || "";
+          accountData.specialization = row["Specialization"]?.toString().trim() || "";
+        }
+
+        // Create account using the appropriate service
         try {
-          await adminService.createAccount(accountData);
+          switch (role) {
+            case ROLES.ADMIN:
+              await adminService.createAdmin(accountData);
+              break;
+            case ROLES.LECTURER:
+              await lecturerService.createLecturer(accountData);
+              break;
+            case ROLES.STUDENT:
+              await studentManagementService.createStudent(accountData);
+              break;
+            case ROLES.HOD:
+              await adminService.createHOD(accountData);
+              break;
+            case ROLES.EXAMINER:
+              await examinerService.createExaminer(accountData);
+              break;
+            default:
+              throw new Error(`Invalid role: ${role}`);
+          }
           results.success++;
         } catch (error: any) {
           results.failed++;
@@ -603,7 +673,6 @@ const ManageUsersPageContent: React.FC = () => {
                               "Failed to create account";
           results.errors.push({
             row: rowNum,
-            accountCode: accountData.accountCode,
             email: accountData.email,
             error: errorMessage,
           });
@@ -800,22 +869,25 @@ const ManageUsersPageContent: React.FC = () => {
                 );
               }
               return (
-                <tr key={user.id} className={styles["table-row"]}>
+                <tr 
+                  key={user.id} 
+                  className={styles["table-row"]}
+                  onClick={() => showEditModal(user)}
+                  style={{ cursor: "pointer" }}
+                >
                   <td>{(currentPage - 1) * pageSize + index + 1}</td>
                   <td>{user.email}</td>
                   <td>{user.fullName}</td>
                   <td>{new Date(user.dateOfBirth).toLocaleDateString()}</td>
                   <td>{mapRoleToString(user.role)}</td>
                   <td>{user.accountCode}</td>
-                  <td>
+                  <td onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="small"
-                      type="primary"
+                      icon={<EditOutlined />}
                       onClick={() => showEditModal(user)}
                       className={styles["rounded-button"]}
-                    >
-                      Edit
-                    </Button>
+                    />
                   </td>
                 </tr>
               );
@@ -852,7 +924,7 @@ const ManageUsersPageContent: React.FC = () => {
         </div>
       )}
       {isEditModalVisible && (
-        <UserDetailFormModal
+        <CreateUserFormModal
           visible={isEditModalVisible}
           onCancel={handleEditCancel}
           onOk={handleEditOk}
@@ -861,7 +933,7 @@ const ManageUsersPageContent: React.FC = () => {
         />
       )}
       {isCreateModalVisible && (
-        <UserDetailFormModal
+        <CreateUserFormModal
           visible={isCreateModalVisible}
           onCancel={handleCreateCancel}
           onOk={handleCreateOk}

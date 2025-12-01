@@ -4,6 +4,7 @@ export interface CourseElementBasic {
   name: string;
   description: string;
   weight: number;
+  elementType: number; // 0: Assignment, 1: Lab, 2: PE
   semesterCourseId: number;
   createdAt: string;
   updatedAt: string;
@@ -21,6 +22,7 @@ export interface CreateCourseElementPayload {
   name: string;
   description: string;
   weight: number;
+  elementType: number; // 0: Assignment, 1: Lab, 2: PE
   semesterCourseId: number;
 }
 
@@ -28,6 +30,7 @@ export interface UpdateCourseElementPayload {
   name: string;
   description: string;
   weight: number;
+  elementType: number; // 0: Assignment, 1: Lab, 2: PE
 }
 
 export class CourseElementManagementService {

@@ -32,15 +32,14 @@ export interface ExaminerApiResponse {
 
 export interface CreateExaminerPayload {
   username: string;
-  password?: string;
+  password: string;
   email: string;
   phoneNumber: string;
   fullName: string;
-  avatar: string;
+  avatar?: string;
   address: string;
   gender: number;
   dateOfBirth: string;
-  role: string;
 }
 
 export class ExaminerService {

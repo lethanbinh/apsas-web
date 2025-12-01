@@ -109,6 +109,26 @@ export class StudentManagementService {
   async deleteStudentGroup(studentGroupId: string | number): Promise<void> {
     await apiService.delete(`/StudentGroup/${studentGroupId}`);
   }
+
+  async createStudent(payload: CreateStudentPayload): Promise<StudentDetail> {
+    const response = await apiService.post<StudentListApiResponse>(
+      "/Student/create",
+      payload
+    );
+    return response.result as any;
+  }
+}
+
+export interface CreateStudentPayload {
+  username: string;
+  password: string;
+  email: string;
+  phoneNumber: string;
+  fullName: string;
+  avatar?: string;
+  address: string;
+  gender: number;
+  dateOfBirth: string;
 }
 
 export const studentManagementService = new StudentManagementService();

@@ -47,6 +47,8 @@ import {
 } from "antd";
 import { format } from "date-fns";
 import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
@@ -204,11 +206,47 @@ const CourseElementsTable = ({
   onEdit,
   onDelete,
 }: CourseElementsTableProps) => {
+  const getElementTypeLabel = (elementType: number) => {
+    switch (elementType) {
+      case 0:
+        return "Assignment";
+      case 1:
+        return "Lab";
+      case 2:
+        return "PE";
+      default:
+        return "Unknown";
+    }
+  };
+
+  const getElementTypeColor = (elementType: number) => {
+    switch (elementType) {
+      case 0:
+        return "blue";
+      case 1:
+        return "green";
+      case 2:
+        return "orange";
+      default:
+        return "default";
+    }
+  };
+
   const columns: TableProps<CourseElement>["columns"] = [
     {
       title: "Name",
       dataIndex: "name",
       key: "name",
+    },
+    {
+      title: "Element Type",
+      dataIndex: "elementType",
+      key: "elementType",
+      render: (elementType: number) => (
+        <Tag color={getElementTypeColor(elementType)}>
+          {getElementTypeLabel(elementType)}
+        </Tag>
+      ),
     },
     {
       title: "Weight",
@@ -382,6 +420,7 @@ interface SemesterCoursesTableProps {
     semesterCourse: SemesterCourse
   ) => void;
   onDeleteAssignRequest: (requestId: number) => void;
+  onImportClassStudent: (semesterCourse: SemesterCourse) => void;
   studentCountRefreshTrigger?: number;
 }
 
@@ -401,6 +440,7 @@ const SemesterCoursesTable = ({
   onAddAssignRequest,
   onEditAssignRequest,
   onDeleteAssignRequest,
+  onImportClassStudent,
   studentCountRefreshTrigger,
 }: SemesterCoursesTableProps) => {
   const columns: TableProps<SemesterCourse>["columns"] = [
@@ -488,13 +528,20 @@ const SemesterCoursesTable = ({
         label: `Classes (${record.classes.length})`,
         children: (
           <>
-            <Button
-              icon={<PlusOutlined />}
-              onClick={() => onAddClass(record.id)}
-              style={{ marginBottom: 16 }}
-            >
-              Add Class
-            </Button>
+            <Space style={{ marginBottom: 16 }} wrap>
+              <Button
+                icon={<PlusOutlined />}
+                onClick={() => onAddClass(record.id)}
+              >
+                Add Class
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={() => onImportClassStudent(record)}
+              >
+                Import Class Student
+              </Button>
+            </Space>
             <ClassesTable
               classes={record.classes}
               onEdit={onEditClass}
@@ -567,6 +614,7 @@ const SemesterDetailPageContent = ({
 }: {
   params: { semesterCode: string };
 }) => {
+  const router = useRouter();
   const [semesterData, setSemesterData] = useState<SemesterPlanDetail | null>(
     null
   );
@@ -612,6 +660,10 @@ const SemesterDetailPageContent = ({
   const [viewingClassCode, setViewingClassCode] = useState<string>("");
   const [studentCountRefreshTrigger, setStudentCountRefreshTrigger] = useState(0);
   const [isImportClassStudentModalOpen, setIsImportClassStudentModalOpen] = useState(false);
+  const [importingSemesterCourseId, setImportingSemesterCourseId] = useState<number | null>(null);
+  const [importingSemesterCode, setImportingSemesterCode] = useState<string>("");
+  const [importingCourseCode, setImportingCourseCode] = useState<string>("");
+  const [importingCourseName, setImportingCourseName] = useState<string>("");
 
   const fetchDetail = useCallback(async () => {
     if (!params.semesterCode) {
@@ -999,12 +1051,20 @@ const SemesterDetailPageContent = ({
     });
   };
 
-  const handleImportClassStudent = () => {
+  const handleImportClassStudent = (semesterCourse: SemesterCourse) => {
+    setImportingSemesterCourseId(semesterCourse.id);
+    setImportingSemesterCode(semesterData?.semesterCode || "");
+    setImportingCourseCode(semesterCourse.course.code);
+    setImportingCourseName(semesterCourse.course.name);
     setIsImportClassStudentModalOpen(true);
   };
 
   const handleImportClassStudentModalCancel = () => {
     setIsImportClassStudentModalOpen(false);
+    setImportingSemesterCourseId(null);
+    setImportingSemesterCode("");
+    setImportingCourseCode("");
+    setImportingCourseName("");
   };
 
   const handleImportClassStudentModalOk = () => {
@@ -1044,11 +1104,10 @@ const SemesterDetailPageContent = ({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
         <Title level={2} style={{ margin: 0 }}>Semester Plan: {semesterData.semesterCode}</Title>
         <Button
-          type="primary"
-          icon={<UploadOutlined />}
-          onClick={handleImportClassStudent}
+          icon={<ArrowLeftOutlined />}
+          onClick={() => router.back()}
         >
-          Import Class Student
+          Back
         </Button>
       </div>
 
@@ -1111,6 +1170,7 @@ const SemesterDetailPageContent = ({
         onAddAssignRequest={handleOpenCreateAssignRequestModal}
         onEditAssignRequest={handleOpenEditAssignRequestModal}
         onDeleteAssignRequest={handleDeleteAssignRequest}
+        onImportClassStudent={handleImportClassStudent}
         studentCountRefreshTrigger={studentCountRefreshTrigger}
       />
 
@@ -1181,23 +1241,17 @@ const SemesterDetailPageContent = ({
         }}
       />
 
-      <ImportClassStudentModal
-        open={isImportClassStudentModalOpen}
-        onCancel={handleImportClassStudentModalCancel}
-        onImport={handleImportClassStudentModalOk}
-        semesterCode={semesterData.semesterCode}
-        semesterCourses={semesterData.semesterCourses.map(sc => ({
-          id: sc.id,
-          semesterId: sc.semesterId,
-          courseId: sc.courseId,
-          course: {
-            id: sc.course.id,
-            name: sc.course.name,
-            code: sc.course.code,
-            description: sc.course.description,
-          },
-        }))}
-      />
+      {importingSemesterCourseId !== null && (
+        <ImportClassStudentModal
+          open={isImportClassStudentModalOpen}
+          onCancel={handleImportClassStudentModalCancel}
+          onImport={handleImportClassStudentModalOk}
+          semesterCode={importingSemesterCode}
+          semesterCourseId={importingSemesterCourseId}
+          courseCode={importingCourseCode}
+          courseName={importingCourseName}
+        />
+      )}
     </div>
   );
 };
