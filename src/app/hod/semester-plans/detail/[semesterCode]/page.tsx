@@ -5,6 +5,7 @@ import { CourseCrudModal } from "@/components/modals/CourseCrudModal";
 import { CourseElementCrudModal } from "@/components/modals/CourseElementCrudModal";
 import { StudentGroupCrudModal } from "@/components/modals/StudentGroupCrudModal";
 import { ViewStudentsModal } from "@/components/modals/ViewStudentsModal";
+import { ImportClassStudentModal } from "@/components/hod/ImportClassStudentModal";
 import { classManagementService } from "@/services/classManagementService";
 import { StudentInClass } from "@/services/classService";
 import { courseElementManagementService } from "@/services/courseElementManagementService";
@@ -29,6 +30,7 @@ import {
   PlusOutlined,
   TeamOutlined,
   UserOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import type { TableProps, TabsProps } from "antd";
 import {
@@ -609,6 +611,7 @@ const SemesterDetailPageContent = ({
   const [viewingClassId, setViewingClassId] = useState<number | null>(null);
   const [viewingClassCode, setViewingClassCode] = useState<string>("");
   const [studentCountRefreshTrigger, setStudentCountRefreshTrigger] = useState(0);
+  const [isImportClassStudentModalOpen, setIsImportClassStudentModalOpen] = useState(false);
 
   const fetchDetail = useCallback(async () => {
     if (!params.semesterCode) {
@@ -996,6 +999,24 @@ const SemesterDetailPageContent = ({
     });
   };
 
+  const handleImportClassStudent = () => {
+    setIsImportClassStudentModalOpen(true);
+  };
+
+  const handleImportClassStudentModalCancel = () => {
+    setIsImportClassStudentModalOpen(false);
+  };
+
+  const handleImportClassStudentModalOk = () => {
+    setIsImportClassStudentModalOpen(false);
+    fetchDetail();
+    notification.success({
+      message: "Import Successful",
+      description: "Class student data has been imported successfully.",
+      placement: "topRight",
+    });
+  };
+
   if (loading) {
     return (
       <div
@@ -1020,7 +1041,16 @@ const SemesterDetailPageContent = ({
 
   return (
     <div style={{ padding: "24px", background: "#fff", minHeight: "100%" }}>
-      <Title level={2}>Semester Plan: {semesterData.semesterCode}</Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <Title level={2} style={{ margin: 0 }}>Semester Plan: {semesterData.semesterCode}</Title>
+        <Button
+          type="primary"
+          icon={<UploadOutlined />}
+          onClick={handleImportClassStudent}
+        >
+          Import Class Student
+        </Button>
+      </div>
 
       <Descriptions bordered style={{ marginBottom: 24 }} column={2}>
         <Descriptions.Item label="Semester Code">
@@ -1149,6 +1179,24 @@ const SemesterDetailPageContent = ({
           fetchDetail();
           setStudentCountRefreshTrigger(prev => prev + 1);
         }}
+      />
+
+      <ImportClassStudentModal
+        open={isImportClassStudentModalOpen}
+        onCancel={handleImportClassStudentModalCancel}
+        onImport={handleImportClassStudentModalOk}
+        semesterCode={semesterData.semesterCode}
+        semesterCourses={semesterData.semesterCourses.map(sc => ({
+          id: sc.id,
+          semesterId: sc.semesterId,
+          courseId: sc.courseId,
+          course: {
+            id: sc.course.id,
+            name: sc.course.name,
+            code: sc.course.code,
+            description: sc.course.description,
+          },
+        }))}
       />
     </div>
   );

@@ -6,6 +6,9 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb/db';
 import AppDownloadLink from '@/lib/mongodb/models/AppDownloadLink';
 
+// Force dynamic rendering to prevent build-time execution
+export const dynamic = 'force-dynamic';
+
 /**
  * GET - Lấy lịch sử các version (tạm thời chỉ lấy document hiện tại, có thể mở rộng sau)
  */

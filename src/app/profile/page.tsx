@@ -362,6 +362,12 @@ const ProfilePage = () => {
   }
 
   const roleInfo = getRoleInfo(profile.role);
+  const avatarSrc =
+    profile.avatar && profile.avatar.trim().length > 0
+      ? profile.avatar
+      : profile.fullName
+      ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}`
+      : undefined;
 
   return (
     <Layout>
@@ -374,7 +380,7 @@ const ProfilePage = () => {
                 <div style={{ position: 'relative', display: 'inline-block' }}>
                   <Avatar 
                     size={120} 
-                    src={profile.avatar} 
+                    src={avatarSrc}
                     icon={<UserOutlined />}
                     className={styles.avatar}
                     style={{ 

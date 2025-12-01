@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
 import { authService } from "@/services/authService";
-import { logout } from "@/store/slices/authSlice";
+import { logout, fetchUserProfile } from "@/store/slices/authSlice";
 import { LoginCredentials } from "@/types";
 import { Button, Checkbox, Form, Input, App, Select } from "antd";
 import { getApps, initializeApp } from "firebase/app";
@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store/store";
 import { setCookie, deleteCookie } from "@/lib/utils/cookie";
 import { setStorageItem, removeStorageItem } from "@/lib/utils/storage";
 
@@ -121,7 +122,7 @@ const translateErrorMessage = (errorMsg: string): string => {
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -298,10 +299,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setErrors({});
 
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
+        removeStorageItem('auth_token');
+        removeStorageItem('user_data');
+        removeStorageItem('user_id');
+        deleteCookie('auth_token');
       }
+      dispatch(logout());
 
       const result = await signInWithPopup(auth, provider);
       console.log("result:", result);
@@ -312,15 +315,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         );
       }
 
-      const idToken = await result.user.getIdToken();
-      console.log("Google ID Token:", idToken);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const googleIdToken =
+        credential?.idToken ||
+        (result as any)?._tokenResponse?.oauthIdToken ||
+        null;
 
-      if (!idToken) {
-        throw new Error("Google authentication failed: No ID token received");
+      if (!googleIdToken) {
+        throw new Error("Google authentication failed: No Google ID token received");
       }
 
-      console.log("Sending ID Token to backend:", idToken);
-      const response = await authService.googleLogin({ idToken });
+      console.log("Google ID Token:", googleIdToken);
+
+      console.log("Sending ID Token to backend:", googleIdToken);
+      const response = await authService.googleLogin({ idToken: googleIdToken });
       console.log("Backend response for Google Login:", response);
 
       if (!response || !response.result || !response.result.token) {
@@ -351,6 +359,40 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       };
 
       const userRole = mapRoleToNumber(decoded?.role || 2);
+      const rawUserId =
+        decoded?.nameid ||
+        decoded?.sub ||
+        decoded?.userId ||
+        decoded?.id ||
+        result.user?.uid;
+      const userIdNumber = rawUserId ? parseInt(rawUserId, 10) || rawUserId : null;
+
+      const userInfo = {
+        id: typeof userIdNumber === "number" ? userIdNumber : 0,
+        accountCode: decoded?.accountCode || "",
+        username: decoded?.unique_name || decoded?.username || "",
+        email: decoded?.email || result.user?.email || "",
+        phoneNumber: decoded?.phoneNumber || "",
+        fullName: decoded?.fullName || result.user?.displayName || "",
+        avatar: decoded?.avatar || result.user?.photoURL || "",
+        address: decoded?.address || "",
+        gender: typeof decoded?.gender === "number" ? decoded.gender : 0,
+        dateOfBirth: decoded?.dateOfBirth || "",
+        role: userRole,
+      };
+
+      if (typeof window !== "undefined") {
+        if (rawUserId) {
+          setStorageItem("user_id", String(rawUserId));
+        }
+        setStorageItem("user_data", JSON.stringify(userInfo));
+      }
+
+      try {
+        await dispatch(fetchUserProfile()).unwrap();
+      } catch (profileError: any) {
+        console.warn("Could not refresh profile after Google login:", profileError);
+      }
       console.log(
         "Decoded role from JWT:",
         decoded?.role,
