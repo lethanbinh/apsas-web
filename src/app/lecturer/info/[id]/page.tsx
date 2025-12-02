@@ -22,18 +22,35 @@ export default function ClassDetailPage({
 
   if (isLoading && !classData) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        backgroundColor: '#ffffff'
+      }}>
         <Spin size="large" />
       </div>
     );
   }
 
   if (error || !classData) {
-    return <div>Class not found.</div>;
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        backgroundColor: '#ffffff',
+        padding: '24px'
+      }}>
+        Class not found.
+      </div>
+    );
   }
 
   return (
-    <div>
+    <div style={{ 
+      minHeight: '100vh',
+      backgroundColor: '#ffffff'
+    }}>
       <ClassInfo classData={classData} />
     </div>
   );

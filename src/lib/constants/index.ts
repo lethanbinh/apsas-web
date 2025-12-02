@@ -97,7 +97,6 @@ export interface NavigationItem {
 
 export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   [ROLES.STUDENT]: [
-    { key: "home", label: "Home", href: "/home/student" },
     {
       key: "my-classes",
       label: "My Classes",
@@ -111,7 +110,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
     // },
   ],
   [ROLES.LECTURER]: [
-    { key: "home", label: "Home", href: "/home/lecturer" },
     {
       key: "my-classes",
       label: "My Classes",

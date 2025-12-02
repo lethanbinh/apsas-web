@@ -80,6 +80,15 @@ const formatUtcDate = (dateString: string | null | undefined, formatStr: string)
   return vietnamTime.format(formatStr);
 };
 
+// Helper function to check if semester has passed
+const isSemesterPassed = (endDate: string | null | undefined): boolean => {
+  if (!endDate) return false;
+  const now = dayjs().tz("Asia/Ho_Chi_Minh");
+  const semesterEnd = toVietnamTime(endDate);
+  if (!semesterEnd || !semesterEnd.isValid()) return false;
+  return now.isAfter(semesterEnd, 'day');
+};
+
 const getStatusTag = (status: number) => {
   switch (status) {
     case 0:
@@ -455,12 +464,19 @@ const MySubmissionsPageContent = () => {
   });
 
   const semesters = useMemo(() => {
-    return semesterDetailsQueries
+    const filtered = semesterDetailsQueries
       .map(q => q.data)
       .filter((s): s is SemesterPlanDetail => s !== undefined);
+    
+    // Sort by endDate descending (newest first)
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.endDate || 0).getTime();
+      const dateB = new Date(b.endDate || 0).getTime();
+      return dateB - dateA; // Descending order (newest first)
+    });
   }, [semesterDetailsQueries]);
 
-  // Set default to current semester
+  // Set default to current semester, or latest if current has no data
   useEffect(() => {
     if (allSemestersData && semesters.length > 0 && selectedSemester === undefined) {
       const now = new Date();
@@ -471,32 +487,24 @@ const MySubmissionsPageContent = () => {
         return now >= startDate && now <= endDate;
       });
       
-      // Check if current semester has grading groups (is in semesters list)
+      // Try to find current semester in semesters list (has grading groups)
       if (currentSemester) {
         const semesterDetail = semesters.find((s) => s.semesterCode === currentSemester.semesterCode);
         if (semesterDetail) {
+          // Current semester has data, use it
           setSelectedSemester(Number(semesterDetail.id));
-        } else {
-          // If no current semester or current semester has no grading groups, fallback to latest semester with grading groups
-          const latestSemester = [...semesters].sort((a, b) => {
-            const dateA = new Date(a.endDate || 0).getTime();
-            const dateB = new Date(b.endDate || 0).getTime();
-            return dateB - dateA; // Descending order (newest first)
-          })[0];
-          if (latestSemester) {
-            setSelectedSemester(Number(latestSemester.id));
-          }
+          return;
         }
-      } else {
-        // If no current semester, fallback to latest semester with grading groups
-        const latestSemester = [...semesters].sort((a, b) => {
-          const dateA = new Date(a.endDate || 0).getTime();
-          const dateB = new Date(b.endDate || 0).getTime();
-          return dateB - dateA; // Descending order (newest first)
-        })[0];
-        if (latestSemester) {
-          setSelectedSemester(Number(latestSemester.id));
-        }
+      }
+      
+      // Current semester not found or has no data, use latest semester
+      const latestSemester = [...semesters].sort((a, b) => {
+        const dateA = new Date(a.endDate || 0).getTime();
+        const dateB = new Date(b.endDate || 0).getTime();
+        return dateB - dateA; // Descending order (newest first)
+      })[0];
+      if (latestSemester) {
+        setSelectedSemester(Number(latestSemester.id));
       }
     }
   }, [allSemestersData, semesters, selectedSemester]);
@@ -958,12 +966,11 @@ const MySubmissionsPageContent = () => {
           console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
         }
 
-        // Determine assignment type
-        const nameLower = (courseElement.name || "").toLowerCase();
+        // Determine assignment type from elementType field
+        // elementType: 0 = Assignment, 1 = Lab, 2 = PE (Practical Exam)
+        // Now only PE is used, so only elementType === 2 is "Practical Exam"
         const assignmentType: "Assignment" | "Lab" | "Practical Exam" = 
-          nameLower.includes("lab") || nameLower.includes("thực hành") ? "Lab" :
-          nameLower.includes("exam") || nameLower.includes("pe") || nameLower.includes("practical") ||
-          nameLower.includes("thi thực hành") || nameLower.includes("kiểm tra thực hành") ? "Practical Exam" :
+          courseElement.elementType === 2 ? "Practical Exam" :
           "Assignment";
 
         reportData.push({
@@ -1404,6 +1411,7 @@ const MySubmissionsPageContent = () => {
       submissionCount: number;
       gradingGroupIds: number[]; // All grading group IDs that match
       gradingGroup: GradingGroup; // Latest grading group
+      isSemesterPassed: boolean; // Whether the semester has ended
     }>();
 
     // First pass: collect all unique keys
@@ -1428,7 +1436,7 @@ const MySubmissionsPageContent = () => {
 
     // Second pass: process each unique key and group matching grading groups
     allKeys.forEach((key, keyStr) => {
-      // Find all grading groups that match this key
+      // Find all grading groups that match this key (Course, Template, Semester)
       const matchingGroups = gradingGroups.filter(g => {
         const gCourseInfo = gradingGroupToCourseMap[g.id];
         const gSemesterCode = gradingGroupToSemesterMap[g.id];
@@ -1471,6 +1479,11 @@ const MySubmissionsPageContent = () => {
         }
       });
 
+      // Check if semester has passed
+      const semesterDetail = semesters.find((s) => s.semesterCode === key.semesterCode);
+      const semesterEndDate = semesterDetail?.endDate;
+      const semesterPassed = isSemesterPassed(semesterEndDate);
+
       groupedMap.set(keyStr, {
         key: keyStr, // Use the composite key as unique identifier
         id: latestGroup.id,
@@ -1481,6 +1494,7 @@ const MySubmissionsPageContent = () => {
         submissionCount: studentSubmissions.size,
         gradingGroupIds: matchingGroupIds,
         gradingGroup: latestGroup,
+        isSemesterPassed: semesterPassed,
       });
     });
 
@@ -1553,16 +1567,6 @@ const MySubmissionsPageContent = () => {
       ),
     },
     {
-      title: "Submissions",
-      dataIndex: "submissionCount",
-      key: "submissions",
-      width: 120,
-      align: "center",
-      render: (count) => (
-        <Tag color={count > 0 ? "green" : "default"}>{count}</Tag>
-      ),
-    },
-    {
       title: "Actions",
       key: "actions",
       width: 150,
@@ -1572,6 +1576,7 @@ const MySubmissionsPageContent = () => {
           type="primary"
           onClick={() => router.push(`/lecturer/grading-group/${record.id}`)}
           size="small"
+          disabled={record.isSemesterPassed}
         >
           Manage
         </Button>

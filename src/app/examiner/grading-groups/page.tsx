@@ -23,6 +23,7 @@ import {
   UserAddOutlined,
   DownloadOutlined,
   DeleteOutlined,
+  FileOutlined,
 } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import {
@@ -38,6 +39,7 @@ import {
   Empty,
   Select,
   Popconfirm,
+  Collapse,
 } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1013,8 +1015,8 @@ const GradingGroupsPageContent = () => {
                   const semesterCode = group.semesterCode;
                   if (!semesterCode) return;
                   
-                  // Create composite key: courseId_templateId_semesterCode
-                  const key = `${course.courseId}_${template.templateId}_${semesterCode}`;
+                  // Create composite key: courseId_templateId_lecturerId (gộp theo Course, Template, Lecturer)
+                  const key = `${course.courseId}_${template.templateId}_${lecturer.lecturerId}`;
                   
                   const existing = groupedMap.get(key);
                   if (!existing) {
@@ -1031,15 +1033,9 @@ const GradingGroupsPageContent = () => {
                       group: group,
                     });
                   } else {
-                    // Merge: add submissions and lecturers
+                    // Merge: add submissions (lecturer đã giống nhau nên không cần thêm)
                     const existingDate = existing.group.createdAt ? new Date(existing.group.createdAt).getTime() : 0;
                     const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
-                    
-                    // Add lecturer if not already in list
-                    if (!existing.lecturerNames.includes(lecturer.lecturerName)) {
-                      existing.lecturerNames.push(lecturer.lecturerName);
-                      existing.lecturerCodes.push(lecturer.lecturerCode);
-                    }
                     
                     groupedMap.set(key, {
                       ...existing,
@@ -1112,16 +1108,6 @@ const GradingGroupsPageContent = () => {
               ),
             },
             {
-              title: "Submissions",
-              dataIndex: "submissionCount",
-              key: "submissions",
-              width: 120,
-              align: "center",
-              render: (count) => (
-                <Tag color={count > 0 ? "green" : "default"}>{count}</Tag>
-              ),
-            },
-            {
               title: "Actions",
               key: "actions",
               width: 200,
@@ -1177,6 +1163,38 @@ const GradingGroupsPageContent = () => {
                 showTotal: (total) => `Total ${total} assignments`,
               }}
               scroll={{ x: 1000 }}
+              expandable={{
+                expandedRowRender: (record) => (
+                  <div style={{ padding: '16px 0' }}>
+                    {record.group.submittedGradeSheetUrl ? (
+                      <Space direction="vertical" size="small">
+                        <Text strong>Grade Sheet:</Text>
+                        <Button
+                          type="link"
+                          icon={<DownloadOutlined />}
+                          href={record.group.submittedGradeSheetUrl}
+                          target="_blank"
+                          style={{ padding: 0 }}
+                        >
+                          Download Grade Sheet
+                        </Button>
+                        {record.group.gradeSheetSubmittedAt && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            Submitted at: {dayjs.utc(record.group.gradeSheetSubmittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
+                          </Text>
+                        )}
+                      </Space>
+                    ) : (
+                      <Alert
+                        message="No grade sheet submitted yet"
+                        type="info"
+                        showIcon
+                      />
+                    )}
+                  </div>
+                ),
+                rowExpandable: () => true,
+              }}
             />
           );
         })()}

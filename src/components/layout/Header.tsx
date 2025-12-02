@@ -78,7 +78,7 @@ export const Header: React.FC = () => {
     const matchingItem = sortedKeys.find((item) =>
       pathname.startsWith(item.href)
     );
-    return matchingItem?.key || "home";
+    return matchingItem?.key || (user?.role === 2 ? "my-classes" : user?.role === 1 ? "my-classes" : "home");
   }, [pathname, navigation, user?.role]);
 
   const userMenuItems: MenuProps["items"] = [
@@ -101,9 +101,9 @@ export const Header: React.FC = () => {
               : user.role === 0
                 ? "/admin/dashboard"
                 : user.role === 1
-                  ? "/home/lecturer"
+                  ? "/classes/my-classes/lecturer"
                   : user.role === 2
-                    ? "/home/student"
+                    ? "/classes/my-classes/student"
                     : user.role === 3
                       ? "/hod/semester-plans"
                       : user.role === 4

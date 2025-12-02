@@ -251,13 +251,13 @@ export function middleware(request: NextRequest) {
 function getDefaultRouteForRole(role: number, baseUrl: string): URL {
   const defaultRoutes: Record<number, string> = {
     0: "/admin/manage-users", // Admin
-    1: "/home/lecturer", // Lecturer
-    2: "/home/student", // Student
+    1: "/classes/my-classes/lecturer", // Lecturer
+    2: "/classes/my-classes/student", // Student
     3: "/hod/semester-plans", // HOD
     4: "/examiner/grading-groups", // Examiner
   };
 
-  const defaultRoute = defaultRoutes[role] || "/home/student";
+  const defaultRoute = defaultRoutes[role] || "/classes/my-classes/student";
   return new URL(defaultRoute, baseUrl);
 }
 

@@ -6,6 +6,9 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 import { FeedbackData, geminiService } from "@/services/geminiService";
 import { gradingService, GradingSession } from "@/services/gradingService";
 import { gradeItemService, GradeItem } from "@/services/gradeItemService";
+import { courseElementService } from "@/services/courseElementService";
+import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
+import { semesterService, SemesterPlanDetail } from "@/services/semesterService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
 import { gradingGroupService, GradingGroup } from "@/services/gradingGroupService";
@@ -20,6 +23,8 @@ import {
   RightOutlined,
   EditOutlined,
   FileTextOutlined,
+  FileExcelOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -40,6 +45,7 @@ import {
   Select,
   Divider,
   Empty,
+  Upload,
 } from "antd";
 import type { TableProps } from "antd";
 import { useRouter, useParams } from "next/navigation";
@@ -58,6 +64,15 @@ dayjs.extend(timezone);
 // Helper function to convert UTC to Vietnam time (UTC+7)
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
+};
+
+// Helper function to check if semester has passed
+const isSemesterPassed = (endDate: string | null | undefined): boolean => {
+  if (!endDate) return false;
+  const now = dayjs().tz("Asia/Ho_Chi_Minh");
+  const semesterEnd = toVietnamTime(endDate);
+  if (!semesterEnd || !semesterEnd.isValid()) return false;
+  return now.isAfter(semesterEnd, 'day');
 };
 
 const { Title, Text } = Typography;
@@ -79,9 +94,12 @@ export default function GradingGroupPage() {
   const [editSubmissionModalVisible, setEditSubmissionModalVisible] = useState(false);
   const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] = useState<Submission | null>(null);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFileList, setUploadFileList] = useState<any[]>([]);
+  const [semesterEnded, setSemesterEnded] = useState(false);
   const queryClient = useQueryClient();
 
-  // Fetch grading group using TanStack Query
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.all,
     queryFn: () => gradingGroupService.getGradingGroups({}),
@@ -163,9 +181,251 @@ export default function GradingGroupPage() {
     return scoreMap;
   }, [submissions, gradingSessionsQueries]);
 
+  // Fetch assessment template to get course element and semester info
+  const { data: templatesResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!gradingGroup?.assessmentTemplateId,
+  });
+
+  const assessmentTemplate = useMemo(() => {
+    if (!templatesResponse?.items || !gradingGroup?.assessmentTemplateId) return null;
+    return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
+  }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
+
+  // Fetch course element to get semester info
+  const { data: courseElementsData } = useQuery({
+    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: !!assessmentTemplate?.courseElementId,
+  });
+
+  const courseElement = useMemo(() => {
+    if (!courseElementsData || !assessmentTemplate?.courseElementId) return null;
+    return courseElementsData.find((ce) => ce.id === assessmentTemplate.courseElementId) || null;
+  }, [courseElementsData, assessmentTemplate]);
+
+  // Fetch semester detail to check if passed
+  const semesterCode = courseElement?.semesterCourse?.semester?.semesterCode;
+  const { data: semesterDetail } = useQuery({
+    queryKey: ['semesterPlanDetail', semesterCode],
+    queryFn: () => semesterService.getSemesterPlanDetail(semesterCode!),
+    enabled: !!semesterCode,
+  });
+
+  // Check if semester has passed
+  useEffect(() => {
+    if (semesterDetail?.endDate) {
+      const passed = isSemesterPassed(semesterDetail.endDate);
+      setSemesterEnded(passed);
+    } else {
+      setSemesterEnded(false);
+    }
+  }, [semesterDetail?.endDate]);
+
+  // Mutation for uploading grade sheet
+  const uploadGradeSheetMutation = useMutation({
+    mutationFn: async ({ gradingGroupId, file }: { gradingGroupId: number; file: File }) => {
+      return gradingGroupService.submitGradesToExaminer(gradingGroupId, file);
+    },
+    onSuccess: () => {
+      message.success("Grade sheet uploaded successfully!");
+      setUploadModalVisible(false);
+      setUploadFile(null);
+      setUploadFileList([]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
+      queryClient.invalidateQueries({ queryKey: ['submissions'] });
+    },
+    onError: (err: any) => {
+      console.error("Failed to upload grade sheet:", err);
+      const errorMessage = err.message || err.response?.data?.errorMessages?.join(", ") || "Failed to upload grade sheet";
+      message.error(errorMessage);
+    },
+  });
+
   const handleOpenEditModal = (submission: Submission) => {
     setSelectedSubmissionForEdit(submission);
     setEditSubmissionModalVisible(true);
+  };
+
+  const handleUploadGradeSheet = () => {
+    if (!gradingGroup) return;
+    setUploadFile(null);
+    setUploadFileList([]);
+    setUploadModalVisible(true);
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!gradingGroup || !uploadFile) {
+      message.warning("Please select a file to upload");
+      return;
+    }
+
+    uploadGradeSheetMutation.mutate({
+      gradingGroupId: gradingGroup.id,
+      file: uploadFile,
+    });
+  };
+
+  const handleExportGradeReport = async () => {
+    if (!gradingGroup) return;
+
+    try {
+      message.info("Preparing grade report...");
+
+      // Get all submissions for this grading group
+      const groupSubmissions = await submissionService.getSubmissionList({
+        gradingGroupId: gradingGroup.id,
+      });
+
+      if (groupSubmissions.length === 0) {
+        message.warning("No submissions found for this grading group");
+        return;
+      }
+
+      // Get assessment template
+      if (!gradingGroup.assessmentTemplateId) {
+        message.error("Assessment template not found");
+        return;
+      }
+
+      const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const assessmentTemplate = templatesRes.items.find(
+        (t) => t.id === gradingGroup.assessmentTemplateId
+      );
+
+      if (!assessmentTemplate) {
+        message.error("Assessment template not found");
+        return;
+      }
+
+      // Get course element
+      if (!assessmentTemplate.courseElementId) {
+        message.error("Course element not found");
+        return;
+      }
+
+      const courseElements = await courseElementService.getCourseElements({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      const courseElement = courseElements.find(
+        (ce) => ce.id === assessmentTemplate.courseElementId
+      );
+
+      if (!courseElement) {
+        message.error("Course element not found");
+        return;
+      }
+
+      // Fetch questions and rubrics
+      let questions: AssessmentQuestion[] = [];
+      const rubrics: { [questionId: number]: RubricItem[] } = {};
+
+      try {
+        const papersRes = await assessmentPaperService.getAssessmentPapers({
+          assessmentTemplateId: assessmentTemplate.id,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+
+        for (const paper of papersRes.items) {
+          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
+          });
+          questions = [...questions, ...questionsRes.items];
+
+          for (const question of questionsRes.items) {
+            const rubricsRes = await rubricItemService.getRubricsForQuestion({
+              assessmentQuestionId: question.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+            rubrics[question.id] = rubricsRes.items;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch questions/rubrics:", err);
+      }
+
+      // Prepare report data
+      const reportData: GradeReportData[] = [];
+
+      for (const submission of groupSubmissions) {
+        let gradingSession = null;
+        let gradeItems: any[] = [];
+
+        try {
+          const gradingSessionsResult = await gradingService.getGradingSessions({
+            submissionId: submission.id,
+          });
+          if (gradingSessionsResult.items.length > 0) {
+            gradingSession = gradingSessionsResult.items.sort((a, b) => 
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+            )[0];
+            
+            const gradeItemsResult = await gradeItemService.getGradeItems({
+              gradingSessionId: gradingSession.id,
+            });
+            gradeItems = gradeItemsResult.items;
+          }
+        } catch (err) {
+          console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
+        }
+
+        // Determine assignment type from elementType field
+        // elementType: 0 = Assignment, 1 = Lab, 2 = PE (Practical Exam)
+        // Now only PE is used, so only elementType === 2 is "Practical Exam"
+        const assignmentType: "Assignment" | "Lab" | "Practical Exam" = 
+          courseElement.elementType === 2 ? "Practical Exam" :
+          "Assignment";
+
+        reportData.push({
+          submission,
+          gradingSession,
+          gradeItems,
+          questions,
+          rubrics,
+          feedback: {
+            overallFeedback: "",
+            strengths: "",
+            weaknesses: "",
+            codeQuality: "",
+            algorithmEfficiency: "",
+            suggestionsForImprovement: "",
+            bestPractices: "",
+            errorHandling: "",
+          },
+          courseElementName: courseElement.name,
+          assignmentType: assignmentType,
+        });
+      }
+
+      if (reportData.length === 0) {
+        message.warning("No data available to export");
+        return;
+      }
+
+      await exportGradeReportToExcel(
+        reportData,
+        `Grade_Report_${gradingGroup.assessmentTemplateName || gradingGroup.id}`
+      );
+      message.success("Grade report exported successfully");
+    } catch (err: any) {
+      console.error("Export error:", err);
+      message.error(err.message || "Export failed. Please check browser console for details.");
+    }
   };
 
   const handleBatchGrading = async () => {
@@ -339,6 +599,22 @@ export default function GradingGroupPage() {
               </Title>
             </Space>
             <Space>
+              <Button
+                icon={<FileExcelOutlined />}
+                onClick={handleExportGradeReport}
+                disabled={semesterEnded || submissions.length === 0}
+                size="large"
+              >
+                Export Grade Report
+              </Button>
+              <Button
+                icon={<UploadOutlined />}
+                onClick={handleUploadGradeSheet}
+                disabled={semesterEnded}
+                size="large"
+              >
+                Submit Grade Sheet
+              </Button>
               {submissions.length > 0 && (
                 <Button
                   icon={<RobotOutlined />}
@@ -346,6 +622,7 @@ export default function GradingGroupPage() {
                   loading={batchGradingLoading}
                   type="primary"
                   size="large"
+                  disabled={semesterEnded}
                 >
                   Batch Grade
                 </Button>
@@ -393,6 +670,47 @@ export default function GradingGroupPage() {
           gradingGroup={gradingGroup}
         />
       )}
+
+      {/* Upload Grade Sheet Modal */}
+      <Modal
+        title="Upload Grade Sheet"
+        open={uploadModalVisible}
+        onCancel={() => {
+          setUploadModalVisible(false);
+          setUploadFile(null);
+          setUploadFileList([]);
+        }}
+        onOk={handleUploadSubmit}
+        confirmLoading={uploadGradeSheetMutation.isPending}
+        okText="Upload"
+      >
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <Text>Select Excel file to upload:</Text>
+          <Upload
+            fileList={uploadFileList}
+            beforeUpload={(file) => {
+              setUploadFile(file);
+              setUploadFileList([{
+                uid: file.name,
+                name: file.name,
+                status: 'done',
+              }]);
+              return false; // Prevent auto upload
+            }}
+            accept=".xlsx,.xls"
+            maxCount={1}
+            onRemove={() => {
+              setUploadFile(null);
+              setUploadFileList([]);
+            }}
+          >
+            <Button icon={<UploadOutlined />}>Select File</Button>
+          </Upload>
+          {uploadFile && (
+            <Text type="secondary">Selected: {uploadFile.name}</Text>
+          )}
+        </Space>
+      </Modal>
     </div>
   );
 }
@@ -418,7 +736,7 @@ function EditSubmissionModal({
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [totalScore, setTotalScore] = useState(0);
-  const [isSemesterPassed, setIsSemesterPassed] = useState(false);
+  const [semesterEnded, setSemesterEnded] = useState(false);
   const [autoGradingPollIntervalRef, setAutoGradingPollIntervalRef] = useState<NodeJS.Timeout | null>(null);
   const pollingSessionIdRef = useRef<number | null>(null);
   const hasShownCompletionMessageRef = useRef<boolean>(false);
@@ -464,7 +782,7 @@ function EditSubmissionModal({
       });
       setSubmissionFeedbackId(null);
       setTotalScore(0);
-      setIsSemesterPassed(false);
+      setSemesterEnded(false);
       
       if (autoGradingPollIntervalRef) {
         clearInterval(autoGradingPollIntervalRef);
@@ -815,7 +1133,7 @@ function EditSubmissionModal({
       return;
     }
 
-    if (isSemesterPassed) {
+    if (semesterEnded) {
       message.warning("Cannot save grade when the semester has ended");
       return;
     }
@@ -916,7 +1234,7 @@ function EditSubmissionModal({
       return;
     }
 
-    if (isSemesterPassed) {
+    if (semesterEnded) {
       message.warning("Cannot use auto grading when the semester has ended");
       return;
     }
@@ -1043,7 +1361,7 @@ function EditSubmissionModal({
       return;
     }
 
-    if (isSemesterPassed) {
+    if (semesterEnded) {
       message.warning("Cannot use AI feedback when the semester has ended");
       return;
     }
@@ -1119,7 +1437,7 @@ function EditSubmissionModal({
                   value={feedbackData[currentRow[0].key] || ""}
                   onChange={(e) => handleFeedbackChange(currentRow[0].key, e.target.value)}
                   placeholder={`Enter ${currentRow[0].label.toLowerCase()}...`}
-                  disabled={isSemesterPassed}
+                  disabled={semesterEnded}
                 />
               </div>
             );
@@ -1135,7 +1453,7 @@ function EditSubmissionModal({
                         value={feedbackData[f.key] || ""}
                         onChange={(e) => handleFeedbackChange(f.key, e.target.value)}
                         placeholder={`Enter ${f.label.toLowerCase()}...`}
-                        disabled={isSemesterPassed}
+                        disabled={semesterEnded}
                       />
                     </div>
                   </Col>
@@ -1154,7 +1472,7 @@ function EditSubmissionModal({
               value={value}
               onChange={(e) => handleFeedbackChange(field.key, e.target.value)}
               placeholder={`Enter ${field.label.toLowerCase()}...`}
-              disabled={isSemesterPassed}
+              disabled={semesterEnded}
             />
           </div>
         );
@@ -1171,7 +1489,7 @@ function EditSubmissionModal({
                   value={feedbackData[currentRow[0].key] || ""}
                   onChange={(e) => handleFeedbackChange(currentRow[0].key, e.target.value)}
                   placeholder={`Enter ${currentRow[0].label.toLowerCase()}...`}
-                  disabled={isSemesterPassed}
+                  disabled={semesterEnded}
                 />
               </div>
             );
@@ -1187,7 +1505,7 @@ function EditSubmissionModal({
                         value={feedbackData[f.key] || ""}
                         onChange={(e) => handleFeedbackChange(f.key, e.target.value)}
                         placeholder={`Enter ${f.label.toLowerCase()}...`}
-                        disabled={isSemesterPassed}
+                        disabled={semesterEnded}
                       />
                     </div>
                   </Col>
@@ -1245,7 +1563,7 @@ function EditSubmissionModal({
     >
       <Spin spinning={loadingFeedback || loadingAiFeedback}>
         <Space direction="vertical" size="large" style={{ width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
-          {isSemesterPassed && (
+          {semesterEnded && (
             <Alert
               message="Semester has ended. Grading modifications are disabled."
               type="warning"
@@ -1341,7 +1659,7 @@ function EditSubmissionModal({
                                 icon={<RobotOutlined />}
                                 onClick={handleAutoGrading}
                                 loading={autoGradingLoading}
-                                disabled={isSemesterPassed}
+                                disabled={semesterEnded}
                                 block
                               >
                                 Auto Grading
@@ -1351,7 +1669,7 @@ function EditSubmissionModal({
                                 icon={<SaveOutlined />}
                                 onClick={handleSave}
                                 loading={saving}
-                                disabled={isSemesterPassed}
+                                disabled={semesterEnded}
                                 block
                               >
                                 Save Grade
@@ -1361,7 +1679,7 @@ function EditSubmissionModal({
                                 icon={<RobotOutlined />}
                                 onClick={handleGetAiFeedback}
                                 loading={loadingAiFeedback}
-                                disabled={isSemesterPassed}
+                                disabled={semesterEnded}
                                 block
                               >
                                 Get AI Feedback
@@ -1458,7 +1776,7 @@ function EditSubmissionModal({
                                                 onChange={(value) =>
                                                   updateRubricScore(question.id, rubric.id, value || 0)
                                                 }
-                                                disabled={isSemesterPassed}
+                                                disabled={semesterEnded}
                                                 style={{ width: "100%" }}
                                               />
                                             ),
@@ -1483,7 +1801,7 @@ function EditSubmissionModal({
                                         rows={3}
                                         value={question.rubricComments?.[question.id] || ""}
                                         onChange={(e) => updateQuestionComment(question.id, e.target.value)}
-                                        disabled={isSemesterPassed}
+                                        disabled={semesterEnded}
                                         placeholder="Enter comments for this question..."
                                       />
                                     </div>
@@ -1531,7 +1849,7 @@ function EditSubmissionModal({
                           type="primary"
                           icon={<SaveOutlined />}
                           onClick={handleSaveFeedback}
-                          disabled={loadingFeedback || loadingAiFeedback || isSemesterPassed}
+                          disabled={loadingFeedback || loadingAiFeedback || semesterEnded}
                         >
                           Save Feedback
                         </Button>
@@ -2009,4 +2327,3 @@ function GradingHistoryModal({
     </>
   );
 }
-
