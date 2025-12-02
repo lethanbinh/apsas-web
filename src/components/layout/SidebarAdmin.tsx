@@ -3,9 +3,8 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Input, Menu } from "antd";
+import { Layout, Menu } from "antd";
 import {
-  FileTextOutlined,
   TeamOutlined,
   DashboardOutlined,
   DownloadOutlined,
@@ -13,7 +12,6 @@ import {
 import styles from "./SidebarAdmin.module.css";
 
 const { Sider } = Layout;
-const { Search } = Input;
 
 // --- Giữ nguyên các mục menu (như bản gốc) ---
 const menuItems = [
@@ -27,11 +25,12 @@ const menuItems = [
     icon: <DashboardOutlined />,
     label: <Link href="/admin/dashboard">Dashboard</Link>,
   },
-  {
-    key: "/admin/app-download",
-    icon: <DownloadOutlined />,
-    label: <Link href="/admin/app-download">App Download</Link>,
-  },
+  // Temporarily hidden - App Download management
+  // {
+  //   key: "/admin/app-download",
+  //   icon: <DownloadOutlined />,
+  //   label: <Link href="/admin/app-download">App Download</Link>,
+  // },
 ];
 
 export default function SidebarAdmin() {
@@ -49,12 +48,6 @@ export default function SidebarAdmin() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Search
-          placeholder="Search..."
-          prefix={<FileTextOutlined />}
-          className={styles.searchBar}
-        />
-
         <Menu
           mode="inline"
           selectedKeys={[activeKey]}

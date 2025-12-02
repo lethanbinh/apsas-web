@@ -85,8 +85,8 @@ export const Footer: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Column: Download */}
-                    <div className="download-column">
+                    {/* Column: Download - Temporarily hidden */}
+                    {/* <div className="download-column">
                         <h4 className="column-title">Download</h4>
                         <button 
                             className="download-button"
@@ -95,7 +95,7 @@ export const Footer: React.FC = () => {
                         >
                             Download now <DownloadOutlined className="download-icon" />
                         </button>
-                    </div>
+                    </div> */}
                 </div>
 
             </div>

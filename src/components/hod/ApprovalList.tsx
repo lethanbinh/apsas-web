@@ -8,6 +8,7 @@ import styles from "./ApprovalList.module.css";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/services/adminService"; 
 import { ApiApprovalItem } from "@/types"; 
+import { semesterService } from "@/services/semesterService";
 import type { TablePaginationConfig } from 'antd/es/table';
 
 const { Title, Text } = Typography;
@@ -147,10 +148,44 @@ export default function ApprovalList() {
         setLoading(true);
         setError(null);
         
-        // Fetch all approvals (use large pageSize to get all data)
-        const response = await adminService.getApprovalList(1, 10000);
+        // Fetch all approvals and semesters in parallel
+        const [approvalsResponse, semesters] = await Promise.all([
+          adminService.getApprovalList(1, 10000),
+          semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 })
+        ]);
         
-        setAllApprovals(response.items);
+        setAllApprovals(approvalsResponse.items);
+        
+        // Set default to current semester
+        if (selectedSemester === undefined) {
+          const now = new Date();
+          const currentSemester = semesters.find((sem) => {
+            const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+            const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+            return now >= startDate && now <= endDate;
+          });
+          
+          if (currentSemester) {
+            // Get unique semester names from approvals
+            const uniqueSemesterNames = Array.from(
+              new Set(approvalsResponse.items.map(a => a.semesterName).filter(Boolean))
+            );
+            
+            // Find semesterName that matches current semester's semesterCode
+            // semesterName might be "Fall2025 - 2025" or "Fall2025", semesterCode is "Fall2025"
+            const matchingSemesterName = uniqueSemesterNames.find(
+              name => name === currentSemester.semesterCode || 
+                      name.startsWith(currentSemester.semesterCode) ||
+                      name.includes(currentSemester.semesterCode)
+            );
+            
+            // If found matching semesterName, use it
+            if (matchingSemesterName) {
+              setSelectedSemester(matchingSemesterName);
+            }
+            // If no match, don't set default (show all) - user can manually select
+          }
+        }
       } catch (err: any) {
         console.error("Failed to fetch approvals:", err);
         const apiError = err.response?.data?.errorMessages?.[0] || err.message || "Failed to load approval data.";

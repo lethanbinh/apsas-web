@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Layout, Input, Menu } from "antd";
 import {
-  SearchOutlined,
   ApartmentOutlined,
   FileTextOutlined,
 } from "@ant-design/icons";
@@ -41,12 +40,6 @@ export default function ExaminerSidebar() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Input
-          placeholder="Search..."
-          prefix={<SearchOutlined />}
-          className={styles.searchBar}
-        />
-
         <Menu
           mode="inline"
           selectedKeys={[activeKey]}

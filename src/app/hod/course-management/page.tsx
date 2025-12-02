@@ -174,6 +174,14 @@ const CourseManagementPageContent = () => {
   };
 
   const handleOpenEdit = (record: Course) => {
+    // Kiểm tra xem course có thể edit được không
+    if (!canEditCourse(record)) {
+      notification.warning({
+        message: "Cannot edit course",
+        description: "You cannot edit a course that belongs to a semester that has already started.",
+      });
+      return;
+    }
     setEditingCourse(record);
     setIsModalOpen(true);
   };
@@ -213,6 +221,37 @@ const CourseManagementPageContent = () => {
       .map(s => s.id);
     
     // Nếu course thuộc bất kỳ semester nào đã bắt đầu thì không cho xóa
+    const hasStartedSemester = courseSemesterIds.some(semesterId => 
+      startedSemesterIds.includes(semesterId)
+    );
+    
+    return !hasStartedSemester;
+  }, [selectedSemesterId, semesters, courseSemesterMap]);
+
+  // Kiểm tra xem course có thể edit được không (tương tự canDeleteCourse)
+  const canEditCourse = useCallback((course: Course): boolean => {
+    // Nếu đang filter theo semester, kiểm tra semester đó đã bắt đầu chưa
+    if (selectedSemesterId) {
+      const semester = semesters.find(s => s.id === selectedSemesterId);
+      if (semester && isSemesterStarted(semester.startDate)) {
+        return false;
+      }
+      return true;
+    }
+    
+    // Nếu không filter, kiểm tra xem course có thuộc semester nào đã bắt đầu không
+    const courseSemesterIds = courseSemesterMap.get(course.id) || [];
+    if (courseSemesterIds.length === 0) {
+      // Nếu course chưa thuộc semester nào, có thể edit
+      return true;
+    }
+    
+    // Kiểm tra xem course có thuộc semester nào đã bắt đầu không
+    const startedSemesterIds = semesters
+      .filter(s => isSemesterStarted(s.startDate))
+      .map(s => s.id);
+    
+    // Nếu course thuộc bất kỳ semester nào đã bắt đầu thì không cho edit
     const hasStartedSemester = courseSemesterIds.some(semesterId => 
       startedSemesterIds.includes(semesterId)
     );
@@ -295,15 +334,28 @@ const CourseManagementPageContent = () => {
       key: "actions",
       render: (_, record) => {
         const canDelete = canDeleteCourse(record);
+        const canEdit = canEditCourse(record);
         return (
           <Space size="middle">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenEdit(record)}
-            >
-              Edit
-            </Button>
+            {canEdit ? (
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleOpenEdit(record)}
+              >
+                Edit
+              </Button>
+            ) : (
+              <Tooltip title="Cannot edit a course that belongs to a semester that has already started">
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
+                  disabled
+                >
+                  Edit
+                </Button>
+              </Tooltip>
+            )}
             {canDelete ? (
               <Button
                 type="link"

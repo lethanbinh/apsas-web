@@ -35,7 +35,7 @@ export default function ClassDetailPage() {
 
   return (
     <div>
-      <ClassInfo classData={classData} />
+      <ClassInfo classData={classData} showTotalStudents={false} />
     </div>
   );
 }

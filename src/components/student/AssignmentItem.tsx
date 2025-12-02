@@ -1,16 +1,19 @@
 // Tên file: components/AssignmentList/AssignmentItem.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { App, Typography, Alert, Upload } from "antd";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { App, Typography, Alert, Upload, Modal, List, Tag, Space, Button as AntButton } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
 import {
   UploadOutlined,
   CheckCircleOutlined,
   EyeOutlined,
   FilePdfOutlined,
+  FileTextOutlined,
   DatabaseOutlined,
   ClockCircleOutlined,
+  HistoryOutlined,
+  DownloadOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../ui/Button";
@@ -59,6 +62,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     useState(false);
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
   const [isPaperModalVisible, setIsPaperModalVisible] = useState(false);
+  const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
   const { message } = App.useApp();
   const { studentId } = useStudent();
   const { user } = useAuth();
@@ -70,7 +74,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
     queryFn: async () => {
       if (!studentId) return [];
-      
+
       if (data.classAssessmentId) {
         return submissionService.getSubmissionList({
           studentId: studentId,
@@ -87,10 +91,20 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     enabled: !!studentId && (!!data.classAssessmentId || !!data.examSessionId),
   });
 
-  const lastSubmission = submissions.length > 0 
-    ? submissions.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0]
-    : null;
+  // Sort submissions by submittedAt (most recent first)
+  const sortedSubmissions = useMemo(() => {
+    return [...submissions].sort((a, b) => {
+      const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [submissions]);
+
+  const lastSubmission = sortedSubmissions.length > 0 ? sortedSubmissions[0] : null;
   const submissionCount = submissions.length;
+  
+  // For labs, get all submissions for history (sorted, most recent first)
+  const labSubmissionHistory = isLab ? sortedSubmissions : [];
   const isLoadingSubmission = false; // useQuery handles loading state
 
   // Cleanup polling interval on unmount
@@ -120,25 +134,32 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return hasDeadline() && !isDeadlinePassed();
   };
 
-  // Mutation for creating submission
+  // Mutation for creating or updating submission
   const submitMutation = useMutation({
-    mutationFn: async ({ file, studentCode }: { file: File; studentCode: string }) => {
+    mutationFn: async ({ file, studentCode, submissionId }: { file: File; studentCode: string; submissionId?: number }) => {
       const newFileName = studentCode ? `${studentCode}.zip` : file.name;
       const renamedFile = new File([file], newFileName, { type: file.type });
-      
-      return submissionService.createSubmission({
-        StudentId: studentId!,
-        ClassAssessmentId: data.classAssessmentId,
-        ExamSessionId: data.examSessionId,
-        file: renamedFile,
-      });
+
+      // If there's an existing submission, update it; otherwise create a new one
+      if (submissionId) {
+        return submissionService.updateSubmission(submissionId, {
+          file: renamedFile,
+        });
+      } else {
+        return submissionService.createSubmission({
+          StudentId: studentId!,
+          ClassAssessmentId: data.classAssessmentId,
+          ExamSessionId: data.examSessionId,
+          file: renamedFile,
+        });
+      }
     },
     onSuccess: async (newSubmission) => {
       // Invalidate submissions queries
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byStudent', studentId] });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byStudentAndClass'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.submissions.all });
-      
+
       // For labs, trigger auto grading after submission
       if (isLab && data.assessmentTemplateId) {
         try {
@@ -149,7 +170,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
 
           if (gradingSession.status === 0) {
             message.loading("Auto grading in progress...", 0);
-            
+
             const pollInterval = setInterval(async () => {
               try {
                 const sessionsResult = await gradingService.getGradingSessions({
@@ -173,10 +194,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                       autoGradingPollIntervalRef.current = null;
                     }
                     message.destroy();
-                    
+
                     // Invalidate grading queries
                     queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                    
+
                     if (latestSession.status === 1) {
                       message.success("Auto grading completed successfully");
                     } else if (latestSession.status === 2) {
@@ -222,6 +243,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       }
 
       setFileList([]);
+      setIsSubmitModalVisible(false);
     },
     onError: (err: any) => {
       console.error("Failed to submit assignment:", err);
@@ -242,9 +264,9 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     }
 
     // Validate file type - must be zip
-    const isZip = file.type === "application/zip" || 
-                  file.type === "application/x-zip-compressed" ||
-                  file.name.toLowerCase().endsWith(".zip");
+    const isZip = file.type === "application/zip" ||
+      file.type === "application/x-zip-compressed" ||
+      file.name.toLowerCase().endsWith(".zip");
     if (!isZip) {
       message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
       return;
@@ -283,7 +305,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       }
     }
 
-    submitMutation.mutate({ file, studentCode });
+    submitMutation.mutate({ file, studentCode, submissionId: lastSubmission?.id });
   };
 
   const isSubmitting = submitMutation.isPending;
@@ -295,9 +317,9 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     },
     beforeUpload: (file: File) => {
       // Validate file type - must be zip
-      const isZip = file.type === "application/zip" || 
-                    file.type === "application/x-zip-compressed" ||
-                    file.name.toLowerCase().endsWith(".zip");
+      const isZip = file.type === "application/zip" ||
+        file.type === "application/x-zip-compressed" ||
+        file.name.toLowerCase().endsWith(".zip");
       if (!isZip) {
         message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
         return false;
@@ -317,15 +339,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
 
   return (
     <div className={styles.itemContent}>
-      <div className={styles.contentSection}>
-        <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-          Description
-        </Title>
-        <Paragraph style={{ fontSize: "0.95rem", lineHeight: 1.6, marginBottom: 0 }}>
-          {data.description}
-        </Paragraph>
-      </div>
-
       {(!isExam || isPracticalExam) && (
         <>
           {/* For practical exam, only show requirements when deadline is set */}
@@ -353,52 +366,138 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                 </Button>
               </div>
 
-            <div className={styles.downloadSection}>
-              {data.requirementFile && (
-                <Alert
-                  message={
-                    <a 
-                      href={data.requirementFileUrl || "#"} 
-                      download={data.requirementFile}
-                      target={data.requirementFileUrl ? "_blank" : undefined}
-                      rel={data.requirementFileUrl ? "noopener noreferrer" : undefined}
-                    >
-                      {data.requirementFile}
-                    </a>
-                  }
-                  type="info"
-                  showIcon
-                  icon={<FilePdfOutlined />}
-                  className={styles.requirementAlert}
-                />
-              )}
-              {data.databaseFile && (
-                <Alert
-                  message={
-                    <a 
-                      href={data.databaseFileUrl || "#"} 
-                      download={data.databaseFile}
-                      target={data.databaseFileUrl ? "_blank" : undefined}
-                      rel={data.databaseFileUrl ? "noopener noreferrer" : undefined}
-                    >
-                      {data.databaseFile}
-                    </a>
-                  }
-                  type="info"
-                  showIcon
-                  icon={<DatabaseOutlined />}
-                  className={styles.requirementAlert}
-                />
-              )}
+              <div className={styles.downloadSection}>
+                {data.requirementFile && (
+                  <Alert
+                    message={
+                      <a
+                        href={data.requirementFileUrl || "#"}
+                        download={data.requirementFile}
+                        target={data.requirementFileUrl ? "_blank" : undefined}
+                        rel={data.requirementFileUrl ? "noopener noreferrer" : undefined}
+                      >
+                        {data.requirementFile}
+                      </a>
+                    }
+                    type="info"
+                    showIcon
+                    icon={<FilePdfOutlined />}
+                    className={styles.requirementAlert}
+                  />
+                )}
+                {data.databaseFile && (
+                  <Alert
+                    message={
+                      <a
+                        href={data.databaseFileUrl || "#"}
+                        download={data.databaseFile}
+                        target={data.databaseFileUrl ? "_blank" : undefined}
+                        rel={data.databaseFileUrl ? "noopener noreferrer" : undefined}
+                      >
+                        {data.databaseFile}
+                      </a>
+                    }
+                    type="info"
+                    showIcon
+                    icon={<DatabaseOutlined />}
+                    className={styles.requirementAlert}
+                  />
+                )}
+              </div>
             </div>
-          </div>
           )}
 
-          <div className={styles.submissionSection}>
+          {/* Deadline - moved above Your Submission */}
+          <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-              Your Submission
+              Deadline
             </Title>
-            
+            <DeadlineDisplay date={data.date} />
+          </div>
+
+          {/* Lab Submission History - only for labs */}
+          {isLab && labSubmissionHistory.length > 0 && (
+            <div className={styles.contentSection} style={{ marginTop: "24px" }}>
+              <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
+                <HistoryOutlined style={{ marginRight: 8 }} />
+                Submission History
+              </Title>
+              <List
+                size="small"
+                dataSource={labSubmissionHistory}
+                renderItem={(submission, index) => (
+                  <List.Item
+                    style={{
+                      padding: "8px 12px",
+                      backgroundColor: index === 0 ? "#f0f9ff" : "#fafafa",
+                      border: index === 0 ? "1px solid #1890ff" : "1px solid #e8e8e8",
+                      borderRadius: "4px",
+                      marginBottom: "8px",
+                    }}
+                    actions={
+                      submission.submissionFile?.submissionUrl
+                        ? [
+                            <AntButton
+                              key="download"
+                              type="link"
+                              size="small"
+                              icon={<DownloadOutlined />}
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = submission.submissionFile!.submissionUrl;
+                                link.download = submission.submissionFile!.name || "submission.zip";
+                                link.target = "_blank";
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                            >
+                              Download
+                            </AntButton>,
+                          ]
+                        : []
+                    }
+                  >
+                    <List.Item.Meta
+                      title={
+                        <Space>
+                          <Text strong style={{ fontSize: "13px" }}>
+                            {toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm")}
+                          </Text>
+                          {index === 0 && <Tag color="blue">Latest</Tag>}
+                          {submission.lastGrade !== undefined && submission.lastGrade !== null && (
+                            <Tag color="green">
+                              Score: {Number(submission.lastGrade).toFixed(2)}
+                            </Tag>
+                          )}
+                        </Space>
+                      }
+                      description={
+                        submission.submissionFile ? (
+                          <Text type="secondary" style={{ fontSize: "12px" }}>
+                            <FileTextOutlined style={{ marginRight: 4 }} />
+                            {submission.submissionFile.name}
+                          </Text>
+                        ) : (
+                          <Text type="secondary" style={{ fontSize: "12px" }}>
+                            No file
+                          </Text>
+                        )
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </div>
+          )}
+
+          {/* Your Submission - hidden for labs */}
+          {!isLab && (
+            <div className={styles.submissionSection}>
+              <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
+                Your Submission
+              </Title>
+
             {lastSubmission && (
               <Alert
                 message="Last Submission"
@@ -445,53 +544,26 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                 icon={<ClockCircleOutlined />}
               />
             ) : (
-              <>
-                <Dragger {...uploadProps} className={styles.uploadDragger} accept=".zip" disabled={!canSubmit()}>
-                  <p className="ant-upload-drag-icon">
-                    <UploadOutlined />
-                  </p>
-                  <p className="ant-upload-text">
-                    Drag & drop your ZIP file here, or click to browse
-                  </p>
-                  <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
-                    Chỉ chấp nhận file ZIP
-                  </p>
-                  {isLab && (
-                    <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
-                      Submission attempts: {submissionCount}/3
-                      {submissionCount >= 3 && (
-                        <span style={{ color: "#ff4d4f", marginLeft: "8px" }}>
-                          (Maximum limit reached)
-                        </span>
-                      )}
-                    </p>
-                  )}
-                  {!isLab && lastSubmission && (
-                    <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
-                      You can submit multiple times. The latest submission will be used.
-                    </p>
-                  )}
-                </Dragger>
-                <Button
-                  variant="primary"
-                  size="large"
-                  onClick={handleSubmit}
-                  loading={isSubmitting}
-                  disabled={fileList.length === 0 || !canSubmit() || (isLab && submissionCount >= 3)}
-                  className={styles.submitButton}
-                >
-                  {isLab 
-                    ? (submissionCount >= 3 
-                        ? "Maximum Submissions Reached" 
-                        : lastSubmission 
-                          ? `Resubmit Lab (${submissionCount}/3)` 
-                          : `Submit Lab (${submissionCount}/3)`)
-                    : (lastSubmission ? "Resubmit Assignment" : "Submit Assignment")
-                  }
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                size="large"
+                onClick={() => setIsSubmitModalVisible(true)}
+                disabled={!canSubmit() || (isLab && submissionCount >= 3)}
+                className={styles.submitButton}
+                icon={<UploadOutlined />}
+              >
+                {isLab
+                  ? (submissionCount >= 3
+                    ? "Maximum Submissions Reached"
+                    : lastSubmission
+                      ? `Resubmit Lab (${submissionCount}/3)`
+                      : `Submit Lab (${submissionCount}/3)`)
+                  : (lastSubmission ? "Resubmit Assignment" : "Submit Assignment")
+                }
+              </Button>
             )}
-          </div>
+            </div>
+          )}
         </>
       )}
 
@@ -518,15 +590,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </Button>
           </div>
         </>
-      )}
-
-      {(!isExam || isPracticalExam) && (
-        <div className={styles.contentSection} style={{ marginTop: "24px" }}>
-          <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-            Deadline
-          </Title>
-          <DeadlineDisplay date={data.date} />
-        </div>
       )}
 
       {(!isExam || isPracticalExam) && (
@@ -557,6 +620,69 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           classId={data.classId}
         />
       )}
+
+      {/* Submit Modal */}
+      <Modal
+        title={isLab
+          ? (lastSubmission ? `Resubmit Lab (${submissionCount}/3)` : `Submit Lab (${submissionCount}/3)`)
+          : (lastSubmission ? "Resubmit Assignment" : "Submit Assignment")
+        }
+        open={isSubmitModalVisible}
+        onCancel={() => {
+          setIsSubmitModalVisible(false);
+          setFileList([]);
+        }}
+        footer={null}
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Text type="secondary">
+            {isLab && (
+              <div style={{ marginBottom: 8 }}>
+                Submission attempts: {submissionCount}/3
+                {submissionCount >= 3 && (
+                  <span style={{ color: "#ff4d4f", marginLeft: "8px" }}>
+                    (Maximum limit reached)
+                  </span>
+                )}
+              </div>
+            )}
+            {!isLab && lastSubmission && (
+              <div style={{ marginBottom: 8 }}>
+                You can submit multiple times. The latest submission will be used.
+              </div>
+            )}
+          </Text>
+        </div>
+        <Dragger {...uploadProps} accept=".zip" disabled={!canSubmit() || (isLab && submissionCount >= 3)}>
+          <p className="ant-upload-drag-icon">
+            <UploadOutlined />
+          </p>
+          <p className="ant-upload-text">
+            Drag & drop your ZIP file here, or click to browse
+          </p>
+          <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
+            Chỉ chấp nhận file ZIP
+          </p>
+        </Dragger>
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <Button
+            onClick={() => {
+              setIsSubmitModalVisible(false);
+              setFileList([]);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            loading={isSubmitting}
+            disabled={fileList.length === 0 || !canSubmit() || (isLab && submissionCount >= 3)}
+          >
+            Submit
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -2,20 +2,18 @@
 
 import {
   InfoCircleOutlined,
-  SearchOutlined,
   BarChartOutlined,
   TeamOutlined,
   ExperimentOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
-import { Input, Layout, Menu } from "antd";
+import { Layout, Menu } from "antd";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import styles from "./SidebarLecturer.module.css";
 
 const { Sider } = Layout;
-const { Search } = Input;
 
 type MenuItem = Required<MenuProps>["items"][number];
 
@@ -68,12 +66,6 @@ export default function SidebarLecturer() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Search
-          placeholder="Search..."
-          prefix={<SearchOutlined />}
-          className={styles.searchBar}
-        />
-
         <Menu
           mode="inline"
           selectedKeys={[selectedKey]}

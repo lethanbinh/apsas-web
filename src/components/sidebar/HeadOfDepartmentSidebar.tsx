@@ -3,9 +3,8 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Input, Menu } from "antd";
+import { Layout, Menu } from "antd";
 import {
-  SearchOutlined,
   FileTextOutlined,
   BarChartOutlined,
   CalendarOutlined,
@@ -54,12 +53,6 @@ export default function HeadOfDepartmentSidebar() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Input
-          placeholder="Search..."
-          prefix={<SearchOutlined />}
-          className={styles.searchBar}
-        />
-
         <Menu
           mode="inline"
           selectedKeys={[activeKey]}

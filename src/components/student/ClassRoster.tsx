@@ -46,17 +46,6 @@ const columns: TableProps<Member>["columns"] = [
     sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   },
   {
-    title: "Role",
-    dataIndex: "role",
-    key: "role",
-    render: (role: Member["role"]) => {
-      const color = "blue";
-      return <Tag color={color}>{role.toUpperCase()}</Tag>;
-    },
-    filters: [{ text: "Student", value: "Student" }],
-    onFilter: (value, record) => record.role === value,
-  },
-  {
     title: "Class",
     dataIndex: "class",
     key: "class",

@@ -109,6 +109,14 @@ const SemesterManagementPageContent = () => {
   };
 
   const handleOpenEdit = (record: Semester) => {
+    // Kiểm tra xem semester đã bắt đầu chưa
+    if (isSemesterStarted(record.startDate)) {
+      notification.warning({
+        message: "Cannot edit semester",
+        description: "You cannot edit a semester that has already started.",
+      });
+      return;
+    }
     setEditingSemester(record);
     setIsModalOpen(true);
   };
@@ -216,15 +224,28 @@ const SemesterManagementPageContent = () => {
       key: "actions",
       render: (_, record) => {
         const canDelete = !isSemesterStarted(record.startDate);
+        const canEdit = !isSemesterStarted(record.startDate);
         return (
           <Space size="middle">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleOpenEdit(record)}
-            >
-              Edit
-            </Button>
+            {canEdit ? (
+              <Button
+                type="link"
+                icon={<EditOutlined />}
+                onClick={() => handleOpenEdit(record)}
+              >
+                Edit
+              </Button>
+            ) : (
+              <Tooltip title="Cannot edit a semester that has already started">
+                <Button
+                  type="link"
+                  icon={<EditOutlined />}
+                  disabled
+                >
+                  Edit
+                </Button>
+              </Tooltip>
+            )}
             {canDelete ? (
               <Button
                 type="link"

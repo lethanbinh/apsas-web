@@ -18,6 +18,8 @@ import {
   SaveOutlined,
   LeftOutlined,
   RightOutlined,
+  EditOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import {
   App,
@@ -37,7 +39,9 @@ import {
   Typography,
   Select,
   Divider,
+  Empty,
 } from "antd";
+import type { TableProps } from "antd";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -72,36 +76,9 @@ export default function GradingGroupPage() {
   const { message } = App.useApp();
   const { user } = useAuth();
 
-  const [saving, setSaving] = useState(false);
-  const [autoGradingLoading, setAutoGradingLoading] = useState(false);
-  const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
-  const [loadingFeedback, setLoadingFeedback] = useState(false);
-  const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(null);
-  const [totalScore, setTotalScore] = useState(0);
-  const [isSemesterPassed, setIsSemesterPassed] = useState(false);
-  const [autoGradingPollIntervalRef, setAutoGradingPollIntervalRef] = useState<NodeJS.Timeout | null>(null);
-  const pollingSessionIdRef = useRef<number | null>(null);
-  const hasShownCompletionMessageRef = useRef<boolean>(false);
-  // Store user edits separately to avoid conflicts with derived state
-  const [userEdits, setUserEdits] = useState<{
-    rubricScores: Record<string, number>; // key: "questionId_rubricId"
-    rubricComments: Record<number, string>; // key: questionId
-  }>({
-    rubricScores: {},
-    rubricComments: {},
-  });
-  const [feedback, setFeedback] = useState<FeedbackData>({
-    overallFeedback: "",
-    strengths: "",
-    weaknesses: "",
-    codeQuality: "",
-    algorithmEfficiency: "",
-    suggestionsForImprovement: "",
-    bestPractices: "",
-    errorHandling: "",
-  });
-  const [submissionFeedbackId, setSubmissionFeedbackId] = useState<number | null>(null);
-  const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
+  const [editSubmissionModalVisible, setEditSubmissionModalVisible] = useState(false);
+  const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] = useState<Submission | null>(null);
+  const [batchGradingLoading, setBatchGradingLoading] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch grading group using TanStack Query
@@ -158,20 +135,323 @@ export default function GradingGroupPage() {
     );
   }, [allSubmissionsData]);
 
-  // Set default selected submission
-  useEffect(() => {
-    if (submissions.length > 0 && !selectedSubmissionId) {
-      setSelectedSubmissionId(submissions[0].id);
+  // Fetch latest grading sessions for all submissions to calculate total scores
+  const gradingSessionsQueries = useQueries({
+    queries: submissions.map((sub) => ({
+      queryKey: queryKeys.grading.sessions.list({ submissionId: sub.id, pageNumber: 1, pageSize: 1 }),
+      queryFn: () => gradingService.getGradingSessions({
+        submissionId: sub.id,
+        pageNumber: 1,
+        pageSize: 1,
+      }),
+      enabled: submissions.length > 0,
+    })),
+  });
+
+  // Calculate total scores for each submission
+  const submissionTotalScores = useMemo(() => {
+    const scoreMap: Record<number, number> = {};
+    submissions.forEach((submission, index) => {
+      const sessionsQuery = gradingSessionsQueries[index];
+      if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
+        const latestSession = sessionsQuery.data.items[0];
+        if (latestSession.grade !== undefined && latestSession.grade !== null) {
+          scoreMap[submission.id] = latestSession.grade;
+        }
+      }
+    });
+    return scoreMap;
+  }, [submissions, gradingSessionsQueries]);
+
+  const handleOpenEditModal = (submission: Submission) => {
+    setSelectedSubmissionForEdit(submission);
+    setEditSubmissionModalVisible(true);
+  };
+
+  const handleBatchGrading = async () => {
+    if (!gradingGroup || !gradingGroup.assessmentTemplateId) {
+      message.error("Cannot find assessment template. Please contact administrator.");
+      return;
     }
-  }, [submissions, selectedSubmissionId]);
 
-  const currentSubmission = useMemo(() => {
-    return submissions.find(s => s.id === selectedSubmissionId) || null;
-  }, [submissions, selectedSubmissionId]);
+    if (submissions.length === 0) {
+      message.warning("No submissions to grade");
+      return;
+    }
 
-  // Reset feedback when switching submissions
+    setBatchGradingLoading(true);
+    message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
+
+    try {
+      const gradingPromises = submissions.map(async (submission) => {
+        try {
+          await gradingService.autoGrading({
+            submissionId: submission.id,
+            assessmentTemplateId: gradingGroup.assessmentTemplateId!,
+          });
+          return { success: true, submissionId: submission.id };
+        } catch (err: any) {
+          console.error(`Failed to grade submission ${submission.id}:`, err);
+          return { 
+            success: false, 
+            submissionId: submission.id, 
+            error: err.message || "Unknown error" 
+          };
+        }
+      });
+
+      const results = await Promise.all(gradingPromises);
+      message.destroy();
+      
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      if (successCount > 0) {
+        message.success(`Batch grading started for ${successCount}/${results.length} submission(s)`);
+        // Invalidate relevant queries
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+        queryClient.invalidateQueries({ queryKey: ['submissions'] });
+      }
+      if (failCount > 0) {
+        message.warning(`Failed to start grading for ${failCount} submission(s)`);
+      }
+    } catch (err: any) {
+      message.destroy();
+      console.error("Failed to start batch grading:", err);
+      message.error(err.message || "Failed to start batch grading");
+    } finally {
+      setBatchGradingLoading(false);
+    }
+  };
+
+  // Submission table columns
+  const submissionColumns: TableProps<Submission>["columns"] = useMemo(() => [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      width: 80,
+      align: "center",
+    },
+    {
+      title: "Student",
+      key: "student",
+      width: 200,
+      render: (_: any, record: Submission) => (
+        <div>
+          <Text strong style={{ fontSize: 14 }}>{record.studentName}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.studentCode}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Submission File",
+      key: "file",
+      width: 200,
+      render: (_: any, record: Submission) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <FileTextOutlined />
+          <span>{record.submissionFile?.name || "N/A"}</span>
+        </div>
+      ),
+    },
+    {
+      title: "Submitted At",
+      dataIndex: "submittedAt",
+      key: "submittedAt",
+      width: 180,
+      render: (date: string) => date
+        ? dayjs.utc(date).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
+        : "N/A",
+    },
+    {
+      title: "Score",
+      key: "score",
+      width: 120,
+      align: "center",
+      render: (_, record) => {
+        const totalScore = submissionTotalScores[record.id];
+        if (totalScore !== undefined && totalScore !== null) {
+          return (
+            <Tag color="green" style={{ fontSize: 14, fontWeight: 600 }}>
+              {totalScore.toFixed(2)}
+            </Tag>
+          );
+        }
+        return (
+          <Tag color="default">Not graded</Tag>
+        );
+      },
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: 120,
+      fixed: "right",
+      align: "center",
+      render: (_: any, record: Submission) => (
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => handleOpenEditModal(record)}
+          size="small"
+        >
+          Edit
+        </Button>
+      ),
+    },
+  ], [submissionTotalScores]);
+
+  const loading = isLoadingGradingGroups && !gradingGroup;
+
+  if (loading) {
+    return (
+      <div className={styles.loadingContainer}>
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (!gradingGroup) {
+    return (
+      <div style={{ padding: 24 }}>
+        <Alert message="Grading group not found" type="error" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      <Card>
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <Space>
+              <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
+                Back
+              </Button>
+              <Title level={3} style={{ margin: 0 }}>
+                {gradingGroup.assessmentTemplateName || "Grading Group"}
+              </Title>
+            </Space>
+            <Space>
+              {submissions.length > 0 && (
+                <Button
+                  icon={<RobotOutlined />}
+                  onClick={handleBatchGrading}
+                  loading={batchGradingLoading}
+                  type="primary"
+                  size="large"
+                >
+                  Batch Grade
+                </Button>
+              )}
+            </Space>
+          </div>
+
+          {/* Submissions Table */}
+          <Card>
+            {submissions.length === 0 ? (
+              <Empty
+                description="No submissions found"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : (
+              <Table
+                columns={submissionColumns}
+                dataSource={submissions}
+                rowKey="id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showTotal: (total) => `Total ${total} submissions`,
+                }}
+                scroll={{ x: 1000 }}
+                onRow={(record) => ({
+                  onClick: () => handleOpenEditModal(record),
+                  style: { cursor: 'pointer' },
+                })}
+              />
+            )}
+          </Card>
+        </Space>
+      </Card>
+
+      {/* Edit Submission Modal */}
+      {selectedSubmissionForEdit && (
+        <EditSubmissionModal
+          visible={editSubmissionModalVisible}
+          onClose={() => {
+            setEditSubmissionModalVisible(false);
+            setSelectedSubmissionForEdit(null);
+          }}
+          submission={selectedSubmissionForEdit}
+          gradingGroup={gradingGroup}
+        />
+      )}
+    </div>
+  );
+}
+
+// Edit Submission Modal Component
+function EditSubmissionModal({
+  visible,
+  onClose,
+  submission,
+  gradingGroup,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  submission: Submission;
+  gradingGroup: GradingGroup;
+}) {
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const [saving, setSaving] = useState(false);
+  const [autoGradingLoading, setAutoGradingLoading] = useState(false);
+  const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
+  const [isSemesterPassed, setIsSemesterPassed] = useState(false);
+  const [autoGradingPollIntervalRef, setAutoGradingPollIntervalRef] = useState<NodeJS.Timeout | null>(null);
+  const pollingSessionIdRef = useRef<number | null>(null);
+  const hasShownCompletionMessageRef = useRef<boolean>(false);
+  
+  const [userEdits, setUserEdits] = useState<{
+    rubricScores: Record<string, number>;
+    rubricComments: Record<number, string>;
+  }>({
+    rubricScores: {},
+    rubricComments: {},
+  });
+  
+  const [feedback, setFeedback] = useState<FeedbackData>({
+    overallFeedback: "",
+    strengths: "",
+    weaknesses: "",
+    codeQuality: "",
+    algorithmEfficiency: "",
+    suggestionsForImprovement: "",
+    bestPractices: "",
+    errorHandling: "",
+  });
+  
+  const [submissionFeedbackId, setSubmissionFeedbackId] = useState<number | null>(null);
+  const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
+
+  // Reset when submission changes
   useEffect(() => {
-    if (currentSubmission) {
+    if (submission) {
+      setUserEdits({
+        rubricScores: {},
+        rubricComments: {},
+      });
       setFeedback({
         overallFeedback: "",
         strengths: "",
@@ -183,8 +463,9 @@ export default function GradingGroupPage() {
         errorHandling: "",
       });
       setSubmissionFeedbackId(null);
+      setTotalScore(0);
+      setIsSemesterPassed(false);
       
-      // Clear polling interval when switching submissions
       if (autoGradingPollIntervalRef) {
         clearInterval(autoGradingPollIntervalRef);
         setAutoGradingPollIntervalRef(null);
@@ -194,7 +475,7 @@ export default function GradingGroupPage() {
       message.destroy();
       setAutoGradingLoading(false);
     }
-  }, [currentSubmission?.id]);
+  }, [submission?.id]);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
@@ -207,15 +488,6 @@ export default function GradingGroupPage() {
     };
   }, [autoGradingPollIntervalRef]);
 
-  const loading = isLoadingGradingGroups && !gradingGroup;
-
-  // Check semester status (simplified for grading group)
-  useEffect(() => {
-    if (currentSubmission?.id) {
-      setIsSemesterPassed(false);
-    }
-  }, [currentSubmission?.id]);
-
   // Fetch assessment template
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
@@ -223,7 +495,7 @@ export default function GradingGroupPage() {
       pageNumber: 1,
       pageSize: 1000,
     }),
-    enabled: !!gradingGroup?.assessmentTemplateId,
+    enabled: visible && !!gradingGroup?.assessmentTemplateId,
   });
 
   const assessmentTemplate = useMemo(() => {
@@ -239,7 +511,7 @@ export default function GradingGroupPage() {
       pageNumber: 1,
       pageSize: 100,
     }),
-    enabled: !!assessmentTemplate?.id,
+    enabled: visible && !!assessmentTemplate?.id,
   });
 
   const papers = papersResponse?.items || [];
@@ -253,11 +525,10 @@ export default function GradingGroupPage() {
         pageNumber: 1,
         pageSize: 100,
       }),
-      enabled: papers.length > 0,
+      enabled: visible && papers.length > 0,
     })),
   });
 
-  // Fetch rubrics for all questions
   const allQuestionsFromQueries = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {
@@ -276,11 +547,10 @@ export default function GradingGroupPage() {
         pageNumber: 1,
         pageSize: 100,
       }),
-      enabled: allQuestionsFromQueries.length > 0,
+      enabled: visible && allQuestionsFromQueries.length > 0,
     })),
   });
 
-  // Combine questions with rubrics
   const questionsWithRubrics = useMemo(() => {
     const result: QuestionWithRubrics[] = [];
     allQuestionsFromQueries.forEach((question, index) => {
@@ -299,13 +569,13 @@ export default function GradingGroupPage() {
 
   // Fetch latest grading session
   const { data: gradingSessionsData } = useQuery({
-    queryKey: queryKeys.grading.sessions.list({ submissionId: selectedSubmissionId!, pageNumber: 1, pageSize: 100 }),
+    queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
-      submissionId: selectedSubmissionId!,
+      submissionId: submission.id,
       pageNumber: 1,
       pageSize: 100,
     }),
-    enabled: !!selectedSubmissionId,
+    enabled: visible && !!submission.id,
   });
 
   const latestGradingSession = useMemo(() => {
@@ -326,7 +596,7 @@ export default function GradingGroupPage() {
       pageNumber: 1,
       pageSize: 1000,
     }),
-    enabled: !!latestGradingSession?.id,
+    enabled: visible && !!latestGradingSession?.id,
   });
 
   const latestGradeItems = gradeItemsData?.items || [];
@@ -337,10 +607,9 @@ export default function GradingGroupPage() {
       rubricScores: {},
       rubricComments: {},
     });
-  }, [selectedSubmissionId]);
+  }, [submission.id]);
 
   // Update questions with grade items data
-  // Use useMemo to derive questions instead of useEffect to avoid infinite loops
   const questions = useMemo(() => {
     if (questionsWithRubrics.length === 0) return [];
     
@@ -375,7 +644,6 @@ export default function GradingGroupPage() {
             (item) => item.rubricItemId === rubric.id
           );
           if (matchingGradeItem) {
-            // Use user edit if exists, otherwise use grade item score
             const editKey = `${question.id}_${rubric.id}`;
             newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined 
               ? userEdits.rubricScores[editKey] 
@@ -384,7 +652,6 @@ export default function GradingGroupPage() {
               questionComment = matchingGradeItem.comments;
             }
           } else {
-            // Check if user has edited this rubric
             const editKey = `${question.id}_${rubric.id}`;
             if (userEdits.rubricScores[editKey] !== undefined) {
               newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
@@ -392,7 +659,6 @@ export default function GradingGroupPage() {
           }
         });
 
-        // Use user edit comment if exists, otherwise use from grade item
         newRubricComments[question.id] = userEdits.rubricComments[question.id] !== undefined
           ? userEdits.rubricComments[question.id]
           : questionComment;
@@ -405,7 +671,6 @@ export default function GradingGroupPage() {
       });
     }
     
-    // If no grade items, still apply user edits
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
       const newRubricComments = { ...(question.rubricComments || {}) };
@@ -429,7 +694,7 @@ export default function GradingGroupPage() {
     });
   }, [questionsWithRubrics, latestGradeItems, userEdits]);
 
-  // Calculate total score separately
+  // Calculate total score
   useEffect(() => {
     if (latestGradeItems.length > 0) {
       const total = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
@@ -441,298 +706,12 @@ export default function GradingGroupPage() {
     }
   }, [latestGradeItems, latestGradingSession]);
 
-  const handleSave = async () => {
-    if (!currentSubmission || !user?.id) {
-      message.error("Submission or User ID not found");
-      return;
+  // Fetch feedback
+  useEffect(() => {
+    if (visible && submission.id) {
+      fetchFeedback(submission.id);
     }
-
-    if (isSemesterPassed) {
-      message.warning("Cannot save grade when the semester has ended");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      // Calculate total score from rubric scores
-      const calculatedTotal = questions.reduce((sum, question) => {
-        const questionTotal = Object.values(question.rubricScores).reduce(
-          (qSum, score) => qSum + (score || 0),
-          0
-        );
-        return sum + questionTotal;
-      }, 0);
-
-      // Get or create grading session
-      let gradingSessionId: number;
-      if (latestGradingSession) {
-        gradingSessionId = latestGradingSession.id;
-      } else {
-        // Create new grading session
-        if (!gradingGroup?.assessmentTemplateId) {
-          message.error("Cannot find assessment template. Please contact administrator.");
-          setSaving(false);
-          return;
-        }
-
-        // Create grading session
-        await gradingService.createGrading({
-          submissionId: currentSubmission.id,
-          assessmentTemplateId: gradingGroup.assessmentTemplateId,
-        });
-
-        // Fetch the newly created session
-        const gradingSessionsResult = await gradingService.getGradingSessions({
-          submissionId: currentSubmission.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-
-        if (gradingSessionsResult.items.length > 0) {
-          const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
-            return dateB - dateA;
-          });
-          gradingSessionId = sortedSessions[0].id;
-        } else {
-          message.error("Failed to create grading session");
-          setSaving(false);
-          return;
-        }
-      }
-
-      // Save all grade items
-      for (const question of questions) {
-        const questionComment = question.rubricComments?.[question.id] || "";
-
-        for (const rubric of question.rubrics) {
-          const score = question.rubricScores[rubric.id] || 0;
-          const existingGradeItem = latestGradeItems.find(
-            (item) => item.rubricItemId === rubric.id
-          );
-
-          if (existingGradeItem) {
-            await gradeItemService.updateGradeItem(existingGradeItem.id, {
-              score: score,
-              comments: questionComment,
-            });
-          } else {
-            await gradeItemService.createGradeItem({
-              gradingSessionId: gradingSessionId,
-              rubricItemId: rubric.id,
-              score: score,
-              comments: questionComment,
-            });
-          }
-        }
-      }
-
-      // Update grading session
-      await gradingService.updateGradingSession(gradingSessionId, {
-        grade: calculatedTotal,
-        status: 1,
-      });
-
-      message.success("Grade saved successfully");
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
-      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-      // Invalidate feedback queries
-      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', currentSubmission.id] });
-    } catch (err: any) {
-      console.error("Failed to save grade:", err);
-      message.error(err.message || "Failed to save grade");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAutoGrading = async () => {
-    if (!currentSubmission || !gradingGroup?.assessmentTemplateId) {
-      message.error("Submission or assessment template not found");
-      return;
-    }
-
-    if (isSemesterPassed) {
-      message.warning("Cannot use auto grading when the semester has ended");
-      return;
-    }
-
-    // Clear any existing polling interval
-    if (autoGradingPollIntervalRef) {
-      clearInterval(autoGradingPollIntervalRef);
-      setAutoGradingPollIntervalRef(null);
-    }
-    
-    // Reset completion message flag
-    hasShownCompletionMessageRef.current = false;
-
-    try {
-      setAutoGradingLoading(true);
-
-      // Call auto grading API
-      const gradingSession = await gradingService.autoGrading({
-        submissionId: currentSubmission.id,
-        assessmentTemplateId: gradingGroup.assessmentTemplateId,
-      });
-
-      // Invalidate queries immediately (including grading history modal)
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
-      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-      queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-
-      // If status is 0 (PROCESSING), start polling
-      if (gradingSession.status === 0) {
-        // Track the session ID we're polling
-        pollingSessionIdRef.current = gradingSession.id;
-        hasShownCompletionMessageRef.current = false;
-        
-        const loadingMessageKey = `auto-grading-${gradingSession.id}`;
-        message.loading({ content: "Auto grading in progress...", key: loadingMessageKey, duration: 0 });
-        
-        // Poll every 2 seconds until status changes
-        const pollInterval = setInterval(async () => {
-          // Check if we've already shown the message or if session ID changed
-          if (hasShownCompletionMessageRef.current || pollingSessionIdRef.current !== gradingSession.id) {
-            clearInterval(pollInterval);
-            setAutoGradingPollIntervalRef(null);
-            return;
-          }
-
-          try {
-            // Fetch sessions and find the specific one we're polling
-            const sessionsResult = await gradingService.getGradingSessions({
-              submissionId: currentSubmission.id,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-
-            // Find the session we're polling
-            const targetSession = sessionsResult.items.find(s => s.id === pollingSessionIdRef.current);
-
-            // Only process if we found the session and it's still the one we're polling
-            if (targetSession && pollingSessionIdRef.current === gradingSession.id) {
-              // If status is no longer PROCESSING (0), stop polling and show message
-              if (targetSession.status !== 0) {
-                hasShownCompletionMessageRef.current = true;
-                clearInterval(pollInterval);
-                setAutoGradingPollIntervalRef(null);
-                pollingSessionIdRef.current = null;
-                setAutoGradingLoading(false);
-                
-                // Invalidate queries to refresh data (including grading history modal)
-                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
-                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
-                queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-                queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-                
-                // Replace loading message with success/error message
-                if (targetSession.status === 1) {
-                  message.success({ content: "Auto grading completed successfully", key: loadingMessageKey, duration: 3 });
-                } else if (targetSession.status === 2) {
-                  message.error({ content: "Auto grading failed", key: loadingMessageKey, duration: 3 });
-                }
-              }
-            } else if (!targetSession) {
-              // Session not found, might have been deleted or submission changed
-              hasShownCompletionMessageRef.current = true;
-              clearInterval(pollInterval);
-              setAutoGradingPollIntervalRef(null);
-              pollingSessionIdRef.current = null;
-              message.destroy(loadingMessageKey);
-              setAutoGradingLoading(false);
-            }
-          } catch (err: any) {
-            console.error("Failed to poll grading status:", err);
-            if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
-              hasShownCompletionMessageRef.current = true;
-              clearInterval(pollInterval);
-              setAutoGradingPollIntervalRef(null);
-              message.destroy(loadingMessageKey);
-              setAutoGradingLoading(false);
-              message.error(err.message || "Failed to check grading status");
-            }
-          }
-        }, 2000); // Poll every 2 seconds
-
-        setAutoGradingPollIntervalRef(pollInterval);
-
-        // Stop polling after 5 minutes (safety timeout)
-        setTimeout(() => {
-          if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
-            hasShownCompletionMessageRef.current = true;
-            clearInterval(pollInterval);
-            setAutoGradingPollIntervalRef(null);
-            pollingSessionIdRef.current = null;
-            message.destroy(loadingMessageKey);
-            setAutoGradingLoading(false);
-            message.warning("Auto grading is taking longer than expected. Please check the status manually.");
-          }
-        }, 300000); // 5 minutes
-      } else {
-        // Status is not PROCESSING, grading completed immediately
-        setAutoGradingLoading(false);
-        // Invalidate queries to refresh data (including grading history modal)
-        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 1000 }) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: currentSubmission.id, pageNumber: 1, pageSize: 100 }) });
-        queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-        queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-        
-        if (gradingSession.status === 1) {
-          message.success("Auto grading completed successfully");
-        } else if (gradingSession.status === 2) {
-          message.error("Auto grading failed");
-        }
-      }
-    } catch (err: any) {
-      console.error("Failed to start auto grading:", err);
-      message.error(err.message || "Failed to start auto grading");
-      setAutoGradingLoading(false);
-    }
-  };
-
-  // Feedback functions
-  const serializeFeedback = (feedbackData: FeedbackData): string => {
-    return JSON.stringify(feedbackData);
-  };
-
-  const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
-    if (!feedbackText || feedbackText.trim() === "") {
-      return {
-        overallFeedback: "",
-        strengths: "",
-        weaknesses: "",
-        codeQuality: "",
-        algorithmEfficiency: "",
-        suggestionsForImprovement: "",
-        bestPractices: "",
-        errorHandling: "",
-      };
-    }
-
-    try {
-      const parsed = JSON.parse(feedbackText);
-      if (typeof parsed === "object" && parsed !== null) {
-        return {
-          overallFeedback: parsed.overallFeedback || "",
-          strengths: parsed.strengths || "",
-          weaknesses: parsed.weaknesses || "",
-          codeQuality: parsed.codeQuality || "",
-          algorithmEfficiency: parsed.algorithmEfficiency || "",
-          suggestionsForImprovement: parsed.suggestionsForImprovement || "",
-          bestPractices: parsed.bestPractices || "",
-          errorHandling: parsed.errorHandling || "",
-        };
-      }
-      throw new Error("Parsed result is not an object");
-    } catch (error) {
-      return null;
-    }
-  };
+  }, [visible, submission.id]);
 
   const fetchFeedback = async (submissionId: number) => {
     try {
@@ -776,11 +755,45 @@ export default function GradingGroupPage() {
     }
   };
 
-  const saveFeedback = async (feedbackData: FeedbackData) => {
-    if (!currentSubmission) {
-      throw new Error("No submission selected");
+  const serializeFeedback = (feedbackData: FeedbackData): string => {
+    return JSON.stringify(feedbackData);
+  };
+
+  const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
+    if (!feedbackText || feedbackText.trim() === "") {
+      return {
+        overallFeedback: "",
+        strengths: "",
+        weaknesses: "",
+        codeQuality: "",
+        algorithmEfficiency: "",
+        suggestionsForImprovement: "",
+        bestPractices: "",
+        errorHandling: "",
+      };
     }
 
+    try {
+      const parsed = JSON.parse(feedbackText);
+      if (typeof parsed === "object" && parsed !== null) {
+        return {
+          overallFeedback: parsed.overallFeedback || "",
+          strengths: parsed.strengths || "",
+          weaknesses: parsed.weaknesses || "",
+          codeQuality: parsed.codeQuality || "",
+          algorithmEfficiency: parsed.algorithmEfficiency || "",
+          suggestionsForImprovement: parsed.suggestionsForImprovement || "",
+          bestPractices: parsed.bestPractices || "",
+          errorHandling: parsed.errorHandling || "",
+        };
+      }
+      throw new Error("Parsed result is not an object");
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const saveFeedback = async (feedbackData: FeedbackData) => {
     const feedbackText = serializeFeedback(feedbackData);
 
     if (submissionFeedbackId) {
@@ -789,15 +802,243 @@ export default function GradingGroupPage() {
       });
     } else {
       const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
-        submissionId: currentSubmission.id,
+        submissionId: submission.id,
         feedbackText: feedbackText,
       });
       setSubmissionFeedbackId(newFeedback.id);
     }
   };
 
+  const handleSave = async () => {
+    if (!submission || !user?.id) {
+      message.error("Submission or User ID not found");
+      return;
+    }
+
+    if (isSemesterPassed) {
+      message.warning("Cannot save grade when the semester has ended");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      const calculatedTotal = questions.reduce((sum, question) => {
+        const questionTotal = Object.values(question.rubricScores).reduce(
+          (qSum, score) => qSum + (score || 0),
+          0
+        );
+        return sum + questionTotal;
+      }, 0);
+
+      let gradingSessionId: number;
+      if (latestGradingSession) {
+        gradingSessionId = latestGradingSession.id;
+      } else {
+        if (!gradingGroup?.assessmentTemplateId) {
+          message.error("Cannot find assessment template. Please contact administrator.");
+          setSaving(false);
+          return;
+        }
+
+        await gradingService.createGrading({
+          submissionId: submission.id,
+          assessmentTemplateId: gradingGroup.assessmentTemplateId,
+        });
+
+        const gradingSessionsResult = await gradingService.getGradingSessions({
+          submissionId: submission.id,
+          pageNumber: 1,
+          pageSize: 100,
+        });
+
+        if (gradingSessionsResult.items.length > 0) {
+          const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
+            const dateA = new Date(a.createdAt).getTime();
+            const dateB = new Date(b.createdAt).getTime();
+            return dateB - dateA;
+          });
+          gradingSessionId = sortedSessions[0].id;
+        } else {
+          message.error("Failed to create grading session");
+          setSaving(false);
+          return;
+        }
+      }
+
+      for (const question of questions) {
+        const questionComment = question.rubricComments?.[question.id] || "";
+
+        for (const rubric of question.rubrics) {
+          const score = question.rubricScores[rubric.id] || 0;
+          const existingGradeItem = latestGradeItems.find(
+            (item) => item.rubricItemId === rubric.id
+          );
+
+          if (existingGradeItem) {
+            await gradeItemService.updateGradeItem(existingGradeItem.id, {
+              score: score,
+              comments: questionComment,
+            });
+          } else {
+            await gradeItemService.createGradeItem({
+              gradingSessionId: gradingSessionId,
+              rubricItemId: rubric.id,
+              score: score,
+              comments: questionComment,
+            });
+          }
+        }
+      }
+
+      await gradingService.updateGradingSession(gradingSessionId, {
+        grade: calculatedTotal,
+        status: 1,
+      });
+
+      message.success("Grade saved successfully");
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
+      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submission.id] });
+    } catch (err: any) {
+      console.error("Failed to save grade:", err);
+      message.error(err.message || "Failed to save grade");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAutoGrading = async () => {
+    if (!submission || !gradingGroup?.assessmentTemplateId) {
+      message.error("Submission or assessment template not found");
+      return;
+    }
+
+    if (isSemesterPassed) {
+      message.warning("Cannot use auto grading when the semester has ended");
+      return;
+    }
+
+    if (autoGradingPollIntervalRef) {
+      clearInterval(autoGradingPollIntervalRef);
+      setAutoGradingPollIntervalRef(null);
+    }
+    
+    hasShownCompletionMessageRef.current = false;
+
+    try {
+      setAutoGradingLoading(true);
+
+      const gradingSession = await gradingService.autoGrading({
+        submissionId: submission.id,
+        assessmentTemplateId: gradingGroup.assessmentTemplateId,
+      });
+
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+
+      if (gradingSession.status === 0) {
+        pollingSessionIdRef.current = gradingSession.id;
+        hasShownCompletionMessageRef.current = false;
+        
+        const loadingMessageKey = `auto-grading-${gradingSession.id}`;
+        message.loading({ content: "Auto grading in progress...", key: loadingMessageKey, duration: 0 });
+        
+        const pollInterval = setInterval(async () => {
+          if (hasShownCompletionMessageRef.current || pollingSessionIdRef.current !== gradingSession.id) {
+            clearInterval(pollInterval);
+            setAutoGradingPollIntervalRef(null);
+            return;
+          }
+
+          try {
+            const sessionsResult = await gradingService.getGradingSessions({
+              submissionId: submission.id,
+              pageNumber: 1,
+              pageSize: 100,
+            });
+
+            const targetSession = sessionsResult.items.find(s => s.id === pollingSessionIdRef.current);
+
+            if (targetSession && pollingSessionIdRef.current === gradingSession.id) {
+              if (targetSession.status !== 0) {
+                hasShownCompletionMessageRef.current = true;
+                clearInterval(pollInterval);
+                setAutoGradingPollIntervalRef(null);
+                pollingSessionIdRef.current = null;
+                setAutoGradingLoading(false);
+                
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
+                queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+                queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+                
+                if (targetSession.status === 1) {
+                  message.success({ content: "Auto grading completed successfully", key: loadingMessageKey, duration: 3 });
+                } else if (targetSession.status === 2) {
+                  message.error({ content: "Auto grading failed", key: loadingMessageKey, duration: 3 });
+                }
+              }
+            } else if (!targetSession) {
+              hasShownCompletionMessageRef.current = true;
+              clearInterval(pollInterval);
+              setAutoGradingPollIntervalRef(null);
+              pollingSessionIdRef.current = null;
+              message.destroy(loadingMessageKey);
+              setAutoGradingLoading(false);
+            }
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+            if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
+              hasShownCompletionMessageRef.current = true;
+              clearInterval(pollInterval);
+              setAutoGradingPollIntervalRef(null);
+              message.destroy(loadingMessageKey);
+              setAutoGradingLoading(false);
+              message.error(err.message || "Failed to check grading status");
+            }
+          }
+        }, 2000);
+
+        setAutoGradingPollIntervalRef(pollInterval);
+
+        setTimeout(() => {
+          if (!hasShownCompletionMessageRef.current && pollingSessionIdRef.current === gradingSession.id) {
+            hasShownCompletionMessageRef.current = true;
+            clearInterval(pollInterval);
+            setAutoGradingPollIntervalRef(null);
+            pollingSessionIdRef.current = null;
+            message.destroy(loadingMessageKey);
+            setAutoGradingLoading(false);
+            message.warning("Auto grading is taking longer than expected. Please check the status manually.");
+          }
+        }, 300000);
+      } else {
+        setAutoGradingLoading(false);
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+        queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+        
+        if (gradingSession.status === 1) {
+          message.success("Auto grading completed successfully");
+        } else if (gradingSession.status === 2) {
+          message.error("Auto grading failed");
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to start auto grading:", err);
+      message.error(err.message || "Failed to start auto grading");
+      setAutoGradingLoading(false);
+    }
+  };
+
   const handleGetAiFeedback = async () => {
-    if (!currentSubmission) {
+    if (!submission) {
       message.error("No submission selected");
       return;
     }
@@ -809,7 +1050,7 @@ export default function GradingGroupPage() {
 
     try {
       setLoadingAiFeedback(true);
-      const formattedFeedback = await gradingService.getFormattedAiFeedback(currentSubmission.id, "OpenAI");
+      const formattedFeedback = await gradingService.getFormattedAiFeedback(submission.id, "OpenAI");
       setFeedback(formattedFeedback);
       await saveFeedback(formattedFeedback);
       message.success("AI feedback retrieved and saved successfully!");
@@ -835,7 +1076,7 @@ export default function GradingGroupPage() {
   };
 
   const handleSaveFeedback = async () => {
-    if (!currentSubmission) {
+    if (!submission) {
       message.error("No submission selected");
       return;
     }
@@ -962,27 +1203,6 @@ export default function GradingGroupPage() {
     return elements;
   };
 
-  const handlePrevious = () => {
-    if (!selectedSubmissionId) return;
-    const currentIndex = submissions.findIndex(s => s.id === selectedSubmissionId);
-    if (currentIndex > 0) {
-      setSelectedSubmissionId(submissions[currentIndex - 1].id);
-    }
-  };
-
-  const handleNext = () => {
-    if (!selectedSubmissionId) return;
-    const currentIndex = submissions.findIndex(s => s.id === selectedSubmissionId);
-    if (currentIndex < submissions.length - 1) {
-      setSelectedSubmissionId(submissions[currentIndex + 1].id);
-    }
-  };
-
-  const getCurrentIndex = () => {
-    if (!selectedSubmissionId) return 0;
-    return submissions.findIndex(s => s.id === selectedSubmissionId) + 1;
-  };
-
   const updateRubricScore = (questionId: number, rubricId: number, score: number) => {
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
@@ -1004,72 +1224,27 @@ export default function GradingGroupPage() {
     }));
   };
 
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  if (!gradingGroup || submissions.length === 0) {
-    return (
-      <div style={{ padding: 24 }}>
-        <Alert message="No submissions found in this grading group" type="warning" />
-      </div>
-    );
-  }
-
-  const currentIndex = getCurrentIndex();
-  const currentSubmissionData = submissions.find(s => s.id === selectedSubmissionId);
+  const maxScore = questions.reduce((sum, q) => {
+    return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+  }, 0);
 
   return (
-    <div className={styles.container}>
-      <Card>
-        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={() => router.back()}>
-                Back
-              </Button>
-              <Title level={3} style={{ margin: 0 }}>
-                {gradingGroup.assessmentTemplateName || "Grading Group"}
-              </Title>
-            </Space>
-            <Space>
-              <Text strong>
-                {currentIndex} / {submissions.length}
-              </Text>
-              <Button
-                icon={<LeftOutlined />}
-                onClick={handlePrevious}
-                disabled={currentIndex <= 1}
-              >
-                Previous
-              </Button>
-              <Select
-                style={{ width: 200 }}
-                value={selectedSubmissionId}
-                onChange={(value) => setSelectedSubmissionId(value)}
-                placeholder="Select submission"
-              >
-                {submissions.map((sub) => (
-                  <Select.Option key={sub.id} value={sub.id}>
-                    {sub.studentCode} - {sub.studentName}
-                  </Select.Option>
-                ))}
-              </Select>
-              <Button
-                icon={<RightOutlined />}
-                onClick={handleNext}
-                disabled={currentIndex >= submissions.length}
-              >
-                Next
-              </Button>
-            </Space>
-          </div>
-
+    <Modal
+      title={
+        <div>
+          <Title level={4} style={{ margin: 0 }}>
+            Edit Submission - {submission.studentCode} - {submission.studentName}
+          </Title>
+        </div>
+      }
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      width={1400}
+      style={{ top: 20 }}
+    >
+      <Spin spinning={loadingFeedback || loadingAiFeedback}>
+        <Space direction="vertical" size="large" style={{ width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
           {isSemesterPassed && (
             <Alert
               message="Semester has ended. Grading modifications are disabled."
@@ -1078,46 +1253,39 @@ export default function GradingGroupPage() {
             />
           )}
 
-          {/* Current Submission Info */}
-          {currentSubmissionData && (
-            <Card size="small">
-              <Row gutter={16}>
-                <Col span={6}>
-                  <Text type="secondary">Student Code:</Text>
-                  <br />
-                  <Text strong>{currentSubmissionData.studentCode}</Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary">Student Name:</Text>
-                  <br />
-                  <Text strong>{currentSubmissionData.studentName}</Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary">Submitted At:</Text>
-                  <br />
-                  <Text>
-                    {currentSubmissionData.submittedAt
-                      ? dayjs.utc(currentSubmissionData.submittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
-                      : "N/A"}
-                  </Text>
-                </Col>
-                <Col span={6}>
-                  <Text type="secondary">Total Score:</Text>
-                  <br />
-                  <Text strong style={{ fontSize: 18, color: "#52c41a" }}>
-                    {(() => {
-                      const maxScore = questions.reduce((sum, q) => {
-                        return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
-                      }, 0);
-                      return maxScore > 0 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}` : totalScore.toFixed(2);
-                    })()}
-                  </Text>
-                </Col>
-              </Row>
-            </Card>
-          )}
+          {/* Submission Info */}
+          <Card size="small">
+            <Row gutter={16}>
+              <Col span={6}>
+                <Text type="secondary">Student Code:</Text>
+                <br />
+                <Text strong>{submission.studentCode}</Text>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">Student Name:</Text>
+                <br />
+                <Text strong>{submission.studentName}</Text>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">Submitted At:</Text>
+                <br />
+                <Text>
+                  {submission.submittedAt
+                    ? dayjs.utc(submission.submittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
+                    : "N/A"}
+                </Text>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">Total Score:</Text>
+                <br />
+                <Text strong style={{ fontSize: 18, color: "#52c41a" }}>
+                  {maxScore > 0 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}` : totalScore.toFixed(2)}
+                </Text>
+              </Col>
+            </Row>
+          </Card>
 
-          {/* Grading Section */}
+          {/* Grading Details Section */}
           <Card>
             <Collapse
               defaultActiveKey={["grading-details"]}
@@ -1165,9 +1333,7 @@ export default function GradingGroupPage() {
                               Total Questions: {questions.length}
                             </Text>
                             <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
-                              Total Max Score: {questions.reduce((sum, q) => {
-                                return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
-                              }, 0).toFixed(2)}
+                              Total Max Score: {maxScore.toFixed(2)}
                             </Text>
                             <Space direction="vertical" style={{ width: "100%" }}>
                               <Button
@@ -1344,55 +1510,53 @@ export default function GradingGroupPage() {
           </Card>
 
           {/* Feedback Section */}
-          <Card style={{ marginTop: 24 }}>
-            <Spin spinning={loadingFeedback || loadingAiFeedback}>
-              <Collapse
-                defaultActiveKey={[]}
-                items={[
-                  {
-                    key: "feedback",
-                    label: (
-                      <Title level={4} style={{ margin: 0 }}>
-                        Detailed Feedback
-                      </Title>
-                    ),
-                    children: (
-                      <div>
-                        <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
-                          <Text type="secondary">
-                            Provide comprehensive feedback for the student's submission
-                          </Text>
-                          <Button
-                            type="primary"
-                            icon={<SaveOutlined />}
-                            onClick={handleSaveFeedback}
-                            disabled={loadingFeedback || loadingAiFeedback || isSemesterPassed}
-                          >
-                            Save Feedback
-                          </Button>
-                        </Space>
-                        <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                          {renderFeedbackFields(feedback)}
-                        </Space>
-                      </div>
-                    ),
-                  },
-                ]}
-              />
-            </Spin>
+          <Card>
+            <Collapse
+              defaultActiveKey={[]}
+              items={[
+                {
+                  key: "feedback",
+                  label: (
+                    <Title level={4} style={{ margin: 0 }}>
+                      Detailed Feedback
+                    </Title>
+                  ),
+                  children: (
+                    <div>
+                      <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
+                        <Text type="secondary">
+                          Provide comprehensive feedback for the student's submission
+                        </Text>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          onClick={handleSaveFeedback}
+                          disabled={loadingFeedback || loadingAiFeedback || isSemesterPassed}
+                        >
+                          Save Feedback
+                        </Button>
+                      </Space>
+                      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                        {renderFeedbackFields(feedback)}
+                      </Space>
+                    </div>
+                  ),
+                },
+              ]}
+            />
           </Card>
         </Space>
-      </Card>
+      </Spin>
 
       {/* Grading History Modal */}
-      {currentSubmission && (
+      {submission && (
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
           onClose={() => setGradingHistoryModalVisible(false)}
-          submissionId={currentSubmission.id}
+          submissionId={submission.id}
         />
       )}
-    </div>
+    </Modal>
   );
 }
 

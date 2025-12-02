@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Layout, Input, Menu } from "antd";
 import {
-  SearchOutlined,
   InfoCircleOutlined,
   BarChartOutlined,
   BookOutlined,
@@ -16,7 +15,6 @@ import {
 import styles from "./StudentSidebar.module.css";
 
 const { Sider } = Layout;
-const { Search } = Input;
 
 // Giữ nguyên mảng menuItems
 const menuItems = [
@@ -30,11 +28,12 @@ const menuItems = [
     icon: <BarChartOutlined />,
     label: <Link href="/student/assignments">Assignments</Link>,
   },
-  {
-    key: "/student/submissions",
-    icon: <BookOutlined />,
-    label: <Link href="/student/submissions">Submission history</Link>,
-  },
+  // Temporarily removed - Submission history moved to Labs page
+  // {
+  //   key: "/student/submissions",
+  //   icon: <BookOutlined />,
+  //   label: <Link href="/student/submissions">Submission history</Link>,
+  // },
   {
     key: "/student/members",
     icon: <UsergroupAddOutlined />,
@@ -70,12 +69,6 @@ export default function StudentSidebar() {
   return (
     <Sider width={280} className={styles.sider}>
       <div className={styles.siderContent}>
-        <Search
-          placeholder="Search..."
-          prefix={<SearchOutlined />}
-          className={styles.searchBar}
-        />
-
         <Menu
           mode="inline"
           // 3. Sử dụng activeKey đã tính toán

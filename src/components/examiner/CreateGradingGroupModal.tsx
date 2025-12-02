@@ -127,7 +127,7 @@ export const CreateGradingGroupModal: React.FC<
   const { user } = useAuth();
 
   // Fetch semesters using TanStack Query
-  const { data: semesters = [] } = useQuery({
+  const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
       pageNumber: 1,
@@ -135,6 +135,16 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: open,
   });
+
+  // Filter semesters to only show current and future semesters (not past semesters)
+  const semesters = useMemo(() => {
+    const now = new Date();
+    return allSemesters.filter((sem) => {
+      const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+      // Only include semesters where endDate >= today (current and future semesters)
+      return endDate >= now;
+    });
+  }, [allSemesters]);
 
   // Mutation for creating grading group
   const createGradingGroupMutation = useMutation({

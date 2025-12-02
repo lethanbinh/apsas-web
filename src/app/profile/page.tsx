@@ -123,7 +123,7 @@ const ProfilePage = () => {
       const updateData = {
         phoneNumber: values.phoneNumber,
         fullName: values.fullName,
-        avatar: values.avatar || '',
+        avatar: profile.avatar || '', // Keep current avatar, don't update from form
         address: values.address,
         gender: values.gender,
         dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : profile.dateOfBirth,
@@ -587,28 +587,6 @@ const ProfilePage = () => {
               <Input.TextArea rows={3} placeholder="Enter address" />
             </Form.Item>
 
-            <Form.Item
-              name="avatar"
-              label="Avatar URL"
-              rules={[
-                {
-                  validator: (_, value) => {
-                    if (!value || value.trim().length === 0) {
-                      return Promise.resolve(); // Optional field
-                    }
-                    // Basic URL validation
-                    try {
-                      new URL(value);
-                      return Promise.resolve();
-                    } catch {
-                      return Promise.reject(new Error('Please enter a valid URL!'));
-                    }
-                  },
-                },
-              ]}
-            >
-              <Input placeholder="https://example.com/avatar.jpg" />
-            </Form.Item>
 
             <Form.Item
               name="gender"

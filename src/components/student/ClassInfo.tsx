@@ -36,7 +36,13 @@ import { FeedbackData } from "@/services/geminiService";
 
 const { Title, Paragraph, Text } = Typography;
 
-export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
+export default function ClassInfo({ 
+  classData, 
+  showTotalStudents = true 
+}: { 
+  classData: ClassInfoType;
+  showTotalStudents?: boolean;
+}) {
   const { user } = useAuth();
   const { studentId } = useStudent();
   const { message: messageApi } = App.useApp();
@@ -896,61 +902,64 @@ export default function ClassInfo({ classData }: { classData: ClassInfoType }) {
           {classData.courseName} ({classData.classCode})
         </Title>
 
-        {/* 6. Phần chi tiết (Đã sửa lỗi 'icon') */}
-        <Descriptions
-          bordered
-          column={{ xs: 1, sm: 2 }}
-          className={styles.descriptions}
-        >
-          <Descriptions.Item
-            // SỬA Ở ĐÂY: Đặt icon bên trong label
-            label={
-              <span>
-                <ReadOutlined style={{ marginRight: 8 }} />
-                Course Code
-              </span>
-            }
-            span={1}
-          >
-            {classData.courseCode}
-          </Descriptions.Item>
-          <Descriptions.Item
-            // SỬA Ở ĐÂY: Đặt icon bên trong label
-            label={
-              <span>
-                <CalendarOutlined style={{ marginRight: 8 }} />
-                Semester
-              </span>
-            }
-            span={1}
-          >
-            {classData.semesterName}
-          </Descriptions.Item>
-          <Descriptions.Item
-            // SỬA Ở ĐÂY: Đặt icon bên trong label
-            label={
-              <span>
-                <InfoCircleOutlined style={{ marginRight: 8 }} />
-                Class Code
-              </span>
-            }
-            span={1}
-          >
-            {classData.classCode}
-          </Descriptions.Item>
-          <Descriptions.Item
-            // SỬA Ở ĐÂY: Đặt icon bên trong label
-            label={
-              <span>
-                <TeamOutlined style={{ marginRight: 8 }} />
-                Total Students
-              </span>
-            }
-            span={1}
-          >
-            {classData.studentCount}
-          </Descriptions.Item>
-        </Descriptions>
+        {/* 6. Phần chi tiết - Layout sát nhau hơn */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+          gap: '16px',
+          marginTop: '16px'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '12px',
+            backgroundColor: '#fafafa',
+            borderRadius: '4px'
+          }}>
+            <ReadOutlined style={{ fontSize: '16px', color: '#666' }} />
+            <span style={{ fontWeight: 500, marginRight: '4px' }}>Course Code:</span>
+            <span>{classData.courseCode}</span>
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '12px',
+            backgroundColor: '#fafafa',
+            borderRadius: '4px'
+          }}>
+            <CalendarOutlined style={{ fontSize: '16px', color: '#666' }} />
+            <span style={{ fontWeight: 500, marginRight: '4px' }}>Semester:</span>
+            <span>{classData.semesterName}</span>
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '12px',
+            backgroundColor: '#fafafa',
+            borderRadius: '4px'
+          }}>
+            <InfoCircleOutlined style={{ fontSize: '16px', color: '#666' }} />
+            <span style={{ fontWeight: 500, marginRight: '4px' }}>Class Code:</span>
+            <span>{classData.classCode}</span>
+          </div>
+          {showTotalStudents && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              padding: '12px',
+              backgroundColor: '#fafafa',
+              borderRadius: '4px'
+            }}>
+              <TeamOutlined style={{ fontSize: '16px', color: '#666' }} />
+              <span style={{ fontWeight: 500, marginRight: '4px' }}>Total Students:</span>
+              <span>{classData.studentCount}</span>
+            </div>
+          )}
+        </div>
 
         {/* 7. Phần mô tả */}
         <Title level={4} style={{ marginTop: "30px" }}>

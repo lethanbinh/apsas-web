@@ -37,24 +37,6 @@ import styles from "./Templates.module.css";
 
 const { Title, Text } = Typography;
 
-// Helper function to check if an assessment template is a PE (Practical Exam)
-function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
-  const name = (template.courseElementName || "").toLowerCase();
-  const keywords = [
-    "exam",
-    "pe",
-    "practical exam",
-    "practical",
-    "test",
-    "kiểm tra thực hành",
-    "thi thực hành",
-    "bài thi",
-    "bài kiểm tra",
-    "thực hành",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
-}
-
 const TemplatesPageContent = () => {
   const queryClient = useQueryClient();
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
@@ -66,7 +48,7 @@ const TemplatesPageContent = () => {
   const { message } = App.useApp();
 
   // Fetch semesters
-  const { data: semesters = [] } = useQuery({
+  const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
       pageNumber: 1,
@@ -106,31 +88,6 @@ const TemplatesPageContent = () => {
     }),
   });
 
-  const loading = loadingTemplates && !templatesResponse;
-  const error = templatesError ? (templatesError as any).message || "Failed to load data." : null;
-  
-  // Show loading spinner when loading and no data
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
-
-  // Filter PE templates
-  const allTemplates = useMemo(() => {
-    if (!templatesResponse?.items) return [];
-    const peTemplates = templatesResponse.items.filter(template => {
-      if (!isPracticalExamTemplate(template)) return false;
-      if (approvedCourseElementIds.size > 0) {
-        return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
-      }
-      return true;
-    });
-    return peTemplates;
-  }, [templatesResponse, approvedCourseElementIds]);
-
   // Fetch all course elements
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
@@ -148,6 +105,37 @@ const TemplatesPageContent = () => {
     return map;
   }, [allCourseElementsRes]);
 
+  // Filter PE templates based on courseElement.elementType === 2 (PE)
+  const allTemplates = useMemo(() => {
+    if (!templatesResponse?.items) return [];
+    const peTemplates = templatesResponse.items.filter(template => {
+      // Get course element from map
+      const courseElement = allCourseElementsMap.get(template.courseElementId);
+      // Only include if elementType === 2 (PE)
+      if (!courseElement || courseElement.elementType !== 2) return false;
+      if (approvedCourseElementIds.size > 0) {
+        return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
+      }
+      return true;
+    });
+    return peTemplates;
+  }, [templatesResponse, approvedCourseElementIds, allCourseElementsMap]);
+
+  // Filter semesters: only those that have templates
+  const semesters = useMemo(() => {
+    // Get all semester codes that have templates
+    const semesterCodesWithTemplates = new Set<string>();
+    allTemplates.forEach(template => {
+      const courseElement = allCourseElementsMap.get(template.courseElementId);
+      if (courseElement?.semesterCourse?.semester?.semesterCode) {
+        semesterCodesWithTemplates.add(courseElement.semesterCourse.semester.semesterCode);
+      }
+    });
+    
+    // Filter to only semesters that have templates
+    return allSemesters.filter((s: Semester) => semesterCodesWithTemplates.has(s.semesterCode));
+  }, [allSemesters, allTemplates, allCourseElementsMap]);
+
   // Fetch courses for selected semester
   const { data: semesterDetail, isLoading: loadingCourses } = useQuery({
     queryKey: ['semesterPlanDetail', selectedSemesterCode],
@@ -155,7 +143,24 @@ const TemplatesPageContent = () => {
     enabled: !!selectedSemesterCode,
   });
 
-  const courses = semesterDetail?.semesterCourses || [];
+  // Filter courses: only those that have course elements with templates
+  const courses = useMemo(() => {
+    if (!semesterDetail?.semesterCourses) return [];
+    
+    // Get all course IDs that have course elements with templates
+    const courseIdsWithTemplates = new Set<number>();
+    allTemplates.forEach(template => {
+      const courseElement = allCourseElementsMap.get(template.courseElementId);
+      if (courseElement?.semesterCourse?.courseId) {
+        courseIdsWithTemplates.add(courseElement.semesterCourse.courseId);
+      }
+    });
+    
+    // Filter to only courses that have templates
+    return semesterDetail.semesterCourses.filter(sc => 
+      courseIdsWithTemplates.has(sc.course.id)
+    );
+  }, [semesterDetail, allTemplates, allCourseElementsMap]);
 
   // Fetch course elements for selected semester
   const { data: courseElementsRes = [], isLoading: loadingCourseElements } = useQuery({
@@ -168,10 +173,34 @@ const TemplatesPageContent = () => {
     enabled: !!selectedSemesterCode,
   });
 
+  // Filter course elements: only PE (elementType === 2), only those with templates, and remove duplicates by name
   const courseElements = useMemo(() => {
-    if (!selectedCourseId) return courseElementsRes;
-    return courseElementsRes.filter(ce => ce.semesterCourse?.courseId === selectedCourseId);
-  }, [courseElementsRes, selectedCourseId]);
+    // Get all course element IDs that have templates
+    const courseElementIdsWithTemplates = new Set(
+      allTemplates.map(t => t.courseElementId)
+    );
+    
+    // First filter by elementType === 2 (PE) and only those with templates
+    let filtered = courseElementsRes.filter(ce => 
+      ce.elementType === 2 && courseElementIdsWithTemplates.has(ce.id)
+    );
+    
+    // Filter by course if selected
+    if (selectedCourseId) {
+      filtered = filtered.filter(ce => ce.semesterCourse?.courseId === selectedCourseId);
+    }
+    
+    // Remove duplicates based on name (keep unique course element names)
+    const uniqueElements = new Map<string, CourseElement>();
+    filtered.forEach(ce => {
+      const name = ce.name || '';
+      if (!uniqueElements.has(name)) {
+        uniqueElements.set(name, ce);
+      }
+    });
+    
+    return Array.from(uniqueElements.values());
+  }, [courseElementsRes, selectedCourseId, allTemplates]);
 
   // Filter templates based on selected filters
   const filteredTemplates = useMemo(() => {
@@ -202,6 +231,34 @@ const TemplatesPageContent = () => {
     return filtered;
   }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, courseElements]);
 
+  // Set default to current semester (semester that is currently active)
+  useEffect(() => {
+    if (allSemesters.length > 0 && semesters.length > 0 && selectedSemesterCode === null) {
+      const now = new Date();
+      // Find the current semester from allSemesters (where now is between startDate and endDate)
+      const currentSemester = allSemesters.find((sem: Semester) => {
+        const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+        const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+        return now >= startDate && now <= endDate;
+      });
+      
+      // Check if current semester has templates (is in semesters list)
+      if (currentSemester && semesters.some((s: Semester) => s.semesterCode === currentSemester.semesterCode)) {
+        setSelectedSemesterCode(currentSemester.semesterCode);
+      } else {
+        // If no current semester or current semester has no templates, fallback to latest semester with templates
+        const latestSemester = [...semesters].sort((a: Semester, b: Semester) => {
+          const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
+          const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
+          return dateB - dateA; // Descending order (newest first)
+        })[0];
+        if (latestSemester) {
+          setSelectedSemesterCode(latestSemester.semesterCode);
+        }
+      }
+    }
+  }, [allSemesters, semesters, selectedSemesterCode]);
+
   useEffect(() => {
     if (!selectedSemesterCode) {
       setSelectedCourseId(null);
@@ -214,6 +271,18 @@ const TemplatesPageContent = () => {
       setSelectedCourseElementId(null);
     }
   }, [selectedCourseId, selectedSemesterCode]);
+
+  const loading = loadingTemplates && !templatesResponse;
+  const error = templatesError ? (templatesError as any).message || "Failed to load data." : null;
+
+  // Show loading spinner when loading and no data (after all hooks)
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   const handleSemesterChange = (value: string | null) => {
     setSelectedSemesterCode(value);

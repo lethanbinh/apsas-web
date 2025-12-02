@@ -7,7 +7,7 @@ import {
 } from "@/services/gradingGroupService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
-import { DeleteOutlined, FileZipOutlined, InboxOutlined } from "@ant-design/icons";
+import { DeleteOutlined, FileZipOutlined, InboxOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { TableProps, UploadFile, UploadProps } from "antd";
 import {
   Alert,
@@ -73,7 +73,40 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     enabled: open && !!group?.id,
   });
 
-  const submissions = updatedGroup?.submissions || [];
+  // Get submission IDs from grading group
+  const submissionIds = useMemo(() => {
+    return (updatedGroup?.submissions || []).map(s => s.id);
+  }, [updatedGroup]);
+
+  // Fetch full submission details with submissionFile
+  const { data: fullSubmissionsData = [] } = useQuery({
+    queryKey: ['submissions', 'byGradingGroup', group.id],
+    queryFn: () => submissionService.getSubmissionList({
+      gradingGroupId: group.id,
+    }),
+    enabled: open && !!group?.id,
+  });
+
+  // Map submissions with full details
+  const submissions = useMemo(() => {
+    if (fullSubmissionsData.length > 0) {
+      return fullSubmissionsData;
+    }
+    // Fallback to basic submissions from grading group if full data not available
+    return (updatedGroup?.submissions || []).map(gSub => ({
+      id: gSub.id,
+      studentId: gSub.studentId,
+      studentName: gSub.studentName,
+      studentCode: gSub.studentCode,
+      gradingGroupId: gSub.gradingGroupId,
+      submittedAt: gSub.submittedAt || "",
+      status: gSub.status,
+      lastGrade: gSub.lastGrade,
+      submissionFile: null, // Will be null if not fetched
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as Submission));
+  }, [fullSubmissionsData, updatedGroup]);
 
   // Fetch assessment template
   const { data: templatesResponse } = useQuery({
@@ -256,12 +289,13 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
 
   const isLoading = uploadSubmissionsMutation.isPending || deleteSubmissionsMutation.isPending;
 
-  const submissionColumns: TableProps<GradingGroupSubmission>["columns"] = [
+  const submissionColumns: TableProps<Submission>["columns"] = [
     {
       title: "ID",
       dataIndex: "id",
       key: "id",
       width: 80,
+      align: "center",
     },
     {
       title: "Student",
@@ -269,7 +303,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       key: "student",
       render: (name, record) => (
         <div>
-          <Text strong>{name}</Text>
+          <Text strong style={{ fontSize: 14 }}>{name}</Text>
           <br />
           <Text type="secondary" style={{ fontSize: 12 }}>
             {record.studentCode}
@@ -278,34 +312,35 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       ),
     },
     {
-      title: "Submitted At",
-      dataIndex: "submittedAt",
-      key: "submittedAt",
-      render: (date: string | null) => {
-        const vietnamTime = toVietnamTime(date);
-        return vietnamTime && vietnamTime.isValid() 
-          ? vietnamTime.format("DD/MM/YYYY HH:mm:ss")
-          : "N/A";
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
+      title: "Action",
+      key: "action",
       width: 120,
-      render: (status) =>
-        status === 0 ? (
-          <Tag color="green">On Time</Tag>
-        ) : (
-          <Tag color="red">Late</Tag>
-        ),
-    },
-    {
-      title: "Score",
-      dataIndex: "lastGrade",
-      key: "score",
-      width: 100,
-      render: (grade) => <Text>{grade !== null && grade !== undefined ? `${grade}/100` : "N/A"}</Text>,
+      align: "center",
+      render: (_, record) => {
+        const handleDownload = () => {
+          if (record.submissionFile?.submissionUrl) {
+            const link = document.createElement("a");
+            link.href = record.submissionFile.submissionUrl;
+            link.download = record.submissionFile.name || "submission.zip";
+            link.target = "_blank";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        };
+
+        return (
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={handleDownload}
+            disabled={!record.submissionFile?.submissionUrl}
+            size="small"
+          >
+            Download
+          </Button>
+        );
+      },
     },
   ];
 
@@ -354,32 +389,71 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Text strong>Total: {submissions.length} submissions</Text>
                   {selectedRowKeys.length > 0 && (
-                    <Popconfirm
-                      title={`Delete ${selectedRowKeys.length} submission(s)`}
-                      description="Are you sure you want to delete these submissions?"
-                      onConfirm={() => handleDeleteSubmissions(selectedRowKeys.map(Number))}
-                      okText="Yes"
-                      cancelText="No"
-                    >
+                    <Space>
                       <Button
-                        danger
-                        icon={<DeleteOutlined />}
-                        loading={isLoading}
+                        type="primary"
+                        icon={<DownloadOutlined />}
+                        onClick={() => {
+                          const selectedSubmissions = submissions.filter(s => selectedRowKeys.includes(s.id));
+                          const submissionsWithFiles = selectedSubmissions.filter(s => s.submissionFile?.submissionUrl);
+                          
+                          if (submissionsWithFiles.length === 0) {
+                            messageApi.warning("No submissions with files selected");
+                            return;
+                          }
+
+                          // Download each file
+                          submissionsWithFiles.forEach((sub) => {
+                            if (sub.submissionFile?.submissionUrl) {
+                              const link = document.createElement("a");
+                              link.href = sub.submissionFile.submissionUrl;
+                              link.download = sub.submissionFile.name || `submission_${sub.id}.zip`;
+                              link.target = "_blank";
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }
+                          });
+                          
+                          messageApi.success(`Downloading ${submissionsWithFiles.length} file(s)...`);
+                        }}
                       >
-                        Delete Selected ({selectedRowKeys.length})
+                        Download Selected ({selectedRowKeys.length})
                       </Button>
-                    </Popconfirm>
+                      <Popconfirm
+                        title={`Delete ${selectedRowKeys.length} submission(s)`}
+                        description="Are you sure you want to delete these submissions?"
+                        onConfirm={() => handleDeleteSubmissions(selectedRowKeys.map(Number))}
+                        okText="Yes"
+                        cancelText="No"
+                      >
+                        <Button
+                          danger
+                          icon={<DeleteOutlined />}
+                          loading={isLoading}
+                        >
+                          Delete Selected ({selectedRowKeys.length})
+                        </Button>
+                      </Popconfirm>
+                    </Space>
                   )}
                 </div>
-                <Table
-                  rowSelection={rowSelection}
-                  columns={submissionColumns}
-                  dataSource={submissions}
-                  rowKey="id"
-                  loading={loadingSubmissions}
-                  pagination={{ pageSize: 10 }}
-                  scroll={{ y: 400 }}
-                />
+                <Card>
+                  <Table
+                    rowSelection={rowSelection}
+                    columns={submissionColumns}
+                    dataSource={submissions}
+                    rowKey="id"
+                    loading={loadingSubmissions}
+                    pagination={{ 
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showTotal: (total) => `Total ${total} submissions`,
+                    }}
+                    scroll={{ y: 400 }}
+                    size="middle"
+                  />
+                </Card>
               </Space>
             ),
           },

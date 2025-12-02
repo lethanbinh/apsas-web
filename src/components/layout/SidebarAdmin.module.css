@@ -33,7 +33,7 @@
 .menu {
   background: transparent !important;
   border: none !important;
-  margin-top: 20px;
+  margin-top: 0;
 }
 
 .menu :global(.ant-menu-item) {

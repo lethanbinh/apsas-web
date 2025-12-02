@@ -46,6 +46,10 @@ export interface CreateSubmissionPayload {
   file: File;
 }
 
+export interface UpdateSubmissionPayload {
+  file: File;
+}
+
 export interface SubmissionApiResponse {
   statusCode: number;
   isSuccess: boolean;
@@ -87,6 +91,25 @@ export class SubmissionService {
 
     const response = await apiService.post<SubmissionApiResponse>(
       "/Submission/create",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.result;
+  }
+
+  async updateSubmission(
+    submissionId: number,
+    payload: UpdateSubmissionPayload
+  ): Promise<Submission> {
+    const formData = new FormData();
+    formData.append("SubmissionURL", payload.file);
+
+    const response = await apiService.put<SubmissionApiResponse>(
+      `/Submission/${submissionId}`,
       formData,
       {
         headers: {

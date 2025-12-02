@@ -34,8 +34,10 @@ import {
   Alert,
   App,
   Button,
+  Card,
   Collapse,
   Divider,
+  Empty,
   Input,
   Modal,
   Select,
@@ -138,6 +140,15 @@ const MySubmissionsPageContent = () => {
   const [selectedSemester, setSelectedSemester] = useState<number | undefined>(
     undefined
   );
+
+  // Fetch all semesters for default selection
+  const { data: allSemestersData } = useQuery({
+    queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => semesterService.getSemesters({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(
     undefined
   );
@@ -449,6 +460,47 @@ const MySubmissionsPageContent = () => {
       .filter((s): s is SemesterPlanDetail => s !== undefined);
   }, [semesterDetailsQueries]);
 
+  // Set default to current semester
+  useEffect(() => {
+    if (allSemestersData && semesters.length > 0 && selectedSemester === undefined) {
+      const now = new Date();
+      // Find the current semester from allSemestersData
+      const currentSemester = allSemestersData.find((sem: Semester) => {
+        const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+        const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+        return now >= startDate && now <= endDate;
+      });
+      
+      // Check if current semester has grading groups (is in semesters list)
+      if (currentSemester) {
+        const semesterDetail = semesters.find((s) => s.semesterCode === currentSemester.semesterCode);
+        if (semesterDetail) {
+          setSelectedSemester(Number(semesterDetail.id));
+        } else {
+          // If no current semester or current semester has no grading groups, fallback to latest semester with grading groups
+          const latestSemester = [...semesters].sort((a, b) => {
+            const dateA = new Date(a.endDate || 0).getTime();
+            const dateB = new Date(b.endDate || 0).getTime();
+            return dateB - dateA; // Descending order (newest first)
+          })[0];
+          if (latestSemester) {
+            setSelectedSemester(Number(latestSemester.id));
+          }
+        }
+      } else {
+        // If no current semester, fallback to latest semester with grading groups
+        const latestSemester = [...semesters].sort((a, b) => {
+          const dateA = new Date(a.endDate || 0).getTime();
+          const dateB = new Date(b.endDate || 0).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        })[0];
+        if (latestSemester) {
+          setSelectedSemester(Number(latestSemester.id));
+        }
+      }
+    }
+  }, [allSemestersData, semesters, selectedSemester]);
+
   // Calculate loading state (optimized: removed gradeItemsQueries check since we use session.grade)
   const loading = (
     isLoadingGroups ||
@@ -547,60 +599,71 @@ const MySubmissionsPageContent = () => {
     });
   }, [allSubmissions, classAssessments, semesters, filteredGradingGroups, filteredGradingGroupIds, gradingGroupToSemesterMap, gradingGroupToCourseMap, submissionTotalScores]);
 
-  // Get available courses based on selected semester
+  // Get available courses based on selected semester - only show courses that have grading groups
   const availableCourses = useMemo(() => {
-    if (selectedSemester === undefined) {
-      // If no semester selected, return all unique courses
-      const courseMap = new Map<number, { courseId: number; courseName: string }>();
-      enrichedSubmissions.forEach((sub) => {
-        if (sub.courseId && sub.courseName) {
-          courseMap.set(sub.courseId, { courseId: sub.courseId, courseName: sub.courseName });
-        }
-      });
-      return Array.from(courseMap.values());
-    }
-
-    const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
-    const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
-    if (!selectedSemesterCode) return [];
-
     const courseMap = new Map<number, { courseId: number; courseName: string }>();
-    enrichedSubmissions.forEach((sub) => {
-      if (sub.semesterCode === selectedSemesterCode && sub.courseId && sub.courseName) {
-        courseMap.set(sub.courseId, { courseId: sub.courseId, courseName: sub.courseName });
+    
+    gradingGroups.forEach((group) => {
+      const courseInfo = gradingGroupToCourseMap[group.id];
+      const semesterCode = gradingGroupToSemesterMap[group.id];
+      
+      if (!courseInfo) return;
+      
+      // Filter by selected semester if any
+      if (selectedSemester !== undefined) {
+        const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
+        const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
+        if (selectedSemesterCode && semesterCode !== selectedSemesterCode) {
+          return;
+        }
+      }
+      
+      if (!courseMap.has(courseInfo.courseId)) {
+        courseMap.set(courseInfo.courseId, { courseId: courseInfo.courseId, courseName: courseInfo.courseName });
       }
     });
+    
     return Array.from(courseMap.values());
-  }, [enrichedSubmissions, selectedSemester, semesters]);
+  }, [gradingGroups, gradingGroupToCourseMap, gradingGroupToSemesterMap, selectedSemester, semesters]);
 
-  // Get available templates based on selected semester and course
+  // Get available templates based on selected semester and course - only show templates that have grading groups
   const availableTemplates = useMemo(() => {
-    let filteredGroups = filteredGradingGroups;
-
-    if (selectedSemester !== undefined) {
-      const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
-      const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
-      if (selectedSemesterCode) {
-        filteredGroups = filteredGroups.filter((g) => {
-          const semesterCode = gradingGroupToSemesterMap[g.id];
-          return semesterCode === selectedSemesterCode;
+    const templateMap = new Map<number, { id: number; name: string; assessmentTemplateId: number | null }>();
+    
+    gradingGroups.forEach((group) => {
+      const courseInfo = gradingGroupToCourseMap[group.id];
+      const semesterCode = gradingGroupToSemesterMap[group.id];
+      const templateId = group.assessmentTemplateId;
+      
+      if (!templateId) return;
+      
+      // Filter by selected semester if any
+      if (selectedSemester !== undefined) {
+        const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
+        const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
+        if (selectedSemesterCode && semesterCode !== selectedSemesterCode) {
+          return;
+        }
+      }
+      
+      // Filter by selected course if any
+      if (selectedCourseId !== undefined) {
+        if (courseInfo?.courseId !== selectedCourseId) {
+          return;
+        }
+      }
+      
+      if (!templateMap.has(templateId)) {
+        templateMap.set(templateId, {
+          id: templateId,
+          name: group.assessmentTemplateName || `Template ${templateId}`,
+          assessmentTemplateId: templateId,
         });
       }
-    }
-
-    if (selectedCourseId !== undefined) {
-      filteredGroups = filteredGroups.filter((g) => {
-        const courseInfo = gradingGroupToCourseMap[g.id];
-        return courseInfo?.courseId === selectedCourseId;
-      });
-    }
-
-    return filteredGroups.map((g) => ({
-      id: g.id,
-      name: g.assessmentTemplateName || `Template ${g.id}`,
-      assessmentTemplateId: g.assessmentTemplateId,
-    }));
-  }, [filteredGradingGroups, selectedSemester, selectedCourseId, semesters, gradingGroupToSemesterMap, gradingGroupToCourseMap]);
+    });
+    
+    return Array.from(templateMap.values());
+  }, [gradingGroups, gradingGroupToCourseMap, gradingGroupToSemesterMap, selectedSemester, selectedCourseId, semesters]);
 
   const filteredData = useMemo(() => {
     // First, filter by semester, course, template, and search text
@@ -621,10 +684,11 @@ const MySubmissionsPageContent = () => {
         courseMatch = sub.courseId === selectedCourseId;
       }
 
-      // Filter by template (grading group)
+      // Filter by template (assessment template ID)
       let templateMatch = true;
       if (selectedTemplateId !== undefined) {
-        templateMatch = sub.gradingGroupId === selectedTemplateId;
+        const group = gradingGroups.find(g => g.id === sub.gradingGroupId);
+        templateMatch = group?.assessmentTemplateId === selectedTemplateId;
       }
 
       // Filter by search text
@@ -685,6 +749,7 @@ const MySubmissionsPageContent = () => {
     selectedCourseId,
     selectedTemplateId,
     semesters,
+    gradingGroups,
   ]);
 
   // Group filtered submissions by course and semester
@@ -1315,90 +1380,220 @@ const MySubmissionsPageContent = () => {
     },
   ], []);
 
+  // Flatten all grading groups into a single array for table
+  // Group by Course, Template, Semester - merge submissions from multiple grading groups
+  const flatGradingGroups = useMemo(() => {
+    // Use a composite key object to avoid string splitting issues
+    interface GroupKey {
+      courseId: number;
+      templateId: number;
+      semesterCode: string;
+    }
+    
+    const keyToString = (key: GroupKey): string => {
+      return `${key.courseId}|${key.templateId}|${key.semesterCode}`;
+    };
+
+    const groupedMap = new Map<string, {
+      key: string; // Unique key for this grouped item
+      id: number; // Use the latest grading group ID
+      courseCode: string;
+      courseName: string;
+      templateName: string;
+      semesterCode: string;
+      submissionCount: number;
+      gradingGroupIds: number[]; // All grading group IDs that match
+      gradingGroup: GradingGroup; // Latest grading group
+    }>();
+
+    // First pass: collect all unique keys
+    const allKeys = new Map<string, GroupKey>();
+    gradingGroups.forEach((gradingGroup) => {
+      const courseInfo = gradingGroupToCourseMap[gradingGroup.id];
+      const semesterCode = gradingGroupToSemesterMap[gradingGroup.id];
+      const templateId = gradingGroup.assessmentTemplateId;
+      
+      if (courseInfo && semesterCode && templateId !== null && templateId !== undefined) {
+        const key: GroupKey = {
+          courseId: courseInfo.courseId,
+          templateId: templateId,
+          semesterCode: semesterCode,
+        };
+        const keyStr = keyToString(key);
+        if (!allKeys.has(keyStr)) {
+          allKeys.set(keyStr, key);
+        }
+      }
+    });
+
+    // Second pass: process each unique key and group matching grading groups
+    allKeys.forEach((key, keyStr) => {
+      // Find all grading groups that match this key
+      const matchingGroups = gradingGroups.filter(g => {
+        const gCourseInfo = gradingGroupToCourseMap[g.id];
+        const gSemesterCode = gradingGroupToSemesterMap[g.id];
+        const gTemplateId = g.assessmentTemplateId;
+        // Ensure strict comparison with type conversion
+        return gCourseInfo?.courseId === key.courseId &&
+               String(gSemesterCode) === String(key.semesterCode) &&
+               Number(gTemplateId) === Number(key.templateId);
+      });
+
+      if (matchingGroups.length === 0) return;
+
+      // Get the latest grading group (by createdAt)
+      const latestGroup = matchingGroups.reduce((latest, current) => {
+        const latestDate = latest.createdAt ? new Date(latest.createdAt).getTime() : 0;
+        const currentDate = current.createdAt ? new Date(current.createdAt).getTime() : 0;
+        return currentDate > latestDate ? current : latest;
+      });
+
+      const courseInfo = gradingGroupToCourseMap[latestGroup.id];
+      if (!courseInfo) return;
+
+      // Get all matching group IDs
+      const matchingGroupIds = matchingGroups.map(g => g.id);
+
+      // Count unique students (latest submission per student) across all matching groups
+      const studentSubmissions = new Map<number, EnrichedSubmission>();
+      enrichedSubmissions.forEach((sub) => {
+        if (matchingGroupIds.includes(sub.gradingGroupId || -1) && sub.studentId) {
+          const existing = studentSubmissions.get(sub.studentId);
+          if (!existing) {
+            studentSubmissions.set(sub.studentId, sub);
+          } else {
+            const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
+            const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+            if (currentDate > existingDate || (currentDate === existingDate && sub.id > existing.id)) {
+              studentSubmissions.set(sub.studentId, sub);
+            }
+          }
+        }
+      });
+
+      groupedMap.set(keyStr, {
+        key: keyStr, // Use the composite key as unique identifier
+        id: latestGroup.id,
+        courseCode: courseInfo.courseName.split(' - ')[0] || courseInfo.courseName,
+        courseName: courseInfo.courseName,
+        templateName: latestGroup.assessmentTemplateName || `Template ${latestGroup.id}`,
+        semesterCode: key.semesterCode,
+        submissionCount: studentSubmissions.size,
+        gradingGroupIds: matchingGroupIds,
+        gradingGroup: latestGroup,
+      });
+    });
+
+    // Apply filters to the grouped results
+    let filtered = Array.from(groupedMap.values());
+
+    // Filter by selected semester
+    if (selectedSemester !== undefined) {
+      const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
+      const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
+      if (selectedSemesterCode) {
+        filtered = filtered.filter(g => g.semesterCode === selectedSemesterCode);
+      }
+    }
+
+    // Filter by selected course
+    if (selectedCourseId !== undefined) {
+      filtered = filtered.filter(g => {
+        // Get course info from the grading group in the grouped item
+        const group = gradingGroups.find(gg => g.gradingGroupIds.includes(gg.id));
+        if (!group) return false;
+        const courseInfo = gradingGroupToCourseMap[group.id];
+        return courseInfo?.courseId === selectedCourseId;
+      });
+    }
+
+    // Filter by selected template
+    if (selectedTemplateId !== undefined) {
+      filtered = filtered.filter(g => {
+        // Get template ID from the grading group in the grouped item
+        const group = gradingGroups.find(gg => g.gradingGroupIds.includes(gg.id));
+        return group?.assessmentTemplateId === selectedTemplateId;
+      });
+    }
+
+    return filtered;
+  }, [gradingGroups, gradingGroupToCourseMap, gradingGroupToSemesterMap, enrichedSubmissions, selectedSemester, selectedCourseId, selectedTemplateId, semesters]);
+
+  const gradingGroupColumns: ColumnsType<typeof flatGradingGroups[0]> = useMemo(() => [
+    {
+      title: "Course",
+      key: "course",
+      width: 200,
+      render: (_, record) => (
+        <div>
+          <Text strong style={{ fontSize: 14 }}>{record.courseCode}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.courseName}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Template",
+      dataIndex: "templateName",
+      key: "template",
+      width: 200,
+      render: (name) => <Text strong>{name}</Text>,
+    },
+    {
+      title: "Semester",
+      dataIndex: "semesterCode",
+      key: "semester",
+      width: 120,
+      render: (semester) => semester ? (
+        <Tag color="purple">{semester}</Tag>
+      ) : (
+        <Text type="secondary">N/A</Text>
+      ),
+    },
+    {
+      title: "Submissions",
+      dataIndex: "submissionCount",
+      key: "submissions",
+      width: 120,
+      align: "center",
+      render: (count) => (
+        <Tag color={count > 0 ? "green" : "default"}>{count}</Tag>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      width: 150,
+      fixed: "right",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          onClick={() => router.push(`/lecturer/grading-group/${record.id}`)}
+          size="small"
+        >
+          Manage
+        </Button>
+      ),
+    },
+  ], [router]);
+
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
-        <Title
-          level={2}
-          style={{ margin: 0, fontWeight: 700, color: "rgb(47, 50, 125)" }}
-        >
-          Grading
-        </Title>
+        <div>
+          <Title
+            level={2}
+            style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
+          >
+            Grading Groups
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            Manage your grading groups and submissions
+          </Text>
+        </div>
         <Space>
-          {groupedByCourse.length > 0 && (
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={handleDownloadAll}
-              size="large"
-            >
-              Download All
-            </Button>
-          )}
-          {filteredData.length > 0 && (
-            <Button
-              icon={<RobotOutlined />}
-              onClick={handleBatchGrading}
-              loading={batchGradingMutation.isPending}
-              size="large"
-              type="primary"
-            >
-              Batch Grade
-            </Button>
-          )}
-        </Space>
-      </div>
-      <div style={{ marginBottom: 16, marginTop: 16 }}>
-        <Space>
-          <Select
-            allowClear
-            value={selectedSemester}
-            onChange={(value) => {
-              setSelectedSemester(value);
-              setSelectedCourseId(undefined);
-              setSelectedTemplateId(undefined);
-            }}
-            style={{ width: 200 }}
-            placeholder="Filter by Semester"
-            options={semesters.map((s) => ({
-              label: s.semesterCode,
-              value: Number(s.id),
-            }))}
-          />
-          <Select
-            allowClear
-            value={selectedCourseId}
-            onChange={(value) => {
-              setSelectedCourseId(value);
-              setSelectedTemplateId(undefined);
-            }}
-            disabled={selectedSemester === undefined}
-            style={{ width: 200 }}
-            placeholder="Filter by Course"
-            options={availableCourses.map((c) => ({
-              label: c.courseName,
-              value: c.courseId,
-            }))}
-          />
-          <Select
-            allowClear
-            value={selectedTemplateId}
-            onChange={(value) => {
-              setSelectedTemplateId(value);
-            }}
-            disabled={selectedCourseId === undefined}
-            style={{ width: 250 }}
-            placeholder="Filter by Template"
-            options={availableTemplates.map((t) => ({
-              label: t.name,
-              value: t.id,
-            }))}
-          />
-          <Input
-            placeholder="Search student or file..."
-            prefix={<SearchOutlined />}
-            style={{ width: 240 }}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
         </Space>
       </div>
 
@@ -1415,77 +1610,107 @@ const MySubmissionsPageContent = () => {
           style={{ marginBottom: 16 }}
         />
       ) : (
-        <div>
-          {groupedByCourse.map((group, index) => {
-            const groupKey = `${group.courseId}_${group.semesterCode}_${index}`;
-            // Get grading group from first submission (all submissions in same group have same gradingGroupId)
-            const firstSubmission = group.submissions[0];
-            const gradingGroup = firstSubmission?.gradingGroupId 
-              ? filteredGradingGroups.find((g) => g.id === firstSubmission.gradingGroupId)
-              : null;
+        <>
+          {/* Filter Section */}
+          <Card style={{ marginBottom: 16 }}>
+            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+              <Text strong style={{ fontSize: 16 }}>Filters</Text>
+              <Space wrap>
+                <div>
+                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+                    Semester
+                  </Text>
+                  <Select
+                    style={{ width: 200 }}
+                    placeholder="Select semester"
+                    value={selectedSemester}
+                    onChange={(value) => {
+                      setSelectedSemester(value);
+                      setSelectedCourseId(undefined);
+                      setSelectedTemplateId(undefined);
+                    }}
+                    allowClear
+                  >
+                    {semesters.map((sem) => (
+                      <Select.Option key={sem.id} value={Number(sem.id)}>
+                        {sem.semesterCode}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+                    Course
+                  </Text>
+                  <Select
+                    style={{ width: 200 }}
+                    placeholder="Select course"
+                    value={selectedCourseId}
+                    onChange={(value) => {
+                      setSelectedCourseId(value);
+                      setSelectedTemplateId(undefined);
+                    }}
+                    allowClear
+                    disabled={selectedSemester === undefined}
+                  >
+                    {availableCourses.map((course) => (
+                      <Select.Option key={course.courseId} value={course.courseId}>
+                        {course.courseName}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
+                    Template
+                  </Text>
+                  <Select
+                    style={{ width: 200 }}
+                    placeholder="Select template"
+                    value={selectedTemplateId}
+                    onChange={setSelectedTemplateId}
+                    allowClear
+                    disabled={selectedCourseId === undefined}
+                  >
+                    {availableTemplates.map((template) => (
+                      <Select.Option key={template.id} value={template.id}>
+                        {template.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+              </Space>
+            </Space>
+          </Card>
 
-            return (
-              <Collapse key={groupKey} style={{ marginBottom: 16 }}>
-                <Collapse.Panel
-                  header={
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%" }}>
-                      <span style={{ fontWeight: 600 }}>
-                        {group.courseName} - {group.semesterCode} ({group.submissions.length} submissions)
-                      </span>
-                      {gradingGroup && (
-                        <Space>
-                          <Button
-                            type="default"
-                            icon={<FileExcelOutlined />}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleExportGradeReport(gradingGroup);
-                            }}
-                          >
-                            Export Grade Report
-                          </Button>
-                          <Button
-                            type="default"
-                            icon={<EditOutlined />}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/lecturer/grading-group/${gradingGroup.id}`);
-                            }}
-                          >
-                            Edit Grade
-                          </Button>
-                          <Button
-                            type="primary"
-                            icon={<UploadOutlined />}
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleUploadGradeSheet(gradingGroup);
-                            }}
-                          >
-                            Upload Grade Sheet
-                          </Button>
-                        </Space>
-                      )}
-    </div>
-                  }
-                  key={groupKey}
-                >
-                                <Table
-          columns={columns}
-                    dataSource={group.submissions}
-                                  rowKey="id"
-          pagination={{ pageSize: 10 }}
-          className={styles.table}
-        />
-                  </Collapse.Panel>
-              </Collapse>
-            );
-          })}
-          </div>
-        )}
+          <Card
+            title={
+              <Space>
+                <Text strong style={{ fontSize: 18 }}>Grading Groups</Text>
+              </Space>
+            }
+          >
+            {flatGradingGroups.length === 0 ? (
+              <Empty
+                description="No grading groups found"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : (
+              <Table
+                columns={gradingGroupColumns}
+                dataSource={flatGradingGroups}
+                rowKey="key"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showTotal: (total) => `Total ${total} grading groups`,
+                }}
+                scroll={{ x: 1000 }}
+              />
+            )}
+          </Card>
+        </>
+      )}
 
       <Modal
         title="Upload Grade Sheet"

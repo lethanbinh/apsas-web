@@ -480,24 +480,24 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       // Calculate max score from questions
       const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
-        return `${totalScore}/${maxScore}`;
+        return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
       // If no questions or maxScore is 0, just return the score (even if 0)
-      return totalScore.toString();
+      return Number(totalScore).toFixed(2);
     }
 
     // If we have totalScore from state, show it (even if 0 means graded but got 0)
     if (totalScore !== undefined && totalScore !== null) {
       const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
-        return `${totalScore}/${maxScore}`;
+        return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
-      return totalScore.toString();
+      return Number(totalScore).toFixed(2);
     }
 
     // Fallback to lastSubmission.lastGrade if available
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
-      return lastSubmission.lastGrade.toString();
+      return Number(lastSubmission.lastGrade).toFixed(2);
     }
 
     // If we have grade items, calculate total from them
@@ -505,9 +505,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       const calculatedTotal = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
       const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
-        return `${calculatedTotal}/${maxScore}`;
+        return `${Number(calculatedTotal).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
-      return calculatedTotal.toString();
+      return Number(calculatedTotal).toFixed(2);
     }
 
     // If we have questions with rubric scores, calculate total
@@ -518,10 +518,10 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       }, 0);
       const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0 && calculatedTotal > 0) {
-        return `${calculatedTotal}/${maxScore}`;
+        return `${Number(calculatedTotal).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
       if (calculatedTotal > 0) {
-        return calculatedTotal.toString();
+        return Number(calculatedTotal).toFixed(2);
       }
     }
 
@@ -735,38 +735,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Descriptions>
             </Card>
 
-            {/* Grading Logs Section */}
-            {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
-              <Card className={styles.headerCard} style={{ marginTop: 16 }}>
-                <Title level={4} style={{ marginBottom: 12 }}>
-                  Grading Logs ({latestGradingSession.gradingLogs.length})
-                </Title>
-                <Alert
-                  message="Grading Notes"
-                  description={
-                    <div>
-                      {latestGradingSession.gradingLogs.map((log, index) => (
-                        <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
-                          <div style={{ marginBottom: 4 }}>
-                            <Tag color="blue">{log.action}</Tag>
-                            <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
-                              {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                            </Text>
-                          </div>
-                          <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
-                            {log.details}
-                          </Text>
-                          {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
-                        </div>
-                      ))}
-                    </div>
-                  }
-                  type="info"
-                  showIcon
-                />
-              </Card>
-            )}
-
             {/* Grading Details Card - Questions and Rubrics */}
             {questions.length > 0 && hasScore() && (
               <Card className={styles.questionsCard}>
@@ -776,36 +744,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   {questions.reduce((sum, q) => sum + q.score, 0)}
                 </Text>
                 <Divider />
-                
-                {/* Grading Logs Section */}
-                {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Alert
-                      message="Grading Notes"
-                      description={
-                        <div>
-                          {latestGradingSession.gradingLogs.map((log, index) => (
-                            <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
-                              <div style={{ marginBottom: 4 }}>
-                                <Tag color="blue">{log.action}</Tag>
-                                <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
-                                  {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                                </Text>
-                              </div>
-                              <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
-                                {log.details}
-                              </Text>
-                              {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
-                            </div>
-                          ))}
-                        </div>
-                      }
-                      type="info"
-                      showIcon
-                      style={{ marginBottom: 16 }}
-                    />
-                  </div>
-                )}
 
                 <Collapse 
                   defaultActiveKey={questions.map((_, i) => i.toString())}
@@ -907,7 +845,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                         <div className={styles.questionContent}>
                           <Title level={5}>Reason for this score</Title>
                           <TextArea
-                            rows={4}
+                            rows={6}
                             value={criterion.reason || "No reason provided."}
                             readOnly
                             style={{ marginTop: 8 }}
@@ -938,7 +876,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 <div>
                   <Title level={5}>Overall Feedback</Title>
                   <TextArea
-                    rows={4}
+                    rows={8}
                       value={feedback?.overallFeedback || data.overallFeedback || ""}
                     readOnly
                     placeholder="No overall feedback provided yet."
@@ -953,7 +891,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Strengths</Title>
                       <TextArea
-                        rows={5}
+                        rows={7}
                               value={feedback?.strengths || ""}
                         readOnly
                               placeholder="No strengths feedback provided yet."
@@ -964,7 +902,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Weaknesses</Title>
                       <TextArea
-                        rows={5}
+                        rows={7}
                               value={feedback?.weaknesses || ""}
                         readOnly
                               placeholder="No weaknesses feedback provided yet."
@@ -978,7 +916,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Code Quality</Title>
                       <TextArea
-                        rows={4}
+                        rows={6}
                               value={feedback?.codeQuality || ""}
                         readOnly
                               placeholder="No code quality feedback provided yet."
@@ -989,7 +927,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Algorithm Efficiency</Title>
                       <TextArea
-                        rows={4}
+                        rows={6}
                               value={feedback?.algorithmEfficiency || ""}
                         readOnly
                               placeholder="No algorithm efficiency feedback provided yet."
@@ -1001,7 +939,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 <div>
                   <Title level={5}>Suggestions for Improvement</Title>
                   <TextArea
-                    rows={4}
+                    rows={8}
                           value={feedback?.suggestionsForImprovement || ""}
                     readOnly
                           placeholder="No suggestions provided yet."
@@ -1013,7 +951,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Best Practices</Title>
                       <TextArea
-                        rows={3}
+                        rows={6}
                               value={feedback?.bestPractices || ""}
                         readOnly
                               placeholder="No best practices feedback provided yet."
@@ -1024,7 +962,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>Error Handling</Title>
                       <TextArea
-                        rows={3}
+                        rows={6}
                               value={feedback?.errorHandling || ""}
                         readOnly
                               placeholder="No error handling feedback provided yet."
@@ -1041,7 +979,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     <div>
                       <Title level={5}>What you should avoid</Title>
                       <TextArea
-                        rows={4}
+                        rows={6}
                         value={data.suggestionsAvoid}
                         readOnly
                       />
@@ -1050,7 +988,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                       <div>
                         <Title level={5}>What you should improve</Title>
                         <TextArea
-                          rows={4}
+                          rows={6}
                           value={data.suggestionsImprove}
                           readOnly
                         />

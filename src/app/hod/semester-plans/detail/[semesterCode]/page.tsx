@@ -60,6 +60,14 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
+// Helper function to check if semester has ended
+const isSemesterEnded = (endDate: string): boolean => {
+  if (!endDate) return false;
+  const now = new Date();
+  const semesterEnd = new Date(endDate.endsWith("Z") ? endDate : endDate + "Z");
+  return now > semesterEnd;
+};
+
 
 interface ClassesTableProps {
   classes: Class[];
@@ -69,6 +77,7 @@ interface ClassesTableProps {
   onViewStudents: (classId: number, classCode: string) => void;
   onDeleteStudent: (studentGroupId: number) => void;
   refreshTrigger?: number;
+  isSemesterEnded?: boolean;
 }
 
 const ClassesTable = ({
@@ -79,6 +88,7 @@ const ClassesTable = ({
   onViewStudents,
   onDeleteStudent,
   refreshTrigger,
+  isSemesterEnded = false,
 }: ClassesTableProps) => {
   const [studentCounts, setStudentCounts] = useState<Map<number, number>>(new Map());
   const [loadingCounts, setLoadingCounts] = useState(false);
@@ -173,10 +183,10 @@ const ClassesTable = ({
           <Button type="link" icon={<TeamOutlined />} onClick={() => onViewStudents(record.id, record.classCode)}>
             View Students
           </Button>
-          <Button type="link" onClick={() => onEdit(record)}>
+          <Button type="link" onClick={() => onEdit(record)} disabled={isSemesterEnded}>
             Edit
           </Button>
-          <Button type="link" danger onClick={() => onDelete(record.id)}>
+          <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
             Delete
           </Button>
         </Space>
@@ -199,12 +209,14 @@ interface CourseElementsTableProps {
   elements: CourseElement[];
   onEdit: (element: CourseElement) => void;
   onDelete: (elementId: number) => void;
+  isSemesterEnded?: boolean;
 }
 
 const CourseElementsTable = ({
   elements,
   onEdit,
   onDelete,
+  isSemesterEnded = false,
 }: CourseElementsTableProps) => {
   const getElementTypeLabel = (elementType: number) => {
     switch (elementType) {
@@ -259,10 +271,10 @@ const CourseElementsTable = ({
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button type="link" onClick={() => onEdit(record)}>
+          <Button type="link" onClick={() => onEdit(record)} disabled={isSemesterEnded}>
             Edit
           </Button>
-          <Button type="link" danger onClick={() => onDelete(record.id)}>
+          <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
             Delete
           </Button>
         </Space>
@@ -285,12 +297,14 @@ interface AssignRequestsTableProps {
   requests: AssignRequest[];
   onEdit: (request: AssignRequest) => void;
   onDelete: (requestId: number) => void;
+  isSemesterEnded?: boolean;
 }
 
 const AssignRequestsTable = ({
   requests,
   onEdit,
   onDelete,
+  isSemesterEnded = false,
 }: AssignRequestsTableProps) => {
   // Map status theo ApprovalDetail.tsx:
   // 1=PENDING, 2=ACCEPTED, 3=REJECTED, 4=IN_PROGRESS, 5=COMPLETED (Approved)
@@ -377,11 +391,11 @@ const AssignRequestsTable = ({
         return (
         <Space>
             {!approved && (
-          <Button type="link" onClick={() => onEdit(record)}>
+          <Button type="link" onClick={() => onEdit(record)} disabled={isSemesterEnded}>
             Edit
           </Button>
             )}
-          <Button type="link" danger onClick={() => onDelete(record.id)}>
+          <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
             Delete
           </Button>
         </Space>
@@ -422,6 +436,7 @@ interface SemesterCoursesTableProps {
   onDeleteAssignRequest: (requestId: number) => void;
   onImportClassStudent: (semesterCourse: SemesterCourse) => void;
   studentCountRefreshTrigger?: number;
+  isSemesterEnded?: boolean;
 }
 
 const SemesterCoursesTable = ({
@@ -442,6 +457,7 @@ const SemesterCoursesTable = ({
   onDeleteAssignRequest,
   onImportClassStudent,
   studentCountRefreshTrigger,
+  isSemesterEnded = false,
 }: SemesterCoursesTableProps) => {
   const columns: TableProps<SemesterCourse>["columns"] = [
     {
@@ -505,6 +521,7 @@ const SemesterCoursesTable = ({
             type="link"
             icon={<EditOutlined />}
             onClick={() => onEditCourse(record.course)}
+            disabled={isSemesterEnded}
           >
             Edit Course
           </Button>
@@ -513,6 +530,7 @@ const SemesterCoursesTable = ({
             danger
             icon={<DeleteOutlined />}
             onClick={() => onDeleteCourse(record.id)}
+            disabled={isSemesterEnded}
           >
             Unlink
           </Button>
@@ -532,12 +550,14 @@ const SemesterCoursesTable = ({
               <Button
                 icon={<PlusOutlined />}
                 onClick={() => onAddClass(record.id)}
+                disabled={isSemesterEnded}
               >
                 Add Class
               </Button>
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => onImportClassStudent(record)}
+                disabled={isSemesterEnded}
               >
                 Import Class Student
               </Button>
@@ -550,6 +570,7 @@ const SemesterCoursesTable = ({
               onViewStudents={onViewStudents}
               onDeleteStudent={onDeleteStudent}
               refreshTrigger={studentCountRefreshTrigger}
+              isSemesterEnded={isSemesterEnded}
             />
           </>
         ),
@@ -563,6 +584,7 @@ const SemesterCoursesTable = ({
               icon={<PlusOutlined />}
               onClick={() => onAddElement(record.id)}
               style={{ marginBottom: 16 }}
+              disabled={isSemesterEnded}
             >
               Add Element
             </Button>
@@ -570,6 +592,7 @@ const SemesterCoursesTable = ({
               elements={record.courseElements}
               onEdit={onEditElement}
               onDelete={onDeleteElement}
+              isSemesterEnded={isSemesterEnded}
             />
           </>
         ),
@@ -583,6 +606,7 @@ const SemesterCoursesTable = ({
               icon={<PlusOutlined />}
               onClick={() => onAddAssignRequest(record)}
               style={{ marginBottom: 16 }}
+              disabled={isSemesterEnded}
             >
               Add Assign Request
             </Button>
@@ -590,6 +614,7 @@ const SemesterCoursesTable = ({
               requests={record.assignRequests}
               onEdit={(request) => onEditAssignRequest(request, record)}
               onDelete={onDeleteAssignRequest}
+              isSemesterEnded={isSemesterEnded}
             />
           </>
         ),
@@ -1099,6 +1124,9 @@ const SemesterDetailPageContent = ({
     return <Text type="danger">No semester data found.</Text>;
   }
 
+  // Check if semester has ended
+  const semesterEnded = isSemesterEnded(semesterData.endDate);
+
   return (
     <div style={{ padding: "24px", background: "#fff", minHeight: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -1150,6 +1178,7 @@ const SemesterDetailPageContent = ({
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleOpenCreateCourseModal}
+          disabled={semesterEnded}
         >
           Add New Course
         </Button>
@@ -1172,6 +1201,7 @@ const SemesterDetailPageContent = ({
         onDeleteAssignRequest={handleDeleteAssignRequest}
         onImportClassStudent={handleImportClassStudent}
         studentCountRefreshTrigger={studentCountRefreshTrigger}
+        isSemesterEnded={semesterEnded}
       />
 
       <CourseCrudModal

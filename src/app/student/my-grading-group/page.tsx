@@ -1155,10 +1155,14 @@ const MySubmissionsPageContent = () => {
   );
 };
 
+// Temporarily removed - This page is no longer needed
 export default function MySubmissionsPage() {
+  return null;
+  /* Commented out - This page is no longer needed
   return (
     <App>
       <MySubmissionsPageContent />
     </App>
   );
+  */
 }
