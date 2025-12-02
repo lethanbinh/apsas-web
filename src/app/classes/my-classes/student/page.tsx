@@ -44,12 +44,15 @@ export default function MyClassesPage() {
       // Find current active semester
       const now = new Date();
       const activeSemester = semesters.find((sem) => {
-        const startDate = new Date(sem.startDate);
-        const endDate = new Date(sem.endDate);
+        const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+        const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
         return now >= startDate && now <= endDate;
       });
       if (activeSemester) {
         setCurrentSemesterCode(activeSemester.semesterCode);
+      } else {
+        // If no current semester, set to null so we can use latest
+        setCurrentSemesterCode(null);
       }
       
       return semesters;
@@ -65,34 +68,89 @@ export default function MyClassesPage() {
 
   const isLoading = isLoadingSemesters || isLoadingClasses;
 
-  // Set default semester to current active semester (only once on initial load)
+  // Set default semester to current active semester, or latest if current has no data
   useEffect(() => {
-    if (isInitialLoad && currentSemesterCode && allCourses.length > 0) {
-      // Check if current semester exists in the courses
-      // Try matching by semesterName, semesterCode
-      const hasCurrentSemester = allCourses.some(
-        (cls) => cls.semesterName === currentSemesterCode || 
-                 cls.semesterCode === currentSemesterCode ||
-                 cls.semesterName?.includes(currentSemesterCode) ||
-                 cls.semesterName?.toLowerCase().includes(currentSemesterCode.toLowerCase())
-      );
-      if (hasCurrentSemester) {
-        // Find the matching semester name from courses
-        const matchingCourse = allCourses.find(
-          (cls) => cls.semesterName === currentSemesterCode || 
-                   cls.semesterCode === currentSemesterCode ||
-                   cls.semesterName?.includes(currentSemesterCode) ||
-                   cls.semesterName?.toLowerCase().includes(currentSemesterCode.toLowerCase())
-        );
-        if (matchingCourse?.semesterName) {
-          setSelectedSemester(matchingCourse.semesterName);
-        } else if (matchingCourse?.semesterCode) {
-          setSelectedSemester(matchingCourse.semesterCode);
+    if (isInitialLoad && allSemesters.length > 0 && allCourses.length > 0) {
+      const uniqueSemesterNames = [
+        ...new Set(allCourses.map((cls) => cls.semesterName).filter(Boolean)),
+      ];
+      
+      if (uniqueSemesterNames.length === 0) {
+        setIsInitialLoad(false);
+        return;
+      }
+      
+      // Create a map of semesterName to Semester object for sorting
+      const semesterMap = new Map<string, Semester>();
+      uniqueSemesterNames.forEach((name) => {
+        const courseWithName = allCourses.find((cls) => cls.semesterName === name);
+        if (courseWithName?.semesterCode) {
+          const matchByCode = allSemesters.find((sem) => sem.semesterCode === courseWithName.semesterCode);
+          if (matchByCode) {
+            semesterMap.set(name, matchByCode);
+          }
+        }
+      });
+      
+      // Try to find current semester in courses FIRST (priority)
+      // First, find current semester from allSemesters if not already set
+      let activeSemesterCode = currentSemesterCode;
+      if (!activeSemesterCode) {
+        const now = new Date();
+        const activeSemester = allSemesters.find((sem) => {
+          const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+          const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+          return now >= startDate && now <= endDate;
+        });
+        if (activeSemester) {
+          activeSemesterCode = activeSemester.semesterCode;
         }
       }
+      
+      if (activeSemesterCode) {
+        // Try exact match first
+        const exactMatch = allCourses.find(
+          (cls) => cls.semesterCode === activeSemesterCode || cls.semesterName === activeSemesterCode
+        );
+        if (exactMatch?.semesterName) {
+          setSelectedSemester(exactMatch.semesterName);
+          setIsInitialLoad(false);
+          return;
+        }
+        
+        // Try partial match
+        const partialMatch = allCourses.find(
+          (cls) => cls.semesterName?.includes(activeSemesterCode) ||
+                   cls.semesterName?.toLowerCase().includes(activeSemesterCode.toLowerCase()) ||
+                   cls.semesterCode?.includes(activeSemesterCode)
+        );
+        if (partialMatch?.semesterName) {
+          setSelectedSemester(partialMatch.semesterName);
+          setIsInitialLoad(false);
+          return;
+        }
+      }
+      
+      // Current semester not found or has no data, use latest semester
+      // Sort by startDate (newest first) and get the first one
+      const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
+        const semA = semesterMap.get(a);
+        const semB = semesterMap.get(b);
+        if (semA && semB) {
+          const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
+          const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
+          return dateB.getTime() - dateA.getTime();
+        }
+        return 0;
+      });
+      
+      if (sortedSemesters.length > 0) {
+        setSelectedSemester(sortedSemesters[0]);
+      }
+      
       setIsInitialLoad(false);
     }
-  }, [currentSemesterCode, allCourses, isInitialLoad]);
+  }, [currentSemesterCode, allCourses, allSemesters, isInitialLoad]);
 
   const semesterOptions = useMemo(() => {
     const uniqueSemesterNames = [
