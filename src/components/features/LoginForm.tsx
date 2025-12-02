@@ -3,20 +3,20 @@
 import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
+import { deleteCookie, setCookie } from "@/lib/utils/cookie";
+import { removeStorageItem, setStorageItem } from "@/lib/utils/storage";
 import { authService } from "@/services/authService";
-import { logout, fetchUserProfile } from "@/store/slices/authSlice";
+import { fetchUserProfile, logout } from "@/store/slices/authSlice";
+import { AppDispatch } from "@/store/store";
 import { LoginCredentials } from "@/types";
-import { Button, Checkbox, Form, Input, App, Select } from "antd";
+import { App, Button, Checkbox, Form, Input } from "antd";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/store/store";
-import { setCookie, deleteCookie } from "@/lib/utils/cookie";
-import { setStorageItem, removeStorageItem } from "@/lib/utils/storage";
-
+import Logo from "../../../public/logo/Logo";
 interface LoginFormProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;
@@ -54,41 +54,13 @@ const mapRoleToNumber = (role: string | number): Role => {
   return 2; // Default to Student
 };
 
-// Demo accounts data
-interface DemoAccount {
-  accountCode: string;
-  email: string;
-  password: string;
-  role: string;
-}
-
-const DEMO_ACCOUNTS: DemoAccount[] = [
-  { accountCode: "ADM000001", email: "admin1@system.com", password: "admin@123", role: "Admin" },
-  { accountCode: "HOD000001", email: "Hod1@example.com", password: "Lenam2386", role: "HOD" },
-  { accountCode: "EXA000001", email: "namnoname@example.com", password: "Lenam2385", role: "Examiner" },
-  { accountCode: "EXA000002", email: "examiner01@example.com", password: "Examiner@123", role: "Examiner" },
-  { accountCode: "LEC000001", email: "nguyenvana@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000002", email: "Lecturer1@example.com", password: "Lenam2385", role: "Lecturer" },
-  { accountCode: "LEC000003", email: "tranthib@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000004", email: "leminhc@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000005", email: "phamthid@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000006", email: "hoangvane@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000007", email: "ngothif@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "STU000001", email: "namle2385@gmail.com", password: "Lenam235", role: "Student" },
-  { accountCode: "STU000002", email: "dangthig@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000003", email: "vutranh@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000004", email: "doanthij@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000005", email: "phamanhk@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000006", email: "truongthil@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000007", email: "nguyenthanhm@example.com", password: "123456", role: "Student" },
-];
 
 // Helper function to translate error messages to Vietnamese
 const translateErrorMessage = (errorMsg: string): string => {
   if (!errorMsg) return "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
-  
+
   const lowerMsg = errorMsg.toLowerCase().trim();
-  
+
   // Common error message translations
   const translations: { [key: string]: string } = {
     "invalid email or password": "Email hoặc mật khẩu không đúng. Vui lòng thử lại.",
@@ -107,14 +79,14 @@ const translateErrorMessage = (errorMsg: string): string => {
     "network error": "Lỗi kết nối. Vui lòng kiểm tra kết nối mạng.",
     "timeout": "Yêu cầu quá thời gian chờ. Vui lòng thử lại.",
   };
-  
+
   // Check for exact match or partial match
   for (const [key, value] of Object.entries(translations)) {
     if (lowerMsg.includes(key)) {
       return value;
     }
   }
-  
+
   // If message is already in Vietnamese or doesn't match, return as is
   return errorMsg;
 };
@@ -206,10 +178,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       // Extract error message from API response
       let errorMessage = "Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.";
-      
+
       // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
       // it throws the payload directly. So we need to check multiple possible structures:
-      
+
       // 1. Error is a string (direct payload from rejectWithValue)
       if (typeof error === 'string') {
         errorMessage = translateErrorMessage(error);
@@ -228,7 +200,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
-          
+
           // Handle specific status codes first
           if (status === 401) {
             errorMessage = "Email hoặc mật khẩu không đúng. Vui lòng thử lại.";
@@ -239,12 +211,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           } else if (status >= 500) {
             errorMessage = "Lỗi server. Vui lòng thử lại sau.";
           }
-          
+
           // Check for errorMessages array (common API format)
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = translateErrorMessage(errorData.errorMessages[0]);
-            } 
+            }
             // Check for message string
             else if (errorData.message) {
               errorMessage = translateErrorMessage(errorData.message);
@@ -277,21 +249,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
     }
   };
 
-  const handleDemoLogin = async (account: DemoAccount) => {
-    if (isLoggingIn) return;
-
-    // Set form values for display
-    form.setFieldsValue({
-      email: account.email,
-      password: account.password,
-    });
-
-    // Call handleSubmit directly with demo credentials
-    await handleSubmit({
-      email: account.email,
-      password: account.password,
-    } as LoginCredentials);
-  };
 
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
@@ -418,10 +375,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       // Extract error message from API response
       let errorMessage = "Đăng nhập bằng Google thất bại. Tài khoản chưa được đăng ký hoặc đã xảy ra lỗi.";
-      
+
       // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
       // it throws the payload directly. So we need to check multiple possible structures:
-      
+
       // 1. Error is a string (direct payload from rejectWithValue)
       if (typeof error === 'string') {
         errorMessage = translateErrorMessage(error);
@@ -440,7 +397,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
-          
+
           // Handle specific status codes first
           if (status === 401) {
             errorMessage = "Tài khoản Google chưa được đăng ký hoặc không hợp lệ.";
@@ -451,12 +408,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           } else if (status >= 500) {
             errorMessage = "Lỗi server. Vui lòng thử lại sau.";
           }
-          
+
           // Check for errorMessages array (common API format)
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = translateErrorMessage(errorData.errorMessages[0]);
-            } 
+            }
             // Check for message string
             else if (errorData.message) {
               errorMessage = translateErrorMessage(errorData.message);
@@ -489,8 +446,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
   return (
     <div className="login-form-container">
+      {/* Logo */}
+      <div className="login-logo">
+        <Logo />
+      </div>
+
       <div className="login-form-header">
-        <h1 className="login-title">Login to APSAS!</h1>
+        <h1 className="login-title">Sign in</h1>
+        <p className="login-subtitle">Please login to continue to your account.</p>
       </div>
 
       <Form
@@ -532,11 +495,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             valuePropName="checked"
             className="remember-checkbox"
           >
-            <Checkbox>Remember me</Checkbox>
+            <Checkbox>Keep me logged in</Checkbox>
           </Form.Item>
-          <Link href="/reset-password" className="forgot-password-link">
-            Forgot Password?
-          </Link>
         </div>
 
         {errors.general && (
@@ -549,17 +509,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           <Button
             type="primary"
             htmlType="submit"
-            loading={isLoading}
+            loading={isLoggingIn || isLoading}
             className="login-button"
           >
-            Login
+            Sign in
           </Button>
         </Form.Item>
       </Form>
 
       <div className="login-divider">
         <div className="divider-line"></div>
-        <span className="divider-text">Or login with</span>
+        <span className="divider-text">or</span>
         <div className="divider-line"></div>
       </div>
 
@@ -587,44 +547,13 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           </svg>
         }
       >
-        Login With Google
+        Sign in with Google
       </Button>
 
-      <div className="login-divider" style={{ marginTop: "20px" }}>
-        <div className="divider-line"></div>
-        <span className="divider-text">Or login with demo account</span>
-        <div className="divider-line"></div>
+      <div className="login-footer">
+        <p>Forgot your password? <Link href="/reset-password" className="register-link">Reset it</Link></p>
       </div>
 
-      <div style={{ marginTop: "16px" }}>
-        <Select
-          placeholder="Select a demo account to login quickly"
-          style={{ width: "100%", marginBottom: "12px" }}
-          size="large"
-          showSearch
-          optionFilterProp="children"
-          filterOption={(input, option) =>
-            (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-          }
-          options={DEMO_ACCOUNTS.map((account) => ({
-            value: account.accountCode,
-            label: `${account.accountCode} - ${account.role} (${account.email})`,
-            account: account,
-          }))}
-          onChange={(value) => {
-            const selectedAccount = DEMO_ACCOUNTS.find(
-              (acc) => acc.accountCode === value
-            );
-            if (selectedAccount) {
-              handleDemoLogin(selectedAccount);
-            }
-          }}
-          disabled={isLoggingIn || isLoading}
-        />
-        <div style={{ fontSize: "12px", color: "#8c8c8c", textAlign: "center", marginTop: "8px" }}>
-          Select an account from the list to login automatically
-        </div>
-      </div>
     </div>
   );
 };

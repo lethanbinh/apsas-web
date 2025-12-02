@@ -17,23 +17,24 @@ export default function ResetPasswordPage() {
     <AuthGuard requireAuth={false}>
       <div className="reset-password-main-container">
         <div className="reset-password-content-wrapper">
-          {/* Left side - Illustration */}
-          <div className="reset-password-illustration-section">
-            <div className="illustration-wrapper">
-              <Image
-                src="https://cdn-res.keymedia.com/cdn-cgi/image/f=auto/https://cdn-res.keymedia.com/cms/images/us/036/0308_638042050063908337.jpg"
-                alt="Reset password illustration"
-                width={700}
-                height={600}
-                className="illustration-image"
-                priority
-              />
-            </div>
-          </div>
-          
-          {/* Right side - Reset Password Form */}
+          {/* Left side - Reset Password Form */}
           <div className="reset-password-form-section">
             <ResetPasswordForm />
+          </div>
+
+          {/* Right side - Illustration */}
+          <div className="reset-password-illustration-section">
+            <div className="login-illustration">
+              <div className="illustration-wrapper">
+                <Image
+                  src="/images/login-illustration.png"
+                  alt="Learning illustration"
+                  width={800}
+                  height={800}
+                  className="illustration-image"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

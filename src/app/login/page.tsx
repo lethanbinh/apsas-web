@@ -1,7 +1,3 @@
-/**
- * Login page
- */
-
 import { Metadata } from 'next';
 import { LoginForm } from '@/components/features/LoginForm';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -17,24 +13,22 @@ export default function LoginPage() {
     <AuthGuard requireAuth={false}>
       <div className="login-page">
         <div className="login-container">
-          {/* Left side - Illustration */}
+          {/* Left side - Login Form */}
+          <div className="login-form-section">
+            <LoginForm />
+          </div>
+          
+          {/* Right side - Illustration */}
           <div className="login-illustration">
             <div className="illustration-wrapper">
               <Image
-                src="https://cdn-res.keymedia.com/cdn-cgi/image/f=auto/https://cdn-res.keymedia.com/cms/images/us/036/0308_638042050063908337.jpg"
+                src="/images/login-illustration.png"
                 alt="Learning illustration"
-                width={700}
-                height={600}
+                width={800}
+                height={800}
                 className="illustration-image"
-                priority
-                unoptimized
               />
             </div>
-          </div>
-          
-          {/* Right side - Login Form */}
-          <div className="login-form-section">
-            <LoginForm />
           </div>
         </div>
       </div>
