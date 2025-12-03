@@ -1631,7 +1631,7 @@ export default function AssignmentGradingPage() {
                                       Comments
                                     </Text>
             <TextArea
-              rows={4}
+              rows={15}
                                       value={question.rubricComments?.[question.id] || ""}
                                       onChange={(e) =>
                                         handleRubricCommentChange(question.id, question.id, e.target.value)

@@ -1798,7 +1798,7 @@ function EditSubmissionModal({
                                     <div>
                                       <Text strong>Comments:</Text>
                                       <TextArea
-                                        rows={3}
+                                        rows={15}
                                         value={question.rubricComments?.[question.id] || ""}
                                         onChange={(e) => updateQuestionComment(question.id, e.target.value)}
                                         disabled={semesterEnded}
