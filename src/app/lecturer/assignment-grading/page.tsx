@@ -1,19 +1,17 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/react-query";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
-import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { classAssessmentService } from "@/services/classAssessmentService";
-import { FeedbackData } from "@/services/geminiService";
-import { gradingService, GradingSession } from "@/services/gradingService";
-import { gradeItemService, GradeItem } from "@/services/gradeItemService";
-import { RubricItem, rubricItemService } from "@/services/rubricItemService";
-import { Submission, submissionService } from "@/services/submissionService";
-import { submissionFeedbackService, SubmissionFeedback } from "@/services/submissionFeedbackService";
-import { geminiService } from "@/services/geminiService";
-import { semesterService } from "@/services/semesterService";
 import { courseElementService } from "@/services/courseElementService";
-import { Alert } from "antd";
+import { FeedbackData, geminiService } from "@/services/geminiService";
+import { GradeItem, gradeItemService } from "@/services/gradeItemService";
+import { gradingService } from "@/services/gradingService";
+import { RubricItem, rubricItemService } from "@/services/rubricItemService";
+import { submissionFeedbackService } from "@/services/submissionFeedbackService";
+import { Submission, submissionService } from "@/services/submissionService";
 import {
   ArrowLeftOutlined,
   EyeOutlined,
@@ -21,8 +19,9 @@ import {
   RobotOutlined,
   SaveOutlined,
 } from "@ant-design/icons";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  App,
+  Alert, App,
   Button,
   Card,
   Col,
@@ -39,16 +38,12 @@ import {
   Tag,
   Typography
 } from "antd";
-import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState, useRef, useMemo } from "react";
-import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/react-query";
-import styles from "./page.module.css";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { classService } from "@/services/classService";
-import { useAuth } from "@/hooks/useAuth";
+import utc from "dayjs/plugin/utc";
+import { useRouter } from "next/navigation";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import styles from "./page.module.css";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -365,7 +360,7 @@ export default function AssignmentGradingPage() {
   // Derive questions from queries and grade items
   const questions = useMemo(() => {
     if (questionsWithRubrics.length === 0) return [];
-    
+
     if (latestGradeItems.length > 0) {
       const sortedItems = [...latestGradeItems].sort((a, b) => {
         const dateA = new Date(a.updatedAt).getTime();
@@ -399,8 +394,8 @@ export default function AssignmentGradingPage() {
           if (matchingGradeItem) {
             // Use user edit if exists, otherwise use grade item score
             const editKey = `${question.id}_${rubric.id}`;
-            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined 
-              ? userEdits.rubricScores[editKey] 
+            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined
+              ? userEdits.rubricScores[editKey]
               : matchingGradeItem.score;
             if (!questionComment && matchingGradeItem.comments) {
               questionComment = matchingGradeItem.comments;
@@ -426,7 +421,7 @@ export default function AssignmentGradingPage() {
         };
       });
     }
-    
+
     // If no grade items, still apply user edits
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
@@ -522,13 +517,13 @@ export default function AssignmentGradingPage() {
     maxScore: number
   ) => {
     const scoreValue = score || 0;
-    
+
     // Validate: score cannot exceed max score
     if (scoreValue > maxScore) {
       message.error(`Score cannot exceed maximum score of ${maxScore.toFixed(2)}`);
       return;
     }
-    
+
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
       ...prev,
@@ -582,7 +577,7 @@ export default function AssignmentGradingPage() {
     try {
       // Try to parse as JSON first
       const parsed = JSON.parse(feedbackText);
-      
+
       // Validate that it's a valid FeedbackData object
       if (typeof parsed === "object" && parsed !== null) {
         return {
@@ -596,7 +591,7 @@ export default function AssignmentGradingPage() {
           errorHandling: parsed.errorHandling || "",
         };
       }
-      
+
       // If parsed is not an object, fall through to plain text handling
       throw new Error("Parsed result is not an object");
     } catch (error) {
@@ -624,9 +619,9 @@ export default function AssignmentGradingPage() {
     if (feedbackList.length > 0) {
       const existingFeedback = feedbackList[0];
       setSubmissionFeedbackId(existingFeedback.id);
-      
+
       let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-      
+
       if (parsedFeedback === null) {
         // Try to format with Gemini (async, but we'll handle it)
         geminiService.formatFeedback(existingFeedback.feedbackText)
@@ -1024,7 +1019,7 @@ export default function AssignmentGradingPage() {
       // If status is 0 (PROCESSING), start polling
       if (gradingSession.status === 0) {
         message.loading("Auto grading in progress...", 0);
-        
+
         // Poll every 2 seconds until status changes
         const pollInterval = setInterval(async () => {
           try {
@@ -1051,13 +1046,13 @@ export default function AssignmentGradingPage() {
                 }
                 message.destroy();
                 setAutoGradingLoading(false);
-                
+
                 // Invalidate queries to refresh data (including grading history modal)
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 1000 }) });
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 100 }) });
                 queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
                 queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-                
+
                 if (latestSession.status === 1) {
                   message.success("Auto grading completed successfully");
                 } else if (latestSession.status === 2) {
@@ -1096,7 +1091,7 @@ export default function AssignmentGradingPage() {
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId, pageNumber: 1, pageSize: 100 }) });
         queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
         queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-        
+
         if (gradingSession.status === 1) {
           message.success("Auto grading completed successfully");
         } else if (gradingSession.status === 2) {
@@ -1179,12 +1174,12 @@ export default function AssignmentGradingPage() {
           throw new Error("Failed to create grading session");
         }
       }
-      
+
       // Save all grade items (create or update)
       for (const question of questions) {
         // Get comment for this question (stored with question.id as key)
         const questionComment = question.rubricComments?.[question.id] || "";
-        
+
         for (const rubric of question.rubrics) {
           const score = question.rubricScores[rubric.id] || 0;
           const existingGradeItem = latestGradeItems.find(
@@ -1369,69 +1364,69 @@ export default function AssignmentGradingPage() {
 
   return (
     <App>
-    <div className={styles.container}>
+      <div className={styles.container}>
         {isSemesterPassed && (
-        <Alert
-          message="Semester Ended"
-          description="Cannot edit grades when the semester has ended."
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
-      <Card className={styles.headerCard}>
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <div className={styles.headerActions}>
-            <Button
-              icon={<ArrowLeftOutlined />}
-              onClick={() => router.back()}
-            >
-              Back
-            </Button>
-            <Space>
+          <Alert
+            message="Semester Ended"
+            description="Cannot edit grades when the semester has ended."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
+        <Card className={styles.headerCard}>
+          <Space direction="vertical" style={{ width: "100%" }} size="large">
+            <div className={styles.headerActions}>
               <Button
-                icon={<EyeOutlined />}
-                onClick={() => setViewExamModalVisible(true)}
+                icon={<ArrowLeftOutlined />}
+                onClick={() => router.back()}
               >
-                View Exam
+                Back
               </Button>
-              <Button
+              <Space>
+                <Button
+                  icon={<EyeOutlined />}
+                  onClick={() => setViewExamModalVisible(true)}
+                >
+                  View Exam
+                </Button>
+                <Button
                   icon={<RobotOutlined />}
                   onClick={handleGetAiFeedback}
                   loading={loadingAiFeedback}
                   disabled={isSemesterPassed}
-              >
+                >
                   Get AI Feedback
-              </Button>
-            </Space>
-      </div>
+                </Button>
+              </Space>
+            </div>
 
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label="Submission ID">{submission.id}</Descriptions.Item>
-            <Descriptions.Item label="Student Code">
-              {submission.studentCode}
-            </Descriptions.Item>
-            <Descriptions.Item label="Student Name">
-              {submission.studentName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Submitted At">
-              {submission.submittedAt
-                ? toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
-                : "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Submission File">
-              {submission.submissionFile?.name || "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Total Score">
-              <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
-                {totalScore.toFixed(2)}/{questions.reduce((sum, q) => {
-                  return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
-                }, 0).toFixed(2)}
-              </Text>
-            </Descriptions.Item>
-          </Descriptions>
-        </Space>
-      </Card>
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="Submission ID">{submission.id}</Descriptions.Item>
+              <Descriptions.Item label="Student Code">
+                {submission.studentCode}
+              </Descriptions.Item>
+              <Descriptions.Item label="Student Name">
+                {submission.studentName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Submitted At">
+                {submission.submittedAt
+                  ? toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Submission File">
+                {submission.submissionFile?.name || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Total Score">
+                <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
+                  {totalScore.toFixed(2)}/{questions.reduce((sum, q) => {
+                    return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+                  }, 0).toFixed(2)}
+                </Text>
+              </Descriptions.Item>
+            </Descriptions>
+          </Space>
+        </Card>
 
         <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
           <Spin spinning={loadingFeedback || loadingAiFeedback}>
@@ -1473,7 +1468,7 @@ export default function AssignmentGradingPage() {
         </Card>
 
         <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
-        <Collapse 
+          <Collapse
             defaultActiveKey={["grading-details"]}
             className={`${styles.collapseWrapper} collapse-grading`}
             items={[
@@ -1569,104 +1564,104 @@ export default function AssignmentGradingPage() {
                           const sortedQuestions = [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
 
                           const renderQuestionCollapse = (question: QuestionWithRubrics, index: number) => {
-            const questionTotalScore = Object.values(question.rubricScores).reduce(
-              (sum, score) => sum + (score || 0),
-              0
-            );
-            const questionMaxScore = question.rubrics.reduce(
-              (sum, r) => sum + r.score,
-              0
-            );
+                            const questionTotalScore = Object.values(question.rubricScores).reduce(
+                              (sum, score) => sum + (score || 0),
+                              0
+                            );
+                            const questionMaxScore = question.rubrics.reduce(
+                              (sum, r) => sum + r.score,
+                              0
+                            );
 
-            return {
+                            return {
                               key: `question-${index}`,
-              label: (
-                <div className={styles.questionHeader}>
-                  <span>
-                    <strong>Question {index + 1}:</strong> {question.questionText}
-                  </span>
-                  <Space>
-                    <Tag color="blue">
-                      Score: {questionTotalScore.toFixed(2)}/{questionMaxScore.toFixed(2)}
-                    </Tag>
-                    <Tag color="green">Max: {question.score.toFixed(2)}</Tag>
-                  </Space>
-                </div>
-              ),
-              children: (
-                <div className={styles.questionContent}>
-                  {question.questionSampleInput && (
-                    <div className={styles.sampleSection}>
-                      <Text strong>Sample Input:</Text>
-                      <pre className={styles.codeBlock}>
-                        {question.questionSampleInput}
-                      </pre>
-                    </div>
-                  )}
-                  {question.questionSampleOutput && (
-                    <div className={styles.sampleSection}>
-                      <Text strong>Sample Output:</Text>
-                      <pre className={styles.codeBlock}>
-                        {question.questionSampleOutput}
-                      </pre>
-        </div>
-                  )}
+                              label: (
+                                <div className={styles.questionHeader}>
+                                  <span>
+                                    <strong>Question {index + 1}:</strong> {question.questionText}
+                                  </span>
+                                  <Space>
+                                    <Tag color="blue">
+                                      Score: {questionTotalScore.toFixed(2)}/{questionMaxScore.toFixed(2)}
+                                    </Tag>
+                                    <Tag color="green">Max: {question.score.toFixed(2)}</Tag>
+                                  </Space>
+                                </div>
+                              ),
+                              children: (
+                                <div className={styles.questionContent}>
+                                  {question.questionSampleInput && (
+                                    <div className={styles.sampleSection}>
+                                      <Text strong>Sample Input:</Text>
+                                      <pre className={styles.codeBlock}>
+                                        {question.questionSampleInput}
+                                      </pre>
+                                    </div>
+                                  )}
+                                  {question.questionSampleOutput && (
+                                    <div className={styles.sampleSection}>
+                                      <Text strong>Sample Output:</Text>
+                                      <pre className={styles.codeBlock}>
+                                        {question.questionSampleOutput}
+                                      </pre>
+                                    </div>
+                                  )}
 
-                  <Divider />
+                                  <Divider />
 
-                  <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
-                  <Table
-                    columns={getQuestionColumns(question)}
-                    dataSource={question.rubrics}
-                    rowKey="id"
-                    pagination={false}
-                    size="small"
+                                  <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
+                                  <Table
+                                    columns={getQuestionColumns(question)}
+                                    dataSource={question.rubrics}
+                                    rowKey="id"
+                                    pagination={false}
+                                    size="small"
                                     scroll={{ x: "max-content" }}
                                   />
-                                  
-        <Divider />
+
+                                  <Divider />
 
                                   <div style={{ marginTop: 16 }}>
                                     <Text strong style={{ display: "block", marginBottom: 8 }}>
                                       Comments
                                     </Text>
-            <TextArea
-              rows={15}
+                                    <TextArea
+                                      rows={15}
                                       value={question.rubricComments?.[question.id] || ""}
                                       onChange={(e) =>
                                         handleRubricCommentChange(question.id, question.id, e.target.value)
                                       }
                                       placeholder="Enter comments for this question..."
                                       style={{ width: "100%" }}
-            />
-        </div>
-          </div>
+                                    />
+                                  </div>
+                                </div>
                               ),
                             };
                           };
 
                           return (
                             <Collapse
-                              items={sortedQuestions.map((question, index) => 
+                              items={sortedQuestions.map((question, index) =>
                                 renderQuestionCollapse(question, index)
                               )}
-                />
+                            />
                           );
                         })()}
-            </Col>
-          </Row>
-        </div>
+                      </Col>
+                    </Row>
+                  </div>
                 ),
               },
             ]}
-                />
-      </Card>
+          />
+        </Card>
 
-      <ViewExamModal
-        visible={viewExamModalVisible}
-        onClose={() => setViewExamModalVisible(false)}
-        submission={submission}
-            />
+        <ViewExamModal
+          visible={viewExamModalVisible}
+          onClose={() => setViewExamModalVisible(false)}
+          submission={submission}
+        />
 
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
@@ -1679,7 +1674,7 @@ export default function AssignmentGradingPage() {
           onClose={() => setFeedbackHistoryModalVisible(false)}
           submissionId={submissionId}
         />
-          </div>
+      </div>
     </App>
   );
 }
@@ -1798,7 +1793,7 @@ function ViewExamModal({
     papers.forEach((paper, index) => {
       const query = questionsQueries[index];
       if (query.data?.items) {
-        const sortedQuestions = [...query.data.items].sort((a, b) => 
+        const sortedQuestions = [...query.data.items].sort((a, b) =>
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         questionsMap[paper.id] = sortedQuestions;
@@ -1888,7 +1883,7 @@ function ViewExamModal({
                           <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
                             {question.questionSampleInput}
                           </pre>
-          </div>
+                        </div>
                       )}
 
                       {question.questionSampleOutput && (
@@ -1897,7 +1892,7 @@ function ViewExamModal({
                           <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
                             {question.questionSampleOutput}
                           </pre>
-        </div>
+                        </div>
                       )}
 
                       {rubrics[question.id] && rubrics[question.id].length > 0 && (
@@ -1910,27 +1905,27 @@ function ViewExamModal({
                                 {rubric.input && rubric.input !== "N/A" && (
                                   <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
                                     Input: <code>{rubric.input}</code>
-          </div>
+                                  </div>
                                 )}
                                 {rubric.output && rubric.output !== "N/A" && (
                                   <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
                                     Output: <code>{rubric.output}</code>
-          </div>
+                                  </div>
                                 )}
                               </li>
                             ))}
                           </ul>
-        </div>
+                        </div>
                       )}
 
                       <Divider />
                     </div>
                   ))}
-      </div>
+                </div>
               ),
             }))}
           />
-    </div>
+        </div>
       </Spin>
     </Modal>
   );
@@ -2106,7 +2101,7 @@ function GradingHistoryModal({
       width: "20%",
       render: (text: string) => (
         <Text
-          style={{ 
+          style={{
             fontSize: "12px",
             whiteSpace: "normal",
             wordWrap: "break-word",
@@ -2161,7 +2156,7 @@ function GradingHistoryModal({
             items={gradingHistory.map((session) => {
               const isExpanded = expandedSessions.has(session.id);
               const gradeItems = sessionGradeItems[session.id] || [];
-              
+
               const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
 
               return {
@@ -2268,7 +2263,7 @@ function GradingHistoryModal({
           />
         )}
       </Spin>
-      
+
       {/* Grade Item History Modal */}
       <Modal
         title={
@@ -2277,7 +2272,7 @@ function GradingHistoryModal({
             {selectedGradeItem && (
               <div style={{ marginTop: 8 }}>
                 <Text type="secondary" style={{ fontSize: "12px" }}>
-                  Rubric: {selectedGradeItem.rubricItemDescription} | 
+                  Rubric: {selectedGradeItem.rubricItemDescription} |
                   Total edits: {gradeItemHistory.length}
                 </Text>
               </div>
@@ -2337,7 +2332,7 @@ function GradingHistoryModal({
                   width: "35%",
                   render: (text: string) => (
                     <Text
-                      style={{ 
+                      style={{
                         fontSize: "12px",
                         whiteSpace: "normal",
                         wordWrap: "break-word",
@@ -2447,13 +2442,13 @@ function FeedbackHistoryModal({
   const handleExpandFeedback = (feedbackId: number) => {
     const newExpanded = new Set(expandedFeedbacks);
     const isCurrentlyExpanded = newExpanded.has(feedbackId);
-    
+
     if (isCurrentlyExpanded) {
       newExpanded.delete(feedbackId);
     } else {
       newExpanded.add(feedbackId);
     }
-    
+
     setExpandedFeedbacks(newExpanded);
   };
 

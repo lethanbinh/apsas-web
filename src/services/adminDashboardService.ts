@@ -2,10 +2,10 @@ import { ROLES } from '@/lib/constants';
 import { adminService } from './adminService';
 import { classAssessmentService } from './classAssessmentService';
 import { classService } from './classService';
+import { courseElementService } from './courseElementService';
 import { gradingGroupService } from './gradingGroupService';
 import { gradingService } from './gradingService';
 import { submissionService } from './submissionService';
-import { courseElementService } from './courseElementService';
 
 export interface DashboardOverview {
   users: UserStats;
@@ -272,7 +272,7 @@ export class AdminDashboardService {
       ]);
 
       const users = usersData.status === 'fulfilled' ? usersData.value : this.getDefaultUserStats();
-      
+
       // Get detailed academic stats
       const academicDetailed = await this.getDetailedAcademicStats();
       const academic: AcademicStats = {
@@ -292,7 +292,7 @@ export class AdminDashboardService {
         lecturerWorkload: academicDetailed.lecturerWorkload || [],
         studentToLecturerRatio: academicDetailed.studentToLecturerRatio || 0,
       };
-      
+
       // Get detailed assessment stats
       const assessmentDetailed = await this.getDetailedAssessmentStats();
       const baseAssessments = assessmentsData.status === 'fulfilled' ? assessmentsData.value : this.getDefaultAssessmentStats();
@@ -305,9 +305,9 @@ export class AdminDashboardService {
         topAssessmentsBySubmissions: assessmentDetailed.topAssessmentsBySubmissions || [],
         upcomingDeadlines: assessmentDetailed.upcomingDeadlines || [],
       };
-      
+
       const submissions = submissionsData.status === 'fulfilled' ? submissionsData.value : this.getDefaultSubmissionStats();
-      
+
       // Get detailed grading stats
       const gradingDetailed = await this.getDetailedGradingStats();
       const grading: GradingStats = {
@@ -343,10 +343,10 @@ export class AdminDashboardService {
     try {
       // Fetch all users (with pagination if needed)
       const { users, total } = await adminService.getAccountList(1, 1000);
-      
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      
+
       const byRole = {
         admin: 0,
         lecturer: 0,
@@ -450,7 +450,7 @@ export class AdminDashboardService {
     try {
       const semesters = await adminService.getPaginatedSemesters(1, 100);
       const now = new Date();
-      
+
       const active = semesters.filter((semester) => {
         const startDate = new Date(semester.startDate);
         const endDate = new Date(semester.endDate);
@@ -574,18 +574,18 @@ export class AdminDashboardService {
         pageSize: 1000,
       });
       const templates = await adminService.getAssessmentTemplateList(1, 1000);
-      
+
       const graded = submissions.filter((s) => s.lastGrade > 0).length;
       const pending = submissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
       const notSubmitted = 0; // Would need total expected submissions to calculate
-      
-      const completionRate = submissions.length > 0 
-        ? (graded / submissions.length) * 100 
+
+      const completionRate = submissions.length > 0
+        ? (graded / submissions.length) * 100
         : 0;
 
       // Calculate detailed stats - group by type using template name
       const submissionsByType = { assignment: 0, lab: 0, practicalExam: 0 };
-      
+
       // Create a map of templateId -> template for quick lookup
       const templateMap = new Map<number, any>();
       templates.items.forEach((template) => {
@@ -617,7 +617,7 @@ export class AdminDashboardService {
       const averageGrade = gradedSubmissions.length > 0
         ? gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0) / gradedSubmissions.length
         : 0;
-      
+
       const submissionsByGradeRange = {
         excellent: gradedSubmissions.filter((s) => s.lastGrade >= 8.5).length,
         good: gradedSubmissions.filter((s) => s.lastGrade >= 7.0 && s.lastGrade < 8.5).length,
@@ -715,7 +715,7 @@ export class AdminDashboardService {
         pageNumber: 1,
         pageSize: 1000,
       });
-      
+
       const completed = sessions.items.filter((s) => s.status === 1).length;
 
       return {
@@ -747,7 +747,7 @@ export class AdminDashboardService {
    */
   async getChartData(): Promise<ChartData> {
     try {
-      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] = 
+      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] =
         await Promise.allSettled([
           this.getUserGrowthData(),
           this.getSemesterActivityData(),
@@ -778,17 +778,17 @@ export class AdminDashboardService {
   private async getUserGrowthData(): Promise<UserGrowthData[]> {
     try {
       const { users } = await adminService.getAccountList(1, 1000);
-      
+
       // Group by month
       // Note: Since User interface doesn't have createdAt, we'll use current month as placeholder
       // In production, this should be calculated from actual createdAt timestamps
       const monthlyData: Record<string, { total: number; students: number; lecturers: number }> = {};
       const now = new Date();
       const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      
+
       // Aggregate all users into current month (since we don't have createdAt)
       monthlyData[currentMonthKey] = { total: 0, students: 0, lecturers: 0 };
-      
+
       users.forEach((user) => {
         monthlyData[currentMonthKey].total++;
         if (user.role === ROLES.STUDENT) monthlyData[currentMonthKey].students++;
@@ -823,7 +823,7 @@ export class AdminDashboardService {
 
       // Group by semesterName directly from classes (no need to match with semester list)
       const semesterMap = new Map<string, SemesterActivityData>();
-      
+
       // Count classes per semester
       classes.forEach((cls) => {
         const semesterKey = cls.semesterName || 'Unknown';
@@ -876,7 +876,7 @@ export class AdminDashboardService {
       // Count submissions per semester - via assessment -> course -> semester
       submissions.forEach((submission) => {
         if (!submission.classAssessmentId) return;
-        
+
         const assessment = assessments.items.find((a) => a.id === submission.classAssessmentId);
         if (assessment) {
           const semesterKey = courseToSemesterMap.get(assessment.courseName || '') || 'Unknown';
@@ -928,7 +928,7 @@ export class AdminDashboardService {
   private async getAssessmentDistributionData(): Promise<AssessmentDistributionData[]> {
     try {
       const templates = await adminService.getAssessmentTemplateList(1, 1000);
-      
+
       const distribution = {
         assignment: 0,
         lab: 0,
@@ -959,7 +959,7 @@ export class AdminDashboardService {
   private async getSubmissionStatusData(): Promise<SubmissionStatusData[]> {
     try {
       const submissions = await submissionService.getSubmissionList({});
-      
+
       const graded = submissions.filter((s) => s.lastGrade > 0).length;
       const pending = submissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
       const notSubmitted = submissions.filter((s) => !s.submittedAt).length;
@@ -984,13 +984,13 @@ export class AdminDashboardService {
 
       // Group by date
       const dailyData: Record<string, { graded: number; pending: number }> = {};
-      
+
       sessions.items.forEach((session) => {
         const date = new Date(session.createdAt).toISOString().split('T')[0];
         if (!dailyData[date]) {
           dailyData[date] = { graded: 0, pending: 0 };
         }
-        
+
         if (session.status === 1) {
           dailyData[date].graded++;
         } else {
@@ -1017,7 +1017,7 @@ export class AdminDashboardService {
   async getRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
     try {
       const activities: RecentActivity[] = [];
-      
+
       // Get recent users
       const { users } = await adminService.getAccountList(1, 20);
       users.slice(0, 5).forEach((user) => {
@@ -1075,7 +1075,7 @@ export class AdminDashboardService {
   async getPendingTasks(): Promise<PendingTask[]> {
     try {
       const tasks: PendingTask[] = [];
-      
+
       // Get pending assign requests
       const requests = await adminService.getApprovalList(1, 100);
       requests.items
@@ -1178,10 +1178,10 @@ export class AdminDashboardService {
       }));
 
       // Calculate average students per class
-      const totalStudents = classes.classes.reduce((sum, cls) => 
+      const totalStudents = classes.classes.reduce((sum, cls) =>
         sum + parseInt(cls.studentCount || '0', 10), 0);
-      const averageStudentsPerClass = classes.classes.length > 0 
-        ? Math.round(totalStudents / classes.classes.length) 
+      const averageStudentsPerClass = classes.classes.length > 0
+        ? Math.round(totalStudents / classes.classes.length)
         : 0;
 
       // Find classes without students
@@ -1753,7 +1753,7 @@ export class AdminDashboardService {
         pageSize: 1000,
       });
       const semesters = await adminService.getPaginatedSemesters(1, 100);
-      
+
       // Get course elements
       const courseElements = await courseElementService.getCourseElements({
         pageNumber: 1,
@@ -1976,7 +1976,7 @@ export class AdminDashboardService {
           endAt: assessment.endAt,
           daysRemaining: Math.ceil(
             (new Date(assessment.endAt).getTime() - now.getTime()) /
-              (24 * 60 * 60 * 1000)
+            (24 * 60 * 60 * 1000)
           ),
         }))
         .sort((a, b) => new Date(a.endAt).getTime() - new Date(b.endAt).getTime())

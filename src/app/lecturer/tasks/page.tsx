@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./Tasks.module.css";
 import { useLecturer } from "@/hooks/useLecturer";
@@ -8,6 +8,7 @@ import {
   assignRequestService,
   AssignRequestItem,
 } from "@/services/assignRequestService";
+import { semesterService, Semester } from "@/services/semesterService";
 import { Spin, Select, App } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
 import { queryKeys } from "@/lib/react-query";
@@ -35,6 +36,35 @@ const TasksPageContent = () => {
   >({});
   const { lecturerId, isLoading: isLecturerLoading } = useLecturer();
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
+  const [currentSemesterCode, setCurrentSemesterCode] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  // Fetch all semesters
+  const { data: allSemesters = [] } = useQuery({
+    queryKey: queryKeys.semesters.list(),
+    queryFn: async () => {
+      const semesters = await semesterService.getSemesters({
+        pageNumber: 1,
+        pageSize: 1000,
+      });
+      
+      // Find current active semester
+      const now = new Date();
+      const activeSemester = semesters.find((sem) => {
+        const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+        const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+        return now >= startDate && now <= endDate;
+      });
+      if (activeSemester) {
+        setCurrentSemesterCode(activeSemester.semesterCode);
+      } else {
+        // If no current semester, set to null so we can use latest
+        setCurrentSemesterCode(null);
+      }
+      
+      return semesters;
+    },
+  });
 
   // Fetch tasks using TanStack Query
   const { data: tasksResponse, isLoading, error: queryError } = useQuery({
@@ -61,6 +91,98 @@ const TasksPageContent = () => {
     }));
     return [{ label: "All Semesters", value: "all" }, ...options];
   }, [allTasks]);
+
+  // Set default semester to current active semester, or latest if current has no data
+  useEffect(() => {
+    if (isInitialLoad && allSemesters.length > 0 && allTasks.length > 0) {
+      // Try to find current semester in tasks FIRST (priority)
+      // First, find current semester from allSemesters if not already set
+      let activeSemesterCode = currentSemesterCode;
+      if (!activeSemesterCode) {
+        const now = new Date();
+        const activeSemester = allSemesters.find((sem) => {
+          const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+          const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
+          return now >= startDate && now <= endDate;
+        });
+        if (activeSemester) {
+          activeSemesterCode = activeSemester.semesterCode;
+        }
+      }
+      
+      if (activeSemesterCode) {
+        // Get unique semester names from tasks
+        const uniqueSemesterNames = [
+          ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
+        ];
+        
+        // Try exact match first
+        const exactMatch = uniqueSemesterNames.find(
+          (name) => name === activeSemesterCode
+        );
+        if (exactMatch) {
+          setSelectedSemester(exactMatch);
+          setIsInitialLoad(false);
+          return;
+        }
+        
+        // Try partial match
+        const partialMatch = uniqueSemesterNames.find(
+          (name) => name?.includes(activeSemesterCode!) ||
+                   name?.toLowerCase().includes(activeSemesterCode!.toLowerCase())
+        );
+        if (partialMatch) {
+          setSelectedSemester(partialMatch);
+          setIsInitialLoad(false);
+          return;
+        }
+      }
+      
+      // Current semester not found or has no data, use latest semester
+      const uniqueSemesterNames = [
+        ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
+      ];
+      
+      if (uniqueSemesterNames.length > 0) {
+        // Create a map of semesterName to Semester object for sorting
+        const semesterMap = new Map<string, Semester>();
+        uniqueSemesterNames.forEach((name) => {
+          const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
+          if (exactMatch) {
+            semesterMap.set(name, exactMatch);
+          } else {
+            const partialMatch = allSemesters.find((sem) => 
+              name.includes(sem.semesterCode) || 
+              sem.semesterCode.includes(name) ||
+              name.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
+              sem.semesterCode.toLowerCase().includes(name.toLowerCase())
+            );
+            if (partialMatch) {
+              semesterMap.set(name, partialMatch);
+            }
+          }
+        });
+        
+        // Sort by startDate (newest first) and get the first one
+        const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
+          const semA = semesterMap.get(a);
+          const semB = semesterMap.get(b);
+          if (semA && semB) {
+            const dateA = new Date(semA.startDate);
+            const dateB = new Date(semB.startDate);
+            return dateB.getTime() - dateA.getTime();
+          }
+          return 0;
+        });
+        
+        if (sortedSemesters.length > 0) {
+          setSelectedSemester(sortedSemesters[0]);
+        }
+      }
+      
+      setIsInitialLoad(false);
+    }
+  }, [currentSemesterCode, allTasks, allSemesters, isInitialLoad]);
 
   const filteredTasks = useMemo(() => {
     if (selectedSemester === "all") {

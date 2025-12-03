@@ -72,7 +72,6 @@ export const ROUTES = {
   LOGIN: "/login",
   REGISTER: "/register",
   PROFILE: "/profile",
-  DASHBOARD: "/dashboard",
   STUDENT_GRADE_LOOKUP: "/student",
   PE_LOGIN: "/pe",
   PE_SUBMISSION: "/pe/submission",
@@ -102,12 +101,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       label: "My Classes",
       href: "/classes/my-classes/student",
     },
-    // Temporarily removed
-    // {
-    //   key: "pe",
-    //   label: "PE",
-    //   href: "/student/my-grading-group",
-    // },
   ],
   [ROLES.LECTURER]: [
     {

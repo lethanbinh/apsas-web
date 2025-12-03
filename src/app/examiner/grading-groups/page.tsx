@@ -1,53 +1,51 @@
 "use client";
 
+import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
 import { CreateGradingGroupModal } from "@/components/examiner/CreateGradingGroupModal";
-import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
+import { queryKeys } from "@/lib/react-query";
+import { assessmentFileService } from "@/services/assessmentFileService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
+import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
+import { ClassInfo, classService } from "@/services/classService";
+import { CourseElement, courseElementService } from "@/services/courseElementService";
 import {
   GradingGroup,
   gradingGroupService,
 } from "@/services/gradingGroupService";
-import { Lecturer, lecturerService } from "@/services/lecturerService";
-import { submissionService, Submission } from "@/services/submissionService";
-import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
-import { classService, ClassInfo } from "@/services/classService";
-import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
-import { courseElementService, CourseElement } from "@/services/courseElementService";
-import { semesterService, Semester } from "@/services/semesterService";
-import { assessmentPaperService } from "@/services/assessmentPaperService";
-import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { lecturerService } from "@/services/lecturerService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
-import { assessmentFileService } from "@/services/assessmentFileService";
+import { semesterService } from "@/services/semesterService";
+import { Submission, submissionService } from "@/services/submissionService";
 import {
-  PlusOutlined,
-  UserAddOutlined,
-  DownloadOutlined,
   DeleteOutlined,
-  FileOutlined,
+  DownloadOutlined,
+  PlusOutlined,
+  UserAddOutlined
 } from "@ant-design/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TableProps } from "antd";
 import {
   Alert,
   App,
   Button,
   Card,
+  Empty,
+  Popconfirm,
+  Select,
   Space,
   Spin,
   Table,
   Tag,
-  Typography,
-  Empty,
-  Select,
-  Popconfirm,
-  Collapse,
+  Typography
 } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./GradingGroups.module.css";
-import { queryKeys } from "@/lib/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -235,7 +233,7 @@ const GradingGroupsPageContent = () => {
   // Map submission to enriched data with submission URL
   const enrichedSubmissionsMap = useMemo(() => {
     const map = new Map<number, Submission & { submissionUrl?: string; fileName?: string }>();
-    
+
     allSubmissions.forEach(sub => {
       map.set(sub.id, {
         ...sub,
@@ -268,7 +266,7 @@ const GradingGroupsPageContent = () => {
         const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
         return now >= startDate && now <= endDate;
       });
-      
+
       if (currentSemester) {
         setSelectedSemester(currentSemester.semesterCode);
       } else {
@@ -345,10 +343,10 @@ const GradingGroupsPageContent = () => {
     // Loop qua TẤT CẢ groups
     allGroups.forEach((group) => {
       // Get assessment template
-      const template = group.assessmentTemplateId 
+      const template = group.assessmentTemplateId
         ? allAssessmentTemplates.get(Number(group.assessmentTemplateId))
         : null;
-      
+
       if (!template) return;
 
       // Get course element
@@ -385,7 +383,7 @@ const GradingGroupsPageContent = () => {
 
       // Get enriched submissions for this group
       const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
-      
+
       // Convert to enriched format
       const subs = groupSubmissions.map((sub) => {
         const enriched = enrichedSubmissionsMap.get(sub.id);
@@ -457,10 +455,10 @@ const GradingGroupsPageContent = () => {
       })),
     }));
   }, [
-    allGroups, 
-    allSubmissions, 
-    enrichedSubmissionsMap, 
-    selectedSemester, 
+    allGroups,
+    allSubmissions,
+    enrichedSubmissionsMap,
+    selectedSemester,
     selectedCourseId,
     selectedTemplateId,
     selectedLecturerId,
@@ -518,7 +516,7 @@ const GradingGroupsPageContent = () => {
 
     try {
       message.loading("Preparing download...", 0);
-      
+
       // Dynamic import JSZip
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
@@ -577,7 +575,7 @@ const GradingGroupsPageContent = () => {
         // Create folder name: CourseName_SemesterCode
         const folderName = `${group.courseName.replace(/[^a-zA-Z0-9]/g, "_")}_${group.semesterCode}`;
         const groupFolder = zip.folder(folderName);
-        
+
         if (!groupFolder) continue;
 
         // Get unique grading groups for this course+semester
@@ -599,7 +597,7 @@ const GradingGroupsPageContent = () => {
               pageSize: 1000,
             });
             const template = templateRes.items.find(t => t.id === gradingGroup.assessmentTemplateId);
-            
+
             if (!template) continue;
 
             // Fetch papers
@@ -620,7 +618,7 @@ const GradingGroupsPageContent = () => {
                 pageNumber: 1,
                 pageSize: 100,
               });
-              const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+              const sortedQuestions = [...questionsRes.items].sort((a, b) =>
                 (a.questionNumber || 0) - (b.questionNumber || 0)
               );
               questionsMap[paper.id] = sortedQuestions;
@@ -760,7 +758,7 @@ const GradingGroupsPageContent = () => {
             const doc = new Document({
               sections: [{ properties: {}, children: docSections }],
             });
-            
+
             const wordBlob = await Packer.toBlob(doc);
             const templateName = gradingGroup.assessmentTemplateName || `Template_${gradingGroupId}`;
             const requirementFolder = groupFolder.folder(`Requirements_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`);
@@ -810,7 +808,7 @@ const GradingGroupsPageContent = () => {
                     'Accept': '*/*',
                   },
                 });
-                
+
                 if (response.ok) {
                   const blob = await response.blob();
                   const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
@@ -984,244 +982,244 @@ const GradingGroupsPageContent = () => {
           </Space>
         </div>
 
-      {/* Main Content - Flat Table Design */}
-      <Card
-        title={
-          <Space>
-            <Text strong style={{ fontSize: 18 }}>Grading Groups</Text>
-          </Space>
-        }
-      >
-        {(() => {
-          // Flatten all groups into a single array for table
-          // Group by Course, Template, Semester - merge submissions from multiple grading groups
-          const groupedMap = new Map<string, {
-            id: number; // Use the latest grading group ID
-            courseCode: string;
-            courseName: string;
-            templateName: string;
-            lecturerNames: string[]; // All lecturers
-            lecturerCodes: (string | null)[]; // All lecturer codes
-            semesterCode: string | undefined;
-            submissionCount: number;
-            groupIds: number[]; // All grading group IDs that match
-            group: GradingGroup & { subs: any[]; semesterCode?: string }; // Latest grading group
-          }>();
+        {/* Main Content - Flat Table Design */}
+        <Card
+          title={
+            <Space>
+              <Text strong style={{ fontSize: 18 }}>Grading Groups</Text>
+            </Space>
+          }
+        >
+          {(() => {
+            // Flatten all groups into a single array for table
+            // Group by Course, Template, Semester - merge submissions from multiple grading groups
+            const groupedMap = new Map<string, {
+              id: number; // Use the latest grading group ID
+              courseCode: string;
+              courseName: string;
+              templateName: string;
+              lecturerNames: string[]; // All lecturers
+              lecturerCodes: (string | null)[]; // All lecturer codes
+              semesterCode: string | undefined;
+              submissionCount: number;
+              groupIds: number[]; // All grading group IDs that match
+              group: GradingGroup & { subs: any[]; semesterCode?: string }; // Latest grading group
+            }>();
 
-          groupedByCourse.forEach((course) => {
-            course.templates.forEach((template) => {
-              template.lecturers.forEach((lecturer) => {
-                lecturer.groups.forEach((group) => {
-                  const semesterCode = group.semesterCode;
-                  if (!semesterCode) return;
-                  
-                  // Create composite key: courseId_templateId_lecturerId (gộp theo Course, Template, Lecturer)
-                  const key = `${course.courseId}_${template.templateId}_${lecturer.lecturerId}`;
-                  
-                  const existing = groupedMap.get(key);
-                  if (!existing) {
-                    groupedMap.set(key, {
-                      id: group.id,
-                      courseCode: course.courseCode,
-                      courseName: course.courseName,
-                      templateName: template.templateName,
-                      lecturerNames: [lecturer.lecturerName],
-                      lecturerCodes: [lecturer.lecturerCode],
-                      semesterCode: semesterCode,
-                      submissionCount: group.subs.length,
-                      groupIds: [group.id],
-                      group: group,
-                    });
-                  } else {
-                    // Merge: add submissions (lecturer đã giống nhau nên không cần thêm)
-                    const existingDate = existing.group.createdAt ? new Date(existing.group.createdAt).getTime() : 0;
-                    const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
-                    
-                    groupedMap.set(key, {
-                      ...existing,
-                      submissionCount: existing.submissionCount + group.subs.length,
-                      groupIds: [...existing.groupIds, group.id],
-                      group: currentDate > existingDate ? group : existing.group,
-                      id: currentDate > existingDate ? group.id : existing.id,
-                    });
-                  }
+            groupedByCourse.forEach((course) => {
+              course.templates.forEach((template) => {
+                template.lecturers.forEach((lecturer) => {
+                  lecturer.groups.forEach((group) => {
+                    const semesterCode = group.semesterCode;
+                    if (!semesterCode) return;
+
+                    // Create composite key: courseId_templateId_lecturerId (gộp theo Course, Template, Lecturer)
+                    const key = `${course.courseId}_${template.templateId}_${lecturer.lecturerId}`;
+
+                    const existing = groupedMap.get(key);
+                    if (!existing) {
+                      groupedMap.set(key, {
+                        id: group.id,
+                        courseCode: course.courseCode,
+                        courseName: course.courseName,
+                        templateName: template.templateName,
+                        lecturerNames: [lecturer.lecturerName],
+                        lecturerCodes: [lecturer.lecturerCode],
+                        semesterCode: semesterCode,
+                        submissionCount: group.subs.length,
+                        groupIds: [group.id],
+                        group: group,
+                      });
+                    } else {
+                      // Merge: add submissions (lecturer đã giống nhau nên không cần thêm)
+                      const existingDate = existing.group.createdAt ? new Date(existing.group.createdAt).getTime() : 0;
+                      const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
+
+                      groupedMap.set(key, {
+                        ...existing,
+                        submissionCount: existing.submissionCount + group.subs.length,
+                        groupIds: [...existing.groupIds, group.id],
+                        group: currentDate > existingDate ? group : existing.group,
+                        id: currentDate > existingDate ? group.id : existing.id,
+                      });
+                    }
+                  });
                 });
               });
             });
-          });
 
-          const flatGroups = Array.from(groupedMap.values());
+            const flatGroups = Array.from(groupedMap.values());
 
-          const columns: TableProps<typeof flatGroups[0]>["columns"] = [
-            {
-              title: "Course",
-              key: "course",
-              width: 200,
-              render: (_, record) => (
-                <div>
-                  <Text strong style={{ fontSize: 14 }}>{record.courseCode}</Text>
-                  <br />
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    {record.courseName}
-                  </Text>
-                </div>
-              ),
-            },
-            {
-              title: "Template",
-              dataIndex: "templateName",
-              key: "template",
-              width: 200,
-              render: (name) => <Text strong>{name}</Text>,
-            },
-            {
-              title: "Lecturer",
-              key: "lecturer",
-              width: 200,
-              render: (_, record) => (
-                <div>
-                  {record.lecturerNames.length > 0 && (
-                    <>
-                      <Text strong>{record.lecturerNames.join(", ")}</Text>
-                      {record.lecturerCodes.some(code => code) && (
-                        <>
-                          <br />
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            {record.lecturerCodes.filter(code => code).join(", ")}
-                          </Text>
-                        </>
-                      )}
-                    </>
-                  )}
-                </div>
-              ),
-            },
-            {
-              title: "Semester",
-              dataIndex: "semesterCode",
-              key: "semester",
-              width: 120,
-              render: (semester) => semester ? (
-                <Tag color="purple">{semester}</Tag>
-              ) : (
-                <Text type="secondary">N/A</Text>
-              ),
-            },
-            {
-              title: "Actions",
-              key: "actions",
-              width: 200,
-              fixed: "right",
-              render: (_, record) => (
-                <Space>
-                  <Button
-                    type="primary"
-                    icon={<UserAddOutlined />}
-                    onClick={() => handleOpenAssign(record.group)}
-                    size="small"
-                  >
-                    Manage
-                  </Button>
-                  <Popconfirm
-                    title="Delete Assignment"
-                    description={`Are you sure you want to delete this assignment?`}
-                    onConfirm={() => handleDeleteGroup(record.group)}
-                    okText="Delete"
-                    cancelText="Cancel"
-                    okType="danger"
-                  >
-                    <Button
-                      danger
-                      icon={<DeleteOutlined />}
-                      size="small"
-                    >
-                      Delete
-                    </Button>
-                  </Popconfirm>
-                </Space>
-              ),
-            },
-          ];
-
-          if (flatGroups.length === 0) {
-            return (
-              <Empty
-                description="No grading groups found"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            );
-          }
-
-          return (
-            <Table
-              columns={columns}
-              dataSource={flatGroups}
-              rowKey="id"
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showTotal: (total) => `Total ${total} assignments`,
-              }}
-              scroll={{ x: 1000 }}
-              expandable={{
-                expandedRowRender: (record) => (
-                  <div style={{ padding: '16px 0' }}>
-                    {record.group.submittedGradeSheetUrl ? (
-                      <Space direction="vertical" size="small">
-                        <Text strong>Grade Sheet:</Text>
-                        <Button
-                          type="link"
-                          icon={<DownloadOutlined />}
-                          href={record.group.submittedGradeSheetUrl}
-                          target="_blank"
-                          style={{ padding: 0 }}
-                        >
-                          Download Grade Sheet
-                        </Button>
-                        {record.group.gradeSheetSubmittedAt && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            Submitted at: {dayjs.utc(record.group.gradeSheetSubmittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
-                          </Text>
+            const columns: TableProps<typeof flatGroups[0]>["columns"] = [
+              {
+                title: "Course",
+                key: "course",
+                width: 200,
+                render: (_, record) => (
+                  <div>
+                    <Text strong style={{ fontSize: 14 }}>{record.courseCode}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {record.courseName}
+                    </Text>
+                  </div>
+                ),
+              },
+              {
+                title: "Template",
+                dataIndex: "templateName",
+                key: "template",
+                width: 200,
+                render: (name) => <Text strong>{name}</Text>,
+              },
+              {
+                title: "Lecturer",
+                key: "lecturer",
+                width: 200,
+                render: (_, record) => (
+                  <div>
+                    {record.lecturerNames.length > 0 && (
+                      <>
+                        <Text strong>{record.lecturerNames.join(", ")}</Text>
+                        {record.lecturerCodes.some(code => code) && (
+                          <>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {record.lecturerCodes.filter(code => code).join(", ")}
+                            </Text>
+                          </>
                         )}
-                      </Space>
-                    ) : (
-                      <Alert
-                        message="No grade sheet submitted yet"
-                        type="info"
-                        showIcon
-                      />
+                      </>
                     )}
                   </div>
                 ),
-                rowExpandable: () => true,
-              }}
-            />
-          );
-        })()}
-      </Card>
+              },
+              {
+                title: "Semester",
+                dataIndex: "semesterCode",
+                key: "semester",
+                width: 120,
+                render: (semester) => semester ? (
+                  <Tag color="purple">{semester}</Tag>
+                ) : (
+                  <Text type="secondary">N/A</Text>
+                ),
+              },
+              {
+                title: "Actions",
+                key: "actions",
+                width: 200,
+                fixed: "right",
+                render: (_, record) => (
+                  <Space>
+                    <Button
+                      type="primary"
+                      icon={<UserAddOutlined />}
+                      onClick={() => handleOpenAssign(record.group)}
+                      size="small"
+                    >
+                      Manage
+                    </Button>
+                    <Popconfirm
+                      title="Delete Assignment"
+                      description={`Are you sure you want to delete this assignment?`}
+                      onConfirm={() => handleDeleteGroup(record.group)}
+                      okText="Delete"
+                      cancelText="Cancel"
+                      okType="danger"
+                    >
+                      <Button
+                        danger
+                        icon={<DeleteOutlined />}
+                        size="small"
+                      >
+                        Delete
+                      </Button>
+                    </Popconfirm>
+                  </Space>
+                ),
+              },
+            ];
 
-      {isCreateModalOpen && (
-        <CreateGradingGroupModal
-          open={isCreateModalOpen}
-          onCancel={handleModalCancel}
-          onOk={handleModalOk}
-          allLecturers={allLecturers}
-          existingGroups={allGroups}
-          gradingGroupToSemesterMap={gradingGroupToSemesterMap}
-          assessmentTemplatesMap={allAssessmentTemplates}
-          courseElementsMap={allCourseElements}
-        />
-      )}
+            if (flatGroups.length === 0) {
+              return (
+                <Empty
+                  description="No grading groups found"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              );
+            }
 
-      {isAssignModalOpen && selectedGroup && (
-        <AssignSubmissionsModal
-          open={isAssignModalOpen}
-          onCancel={handleModalCancel}
-          onOk={handleModalOk}
-          group={selectedGroup}
-          allGroups={allGroups}
-        />
-      )}
+            return (
+              <Table
+                columns={columns}
+                dataSource={flatGroups}
+                rowKey="id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showTotal: (total) => `Total ${total} assignments`,
+                }}
+                scroll={{ x: 1000 }}
+                expandable={{
+                  expandedRowRender: (record) => (
+                    <div style={{ padding: '16px 0' }}>
+                      {record.group.submittedGradeSheetUrl ? (
+                        <Space direction="vertical" size="small">
+                          <Text strong>Grade Sheet:</Text>
+                          <Button
+                            type="link"
+                            icon={<DownloadOutlined />}
+                            href={record.group.submittedGradeSheetUrl}
+                            target="_blank"
+                            style={{ padding: 0 }}
+                          >
+                            Download Grade Sheet
+                          </Button>
+                          {record.group.gradeSheetSubmittedAt && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              Submitted at: {dayjs.utc(record.group.gradeSheetSubmittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
+                            </Text>
+                          )}
+                        </Space>
+                      ) : (
+                        <Alert
+                          message="No grade sheet submitted yet"
+                          type="info"
+                          showIcon
+                        />
+                      )}
+                    </div>
+                  ),
+                  rowExpandable: () => true,
+                }}
+              />
+            );
+          })()}
+        </Card>
+
+        {isCreateModalOpen && (
+          <CreateGradingGroupModal
+            open={isCreateModalOpen}
+            onCancel={handleModalCancel}
+            onOk={handleModalOk}
+            allLecturers={allLecturers}
+            existingGroups={allGroups}
+            gradingGroupToSemesterMap={gradingGroupToSemesterMap}
+            assessmentTemplatesMap={allAssessmentTemplates}
+            courseElementsMap={allCourseElements}
+          />
+        )}
+
+        {isAssignModalOpen && selectedGroup && (
+          <AssignSubmissionsModal
+            open={isAssignModalOpen}
+            onCancel={handleModalCancel}
+            onOk={handleModalOk}
+            group={selectedGroup}
+            allGroups={allGroups}
+          />
+        )}
       </div>
     </>
   );

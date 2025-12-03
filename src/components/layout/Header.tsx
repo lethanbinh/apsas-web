@@ -52,19 +52,11 @@ export const Header: React.FC = () => {
       return "my-classes";
     }
     
-    // Special handling for student PE pages - should be treated as "pe"
-    if (user?.role === 2 && (
-      pathname.startsWith("/student/my-grading-group") ||
-      pathname.startsWith("/student/assignment-grading")
-    )) {
-      return "pe";
-    }
     
     // Special handling for student sidebar pages and my-classes - should be treated as "my-classes"
     if (user?.role === 2 && (
       pathname.startsWith("/student/class-detail") ||
       pathname.startsWith("/student/assignments") ||
-      pathname.startsWith("/student/submissions") ||
       pathname.startsWith("/student/members") ||
       pathname.startsWith("/student/labs") ||
       pathname.startsWith("/classes/my-classes/student")

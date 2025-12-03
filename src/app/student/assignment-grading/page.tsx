@@ -1,21 +1,22 @@
 "use client";
 
+import { queryKeys } from "@/lib/react-query";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
-import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { classAssessmentService } from "@/services/classAssessmentService";
 import { FeedbackData } from "@/services/geminiService";
-import { gradingService, GradingSession } from "@/services/gradingService";
-import { gradeItemService, GradeItem } from "@/services/gradeItemService";
+import { GradeItem, gradeItemService } from "@/services/gradeItemService";
+import { gradingGroupService } from "@/services/gradingGroupService";
+import { gradingService } from "@/services/gradingService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
+import { submissionFeedbackService } from "@/services/submissionFeedbackService";
 import { Submission, submissionService } from "@/services/submissionService";
-import { submissionFeedbackService, SubmissionFeedback } from "@/services/submissionFeedbackService";
-import { geminiService } from "@/services/geminiService";
 import {
   ArrowLeftOutlined,
   EyeOutlined,
   HistoryOutlined,
 } from "@ant-design/icons";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   App,
@@ -34,15 +35,12 @@ import {
   Tag,
   Typography
 } from "antd";
-import { useRouter } from "next/navigation";
-import { ReactNode, useEffect, useState, useMemo } from "react";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/react-query";
-import { gradingGroupService } from "@/services/gradingGroupService";
-import styles from "./page.module.css";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import { useRouter } from "next/navigation";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import styles from "./page.module.css";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -645,30 +643,30 @@ export default function AssignmentGradingPage() {
 
         <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
           <Collapse
-              defaultActiveKey={[]}
-              className={`${styles.collapseWrapper} collapse-feedback`}
-              items={[
-                {
-                  key: "feedback",
-                  label: (
-                    <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-                      Detailed Feedback
-                    </Title>
-                  ),
-                  children: (
-                    <div>
-                      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                        {renderFeedbackFields(feedback)}
-                      </Space>
-                    </div>
-                  ),
-                },
-              ]}
-            />
+            defaultActiveKey={[]}
+            className={`${styles.collapseWrapper} collapse-feedback`}
+            items={[
+              {
+                key: "feedback",
+                label: (
+                  <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+                    Detailed Feedback
+                  </Title>
+                ),
+                children: (
+                  <div>
+                    <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                      {renderFeedbackFields(feedback)}
+                    </Space>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </Card>
 
         <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
-          <Collapse 
+          <Collapse
             defaultActiveKey={["grading-details"]}
             className={`${styles.collapseWrapper} collapse-grading`}
             items={[
@@ -798,7 +796,7 @@ export default function AssignmentGradingPage() {
                                     size="small"
                                     scroll={{ x: "max-content" }}
                                   />
-                                  
+
                                   <Divider />
 
                                   <div style={{ marginTop: 16 }}>
@@ -820,7 +818,7 @@ export default function AssignmentGradingPage() {
 
                           return (
                             <Collapse
-                              items={sortedQuestions.map((question, index) => 
+                              items={sortedQuestions.map((question, index) =>
                                 renderQuestionCollapse(question, index)
                               )}
                             />
@@ -1003,76 +1001,76 @@ function ViewExamModal({
           <div>
             <Divider />
 
-          <Collapse
-            items={papers.map((paper, paperIndex) => ({
-              key: paper.id.toString(),
-              label: (
-                <div>
-                  <strong>Paper {paperIndex + 1}: {paper.name}</strong>
-                  {paper.description && (
-                    <Text type="secondary" style={{ marginLeft: 8 }}>
-                      - {paper.description}
-                    </Text>
-                  )}
-                </div>
-              ),
-              children: (
-                <div>
-                  {questions[paper.id]?.map((question, qIndex) => (
-                    <div key={question.id} style={{ marginBottom: 24 }}>
-                      <Title level={5}>
-                        Question {qIndex + 1} (Score: {question.score})
-                      </Title>
-                      <Text>{question.questionText}</Text>
+            <Collapse
+              items={papers.map((paper, paperIndex) => ({
+                key: paper.id.toString(),
+                label: (
+                  <div>
+                    <strong>Paper {paperIndex + 1}: {paper.name}</strong>
+                    {paper.description && (
+                      <Text type="secondary" style={{ marginLeft: 8 }}>
+                        - {paper.description}
+                      </Text>
+                    )}
+                  </div>
+                ),
+                children: (
+                  <div>
+                    {questions[paper.id]?.map((question, qIndex) => (
+                      <div key={question.id} style={{ marginBottom: 24 }}>
+                        <Title level={5}>
+                          Question {qIndex + 1} (Score: {question.score})
+                        </Title>
+                        <Text>{question.questionText}</Text>
 
-                      {question.questionSampleInput && (
-                        <div style={{ marginTop: 12 }}>
-                          <Text strong>Sample Input:</Text>
-                          <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
-                            {question.questionSampleInput}
-                          </pre>
-                        </div>
-                      )}
+                        {question.questionSampleInput && (
+                          <div style={{ marginTop: 12 }}>
+                            <Text strong>Sample Input:</Text>
+                            <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                              {question.questionSampleInput}
+                            </pre>
+                          </div>
+                        )}
 
-                      {question.questionSampleOutput && (
-                        <div style={{ marginTop: 12 }}>
-                          <Text strong>Sample Output:</Text>
-                          <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
-                            {question.questionSampleOutput}
-                          </pre>
-                        </div>
-                      )}
+                        {question.questionSampleOutput && (
+                          <div style={{ marginTop: 12 }}>
+                            <Text strong>Sample Output:</Text>
+                            <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                              {question.questionSampleOutput}
+                            </pre>
+                          </div>
+                        )}
 
-                      {rubrics[question.id] && rubrics[question.id].length > 0 && (
-                        <div style={{ marginTop: 12 }}>
-                          <Text strong>Grading Criteria:</Text>
-                          <ul>
-                            {rubrics[question.id].map((rubric) => (
-                              <li key={rubric.id}>
-                                {rubric.description} (Max: {rubric.score} points)
-                                {rubric.input && rubric.input !== "N/A" && (
-                                  <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
-                                    Input: <code>{rubric.input}</code>
-                                  </div>
-                                )}
-                                {rubric.output && rubric.output !== "N/A" && (
-                                  <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
-                                    Output: <code>{rubric.output}</code>
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                        {rubrics[question.id] && rubrics[question.id].length > 0 && (
+                          <div style={{ marginTop: 12 }}>
+                            <Text strong>Grading Criteria:</Text>
+                            <ul>
+                              {rubrics[question.id].map((rubric) => (
+                                <li key={rubric.id}>
+                                  {rubric.description} (Max: {rubric.score} points)
+                                  {rubric.input && rubric.input !== "N/A" && (
+                                    <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
+                                      Input: <code>{rubric.input}</code>
+                                    </div>
+                                  )}
+                                  {rubric.output && rubric.output !== "N/A" && (
+                                    <div style={{ marginLeft: 20, fontSize: "12px", color: "#666" }}>
+                                      Output: <code>{rubric.output}</code>
+                                    </div>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                      <Divider />
-                    </div>
-                  ))}
-                </div>
-              ),
-            }))}
-          />
+                        <Divider />
+                      </div>
+                    ))}
+                  </div>
+                ),
+              }))}
+            />
           </div>
         )}
       </Spin>
@@ -1159,7 +1157,7 @@ function GradingHistoryModal({
   const handleExpandSession = (sessionId: number) => {
     const newExpanded = new Set(expandedSessions);
     const isCurrentlyExpanded = newExpanded.has(sessionId);
-    
+
     if (isCurrentlyExpanded) {
       newExpanded.delete(sessionId);
     } else {
@@ -1190,7 +1188,7 @@ function GradingHistoryModal({
             items={gradingHistory.map((session) => {
               const isExpanded = expandedSessions.has(session.id);
               const gradeItems = sessionGradeItems[session.id] || [];
-              
+
               const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
 
               return {
@@ -1363,13 +1361,13 @@ function FeedbackHistoryModal({
   const handleExpandFeedback = (feedbackId: number) => {
     const newExpanded = new Set(expandedFeedbacks);
     const isCurrentlyExpanded = newExpanded.has(feedbackId);
-    
+
     if (isCurrentlyExpanded) {
       newExpanded.delete(feedbackId);
     } else {
       newExpanded.add(feedbackId);
     }
-    
+
     setExpandedFeedbacks(newExpanded);
   };
 

@@ -190,33 +190,28 @@ export function middleware(request: NextRequest) {
       // Admin routes - only admin can access
       "/admin",
       "/profile",
-      "/dashboard",
     ],
     1: [
       // Lecturer routes - only lecturer can access
       "/lecturer",
       "/classes/my-classes/lecturer",
       "/profile",
-      "/dashboard",
     ],
     2: [
       // Student routes - only student can access
       "/student",
       "/classes/my-classes/student",
       "/profile",
-      "/dashboard",
     ],
     3: [
       // HOD routes - only HOD can access
       "/hod",
       "/profile",
-      "/dashboard",
     ],
     4: [
       // Examiner routes - only Examiner can access
       "/examiner",
       "/profile",
-      "/dashboard",
     ],
   };
 
