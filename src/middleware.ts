@@ -183,11 +183,6 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(`/classes/my-classes/${userRoleIdentifier}`, request.url));
   }
   
-  // Redirect /home to /home/{role}
-  if (pathname === "/home") {
-    return NextResponse.redirect(new URL(`/home/${userRoleIdentifier}`, request.url));
-  }
-
   // Define allowed route prefixes for each role
   // Routes are checked in order, so more specific routes should come first
   const roleRoutes: Record<number, string[]> = {
@@ -201,7 +196,6 @@ export function middleware(request: NextRequest) {
       // Lecturer routes - only lecturer can access
       "/lecturer",
       "/classes/my-classes/lecturer",
-      "/home/lecturer",
       "/profile",
       "/dashboard",
     ],
@@ -209,7 +203,6 @@ export function middleware(request: NextRequest) {
       // Student routes - only student can access
       "/student",
       "/classes/my-classes/student",
-      "/home/student",
       "/profile",
       "/dashboard",
     ],

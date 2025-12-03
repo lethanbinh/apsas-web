@@ -128,7 +128,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         throw new Error("Failed to process authentication token");
       }
 
-      const redirectPath = roleRedirects[userRole] || "/home/student";
+      const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
 
       console.log("Redirecting to:", redirectPath);
       console.log("User role is:", userRole, "which maps to:", redirectPath);
@@ -353,7 +353,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         userRole
       );
 
-      const redirectPath = roleRedirects[userRole] || "/home/student";
+      const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
       console.log("Redirecting to:", redirectPath);
       router.push(redirectPath);
       onSuccess?.();

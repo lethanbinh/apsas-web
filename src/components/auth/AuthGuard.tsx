@@ -45,7 +45,7 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       if (requireAuth && !isAuthenticated) {
         router.push('/login');
       } else if (!requireAuth && isAuthenticated) {
-        router.push('/home');
+        router.push('/classes/my-classes/student');
       }
     }
   }, [isAuthenticated, isLoading, requireAuth, router]);

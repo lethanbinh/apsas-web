@@ -97,7 +97,7 @@ export const Header: React.FC = () => {
         <Link
           href={
             !mounted || !user?.role
-              ? "/home"
+              ? "/classes/my-classes/student"
               : user.role === 0
                 ? "/admin/dashboard"
                 : user.role === 1
@@ -108,7 +108,7 @@ export const Header: React.FC = () => {
                       ? "/hod/semester-plans"
                       : user.role === 4
                         ? "/examiner/grading-groups"
-                        : "/home"
+                        : "/classes/my-classes/student"
           }
           className={styles.logoLink}
         >
