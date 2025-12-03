@@ -202,32 +202,64 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       return feedbackList;
     },
     enabled: open && !!lastSubmission?.id,
-      });
+  });
 
-  // Process feedback
+  // Get raw feedback text
+  const rawFeedbackText = useMemo(() => {
+    if (!feedbackList || feedbackList.length === 0) return null;
+    return feedbackList[0].feedbackText;
+  }, [feedbackList]);
+
+  // Check if feedback is already in JSON format
+  const isFeedbackJson = useMemo(() => {
+    if (!rawFeedbackText) return false;
+    const parsed = deserializeFeedback(rawFeedbackText);
+    return parsed !== null;
+  }, [rawFeedbackText]);
+
+  // Format feedback with Gemini API if it's not JSON
+  const { data: formattedFeedback, isLoading: isLoadingFormattedFeedback } = useQuery({
+    queryKey: ['formattedFeedback', 'gemini', rawFeedbackText],
+    queryFn: async () => {
+      if (!rawFeedbackText) return null;
+      // Check if it's already JSON format
+      const parsed = deserializeFeedback(rawFeedbackText);
+      if (parsed !== null) return null; // Already JSON, don't format
+      // Format with Gemini
+      return await geminiService.formatFeedback(rawFeedbackText);
+    },
+    enabled: open && !!rawFeedbackText && !isFeedbackJson,
+    staleTime: Infinity, // Cache forever since feedback doesn't change
+  });
+
+  // Process feedback - combine parsed JSON or Gemini formatted feedback
   const feedback = useMemo(() => {
     if (!feedbackList || feedbackList.length === 0) return defaultEmptyFeedback;
     
-        const existingFeedback = feedbackList[0];
-        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-        
-        // If deserialize returns null, it means it's plain text/markdown
-    // For now, put entire text into overallFeedback (Gemini parsing can be done later if needed)
-        if (parsedFeedback === null) {
-            parsedFeedback = {
-              overallFeedback: existingFeedback.feedbackText,
-              strengths: "",
-              weaknesses: "",
-              codeQuality: "",
-              algorithmEfficiency: "",
-              suggestionsForImprovement: "",
-              bestPractices: "",
-              errorHandling: "",
-            };
-          }
+    const existingFeedback = feedbackList[0];
+    let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+    
+    // If deserialize returns null, use Gemini formatted feedback if available
+    if (parsedFeedback === null) {
+      if (formattedFeedback) {
+        parsedFeedback = formattedFeedback;
+      } else {
+        // Fallback: put entire text into overallFeedback while loading
+        parsedFeedback = {
+          overallFeedback: existingFeedback.feedbackText,
+          strengths: "",
+          weaknesses: "",
+          codeQuality: "",
+          algorithmEfficiency: "",
+          suggestionsForImprovement: "",
+          bestPractices: "",
+          errorHandling: "",
+        };
+      }
+    }
     
     return parsedFeedback || defaultEmptyFeedback;
-  }, [feedbackList]);
+  }, [feedbackList, formattedFeedback]);
 
   // Determine assessmentTemplateId (similar to RequirementModal)
   const effectiveClassId = useMemo(() => {
@@ -410,7 +442,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return allQuestions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [papersData, template, questionsQueries, rubricsQueries, latestGradeItems]);
 
-  // Calculate loading state (after all queries are declared)
+  // Calculate loading state (after all queries are declared) - exclude formatted feedback loading
   const loading = useMemo(() => {
     return (
       isLoadingSubmissions ||
@@ -421,6 +453,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       rubricsQueries.some(q => q.isLoading)
     );
   }, [isLoadingSubmissions, isLoadingGradingSessions, isLoadingGradeItems, isLoadingFeedback, questionsQueries, rubricsQueries]);
+
+  // Separate loading state for feedback formatting
+  const isLoadingFeedbackFormatting = isLoadingFormattedFeedback;
 
   // Check if score is available
   const hasScore = () => {
@@ -859,7 +894,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
             )}
 
             <Card className={styles.feedbackCard}>
-              <Spin spinning={isLoadingFeedback}>
+              <Spin spinning={isLoadingFeedback || isLoadingFeedbackFormatting}>
               <Title level={3}>Detailed Feedback</Title>
               <Divider />
 

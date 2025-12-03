@@ -108,12 +108,22 @@ export default function MyClassesPage() {
       }
       
       if (activeSemesterCode) {
-        // Try exact match first
-        const exactMatch = allCourses.find(
-          (cls) => cls.semesterCode === activeSemesterCode || cls.semesterName === activeSemesterCode
+        // Try exact match by semesterCode first (most reliable)
+        const exactMatchByCode = allCourses.find(
+          (cls) => cls.semesterCode === activeSemesterCode
         );
-        if (exactMatch?.semesterName) {
-          setSelectedSemester(exactMatch.semesterName);
+        if (exactMatchByCode?.semesterName) {
+          setSelectedSemester(exactMatchByCode.semesterName);
+          setIsInitialLoad(false);
+          return;
+        }
+        
+        // Try exact match by semesterName
+        const exactMatchByName = allCourses.find(
+          (cls) => cls.semesterName === activeSemesterCode
+        );
+        if (exactMatchByName?.semesterName) {
+          setSelectedSemester(exactMatchByName.semesterName);
           setIsInitialLoad(false);
           return;
         }

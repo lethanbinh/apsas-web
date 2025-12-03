@@ -21,7 +21,6 @@ export default function ResetPasswordPage() {
           <div className="reset-password-form-section">
             <ResetPasswordForm />
           </div>
-
           {/* Right side - Illustration */}
           <div className="reset-password-illustration-section">
             <div className="login-illustration">

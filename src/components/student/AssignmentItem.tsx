@@ -491,77 +491,90 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </div>
           )}
 
-          {/* Your Submission - hidden for labs */}
+          {/* Your Submission - full section for assignments */}
           {!isLab && (
             <div className={styles.submissionSection}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
                 Your Submission
               </Title>
 
-            {lastSubmission && (
-              <Alert
-                message="Last Submission"
-                description={
-                  <div>
-                    <Text>
-                      Submitted on: {toVietnamTime(lastSubmission.submittedAt).format("DD MMM YYYY, HH:mm")}
-                    </Text>
-                    {lastSubmission.submissionFile && (
-                      <div style={{ marginTop: "8px" }}>
-                        <Text strong>File: </Text>
-                        <a
-                          href={lastSubmission.submissionFile.submissionUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {lastSubmission.submissionFile.name}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                }
-                type="info"
-                showIcon
-                icon={<CheckCircleOutlined />}
-                style={{ marginBottom: "16px" }}
-              />
-            )}
+              {lastSubmission && (
+                <Alert
+                  message="Last Submission"
+                  description={
+                    <div>
+                      <Text>
+                        Submitted on: {toVietnamTime(lastSubmission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                      </Text>
+                      {lastSubmission.submissionFile && (
+                        <div style={{ marginTop: "8px" }}>
+                          <Text strong>File: </Text>
+                          <a
+                            href={lastSubmission.submissionFile.submissionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {lastSubmission.submissionFile.name}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  }
+                  type="info"
+                  showIcon
+                  icon={<CheckCircleOutlined />}
+                  style={{ marginBottom: "16px" }}
+                />
+              )}
 
-            {!hasDeadline() ? (
-              <Alert
-                message="No Deadline Set"
-                description="This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting."
-                type="info"
-                showIcon
-                icon={<ClockCircleOutlined />}
-              />
-            ) : isDeadlinePassed() ? (
-              <Alert
-                message="Deadline Passed"
-                description="The submission deadline has passed. You can no longer submit."
-                type="warning"
-                showIcon
-                icon={<ClockCircleOutlined />}
-              />
-            ) : (
+              {!hasDeadline() ? (
+                <Alert
+                  message="No Deadline Set"
+                  description="This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting."
+                  type="info"
+                  showIcon
+                  icon={<ClockCircleOutlined />}
+                />
+              ) : isDeadlinePassed() ? (
+                <Alert
+                  message="Deadline Passed"
+                  description="The submission deadline has passed. You can no longer submit."
+                  type="warning"
+                  showIcon
+                  icon={<ClockCircleOutlined />}
+                />
+              ) : (
+                <Button
+                  variant="primary"
+                  size="large"
+                  onClick={() => setIsSubmitModalVisible(true)}
+                  disabled={!canSubmit()}
+                  className={styles.submitButton}
+                  icon={<UploadOutlined />}
+                >
+                  {lastSubmission ? "Resubmit Assignment" : "Submit Assignment"}
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Submit button only for labs */}
+          {isLab && (
+            <div style={{ marginTop: "16px" }}>
               <Button
                 variant="primary"
                 size="large"
                 onClick={() => setIsSubmitModalVisible(true)}
-                disabled={!canSubmit() || (isLab && submissionCount >= 3)}
+                disabled={!canSubmit() || submissionCount >= 3}
                 className={styles.submitButton}
                 icon={<UploadOutlined />}
               >
-                {isLab
-                  ? (submissionCount >= 3
-                    ? "Maximum Submissions Reached"
-                    : lastSubmission
-                      ? `Resubmit Lab (${submissionCount}/3)`
-                      : `Submit Lab (${submissionCount}/3)`)
-                  : (lastSubmission ? "Resubmit Assignment" : "Submit Assignment")
-                }
+                {submissionCount >= 3
+                  ? "Maximum Submissions Reached"
+                  : lastSubmission
+                    ? `Resubmit Lab (${submissionCount}/3)`
+                    : `Submit Lab (${submissionCount}/3)`}
               </Button>
-            )}
             </div>
           )}
         </>
