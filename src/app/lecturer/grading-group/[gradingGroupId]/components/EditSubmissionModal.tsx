@@ -15,7 +15,7 @@ import { Alert, App, Button, Card, Col, Collapse, Descriptions, Input, InputNumb
 import { HistoryOutlined, RobotOutlined, SaveOutlined } from "@ant-design/icons";
 import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -162,7 +162,7 @@ export function EditSubmissionModal({
     }
   }, [semesterDetail?.endDate]);
 
-  const updateRubricScore = (questionId: number, rubricId: number, score: number) => {
+  const updateRubricScore = useCallback((questionId: number, rubricId: number, score: number) => {
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
       ...prev,
@@ -171,9 +171,9 @@ export function EditSubmissionModal({
         [editKey]: score,
       },
     }));
-  };
+  }, []);
 
-  const updateQuestionComment = (questionId: number, comment: string) => {
+  const updateQuestionComment = useCallback((questionId: number, comment: string) => {
     setUserEdits((prev) => ({
       ...prev,
       rubricComments: {
@@ -181,7 +181,7 @@ export function EditSubmissionModal({
         [questionId]: comment,
       },
     }));
-  };
+  }, []);
 
   const handleSave = async () => {
     if (!submission || !user?.id) {
@@ -284,13 +284,29 @@ export function EditSubmissionModal({
     }
   };
 
+  const modalTitle = useMemo(() => {
+    return `Edit Submission - ${submission.studentCode} - ${submission.studentName}`;
+  }, [submission.studentCode, submission.studentName]);
+
+  const handleFeedbackChange = useCallback((field: keyof FeedbackData, value: string) => {
+    setFeedback((prev) => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleOpenGradingHistory = useCallback(() => {
+    setGradingHistoryModalVisible(true);
+  }, []);
+
+  const handleCloseGradingHistory = useCallback(() => {
+    setGradingHistoryModalVisible(false);
+  }, []);
+
   return (
     <Modal
       title={
         <div>
-          <Title level={4} style={{ margin: 0 }}>
-            Edit Submission - {submission.studentCode} - {submission.studentName}
-          </Title>
+          <h4 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+            {modalTitle}
+          </h4>
         </div>
       }
       open={visible}
@@ -323,7 +339,7 @@ export function EditSubmissionModal({
           saving={saving}
           onAutoGrading={handleAutoGrading}
           onSave={handleSave}
-          onOpenGradingHistory={() => setGradingHistoryModalVisible(true)}
+          onOpenGradingHistory={handleOpenGradingHistory}
           updateRubricScore={updateRubricScore}
           updateQuestionComment={updateQuestionComment}
           message={message}
@@ -333,9 +349,7 @@ export function EditSubmissionModal({
           feedback={feedback}
           loading={loadingFeedback}
           loadingAiFeedback={loadingAiFeedback}
-          onFeedbackChange={(field, value) => {
-            setFeedback((prev) => ({ ...prev, [field]: value }));
-          }}
+          onFeedbackChange={handleFeedbackChange}
           onSaveFeedback={handleSaveFeedback}
         />
       </Space>
@@ -343,7 +357,7 @@ export function EditSubmissionModal({
       {submission && (
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
-          onClose={() => setGradingHistoryModalVisible(false)}
+          onClose={handleCloseGradingHistory}
           submissionId={submission.id}
         />
       )}

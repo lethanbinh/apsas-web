@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { submissionFeedbackService } from "@/services/submissionFeedbackService";
 import { gradingService } from "@/services/gradingService";
@@ -70,6 +70,10 @@ export function useFeedbackOperations({
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [submissionFeedbackId, setSubmissionFeedbackIdLocal] = useState<number | null>(null);
+  
+  // Track processed feedback to avoid duplicate API calls
+  const processedFeedbackRef = useRef<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   // Fetch feedback
   const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
@@ -90,33 +94,51 @@ export function useFeedbackOperations({
       setSubmissionFeedbackIdLocal(existingFeedback.id);
       setSubmissionFeedbackId(existingFeedback.id);
       
+      // Check if we've already processed this feedback text
+      if (processedFeedbackRef.current === existingFeedback.feedbackText) {
+        return; // Already processed, skip
+      }
+      
       let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
       
       if (parsedFeedback === null) {
-        setLoadingFeedback(true);
-        geminiService.formatFeedback(existingFeedback.feedbackText)
-          .then((formatted) => {
-            setFeedback(formatted);
-            setLoadingFeedback(false);
-          })
-          .catch((error) => {
-            console.error("Failed to parse feedback with Gemini:", error);
-            setFeedback({
-              overallFeedback: existingFeedback.feedbackText,
-              strengths: "",
-              weaknesses: "",
-              codeQuality: "",
-              algorithmEfficiency: "",
-              suggestionsForImprovement: "",
-              bestPractices: "",
-              errorHandling: "",
+        // Only call API if not already processing and feedback text is different
+        if (!isProcessingRef.current && processedFeedbackRef.current !== existingFeedback.feedbackText) {
+          isProcessingRef.current = true;
+          processedFeedbackRef.current = existingFeedback.feedbackText;
+          setLoadingFeedback(true);
+          
+          geminiService.formatFeedback(existingFeedback.feedbackText)
+            .then((formatted) => {
+              setFeedback(formatted);
+              setLoadingFeedback(false);
+              isProcessingRef.current = false;
+            })
+            .catch((error) => {
+              console.error("Failed to parse feedback with Gemini:", error);
+              setFeedback({
+                overallFeedback: existingFeedback.feedbackText,
+                strengths: "",
+                weaknesses: "",
+                codeQuality: "",
+                algorithmEfficiency: "",
+                suggestionsForImprovement: "",
+                bestPractices: "",
+                errorHandling: "",
+              });
+              setLoadingFeedback(false);
+              isProcessingRef.current = false;
             });
-            setLoadingFeedback(false);
-          });
+        }
       } else {
+        // Valid parsed feedback, mark as processed
+        processedFeedbackRef.current = existingFeedback.feedbackText;
         setFeedback(parsedFeedback);
       }
     } else {
+      // Reset refs when no feedback
+      processedFeedbackRef.current = null;
+      isProcessingRef.current = false;
       setSubmissionFeedbackIdLocal(null);
       setSubmissionFeedbackId(null);
       setFeedback({

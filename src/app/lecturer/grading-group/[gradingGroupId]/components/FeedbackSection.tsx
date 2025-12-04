@@ -5,7 +5,7 @@ import { Button, Card, Collapse, Space, Spin, Typography } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 import { FeedbackFields } from "./FeedbackFields";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 interface FeedbackSectionProps {
   feedback: FeedbackData;
@@ -31,9 +31,9 @@ export function FeedbackSection({
           {
             key: "feedback",
             label: (
-              <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+              <h3 style={{ margin: 0, display: "flex", alignItems: "center", fontSize: '18px', fontWeight: 600 }}>
                 Detailed Feedback
-              </Title>
+              </h3>
             ),
             children: (
               <Spin spinning={loading || loadingAiFeedback}>

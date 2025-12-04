@@ -1,11 +1,9 @@
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { RubricItem } from "@/services/rubricItemService";
-import { Collapse, Divider, Table, Tag, Typography } from "antd";
+import { Collapse, Divider, Table, Tag } from "antd";
 import { Input } from "antd";
 import { getQuestionColumns } from "../utils/tableUtils";
 import type { MessageInstance } from "antd/es/message/interface";
-
-const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 export interface QuestionWithRubrics extends AssessmentQuestion {
@@ -69,7 +67,7 @@ export function QuestionsGradingSection({
         <div>
           {question.questionSampleInput && (
             <div style={{ marginBottom: 16 }}>
-              <Text strong>Sample Input:</Text>
+              <span style={{ fontWeight: 600 }}>Sample Input:</span>
               <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 4, overflow: "auto" }}>
                 {question.questionSampleInput}
               </pre>
@@ -77,7 +75,7 @@ export function QuestionsGradingSection({
           )}
           {question.questionSampleOutput && (
             <div style={{ marginBottom: 16 }}>
-              <Text strong>Sample Output:</Text>
+              <span style={{ fontWeight: 600 }}>Sample Output:</span>
               <pre style={{ background: "#f5f5f5", padding: 12, borderRadius: 4, overflow: "auto" }}>
                 {question.questionSampleOutput}
               </pre>
@@ -86,7 +84,9 @@ export function QuestionsGradingSection({
 
           <Divider />
 
-          <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
+          <h5 style={{ margin: 0, marginBottom: 16, fontSize: '16px', fontWeight: 600 }}>
+            Grading Criteria ({question.rubrics.length})
+          </h5>
           <Table
             columns={getQuestionColumns(question, handleRubricScoreChange, isSemesterPassed, message)}
             dataSource={question.rubrics}
@@ -99,9 +99,9 @@ export function QuestionsGradingSection({
           <Divider />
 
           <div style={{ marginTop: 16 }}>
-            <Text strong style={{ display: "block", marginBottom: 8 }}>
+            <span style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
               Comments
-            </Text>
+            </span>
             <TextArea
               rows={15}
               value={question.rubricComments?.[question.id] || ""}

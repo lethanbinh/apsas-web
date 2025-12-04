@@ -24,6 +24,10 @@ if (!GEMINI_API_KEY) {
   console.warn("⚠️ GEMINI_API_KEY is not set. Please set it in your .env.local file.");
 }
 
+// Cache for formatted feedback to avoid duplicate API calls
+const feedbackCache = new Map<string, FeedbackData>();
+const processingCache = new Set<string>();
+
 export class GeminiService {
   /**
    * Analyze feedback content to determine what sections are present
@@ -168,10 +172,29 @@ Remember:
    * @returns Formatted feedback data
    */
   async formatFeedback(rawFeedback: string): Promise<FeedbackData> {
-    // Generate dynamic prompt based on feedback content
-    const prompt = this.generateDynamicPrompt(rawFeedback);
+    // Check cache first
+    if (feedbackCache.has(rawFeedback)) {
+      return feedbackCache.get(rawFeedback)!;
+    }
+
+    // Check if already processing this feedback
+    if (processingCache.has(rawFeedback)) {
+      // Wait a bit and check cache again (in case another call finished)
+      await new Promise(resolve => setTimeout(resolve, 100));
+      if (feedbackCache.has(rawFeedback)) {
+        return feedbackCache.get(rawFeedback)!;
+      }
+      // If still processing, use fallback to avoid duplicate calls
+      return this.fallbackFormatFeedback(rawFeedback);
+    }
+
+    // Mark as processing
+    processingCache.add(rawFeedback);
 
     try {
+      // Generate dynamic prompt based on feedback content
+      const prompt = this.generateDynamicPrompt(rawFeedback);
+
       const response = await ai.models.generateContent({
         model: GEMINI_MODEL,
         contents: prompt,
@@ -195,7 +218,7 @@ Remember:
       const parsedData = JSON.parse(cleanedText) as FeedbackData;
 
       // Validate and ensure all fields exist
-      return {
+      const formattedFeedback: FeedbackData = {
         overallFeedback: parsedData.overallFeedback || "",
         strengths: parsedData.strengths || "",
         weaknesses: parsedData.weaknesses || "",
@@ -205,11 +228,28 @@ Remember:
         bestPractices: parsedData.bestPractices || "",
         errorHandling: parsedData.errorHandling || "",
       };
+
+      // Cache the result
+      feedbackCache.set(rawFeedback, formattedFeedback);
+      processingCache.delete(rawFeedback);
+
+      return formattedFeedback;
     } catch (error: any) {
+      processingCache.delete(rawFeedback);
       console.error("Error calling Gemini API:", error);
       
+      // Check if it's a quota/rate limit error
+      if (error?.error?.code === 429 || error?.status === "RESOURCE_EXHAUSTED") {
+        const retryDelay = error?.error?.details?.find((d: any) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo")?.retryDelay || "8s";
+        const quotaMessage = error?.error?.message || "Quota exceeded for Gemini API";
+        throw new Error(`Gemini API quota exceeded. ${quotaMessage} Please retry after ${retryDelay}.`);
+      }
+      
       // Fallback: Try to extract information from raw feedback
-      return this.fallbackFormatFeedback(rawFeedback);
+      const fallbackFeedback = this.fallbackFormatFeedback(rawFeedback);
+      // Cache fallback result to avoid retrying
+      feedbackCache.set(rawFeedback, fallbackFeedback);
+      return fallbackFeedback;
     }
   }
 

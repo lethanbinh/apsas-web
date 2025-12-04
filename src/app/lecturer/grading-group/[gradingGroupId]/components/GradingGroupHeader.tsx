@@ -1,7 +1,5 @@
-import { Button, Space, Typography } from "antd";
+import { Button, Space } from "antd";
 import { ArrowLeftOutlined, FileExcelOutlined, RobotOutlined, UploadOutlined } from "@ant-design/icons";
-
-const { Title } = Typography;
 
 interface GradingGroupHeaderProps {
   title: string;
@@ -30,9 +28,9 @@ export function GradingGroupHeader({
         <Button icon={<ArrowLeftOutlined />} onClick={onBack}>
           Back
         </Button>
-        <Title level={3} style={{ margin: 0 }}>
+        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 600, lineHeight: '32px' }}>
           {title}
-        </Title>
+        </h3>
       </Space>
       <Space>
         <Button

@@ -30,7 +30,7 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { FeedbackFields } from "./components/FeedbackFields";
 import { FeedbackHistoryModal } from "./components/FeedbackHistoryModal";
 import { GradingDetailsSection } from "./components/GradingDetailsSection";
@@ -614,40 +614,69 @@ export default function AssignmentGradingPage() {
     enabled: !!submissionId,
   });
 
+  // Track processed feedback to avoid duplicate API calls
+  const processedFeedbackRef = useRef<string | null>(null);
+  const isProcessingRef = useRef(false);
+  const [isFormattingFeedback, setIsFormattingFeedback] = useState(false);
+
   // Parse and set feedback
   useEffect(() => {
     if (feedbackList.length > 0) {
       const existingFeedback = feedbackList[0];
       setSubmissionFeedbackId(existingFeedback.id);
 
+      // Check if we've already processed this feedback text
+      if (processedFeedbackRef.current === existingFeedback.feedbackText) {
+        return; // Already processed, skip
+      }
+
       let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
 
       if (parsedFeedback === null) {
-        // Try to format with Gemini (async, but we'll handle it)
-        geminiService.formatFeedback(existingFeedback.feedbackText)
-          .then((formatted) => {
-            setFeedback(formatted);
-          })
-          .catch((error) => {
-            console.error("Failed to parse feedback with Gemini:", error);
-            setFeedback({
-              overallFeedback: existingFeedback.feedbackText,
-              strengths: "",
-              weaknesses: "",
-              codeQuality: "",
-              algorithmEfficiency: "",
-              suggestionsForImprovement: "",
-              bestPractices: "",
-              errorHandling: "",
+        // Only call API if not already processing and feedback text is different
+        if (!isProcessingRef.current && processedFeedbackRef.current !== existingFeedback.feedbackText) {
+          isProcessingRef.current = true;
+          processedFeedbackRef.current = existingFeedback.feedbackText;
+          setIsFormattingFeedback(true);
+          
+          // Try to format with Gemini (async, but we'll handle it)
+          geminiService.formatFeedback(existingFeedback.feedbackText)
+            .then((formatted) => {
+              setFeedback(formatted);
+              isProcessingRef.current = false;
+              setIsFormattingFeedback(false);
+            })
+            .catch((error) => {
+              console.error("Failed to parse feedback with Gemini:", error);
+              setFeedback({
+                overallFeedback: existingFeedback.feedbackText,
+                strengths: "",
+                weaknesses: "",
+                codeQuality: "",
+                algorithmEfficiency: "",
+                suggestionsForImprovement: "",
+                bestPractices: "",
+                errorHandling: "",
+              });
+              isProcessingRef.current = false;
+              setIsFormattingFeedback(false);
             });
-          });
+        }
       } else {
+        // Valid parsed feedback, mark as processed
+        processedFeedbackRef.current = existingFeedback.feedbackText;
         setFeedback(parsedFeedback);
+        setIsFormattingFeedback(false);
       }
+    } else {
+      // Reset refs when no feedback
+      processedFeedbackRef.current = null;
+      isProcessingRef.current = false;
+      setIsFormattingFeedback(false);
     }
   }, [feedbackList]);
 
-  const loadingFeedback = isLoadingFeedback;
+  const loadingFeedback = isLoadingFeedback || isFormattingFeedback;
 
   // Mutation for saving feedback
   const saveFeedbackMutation = useMutation({
@@ -1009,23 +1038,27 @@ export default function AssignmentGradingPage() {
                 ),
                 children: (
                   <Spin spinning={loadingFeedback || loadingAiFeedback}>
-                    <div>
-                      <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
-                        <Text type="secondary" style={{ display: "block" }}>
-                          Provide comprehensive feedback for the student's submission
-                        </Text>
-                        <Button
-                          type="primary"
-                          icon={<SaveOutlined />}
-                          onClick={handleSaveFeedback}
-                          disabled={loadingFeedback || loadingAiFeedback}
-                        >
-                          Save Feedback
-                        </Button>
-                      </Space>
-                      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                        <FeedbackFields feedbackData={feedback} onFeedbackChange={handleFeedbackChange} />
-                      </Space>
+                    <div style={{ minHeight: loadingFeedback || loadingAiFeedback ? 200 : 'auto' }}>
+                      {!loadingFeedback && !loadingAiFeedback ? (
+                        <>
+                          <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
+                            <Text type="secondary" style={{ display: "block" }}>
+                              Provide comprehensive feedback for the student's submission
+                            </Text>
+                            <Button
+                              type="primary"
+                              icon={<SaveOutlined />}
+                              onClick={handleSaveFeedback}
+                              disabled={loadingFeedback || loadingAiFeedback}
+                            >
+                              Save Feedback
+                            </Button>
+                          </Space>
+                          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                            <FeedbackFields feedbackData={feedback} onFeedbackChange={handleFeedbackChange} />
+                          </Space>
+                        </>
+                      ) : null}
                     </div>
                   </Spin>
                 ),

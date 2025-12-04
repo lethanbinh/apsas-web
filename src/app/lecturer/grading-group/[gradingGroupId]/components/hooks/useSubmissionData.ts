@@ -153,7 +153,8 @@ export function useSubmissionData({
       rubricScores: {},
       rubricComments: {},
     });
-  }, [submission.id, setUserEdits]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submission.id]);
 
   // Update questions with grade items data
   const questions = useMemo(() => {

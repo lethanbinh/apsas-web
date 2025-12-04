@@ -1,8 +1,7 @@
-import { Col, Input, Row, Typography } from "antd";
+import { Col, Input, Row } from "antd";
 import { ReactNode } from "react";
 import type { FeedbackData } from "@/services/geminiService";
 
-const { Title } = Typography;
 const { TextArea } = Input;
 
 interface FeedbackFieldsProps {
@@ -34,7 +33,9 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
         if (currentRow.length === 1) {
           elements.push(
             <div key={`field-${currentRow[0].key}`}>
-              <Title level={5}>{currentRow[0].label}</Title>
+              <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
+                {currentRow[0].label}
+              </h5>
               <TextArea
                 rows={currentRow[0].rows}
                 value={feedbackData[currentRow[0].key] || ""}
@@ -49,7 +50,9 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
               {currentRow.map((f) => (
                 <Col xs={24} md={12} key={f.key}>
                   <div>
-                    <Title level={5}>{f.label}</Title>
+                    <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
+                      {f.label}
+                    </h5>
                     <TextArea
                       rows={f.rows}
                       value={feedbackData[f.key] || ""}
@@ -67,7 +70,9 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
 
       elements.push(
         <div key={`field-${field.key}`}>
-          <Title level={5}>{field.label}</Title>
+          <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
+            {field.label}
+          </h5>
           <TextArea
             rows={field.rows}
             value={value}
@@ -83,7 +88,9 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
         if (currentRow.length === 1) {
           elements.push(
             <div key={`field-${currentRow[0].key}`}>
-              <Title level={5}>{currentRow[0].label}</Title>
+              <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
+                {currentRow[0].label}
+              </h5>
               <TextArea
                 rows={currentRow[0].rows}
                 value={feedbackData[currentRow[0].key] || ""}
@@ -98,7 +105,9 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
               {currentRow.map((f) => (
                 <Col xs={24} md={12} key={f.key}>
                   <div>
-                    <Title level={5}>{f.label}</Title>
+                    <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
+                      {f.label}
+                    </h5>
                     <TextArea
                       rows={f.rows}
                       value={feedbackData[f.key] || ""}

@@ -1,4 +1,4 @@
-import { Alert, Button, Col, Divider, Row, Space, Tag, Typography } from "antd";
+import { Alert, Button, Col, Divider, Row, Space, Tag } from "antd";
 import { HistoryOutlined, RobotOutlined, SaveOutlined } from "@ant-design/icons";
 import { QuestionsGradingSection } from "./QuestionsGradingSection";
 import type { QuestionWithRubrics } from "./QuestionsGradingSection";
@@ -7,11 +7,10 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import type { MessageInstance } from "antd/es/message/interface";
 import { GradingSession } from "@/services/gradingService";
+import { useCallback } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const { Title, Text } = Typography;
 
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
@@ -46,7 +45,7 @@ export function GradingDetailsSection({
   updateQuestionComment,
   message,
 }: GradingDetailsSectionProps) {
-  const handleRubricScoreChange = (questionId: number, rubricId: number, score: number | null, maxScore: number) => {
+  const handleRubricScoreChange = useCallback((questionId: number, rubricId: number, score: number | null, maxScore: number) => {
     if (score === null) {
       updateRubricScore(questionId, rubricId, 0);
     } else if (score > maxScore) {
@@ -55,11 +54,11 @@ export function GradingDetailsSection({
     } else {
       updateRubricScore(questionId, rubricId, score);
     }
-  };
+  }, [updateRubricScore, message]);
 
-  const handleRubricCommentChange = (questionId: number, rubricId: number, comment: string) => {
+  const handleRubricCommentChange = useCallback((questionId: number, rubricId: number, comment: string) => {
     updateQuestionComment(questionId, comment);
-  };
+  }, [updateQuestionComment]);
 
   return (
     <div>
@@ -73,13 +72,13 @@ export function GradingDetailsSection({
                 <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
                   <div style={{ marginBottom: 4 }}>
                     <Tag color="blue">{log.action}</Tag>
-                    <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
+                    <span style={{ fontSize: "12px", marginLeft: 8, color: "rgba(0, 0, 0, 0.45)" }}>
                       {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                    </Text>
+                    </span>
                   </div>
-                  <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
+                  <span style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
                     {log.details}
-                  </Text>
+                  </span>
                   {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
                 </div>
               ))}
@@ -93,12 +92,12 @@ export function GradingDetailsSection({
       <Row gutter={16}>
         <Col xs={24} md={6} lg={6}>
           <div>
-            <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            <span style={{ display: "block", marginBottom: 16, color: "rgba(0, 0, 0, 0.45)" }}>
               Total Questions: {questions.length}
-            </Text>
-            <Text type="secondary" style={{ display: "block", marginBottom: 16 }}>
+            </span>
+            <span style={{ display: "block", marginBottom: 16, color: "rgba(0, 0, 0, 0.45)" }}>
               Total Max Score: {maxScore.toFixed(2)}
-            </Text>
+            </span>
             <Space direction="vertical" style={{ width: "100%" }}>
               <Button
                 type="default"

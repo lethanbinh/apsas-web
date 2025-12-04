@@ -2,7 +2,7 @@
 
 import { Alert, App, Button, Card, Space, Spin, Typography } from "antd";
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
 import styles from "./page.module.css";
@@ -47,13 +47,18 @@ export default function GradingGroupPage() {
     return gradingGroupsData.find(g => g.id === gradingGroupId) || null;
   }, [gradingGroupsData, gradingGroupId]);
 
+  const title = useMemo(() => {
+    return gradingGroup?.assessmentTemplateName || "Grading Group";
+  }, [gradingGroup?.assessmentTemplateName]);
+
   // Handle grading group not found - only redirect after query has finished loading
   useEffect(() => {
     if (!gradingGroup && gradingGroupId && !isLoadingGradingGroups) {
       message.error("Grading group not found");
       router.back();
     }
-  }, [gradingGroup, gradingGroupId, isLoadingGradingGroups, message, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gradingGroup, gradingGroupId, isLoadingGradingGroups]);
 
   // Fetch all submissions in this grading group
   const { data: allSubmissionsData = [] } = useQuery({
@@ -185,19 +190,23 @@ export default function GradingGroupPage() {
     },
   });
 
-  const handleOpenEditModal = (submission: Submission) => {
+  const handleOpenEditModal = useCallback((submission: Submission) => {
     setSelectedSubmissionForEdit(submission);
     setEditSubmissionModalVisible(true);
-  };
+  }, []);
 
-  const handleUploadGradeSheet = () => {
+  const handleBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const handleUploadGradeSheet = useCallback(() => {
     if (!gradingGroup) return;
     setUploadFile(null);
     setUploadFileList([]);
     setUploadModalVisible(true);
-  };
+  }, [gradingGroup]);
 
-  const handleUploadSubmit = async () => {
+  const handleUploadSubmit = useCallback(async () => {
     if (!gradingGroup || !uploadFile) {
       message.warning("Please select a file to upload");
       return;
@@ -207,9 +216,9 @@ export default function GradingGroupPage() {
       gradingGroupId: gradingGroup.id,
       file: uploadFile,
     });
-  };
+  }, [gradingGroup, uploadFile, uploadGradeSheetMutation, message]);
 
-  const handleExportGradeReport = async () => {
+  const handleExportGradeReport = useCallback(async () => {
     if (!gradingGroup) return;
 
     try {
@@ -220,9 +229,9 @@ export default function GradingGroupPage() {
       console.error("Export error:", err);
       message.error(err.message || "Export failed. Please check browser console for details.");
     }
-  };
+  }, [gradingGroup, message]);
 
-  const handleBatchGrading = async () => {
+  const handleBatchGrading = useCallback(async () => {
     if (!gradingGroup || !gradingGroup.assessmentTemplateId) {
       message.error("Cannot find assessment template. Please contact administrator.");
       return;
@@ -277,7 +286,7 @@ export default function GradingGroupPage() {
     } finally {
       setBatchGradingLoading(false);
     }
-  };
+  }, [gradingGroup, submissions, message, queryClient]);
 
   const loading = isLoadingGradingGroups && !gradingGroup;
 
@@ -302,8 +311,8 @@ export default function GradingGroupPage() {
       <Card>
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <GradingGroupHeader
-            title={gradingGroup.assessmentTemplateName || "Grading Group"}
-            onBack={() => router.back()}
+            title={title}
+            onBack={handleBack}
             onExportGradeReport={handleExportGradeReport}
             onUploadGradeSheet={handleUploadGradeSheet}
             onBatchGrading={handleBatchGrading}
