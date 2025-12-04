@@ -16,9 +16,10 @@ import {
   UserOutlined,
   TrophyOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Space, Spin, Tabs, Select, Card } from "antd";
+import { Alert, Button, Space, Spin, Tabs, Select, Card, DatePicker } from "antd";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs, { Dayjs } from "dayjs";
 import AcademicTab from "./components/AcademicTab";
 import AssessmentsTab from "./components/AssessmentsTab";
 import GradingTab from "./components/GradingTab";
@@ -40,6 +41,9 @@ const AdminDashboardPage = () => {
   const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(undefined);
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  
+  const { RangePicker } = DatePicker;
 
   // Fetch filter options using TanStack Query
   const { data: classesRes } = useQuery({
@@ -75,15 +79,15 @@ const AdminDashboardPage = () => {
 
   const filtersLoading = false; // useQuery handles loading
 
-  // Fetch dashboard data using TanStack Query
+  // Fetch dashboard data using TanStack Query - include filters in query key
   const { data: overview, isLoading: overviewLoading } = useQuery({
-    queryKey: ['adminDashboard', 'overview'],
+    queryKey: ['adminDashboard', 'overview', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
     queryFn: () => adminDashboardService.getDashboardOverview(),
     refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
 
   const { data: chartData, isLoading: chartLoading } = useQuery({
-    queryKey: ['adminDashboard', 'chartData'],
+    queryKey: ['adminDashboard', 'chartData', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
     queryFn: () => adminDashboardService.getChartData(),
     refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
@@ -96,6 +100,7 @@ const AdminDashboardPage = () => {
     classId: selectedClassId,
     courseId: selectedCourseId,
     semesterCode: selectedSemesterCode,
+    dateRange: dateRange,
   };
 
   const handleRefresh = () => {
@@ -119,6 +124,7 @@ const AdminDashboardPage = () => {
           loading={loading}
           onRefresh={handleRefresh}
           filters={filterProps}
+          onDateRangeChange={setDateRange}
         />
       ),
     },
@@ -324,6 +330,16 @@ const AdminDashboardPage = () => {
                   label: s.semesterCode,
                   value: s.semesterCode,
                 }))}
+              />
+            </div>
+            <div>
+              <span style={{ marginRight: 8 }}>Date Range:</span>
+              <RangePicker
+                style={{ width: 250 }}
+                placeholder={["Start Date", "End Date"]}
+                value={dateRange}
+                onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null] | null)}
+                allowClear
               />
             </div>
           </Space>

@@ -64,7 +64,9 @@ interface OverviewTabProps {
     classId?: number;
     courseId?: number;
     semesterCode?: string;
+    dateRange?: [Dayjs | null, Dayjs | null] | null;
   };
+  onDateRangeChange?: (dateRange: [Dayjs | null, Dayjs | null] | null) => void;
 }
 
 const OverviewTab: React.FC<OverviewTabProps> = ({
@@ -73,9 +75,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   loading,
   onRefresh,
   filters,
+  onDateRangeChange,
 }) => {
   const { message } = App.useApp();
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const dateRange = filters?.dateRange || null;
   const [timeRange, setTimeRange] = useState<string>("all");
   const [exportLoading, setExportLoading] = useState(false);
 
@@ -171,23 +174,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
-  // Calculate date range based on timeRange selection
-  useEffect(() => {
-    if (timeRange === "today") {
-      setDateRange([dayjs().startOf("day"), dayjs().endOf("day")]);
-    } else if (timeRange === "week") {
-      setDateRange([dayjs().startOf("week"), dayjs().endOf("week")]);
-    } else if (timeRange === "month") {
-      setDateRange([dayjs().startOf("month"), dayjs().endOf("month")]);
-    } else if (timeRange === "semester") {
-      // Get current semester date range from overview if available
-      // For now, use last 4 months as semester approximation
-      setDateRange([dayjs().subtract(4, "month"), dayjs()]);
-    } else if (timeRange === "all") {
-      setDateRange(null);
-    }
-    // If custom, keep the dateRange as is
-  }, [timeRange]);
+  // Note: dateRange is now controlled by parent component via filters prop
+  // timeRange is kept for UI display purposes but doesn't control dateRange anymore
 
   // Filter chart data based on date range
   const filteredChartData = useMemo(() => {
@@ -256,7 +244,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               onChange={(value) => {
                 setTimeRange(value);
                 if (value !== "custom") {
-                  setDateRange(null);
+                  onDateRangeChange?.(null);
                 }
               }}
               style={{ width: 150 }}
@@ -274,7 +262,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               placeholder={["Start Date", "End Date"]}
               value={dateRange}
               onChange={(dates) => {
-                setDateRange(dates as [Dayjs | null, Dayjs | null] | null);
+                onDateRangeChange?.(dates as [Dayjs | null, Dayjs | null] | null);
                 if (dates) {
                   setTimeRange("custom");
                 }
@@ -286,7 +274,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {dateRange && (
             <Button
               onClick={() => {
-                setDateRange(null);
+                onDateRangeChange?.(null);
                 setTimeRange("all");
               }}
             >

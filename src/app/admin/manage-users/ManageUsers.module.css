@@ -65,6 +65,12 @@
   text-align: left;
 }
 
+.table-header th:first-child {
+  width: 50px;
+  padding: 1rem 0.5rem;
+  text-align: center;
+}
+
 .table-row {
   border-bottom: 1px solid #e5e7eb;
   /* border-b border-gray-200 */
@@ -87,6 +93,12 @@
   color: #4b5563;
   /* text-gray-700 */
   white-space: nowrap;
+}
+
+.table-row td:first-child {
+  width: 50px;
+  padding: 1rem 0.5rem;
+  text-align: center;
 }
 
 .sort-icon {

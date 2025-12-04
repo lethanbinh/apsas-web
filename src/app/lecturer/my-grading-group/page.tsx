@@ -26,6 +26,12 @@ import {
   FileTextOutlined,
   UploadOutlined
 } from "@ant-design/icons";
+import { GradingGroupFilters } from "./components/GradingGroupFilters";
+import { GradingGroupTable, FlatGradingGroup } from "./components/GradingGroupTable";
+import { flattenGradingGroups } from "./utils/flattenGradingGroups";
+import { downloadAllFiles } from "./utils/downloadUtils";
+import { exportGradeReport } from "./utils/exportGradeReportUtils";
+import { getTableColumns } from "./utils/tableColumns";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -94,7 +100,7 @@ const getStatusTag = (status: number) => {
   }
 };
 
-interface EnrichedSubmission extends Submission {
+export interface EnrichedSubmission extends Submission {
   courseName?: string;
   courseId?: number;
   semesterCode?: string;
@@ -851,154 +857,9 @@ const MySubmissionsPageContent = () => {
 
   const handleExportGradeReport = async (gradingGroup: GradingGroup) => {
     try {
-      messageApi.info("Preparing grade report...");
-
-      // Get all submissions for this grading group
-      const groupSubmissions = await submissionService.getSubmissionList({
-        gradingGroupId: gradingGroup.id,
-      });
-
-      if (groupSubmissions.length === 0) {
-        messageApi.warning("No submissions found for this grading group");
-        return;
-      }
-
-      // Get assessment template
-      if (!gradingGroup.assessmentTemplateId) {
-        messageApi.error("Assessment template not found");
-        return;
-      }
-
-      const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const assessmentTemplate = templatesRes.items.find(
-        (t) => t.id === gradingGroup.assessmentTemplateId
-      );
-
-      if (!assessmentTemplate) {
-        messageApi.error("Assessment template not found");
-        return;
-      }
-
-      // Get course element
-      if (!assessmentTemplate.courseElementId) {
-        messageApi.error("Course element not found");
-        return;
-      }
-
-      const courseElements = await courseElementService.getCourseElements({
-        pageNumber: 1,
-        pageSize: 1000,
-      });
-      const courseElement = courseElements.find(
-        (ce) => ce.id === assessmentTemplate.courseElementId
-      );
-
-      if (!courseElement) {
-        messageApi.error("Course element not found");
-        return;
-      }
-
-      // Fetch questions and rubrics
-      let questions: AssessmentQuestion[] = [];
-      const rubrics: { [questionId: number]: RubricItem[] } = {};
-
-      try {
-        const papersRes = await assessmentPaperService.getAssessmentPapers({
-          assessmentTemplateId: assessmentTemplate.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-
-        for (const paper of papersRes.items) {
-          const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-            assessmentPaperId: paper.id,
-            pageNumber: 1,
-            pageSize: 100,
-          });
-          questions = [...questions, ...questionsRes.items];
-
-          for (const question of questionsRes.items) {
-            const rubricsRes = await rubricItemService.getRubricsForQuestion({
-              assessmentQuestionId: question.id,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-            rubrics[question.id] = rubricsRes.items;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch questions/rubrics:", err);
-      }
-
-      // Prepare report data
-      const reportData: GradeReportData[] = [];
-
-      for (const submission of groupSubmissions) {
-        let gradingSession = null;
-        let gradeItems: any[] = [];
-
-        try {
-          const gradingSessionsResult = await gradingService.getGradingSessions({
-            submissionId: submission.id,
-          });
-          if (gradingSessionsResult.items.length > 0) {
-            gradingSession = gradingSessionsResult.items.sort((a, b) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-            )[0];
-
-            const gradeItemsResult = await gradeItemService.getGradeItems({
-              gradingSessionId: gradingSession.id,
-            });
-            gradeItems = gradeItemsResult.items;
-          }
-        } catch (err) {
-          console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
-        }
-
-        // Determine assignment type from elementType field
-        // elementType: 0 = Assignment, 1 = Lab, 2 = PE (Practical Exam)
-        // Now only PE is used, so only elementType === 2 is "Practical Exam"
-        const assignmentType: "Assignment" | "Lab" | "Practical Exam" =
-          courseElement.elementType === 2 ? "Practical Exam" :
-            "Assignment";
-
-        reportData.push({
-          submission,
-          gradingSession,
-          gradeItems,
-          questions,
-          rubrics,
-          feedback: {
-            overallFeedback: "",
-            strengths: "",
-            weaknesses: "",
-            codeQuality: "",
-            algorithmEfficiency: "",
-            suggestionsForImprovement: "",
-            bestPractices: "",
-            errorHandling: "",
-          },
-          courseElementName: courseElement.name,
-          assignmentType: assignmentType,
-        });
-      }
-
-      if (reportData.length === 0) {
-        messageApi.warning("No data available to export");
-        return;
-      }
-
-      await exportGradeReportToExcel(
-        reportData,
-        `Grade_Report_${gradingGroup.assessmentTemplateName || gradingGroup.id}`
-      );
-      messageApi.success("Grade report exported successfully");
-    } catch (err: any) {
-      console.error("Export error:", err);
-      messageApi.error(err.message || "Export failed. Please check browser console for details.");
+      await exportGradeReport(gradingGroup, messageApi);
+    } catch (err) {
+      // Error already handled in exportGradeReport
     }
   };
 
@@ -1019,299 +880,13 @@ const MySubmissionsPageContent = () => {
 
 
   const handleDownloadAll = async () => {
-    if (groupedByCourse.length === 0) {
-      messageApi.warning("No data to download");
-      return;
-    }
-
     try {
-      messageApi.loading("Preparing download...", 0);
-
-      // Dynamic import JSZip
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-
-      // Process each group (course + semester)
-      for (const group of groupedByCourse) {
-        // Create folder name: CourseName_SemesterCode
-        const folderName = `${group.courseName.replace(/[^a-zA-Z0-9]/g, "_")}_${group.semesterCode}`;
-        const groupFolder = zip.folder(folderName);
-
-        if (!groupFolder) continue;
-
-        // Get unique grading groups for this course+semester
-        const uniqueGradingGroups = new Map<number, GradingGroup>();
-        group.submissions.forEach((sub) => {
-          if (sub.gradingGroup && !uniqueGradingGroups.has(sub.gradingGroup.id)) {
-            uniqueGradingGroups.set(sub.gradingGroup.id, sub.gradingGroup);
-          }
-        });
-
-        // Generate requirement Word file for each grading group (template)
-        for (const [gradingGroupId, gradingGroup] of uniqueGradingGroups) {
-          if (!gradingGroup.assessmentTemplateId) continue;
-
-          try {
-            // Fetch template details
-            const templateRes = await assessmentTemplateService.getAssessmentTemplates({
-              pageNumber: 1,
-              pageSize: 1000,
-            });
-            const template = templateRes.items.find(t => t.id === gradingGroup.assessmentTemplateId);
-
-            if (!template) continue;
-
-            // Fetch papers
-            const papersRes = await assessmentPaperService.getAssessmentPapers({
-              assessmentTemplateId: gradingGroup.assessmentTemplateId,
-              pageNumber: 1,
-              pageSize: 100,
-            });
-            const papers = papersRes.items;
-
-            // Fetch questions and rubrics for each paper
-            const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
-            const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-
-            for (const paper of papers) {
-              const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
-                assessmentPaperId: paper.id,
-                pageNumber: 1,
-                pageSize: 100,
-              });
-              const sortedQuestions = [...questionsRes.items].sort((a, b) =>
-                (a.questionNumber || 0) - (b.questionNumber || 0)
-              );
-              questionsMap[paper.id] = sortedQuestions;
-
-              for (const question of sortedQuestions) {
-                const rubricsRes = await rubricItemService.getRubricsForQuestion({
-                  assessmentQuestionId: question.id,
-                  pageNumber: 1,
-                  pageSize: 100,
-                });
-                rubricsMap[question.id] = rubricsRes.items;
-              }
-            }
-
-            // Generate Word document
-            const docxModule = await import("docx");
-            const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
-
-            const docSections = [];
-            docSections.push(
-              new Paragraph({
-                text: template.name || gradingGroup.assessmentTemplateName || "Requirement",
-                heading: HeadingLevel.TITLE,
-                alignment: AlignmentType.CENTER,
-              })
-            );
-            if (template.description) {
-              docSections.push(
-                new Paragraph({ text: template.description, style: "italic" })
-              );
-            }
-            docSections.push(new Paragraph({ text: " " }));
-
-            // Add papers, questions, and rubrics
-            for (const paper of papers) {
-              docSections.push(
-                new Paragraph({
-                  text: paper.name || `Paper ${paper.id}`,
-                  heading: HeadingLevel.HEADING_1,
-                })
-              );
-              if (paper.description) {
-                docSections.push(new Paragraph({ text: paper.description }));
-              }
-              docSections.push(new Paragraph({ text: " " }));
-
-              const questions = questionsMap[paper.id] || [];
-              for (const [index, question] of questions.entries()) {
-                docSections.push(
-                  new Paragraph({
-                    text: `Question ${question.questionNumber || index + 1}: ${question.questionText || ""}`,
-                    heading: HeadingLevel.HEADING_2,
-                  })
-                );
-                if (question.score) {
-                  docSections.push(
-                    new Paragraph({
-                      children: [
-                        new TextRun({ text: "Score: ", bold: true }),
-                        new TextRun(question.score.toString()),
-                      ],
-                    })
-                  );
-                }
-                if (question.questionSampleInput) {
-                  docSections.push(new Paragraph({ text: " " }));
-                  docSections.push(
-                    new Paragraph({
-                      children: [new TextRun({ text: "Sample Input: ", bold: true })],
-                    })
-                  );
-                  docSections.push(new Paragraph({ text: question.questionSampleInput }));
-                }
-                if (question.questionSampleOutput) {
-                  docSections.push(new Paragraph({ text: " " }));
-                  docSections.push(
-                    new Paragraph({
-                      children: [new TextRun({ text: "Sample Output: ", bold: true })],
-                    })
-                  );
-                  docSections.push(new Paragraph({ text: question.questionSampleOutput }));
-                }
-
-                // Add rubrics
-                const rubrics = rubricsMap[question.id] || [];
-                if (rubrics.length > 0) {
-                  docSections.push(new Paragraph({ text: " " }));
-                  docSections.push(
-                    new Paragraph({
-                      children: [new TextRun({ text: "Rubrics: ", bold: true })],
-                    })
-                  );
-                  for (const rubric of rubrics) {
-                    docSections.push(
-                      new Paragraph({
-                        children: [
-                          new TextRun({ text: `- ${rubric.description || ""}`, bold: false }),
-                        ],
-                      })
-                    );
-                    if (rubric.input) {
-                      docSections.push(
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: "  Input: ", bold: true }),
-                            new TextRun(rubric.input),
-                          ],
-                        })
-                      );
-                    }
-                    if (rubric.output) {
-                      docSections.push(
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: "  Output: ", bold: true }),
-                            new TextRun(rubric.output),
-                          ],
-                        })
-                      );
-                    }
-                    if (rubric.score) {
-                      docSections.push(
-                        new Paragraph({
-                          children: [
-                            new TextRun({ text: "  Score: ", bold: true }),
-                            new TextRun(rubric.score.toString()),
-                          ],
-                        })
-                      );
-                    }
-                  }
-                }
-                docSections.push(new Paragraph({ text: " " }));
-              }
-            }
-
-            const doc = new Document({
-              sections: [{ properties: {}, children: docSections }],
-            });
-
-            const wordBlob = await Packer.toBlob(doc);
-            const templateName = gradingGroup.assessmentTemplateName || `Template_${gradingGroupId}`;
-            const requirementFolder = groupFolder.folder(`Requirements_${templateName.replace(/[^a-zA-Z0-9]/g, "_")}`);
-            if (requirementFolder) {
-              requirementFolder.file(`${templateName.replace(/[^a-zA-Z0-9]/g, "_")}_Requirement.docx`, wordBlob);
-
-              // Also download assessment files if any
-              try {
-                const filesRes = await assessmentFileService.getFilesForTemplate({
-                  assessmentTemplateId: gradingGroup.assessmentTemplateId,
-                  pageNumber: 1,
-                  pageSize: 1000,
-                });
-
-                if (filesRes.items.length > 0) {
-                  for (const file of filesRes.items) {
-                    try {
-                      const response = await fetch(file.fileUrl);
-                      if (response.ok) {
-                        const blob = await response.blob();
-                        requirementFolder.file(file.name, blob);
-                      }
-                    } catch (err) {
-                      console.error(`Failed to download assessment file ${file.name}:`, err);
-                    }
-                  }
-                }
-              } catch (err) {
-                console.error(`Failed to fetch assessment files:`, err);
-              }
-            }
-          } catch (err) {
-            console.error(`Failed to generate requirement for template ${gradingGroup.assessmentTemplateId}:`, err);
-          }
-        }
-
-        // Download submissions for this group
-        const submissionsFolder = groupFolder.folder("Submissions");
-        if (submissionsFolder) {
-          for (const sub of group.submissions) {
-            if (sub.submissionFile?.submissionUrl) {
-              try {
-                // Try to download submission file
-                const response = await fetch(sub.submissionFile.submissionUrl, {
-                  method: 'GET',
-                  headers: {
-                    'Accept': '*/*',
-                  },
-                });
-
-                if (response.ok) {
-                  const blob = await response.blob();
-                  const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
-                  submissionsFolder.file(fileName, blob);
-                } else {
-                  console.warn(`Failed to download submission ${sub.id}: HTTP ${response.status}`);
-                  // Create a placeholder file to indicate missing submission
-                  const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_MISSING_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
-                  submissionsFolder.file(fileName, new Blob([`Submission file not available. URL: ${sub.submissionFile.submissionUrl}`], { type: 'text/plain' }));
-                }
-              } catch (err) {
-                console.error(`Failed to download submission ${sub.id}:`, err);
-                // Create a placeholder file to indicate error
-                const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_ERROR_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
-                submissionsFolder.file(fileName, new Blob([`Error downloading submission: ${err}`], { type: 'text/plain' }));
-              }
-            } else {
-              // No submission file URL
-              const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_NO_FILE.txt`;
-              submissionsFolder.file(fileName, new Blob([`No submission file available for submission ID: ${sub.id}`], { type: 'text/plain' }));
-            }
-          }
-        }
-      }
-
-      // Generate zip file
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Grading_${new Date().toISOString().split("T")[0]}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      messageApi.destroy();
-      messageApi.success("Download completed successfully");
-    } catch (err: any) {
-      console.error("Failed to download:", err);
-      messageApi.destroy();
-      messageApi.error(err.message || "Failed to download files");
+      await downloadAllFiles({
+        groupedByCourse,
+        messageApi,
+      });
+    } catch (err) {
+      // Error already handled in downloadAllFiles
     }
   };
 
@@ -1382,199 +957,17 @@ const MySubmissionsPageContent = () => {
   // Flatten all grading groups into a single array for table
   // Group by Course, Template, Semester - merge submissions from multiple grading groups
   const flatGradingGroups = useMemo(() => {
-    // Use a composite key object to avoid string splitting issues
-    interface GroupKey {
-      courseId: number;
-      templateId: number;
-      semesterCode: string;
-    }
-
-    const keyToString = (key: GroupKey): string => {
-      return `${key.courseId}|${key.templateId}|${key.semesterCode}`;
-    };
-
-    const groupedMap = new Map<string, {
-      key: string; // Unique key for this grouped item
-      id: number; // Use the latest grading group ID
-      courseCode: string;
-      courseName: string;
-      templateName: string;
-      semesterCode: string;
-      submissionCount: number;
-      gradingGroupIds: number[]; // All grading group IDs that match
-      gradingGroup: GradingGroup; // Latest grading group
-      isSemesterPassed: boolean; // Whether the semester has ended
-    }>();
-
-    // First pass: collect all unique keys
-    const allKeys = new Map<string, GroupKey>();
-    gradingGroups.forEach((gradingGroup) => {
-      const courseInfo = gradingGroupToCourseMap[gradingGroup.id];
-      const semesterCode = gradingGroupToSemesterMap[gradingGroup.id];
-      const templateId = gradingGroup.assessmentTemplateId;
-
-      if (courseInfo && semesterCode && templateId !== null && templateId !== undefined) {
-        const key: GroupKey = {
-          courseId: courseInfo.courseId,
-          templateId: templateId,
-          semesterCode: semesterCode,
-        };
-        const keyStr = keyToString(key);
-        if (!allKeys.has(keyStr)) {
-          allKeys.set(keyStr, key);
-        }
-      }
-    });
-
-    // Second pass: process each unique key and group matching grading groups
-    allKeys.forEach((key, keyStr) => {
-      // Find all grading groups that match this key (Course, Template, Semester)
-      const matchingGroups = gradingGroups.filter(g => {
-        const gCourseInfo = gradingGroupToCourseMap[g.id];
-        const gSemesterCode = gradingGroupToSemesterMap[g.id];
-        const gTemplateId = g.assessmentTemplateId;
-        // Ensure strict comparison with type conversion
-        return gCourseInfo?.courseId === key.courseId &&
-          String(gSemesterCode) === String(key.semesterCode) &&
-          Number(gTemplateId) === Number(key.templateId);
-      });
-
-      if (matchingGroups.length === 0) return;
-
-      // Get the latest grading group (by createdAt)
-      const latestGroup = matchingGroups.reduce((latest, current) => {
-        const latestDate = latest.createdAt ? new Date(latest.createdAt).getTime() : 0;
-        const currentDate = current.createdAt ? new Date(current.createdAt).getTime() : 0;
-        return currentDate > latestDate ? current : latest;
-      });
-
-      const courseInfo = gradingGroupToCourseMap[latestGroup.id];
-      if (!courseInfo) return;
-
-      // Get all matching group IDs
-      const matchingGroupIds = matchingGroups.map(g => g.id);
-
-      // Count unique students (latest submission per student) across all matching groups
-      const studentSubmissions = new Map<number, EnrichedSubmission>();
-      enrichedSubmissions.forEach((sub) => {
-        if (matchingGroupIds.includes(sub.gradingGroupId || -1) && sub.studentId) {
-          const existing = studentSubmissions.get(sub.studentId);
-          if (!existing) {
-            studentSubmissions.set(sub.studentId, sub);
-          } else {
-            const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-            const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
-            if (currentDate > existingDate || (currentDate === existingDate && sub.id > existing.id)) {
-              studentSubmissions.set(sub.studentId, sub);
-            }
-          }
-        }
-      });
-
-      // Check if semester has passed
-      const semesterDetail = semesters.find((s) => s.semesterCode === key.semesterCode);
-      const semesterEndDate = semesterDetail?.endDate;
-      const semesterPassed = isSemesterPassed(semesterEndDate);
-
-      groupedMap.set(keyStr, {
-        key: keyStr, // Use the composite key as unique identifier
-        id: latestGroup.id,
-        courseCode: courseInfo.courseName.split(' - ')[0] || courseInfo.courseName,
-        courseName: courseInfo.courseName,
-        templateName: latestGroup.assessmentTemplateName || `Template ${latestGroup.id}`,
-        semesterCode: key.semesterCode,
-        submissionCount: studentSubmissions.size,
-        gradingGroupIds: matchingGroupIds,
-        gradingGroup: latestGroup,
-        isSemesterPassed: semesterPassed,
-      });
-    });
-
-    // Apply filters to the grouped results
-    let filtered = Array.from(groupedMap.values());
-
-    // Filter by selected semester
-    if (selectedSemester !== undefined) {
-      const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
-      const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
-      if (selectedSemesterCode) {
-        filtered = filtered.filter(g => g.semesterCode === selectedSemesterCode);
-      }
-    }
-
-    // Filter by selected course
-    if (selectedCourseId !== undefined) {
-      filtered = filtered.filter(g => {
-        // Get course info from the grading group in the grouped item
-        const group = gradingGroups.find(gg => g.gradingGroupIds.includes(gg.id));
-        if (!group) return false;
-        const courseInfo = gradingGroupToCourseMap[group.id];
-        return courseInfo?.courseId === selectedCourseId;
-      });
-    }
-
-    // Filter by selected template
-    if (selectedTemplateId !== undefined) {
-      filtered = filtered.filter(g => {
-        // Get template ID from the grading group in the grouped item
-        const group = gradingGroups.find(gg => g.gradingGroupIds.includes(gg.id));
-        return group?.assessmentTemplateId === selectedTemplateId;
-      });
-    }
-
-    return filtered;
+    return flattenGradingGroups(
+      gradingGroups,
+      gradingGroupToCourseMap,
+      gradingGroupToSemesterMap,
+      enrichedSubmissions,
+      semesters,
+      selectedSemester,
+      selectedCourseId,
+      selectedTemplateId
+    );
   }, [gradingGroups, gradingGroupToCourseMap, gradingGroupToSemesterMap, enrichedSubmissions, selectedSemester, selectedCourseId, selectedTemplateId, semesters]);
-
-  const gradingGroupColumns: ColumnsType<typeof flatGradingGroups[0]> = useMemo(() => [
-    {
-      title: "Course",
-      key: "course",
-      width: 200,
-      render: (_, record) => (
-        <div>
-          <Text strong style={{ fontSize: 14 }}>{record.courseCode}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.courseName}
-          </Text>
-        </div>
-      ),
-    },
-    {
-      title: "Template",
-      dataIndex: "templateName",
-      key: "template",
-      width: 200,
-      render: (name) => <Text strong>{name}</Text>,
-    },
-    {
-      title: "Semester",
-      dataIndex: "semesterCode",
-      key: "semester",
-      width: 120,
-      render: (semester) => semester ? (
-        <Tag color="purple">{semester}</Tag>
-      ) : (
-        <Text type="secondary">N/A</Text>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      width: 150,
-      fixed: "right",
-      render: (_, record) => (
-        <Button
-          type="primary"
-          onClick={() => router.push(`/lecturer/grading-group/${record.id}`)}
-          size="small"
-          disabled={record.isSemesterPassed}
-        >
-          Manage
-        </Button>
-      ),
-    },
-  ], [router]);
 
   return (
     <div className={styles.wrapper}>
@@ -1608,77 +1001,17 @@ const MySubmissionsPageContent = () => {
         />
       ) : (
         <>
-          {/* Filter Section */}
-          <Card style={{ marginBottom: 16 }}>
-            <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-              <Text strong style={{ fontSize: 16 }}>Filters</Text>
-              <Space wrap>
-                <div>
-                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
-                    Semester
-                  </Text>
-                  <Select
-                    style={{ width: 200 }}
-                    placeholder="Select semester"
-                    value={selectedSemester}
-                    onChange={(value) => {
-                      setSelectedSemester(value);
-                      setSelectedCourseId(undefined);
-                      setSelectedTemplateId(undefined);
-                    }}
-                    allowClear
-                  >
-                    {semesters.map((sem) => (
-                      <Select.Option key={sem.id} value={Number(sem.id)}>
-                        {sem.semesterCode}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
-                    Course
-                  </Text>
-                  <Select
-                    style={{ width: 200 }}
-                    placeholder="Select course"
-                    value={selectedCourseId}
-                    onChange={(value) => {
-                      setSelectedCourseId(value);
-                      setSelectedTemplateId(undefined);
-                    }}
-                    allowClear
-                    disabled={selectedSemester === undefined}
-                  >
-                    {availableCourses.map((course) => (
-                      <Select.Option key={course.courseId} value={course.courseId}>
-                        {course.courseName}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <Text type="secondary" style={{ display: "block", marginBottom: 4 }}>
-                    Template
-                  </Text>
-                  <Select
-                    style={{ width: 200 }}
-                    placeholder="Select template"
-                    value={selectedTemplateId}
-                    onChange={setSelectedTemplateId}
-                    allowClear
-                    disabled={selectedCourseId === undefined}
-                  >
-                    {availableTemplates.map((template) => (
-                      <Select.Option key={template.id} value={template.id}>
-                        {template.name}
-                      </Select.Option>
-                    ))}
-                  </Select>
-                </div>
-              </Space>
-            </Space>
-          </Card>
+          <GradingGroupFilters
+            semesters={semesters}
+            availableCourses={availableCourses}
+            availableTemplates={availableTemplates}
+            selectedSemester={selectedSemester}
+            selectedCourseId={selectedCourseId}
+            selectedTemplateId={selectedTemplateId}
+            onSemesterChange={setSelectedSemester}
+            onCourseChange={setSelectedCourseId}
+            onTemplateChange={setSelectedTemplateId}
+          />
 
           <Card
             title={
@@ -1687,24 +1020,7 @@ const MySubmissionsPageContent = () => {
               </Space>
             }
           >
-            {flatGradingGroups.length === 0 ? (
-              <Empty
-                description="No grading groups found"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            ) : (
-              <Table
-                columns={gradingGroupColumns}
-                dataSource={flatGradingGroups}
-                rowKey="key"
-                pagination={{
-                  pageSize: 10,
-                  showSizeChanger: true,
-                  showTotal: (total) => `Total ${total} grading groups`,
-                }}
-                scroll={{ x: 1000 }}
-              />
-            )}
+            <GradingGroupTable dataSource={flatGradingGroups} />
           </Card>
         </>
       )}

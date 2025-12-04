@@ -20,7 +20,7 @@ export class AccountService {
   }
 
   async deleteAccount(id: number): Promise<void> {
-    await apiService.delete(`${API_ENDPOINTS.ADMIN.DELETE}/${id}`);
+    await apiService.delete(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}`);
   }
 
   async updateAccount(id: number, userData: any): Promise<void> {
