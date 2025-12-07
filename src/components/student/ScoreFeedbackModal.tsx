@@ -237,27 +237,27 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     if (!feedbackList || feedbackList.length === 0) return defaultEmptyFeedback;
     
     const existingFeedback = feedbackList[0];
-    let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-    
+        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+        
     // If deserialize returns null, use Gemini formatted feedback if available
-    if (parsedFeedback === null) {
+        if (parsedFeedback === null) {
       if (formattedFeedback) {
         parsedFeedback = formattedFeedback;
       } else {
         // Fallback: put entire text into overallFeedback while loading
-        parsedFeedback = {
-          overallFeedback: existingFeedback.feedbackText,
-          strengths: "",
-          weaknesses: "",
-          codeQuality: "",
-          algorithmEfficiency: "",
-          suggestionsForImprovement: "",
-          bestPractices: "",
-          errorHandling: "",
-        };
-      }
-    }
-    
+            parsedFeedback = {
+              overallFeedback: existingFeedback.feedbackText,
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
+            };
+          }
+        }
+        
     return parsedFeedback || defaultEmptyFeedback;
   }, [feedbackList, formattedFeedback]);
 

@@ -78,7 +78,7 @@ export class AdminDashboardService {
       ]);
 
       const users = usersData.status === 'fulfilled' ? usersData.value : getDefaultUserStats();
-
+      
       // Get detailed academic stats
       const academicDetailed = await academicStatsService.getDetailedAcademicStats();
       const academic: AcademicStats = {
@@ -98,7 +98,7 @@ export class AdminDashboardService {
         lecturerWorkload: academicDetailed.lecturerWorkload || [],
         studentToLecturerRatio: academicDetailed.studentToLecturerRatio || 0,
       };
-
+      
       // Get detailed assessment stats
       const assessmentDetailed = await assessmentStatsService.getDetailedAssessmentStats();
       const baseAssessments = assessmentsData.status === 'fulfilled' ? assessmentsData.value : getDefaultAssessmentStats();
@@ -111,7 +111,7 @@ export class AdminDashboardService {
         topAssessmentsBySubmissions: assessmentDetailed.topAssessmentsBySubmissions || [],
         upcomingDeadlines: assessmentDetailed.upcomingDeadlines || [],
       };
-
+      
       const submissions = submissionsData.status === 'fulfilled' ? submissionsData.value : getDefaultSubmissionStats();
 
       // Get detailed grading stats
@@ -149,7 +149,7 @@ export class AdminDashboardService {
    */
   async getChartData(): Promise<ChartData> {
     try {
-      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] =
+      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] = 
         await Promise.allSettled([
           userStatsService.getUserGrowthData(),
           chartDataService.getSemesterActivityData(),
@@ -185,7 +185,7 @@ export class AdminDashboardService {
   async getRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
     try {
       const activities: RecentActivity[] = [];
-
+      
       // Get recent users
       const { users } = await adminService.getAccountList(1, 20);
       users.slice(0, 5).forEach((user) => {
@@ -243,7 +243,7 @@ export class AdminDashboardService {
   async getPendingTasks(): Promise<PendingTask[]> {
     try {
       const tasks: PendingTask[] = [];
-
+      
       // Get pending assign requests
       const requests = await adminService.getApprovalList(1, 100);
       requests.items
@@ -346,10 +346,10 @@ export class AdminDashboardService {
       }));
 
       // Calculate average students per class
-      const totalStudents = classes.classes.reduce((sum, cls) =>
+      const totalStudents = classes.classes.reduce((sum, cls) => 
         sum + parseInt(cls.studentCount || '0', 10), 0);
-      const averageStudentsPerClass = classes.classes.length > 0
-        ? Math.round(totalStudents / classes.classes.length)
+      const averageStudentsPerClass = classes.classes.length > 0 
+        ? Math.round(totalStudents / classes.classes.length) 
         : 0;
 
       // Find classes without students

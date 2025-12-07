@@ -409,11 +409,11 @@ export const LecturerTaskContent = ({
               // Allow selecting existing template
               return (
                 <Card title="Select Existing Template">
-                  <Alert
-                    message="Template Already Exists"
+            <Alert
+              message="Template Already Exists"
                     description={`This course element already has ${otherTemplates.length} template(s) for other tasks. Please select an existing template to use.`}
-                    type="warning"
-                    showIcon
+              type="warning"
+              showIcon
                     style={{ marginBottom: 16 }}
                   />
                   <Select
@@ -428,7 +428,7 @@ export const LecturerTaskContent = ({
                       </Select.Option>
                     ))}
                   </Select>
-                </Card>
+                        </Card>
               );
             }
             // No template exists, allow creation

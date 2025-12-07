@@ -194,11 +194,11 @@ const ManageUsersPageContent: React.FC = () => {
 
   const handleEditOk = async (values: UserUpdatePayload, role: Role) => {
     if (editingUser) {
-      const updatePayload = {
-        phoneNumber: (values as UserUpdatePayload).phoneNumber,
-        fullName: (values as UserUpdatePayload).fullName,
-        address: (values as UserUpdatePayload).address,
-      };
+        const updatePayload = {
+          phoneNumber: (values as UserUpdatePayload).phoneNumber,
+          fullName: (values as UserUpdatePayload).fullName,
+          address: (values as UserUpdatePayload).address,
+        };
       updateUserMutation.mutate({ userId: editingUser.id, payload: updatePayload });
     }
   };
@@ -239,8 +239,8 @@ const ManageUsersPageContent: React.FC = () => {
           description: `Please type "${expectedText}" to confirm deletion.`,
         });
         return;
-      }
-    } else {
+          }
+        } else {
       const expectedText = `DELETE ${usersToDelete.length}`;
       if (confirmText.trim() !== expectedText.trim() && confirmText.trim() !== "DELETE") {
         notification.error({
@@ -268,9 +268,9 @@ const ManageUsersPageContent: React.FC = () => {
       notification.error({
         message: "Delete Failed",
         description: "You cannot delete other admin accounts.",
-      });
-      return;
-    }
+        });
+        return;
+      }
 
     // Proceed with deletion
     deleteAccountMutation.mutate(accountIds);
@@ -360,7 +360,7 @@ const ManageUsersPageContent: React.FC = () => {
       {loading && !users ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <Spin size="large" />
-        </div>
+      </div>
       ) : error ? (
         <Alert
           message="Error"

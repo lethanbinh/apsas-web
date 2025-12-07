@@ -109,8 +109,8 @@ const GradingGroupsPageContent = () => {
 
   const allSubmissions = allSubmissionsData || [];
 
-  // Get unique classAssessmentIds from submissions
-  const classAssessmentIds = Array.from(
+      // Get unique classAssessmentIds from submissions
+      const classAssessmentIds = Array.from(
     new Set(allSubmissions.filter(s => s.classAssessmentId).map(s => s.classAssessmentId!))
   );
 
@@ -118,53 +118,53 @@ const GradingGroupsPageContent = () => {
   const { data: allClassAssessmentsRes } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
-      pageNumber: 1,
-      pageSize: 1000,
+        pageNumber: 1,
+        pageSize: 1000,
     }),
   });
-
+      
   const allClassAssessments = useMemo(() => {
     const map = new Map<number, ClassAssessment>();
     (allClassAssessmentsRes?.items || []).forEach(ca => {
-      if (classAssessmentIds.includes(ca.id)) {
+        if (classAssessmentIds.includes(ca.id)) {
         map.set(ca.id, ca);
-      }
-    });
+        }
+      });
     return map;
   }, [allClassAssessmentsRes, classAssessmentIds]);
 
   // Get unique assessmentTemplateIds
-  const assessmentTemplateIdsFromClassAssessments = Array.from(
+      const assessmentTemplateIdsFromClassAssessments = Array.from(
     new Set(Array.from(allClassAssessments.values()).map(ca => ca.assessmentTemplateId))
-  );
-  const assessmentTemplateIdsFromGroups = Array.from(
+      );
+      const assessmentTemplateIdsFromGroups = Array.from(
     new Set(allGroups.filter(g => g.assessmentTemplateId !== null).map(g => g.assessmentTemplateId!))
-  );
-  const allAssessmentTemplateIds = Array.from(
-    new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
-  );
+      );
+      const allAssessmentTemplateIds = Array.from(
+        new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
+      );
 
   // Fetch assessment templates
   const { data: allAssessmentTemplatesRes } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
-      pageNumber: 1,
-      pageSize: 1000,
+        pageNumber: 1,
+        pageSize: 1000,
     }),
   });
 
   const allAssessmentTemplates = useMemo(() => {
     const map = new Map<number, AssessmentTemplate>();
     (allAssessmentTemplatesRes?.items || []).forEach(template => {
-      if (allAssessmentTemplateIds.includes(template.id)) {
+        if (allAssessmentTemplateIds.includes(template.id)) {
         map.set(template.id, template);
-      }
-    });
+        }
+      });
     return map;
   }, [allAssessmentTemplatesRes, allAssessmentTemplateIds]);
 
   // Get unique courseElementIds
-  const courseElementIds = Array.from(
+      const courseElementIds = Array.from(
     new Set(Array.from(allAssessmentTemplates.values()).map(t => t.courseElementId))
   );
 
@@ -172,15 +172,15 @@ const GradingGroupsPageContent = () => {
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
-      pageNumber: 1,
-      pageSize: 1000,
+        pageNumber: 1,
+        pageSize: 1000,
     }),
   });
 
   const allCourseElements = useMemo(() => {
     const map = new Map<number, CourseElement>();
-    allCourseElementsRes.forEach(element => {
-      if (courseElementIds.includes(element.id)) {
+      allCourseElementsRes.forEach(element => {
+        if (courseElementIds.includes(element.id)) {
         map.set(element.id, element);
       }
     });
@@ -191,24 +191,24 @@ const GradingGroupsPageContent = () => {
   const gradingGroupToSemesterMap = useMemo(() => {
     const map = new Map<number, string>();
     allGroups.forEach(group => {
-      if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
+        if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
         const assessmentTemplate = allAssessmentTemplates.get(Number(group.assessmentTemplateId));
-        if (assessmentTemplate) {
+          if (assessmentTemplate) {
           const courseElement = allCourseElements.get(Number(assessmentTemplate.courseElementId));
-          if (courseElement && courseElement.semesterCourse && courseElement.semesterCourse.semester) {
-            const semesterCode = courseElement.semesterCourse.semester.semesterCode;
+            if (courseElement && courseElement.semesterCourse && courseElement.semesterCourse.semester) {
+              const semesterCode = courseElement.semesterCourse.semester.semesterCode;
             map.set(Number(group.id), semesterCode);
+            }
           }
         }
-      }
-    });
+      });
     return map;
   }, [allGroups, allAssessmentTemplates, allCourseElements]);
 
   // Get unique classIds
   const classIds = Array.from(new Set(Array.from(allClassAssessments.values()).map(ca => ca.classId)));
 
-  // Fetch classes
+      // Fetch classes
   const { data: classesData } = useQuery({
     queryKey: ['classes', 'byIds', classIds],
     queryFn: async () => {
@@ -236,7 +236,7 @@ const GradingGroupsPageContent = () => {
   // Map submission to enriched data with submission URL
   const enrichedSubmissionsMap = useMemo(() => {
     const map = new Map<number, Submission & { submissionUrl?: string; fileName?: string }>();
-
+    
     allSubmissions.forEach(sub => {
       map.set(sub.id, {
         ...sub,
@@ -335,10 +335,10 @@ const GradingGroupsPageContent = () => {
         templateId: number;
         templateName: string;
         lecturers: Map<number, {
-          lecturerId: number;
-          lecturerName: string;
-          lecturerCode: string | null;
-          groups: (GradingGroup & { subs: any[]; semesterCode?: string })[];
+      lecturerId: number;
+      lecturerName: string;
+      lecturerCode: string | null;
+      groups: (GradingGroup & { subs: any[]; semesterCode?: string })[];
         }>;
       }>;
     }>();
@@ -386,7 +386,7 @@ const GradingGroupsPageContent = () => {
 
       // Get enriched submissions for this group
       const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
-
+      
       // Convert to enriched format
       const subs = groupSubmissions.map((sub) => {
         const enriched = enrichedSubmissionsMap.get(sub.id);
@@ -881,36 +881,36 @@ const GradingGroupsPageContent = () => {
       <div className={styles.wrapper}>
         <div className={styles.header}>
           <div>
-            <Title
-              level={2}
-              style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
-            >
-              Teacher Assignment
-            </Title>
-            <Text type="secondary" style={{ fontSize: 14 }}>
-              Assign submissions to teachers for grading
-            </Text>
-          </div>
-          <Space>
+          <Title
+            level={2}
+            style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
+          >
+            Teacher Assignment
+          </Title>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            Assign submissions to teachers for grading
+          </Text>
+        </div>
+        <Space>
             {groupedByCourse.length > 0 && (
-              <Button
+          <Button
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadAll}
                 size="large"
               >
                 Download All
-              </Button>
+          </Button>
             )}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setIsCreateModalOpen(true)}
-              size="large"
-            >
-              Assign Teacher
-            </Button>
-          </Space>
-        </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsCreateModalOpen(true)}
+            size="large"
+          >
+            Assign Teacher
+          </Button>
+        </Space>
+      </div>
 
         <GradingGroupFilters
           availableSemesters={availableSemesters}
@@ -935,42 +935,42 @@ const GradingGroupsPageContent = () => {
         />
 
         {/* Main Content - Flat Table Design */}
-        <Card
-          title={
-            <Space>
+          <Card
+            title={
+              <Space>
               <Text strong style={{ fontSize: 18 }}>Grading Groups</Text>
-            </Space>
-          }
-        >
+                              </Space>
+                            }
+                          >
           <GradingGroupTable
             dataSource={flattenGradingGroups(groupedByCourse)}
             onAssign={handleOpenAssign}
             onDelete={handleDeleteGroup}
-          />
-        </Card>
+                            />
+                          </Card>
 
-        {isCreateModalOpen && (
-          <CreateGradingGroupModal
-            open={isCreateModalOpen}
-            onCancel={handleModalCancel}
-            onOk={handleModalOk}
-            allLecturers={allLecturers}
-            existingGroups={allGroups}
-            gradingGroupToSemesterMap={gradingGroupToSemesterMap}
-            assessmentTemplatesMap={allAssessmentTemplates}
-            courseElementsMap={allCourseElements}
-          />
-        )}
+      {isCreateModalOpen && (
+        <CreateGradingGroupModal
+          open={isCreateModalOpen}
+          onCancel={handleModalCancel}
+          onOk={handleModalOk}
+          allLecturers={allLecturers}
+          existingGroups={allGroups}
+          gradingGroupToSemesterMap={gradingGroupToSemesterMap}
+          assessmentTemplatesMap={allAssessmentTemplates}
+          courseElementsMap={allCourseElements}
+        />
+      )}
 
-        {isAssignModalOpen && selectedGroup && (
-          <AssignSubmissionsModal
-            open={isAssignModalOpen}
-            onCancel={handleModalCancel}
-            onOk={handleModalOk}
-            group={selectedGroup}
-            allGroups={allGroups}
-          />
-        )}
+      {isAssignModalOpen && selectedGroup && (
+        <AssignSubmissionsModal
+          open={isAssignModalOpen}
+          onCancel={handleModalCancel}
+          onOk={handleModalOk}
+          group={selectedGroup}
+          allGroups={allGroups}
+        />
+      )}
       </div>
     </>
   );

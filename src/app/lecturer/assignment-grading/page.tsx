@@ -123,8 +123,8 @@ export default function AssignmentGradingPage() {
     queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
     queryFn: () => classAssessmentService.getClassAssessments({
       classId: Number(classIdFromStorage!),
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: !!classIdFromStorage && !!submissionId,
   });
@@ -197,7 +197,7 @@ export default function AssignmentGradingPage() {
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
       submissionId: submissionId!,
-      pageNumber: 1,
+        pageNumber: 1,
       pageSize: 100,
     }),
     enabled: !!submissionId,
@@ -206,8 +206,8 @@ export default function AssignmentGradingPage() {
   const latestGradingSession = useMemo(() => {
     if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
     const sorted = [...gradingSessionsData.items].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA;
     });
     return sorted[0];
@@ -218,7 +218,7 @@ export default function AssignmentGradingPage() {
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: () => gradeItemService.getGradeItems({
       gradingSessionId: latestGradingSession!.id,
-      pageNumber: 1,
+        pageNumber: 1,
       pageSize: 1000,
     }),
     enabled: !!latestGradingSession?.id,
@@ -253,7 +253,7 @@ export default function AssignmentGradingPage() {
     // Try to get from gradingGroupId first (most reliable)
     if (submission.gradingGroupId && gradingGroupsData) {
       const gradingGroup = gradingGroupsData.find((gg) => gg.id === submission.gradingGroupId);
-      if (gradingGroup?.assessmentTemplateId) {
+          if (gradingGroup?.assessmentTemplateId) {
         return gradingGroup.assessmentTemplateId;
       }
     }
@@ -262,18 +262,18 @@ export default function AssignmentGradingPage() {
     if (submission.classAssessmentId) {
       if (classAssessmentsData?.items) {
         const classAssessment = classAssessmentsData.items.find(
-          (ca) => ca.id === submission.classAssessmentId
-        );
-        if (classAssessment?.assessmentTemplateId) {
+              (ca) => ca.id === submission.classAssessmentId
+            );
+            if (classAssessment?.assessmentTemplateId) {
           return classAssessment.assessmentTemplateId;
         }
       }
 
       if (allClassAssessmentsData?.items) {
         const classAssessment = allClassAssessmentsData.items.find(
-          (ca) => ca.id === submission.classAssessmentId
-        );
-        if (classAssessment?.assessmentTemplateId) {
+                (ca) => ca.id === submission.classAssessmentId
+              );
+              if (classAssessment?.assessmentTemplateId) {
           return classAssessment.assessmentTemplateId;
         }
       }
@@ -287,8 +287,8 @@ export default function AssignmentGradingPage() {
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
       assessmentTemplateId: assessmentTemplateId!,
-      pageNumber: 1,
-      pageSize: 100,
+          pageNumber: 1,
+          pageSize: 100,
     }),
     enabled: !!assessmentTemplateId,
   });
@@ -300,9 +300,9 @@ export default function AssignmentGradingPage() {
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
       queryFn: () => assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 100,
+            assessmentPaperId: paper.id,
+            pageNumber: 1,
+            pageSize: 100,
       }),
       enabled: papers.length > 0,
     })),
@@ -324,9 +324,9 @@ export default function AssignmentGradingPage() {
     queries: allQuestionsFromQueries.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
       queryFn: () => rubricItemService.getRubricsForQuestion({
-        assessmentQuestionId: question.id,
-        pageNumber: 1,
-        pageSize: 100,
+              assessmentQuestionId: question.id,
+              pageNumber: 1,
+              pageSize: 100,
       }),
       enabled: allQuestionsFromQueries.length > 0,
     })),
@@ -414,12 +414,12 @@ export default function AssignmentGradingPage() {
           ? userEdits.rubricComments[question.id]
           : questionComment;
 
-        return {
+                return {
           ...question,
           rubricScores: newRubricScores,
           rubricComments: newRubricComments,
-        };
-      });
+              };
+            });
     }
 
     // If no grade items, still apply user edits
@@ -449,13 +449,13 @@ export default function AssignmentGradingPage() {
   // Calculate total score from questions
   useEffect(() => {
     const calculatedTotal = questions.reduce((sum, q) => {
-      const questionTotal = Object.values(q.rubricScores).reduce(
+          const questionTotal = Object.values(q.rubricScores).reduce(
         (qSum, score) => qSum + (score || 0),
-        0
-      );
+            0
+          );
       return sum + questionTotal;
     }, 0);
-    setTotalScore(calculatedTotal);
+          setTotalScore(calculatedTotal);
   }, [questions]);
 
   // Get class assessment for semester info
@@ -517,13 +517,13 @@ export default function AssignmentGradingPage() {
     maxScore: number
   ) => {
     const scoreValue = score || 0;
-
+    
     // Validate: score cannot exceed max score
     if (scoreValue > maxScore) {
       message.error(`Score cannot exceed maximum score of ${maxScore.toFixed(2)}`);
       return;
     }
-
+    
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
       ...prev,
@@ -577,7 +577,7 @@ export default function AssignmentGradingPage() {
     try {
       // Try to parse as JSON first
       const parsed = JSON.parse(feedbackText);
-
+      
       // Validate that it's a valid FeedbackData object
       if (typeof parsed === "object" && parsed !== null) {
         return {
@@ -591,7 +591,7 @@ export default function AssignmentGradingPage() {
           errorHandling: parsed.errorHandling || "",
         };
       }
-
+      
       // If parsed is not an object, fall through to plain text handling
       throw new Error("Parsed result is not an object");
     } catch (error) {
@@ -621,18 +621,18 @@ export default function AssignmentGradingPage() {
 
   // Parse and set feedback
   useEffect(() => {
-    if (feedbackList.length > 0) {
-      const existingFeedback = feedbackList[0];
-      setSubmissionFeedbackId(existingFeedback.id);
-
+      if (feedbackList.length > 0) {
+        const existingFeedback = feedbackList[0];
+        setSubmissionFeedbackId(existingFeedback.id);
+        
       // Check if we've already processed this feedback text
       if (processedFeedbackRef.current === existingFeedback.feedbackText) {
         return; // Already processed, skip
       }
 
-      let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-
-      if (parsedFeedback === null) {
+        let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
+        
+        if (parsedFeedback === null) {
         // Only call API if not already processing and feedback text is different
         if (!isProcessingRef.current && processedFeedbackRef.current !== existingFeedback.feedbackText) {
           isProcessingRef.current = true;
@@ -647,16 +647,16 @@ export default function AssignmentGradingPage() {
               setIsFormattingFeedback(false);
             })
             .catch((error) => {
-              console.error("Failed to parse feedback with Gemini:", error);
+            console.error("Failed to parse feedback with Gemini:", error);
               setFeedback({
-                overallFeedback: existingFeedback.feedbackText,
-                strengths: "",
-                weaknesses: "",
-                codeQuality: "",
-                algorithmEfficiency: "",
-                suggestionsForImprovement: "",
-                bestPractices: "",
-                errorHandling: "",
+              overallFeedback: existingFeedback.feedbackText,
+              strengths: "",
+              weaknesses: "",
+              codeQuality: "",
+              algorithmEfficiency: "",
+              suggestionsForImprovement: "",
+              bestPractices: "",
+              errorHandling: "",
               });
               isProcessingRef.current = false;
               setIsFormattingFeedback(false);
@@ -665,7 +665,7 @@ export default function AssignmentGradingPage() {
       } else {
         // Valid parsed feedback, mark as processed
         processedFeedbackRef.current = existingFeedback.feedbackText;
-        setFeedback(parsedFeedback);
+          setFeedback(parsedFeedback);
         setIsFormattingFeedback(false);
       }
     } else {
@@ -681,22 +681,22 @@ export default function AssignmentGradingPage() {
   // Mutation for saving feedback
   const saveFeedbackMutation = useMutation({
     mutationFn: async (feedbackData: FeedbackData) => {
-      if (!submissionId) {
-        throw new Error("No submission selected");
-      }
+    if (!submissionId) {
+      throw new Error("No submission selected");
+    }
 
-      const feedbackText = serializeFeedback(feedbackData);
+    const feedbackText = serializeFeedback(feedbackData);
 
-      if (submissionFeedbackId) {
+    if (submissionFeedbackId) {
         return submissionFeedbackService.updateSubmissionFeedback(submissionFeedbackId, {
-          feedbackText: feedbackText,
-        });
-      } else {
-        const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
-          submissionId: submissionId,
-          feedbackText: feedbackText,
-        });
-        setSubmissionFeedbackId(newFeedback.id);
+        feedbackText: feedbackText,
+      });
+    } else {
+      const newFeedback = await submissionFeedbackService.createSubmissionFeedback({
+        submissionId: submissionId,
+        feedbackText: feedbackText,
+      });
+      setSubmissionFeedbackId(newFeedback.id);
         return newFeedback;
       }
     },
@@ -717,7 +717,7 @@ export default function AssignmentGradingPage() {
   // Mutation for getting AI feedback
   const getAiFeedbackMutation = useMutation({
     mutationFn: async () => {
-      if (!submissionId) {
+    if (!submissionId) {
         throw new Error("No submission selected");
       }
       return gradingService.getFormattedAiFeedback(submissionId, "OpenAI");
@@ -777,7 +777,7 @@ export default function AssignmentGradingPage() {
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
     queryFn: () => gradingService.getGradingSessions({
       submissionId: submissionId!,
-      pageNumber: 1,
+        pageNumber: 1,
       pageSize: 1000,
     }),
     enabled: gradingHistoryModalVisible && !!submissionId,
@@ -786,8 +786,8 @@ export default function AssignmentGradingPage() {
   const gradingHistory = useMemo(() => {
     if (!gradingHistoryData?.items) return [];
     return [...gradingHistoryData.items].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
+          const dateA = new Date(a.createdAt).getTime();
+          const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA;
     });
   }, [gradingHistoryData]);
@@ -801,9 +801,9 @@ export default function AssignmentGradingPage() {
         submissionId: submissionId,
       });
       return [...list].sort((a, b) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return dateB - dateA;
+                const dateA = new Date(a.createdAt).getTime();
+                const dateB = new Date(b.createdAt).getTime();
+                return dateB - dateA;
       });
     },
     enabled: feedbackHistoryModalVisible && !!submissionId,
@@ -814,13 +814,13 @@ export default function AssignmentGradingPage() {
   // Mutation for saving grades
   const saveGradeMutation = useMutation({
     mutationFn: async () => {
-      if (!submissionId || !submission) {
+    if (!submissionId || !submission) {
         throw new Error("No submission selected");
       }
 
       // Calculate total score from all rubric scores
       let calculatedTotal = 0;
-      questions.forEach((q) => {
+        questions.forEach((q) => {
         const questionTotal = Object.values(q.rubricScores).reduce(
           (sum, score) => sum + (score || 0),
           0
@@ -879,12 +879,12 @@ export default function AssignmentGradingPage() {
           throw new Error("Failed to create grading session");
         }
       }
-
+      
       // Save all grade items (create or update)
       for (const question of questions) {
         // Get comment for this question (stored with question.id as key)
         const questionComment = question.rubricComments?.[question.id] || "";
-
+        
         for (const rubric of question.rubrics) {
           const score = question.rubricScores[rubric.id] || 0;
           const existingGradeItem = latestGradeItems.find(
@@ -1000,75 +1000,75 @@ export default function AssignmentGradingPage() {
 
   return (
     <App>
-      <div className={styles.container}>
+    <div className={styles.container}>
         {isSemesterPassed && (
-          <Alert
-            message="Semester Ended"
+        <Alert
+          message="Semester Ended"
             description="Cannot edit grades when the semester has ended."
-            type="warning"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
         )}
-        <Card className={styles.headerCard}>
+      <Card className={styles.headerCard}>
           <SubmissionHeaderCard
             submission={submission}
             totalScore={totalScore}
             totalMaxScore={questions.reduce((sum, q) => {
-              return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+                  return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
             }, 0)}
             onViewExam={() => setViewExamModalVisible(true)}
             onGetAiFeedback={handleGetAiFeedback}
             loadingAiFeedback={loadingAiFeedback}
             isSemesterPassed={isSemesterPassed}
           />
-        </Card>
+      </Card>
 
         <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
-          <Collapse
-            defaultActiveKey={[]}
-            className={`${styles.collapseWrapper} collapse-feedback`}
-            items={[
-              {
-                key: "feedback",
-                label: (
-                  <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-                    Detailed Feedback
-                  </Title>
-                ),
-                children: (
+            <Collapse
+              defaultActiveKey={[]}
+              className={`${styles.collapseWrapper} collapse-feedback`}
+              items={[
+                {
+                  key: "feedback",
+                  label: (
+                    <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+                      Detailed Feedback
+                    </Title>
+                  ),
+                  children: (
                   <Spin spinning={loadingFeedback || loadingAiFeedback}>
                     <div style={{ minHeight: loadingFeedback || loadingAiFeedback ? 200 : 'auto' }}>
                       {!loadingFeedback && !loadingAiFeedback ? (
                         <>
-                          <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
-                            <Text type="secondary" style={{ display: "block" }}>
-                              Provide comprehensive feedback for the student's submission
-                            </Text>
-                            <Button
-                              type="primary"
-                              icon={<SaveOutlined />}
-                              onClick={handleSaveFeedback}
-                              disabled={loadingFeedback || loadingAiFeedback}
-                            >
-                              Save Feedback
-                            </Button>
-                          </Space>
-                          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                      <Space direction="horizontal" style={{ width: "100%", marginBottom: 16, justifyContent: "space-between" }}>
+                        <Text type="secondary" style={{ display: "block" }}>
+                          Provide comprehensive feedback for the student's submission
+                        </Text>
+                        <Button
+                          type="primary"
+                          icon={<SaveOutlined />}
+                          onClick={handleSaveFeedback}
+                          disabled={loadingFeedback || loadingAiFeedback}
+                        >
+                          Save Feedback
+                        </Button>
+                      </Space>
+                      <Space direction="vertical" size="large" style={{ width: "100%" }}>
                             <FeedbackFields feedbackData={feedback} onFeedbackChange={handleFeedbackChange} />
-                          </Space>
+                      </Space>
                         </>
                       ) : null}
                     </div>
                   </Spin>
-                ),
-              },
-            ]}
-          />
+                  ),
+                },
+              ]}
+            />
         </Card>
 
         <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
-          <Collapse
+        <Collapse 
             defaultActiveKey={["grading-details"]}
             className={`${styles.collapseWrapper} collapse-grading`}
             items={[
@@ -1097,27 +1097,27 @@ export default function AssignmentGradingPage() {
                 ),
               },
             ]}
-          />
-        </Card>
+                />
+      </Card>
 
-        <ViewExamModal
-          visible={viewExamModalVisible}
-          onClose={() => setViewExamModalVisible(false)}
-          submission={submission}
-        />
+      <ViewExamModal
+        visible={viewExamModalVisible}
+        onClose={() => setViewExamModalVisible(false)}
+        submission={submission}
+            />
 
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
           onClose={() => setGradingHistoryModalVisible(false)}
           submissionId={submissionId}
-        />
+            />
 
         <FeedbackHistoryModal
           visible={feedbackHistoryModalVisible}
           onClose={() => setFeedbackHistoryModalVisible(false)}
           submissionId={submissionId}
-        />
-      </div>
+            />
+          </div>
     </App>
   );
 }

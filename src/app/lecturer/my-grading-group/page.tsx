@@ -186,7 +186,7 @@ const MySubmissionsPageContent = () => {
             assessmentTemplateId: gradingGroup.assessmentTemplateId,
           });
           return { success: true, submissionId: submission.id };
-        } catch (err: any) {
+      } catch (err: any) {
           console.error(`Failed to grade submission ${submission.id}:`, err);
           return {
             success: false,
@@ -241,7 +241,7 @@ const MySubmissionsPageContent = () => {
     },
   });
 
-  // Fetch grading groups for this lecturer
+        // Fetch grading groups for this lecturer
   const { data: gradingGroups = [], isLoading: isLoadingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.list({ lecturerId: currentLecturerId! }),
     queryFn: () => gradingGroupService.getGradingGroups({
@@ -250,23 +250,23 @@ const MySubmissionsPageContent = () => {
     enabled: !!currentLecturerId,
   });
 
-  // Get unique assessmentTemplateIds from grading groups
+        // Get unique assessmentTemplateIds from grading groups
   const assessmentTemplateIds = useMemo(() => {
     return Array.from(
-      new Set(
+          new Set(
         gradingGroups
-          .filter((g) => g.assessmentTemplateId !== null && g.assessmentTemplateId !== undefined)
-          .map((g) => Number(g.assessmentTemplateId))
-      )
-    );
+              .filter((g) => g.assessmentTemplateId !== null && g.assessmentTemplateId !== undefined)
+              .map((g) => Number(g.assessmentTemplateId))
+          )
+        );
   }, [gradingGroups]);
 
-  // Fetch assessment templates
+        // Fetch assessment templates
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: assessmentTemplateIds.length > 0,
   });
@@ -275,27 +275,27 @@ const MySubmissionsPageContent = () => {
     const map: Record<number, AssessmentTemplate> = {};
     if (templatesData?.items) {
       templatesData.items.forEach((template) => {
-        if (assessmentTemplateIds.includes(template.id)) {
+            if (assessmentTemplateIds.includes(template.id)) {
           map[template.id] = template;
+            }
+          });
         }
-      });
-    }
     return map;
   }, [templatesData, assessmentTemplateIds]);
 
-  // Get unique courseElementIds from assessment templates
+        // Get unique courseElementIds from assessment templates
   const courseElementIds = useMemo(() => {
     return Array.from(
       new Set(Object.values(assessmentTemplateMap).map((t) => t.courseElementId))
-    );
+        );
   }, [assessmentTemplateMap]);
 
-  // Fetch course elements
+        // Fetch course elements
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: courseElementIds.length > 0,
   });
@@ -304,11 +304,11 @@ const MySubmissionsPageContent = () => {
     const map: Record<number, CourseElement> = {};
     if (courseElementsData) {
       courseElementsData.forEach((element) => {
-        if (courseElementIds.includes(element.id)) {
+            if (courseElementIds.includes(element.id)) {
           map[element.id] = element;
+            }
+          });
         }
-      });
-    }
     return map;
   }, [courseElementsData, courseElementIds]);
 
@@ -316,16 +316,16 @@ const MySubmissionsPageContent = () => {
   const gradingGroupToSemesterMap = useMemo(() => {
     const map: Record<number, string> = {};
     gradingGroups.forEach((group) => {
-      if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
+          if (group.assessmentTemplateId !== null && group.assessmentTemplateId !== undefined) {
         const assessmentTemplate = assessmentTemplateMap[Number(group.assessmentTemplateId)];
-        if (assessmentTemplate) {
+            if (assessmentTemplate) {
           const courseElement = courseElementMap[Number(assessmentTemplate.courseElementId)];
           if (courseElement?.semesterCourse?.semester) {
             map[Number(group.id)] = courseElement.semesterCourse.semester.semesterCode;
+              }
+            }
           }
-        }
-      }
-    });
+        });
     return map;
   }, [gradingGroups, assessmentTemplateMap, courseElementMap]);
 
@@ -348,7 +348,7 @@ const MySubmissionsPageContent = () => {
     return map;
   }, [gradingGroups, assessmentTemplateMap, courseElementMap]);
 
-  // Fetch all submissions from all grading groups
+        // Fetch all submissions from all grading groups
   const gradingGroupIds = gradingGroups.map(g => g.id);
   const submissionsQueries = useQueries({
     queries: gradingGroupIds.map((groupId) => ({
@@ -398,37 +398,37 @@ const MySubmissionsPageContent = () => {
   // Fetch class assessments
   const classAssessmentIds = useMemo(() => {
     return Array.from(
-      new Set(allSubmissions.filter((s) => s.classAssessmentId).map((s) => s.classAssessmentId!))
-    );
+          new Set(allSubmissions.filter((s) => s.classAssessmentId).map((s) => s.classAssessmentId!))
+        );
   }, [allSubmissions]);
 
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
-      pageNumber: 1,
-      pageSize: 1000,
+            pageNumber: 1,
+            pageSize: 1000,
     }),
     enabled: classAssessmentIds.length > 0,
   });
-
+          
   const classAssessments = useMemo(() => {
     const map: Record<number, ClassAssessment> = {};
     if (classAssessmentsData?.items) {
       classAssessmentsData.items.forEach((ca) => {
-        if (classAssessmentIds.includes(ca.id)) {
+            if (classAssessmentIds.includes(ca.id)) {
           map[ca.id] = ca;
+            }
+          });
         }
-      });
-    }
     return map;
   }, [classAssessmentsData, classAssessmentIds]);
 
-  // Get unique classIds from class assessments
+        // Get unique classIds from class assessments
   const classIds = useMemo(() => {
     return Array.from(new Set(Object.values(classAssessments).map((ca) => ca.classId)));
   }, [classAssessments]);
-
-  // Fetch classes
+        
+        // Fetch classes
   const classesQueries = useQueries({
     queries: classIds.map((classId) => ({
       queryKey: queryKeys.classes.detail(classId),
@@ -522,33 +522,33 @@ const MySubmissionsPageContent = () => {
   // Filter grading groups: in the same semester, same assessment template, same lecturer, keep only the latest one
   const filteredGradingGroups = useMemo(() => {
     const groupedMap = new Map<string, GradingGroup>();
-
+    
     gradingGroups.forEach((group) => {
       const semesterCode = gradingGroupToSemesterMap[group.id];
       const assessmentTemplateId = group.assessmentTemplateId;
       const lecturerId = group.lecturerId;
-
+      
       // Skip if missing required data
       if (!semesterCode || assessmentTemplateId === null || assessmentTemplateId === undefined) {
         return;
       }
-
+      
       const key = `${semesterCode}_${assessmentTemplateId}_${lecturerId}`;
       const existing = groupedMap.get(key);
-
+      
       if (!existing) {
         groupedMap.set(key, group);
       } else {
         // Compare createdAt - keep the one with the latest date
         const existingDate = existing.createdAt ? new Date(existing.createdAt).getTime() : 0;
         const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
-
+        
         if (currentDate > existingDate) {
           groupedMap.set(key, group);
         }
       }
     });
-
+    
     return Array.from(groupedMap.values());
   }, [gradingGroups, gradingGroupToSemesterMap]);
 
@@ -565,21 +565,21 @@ const MySubmissionsPageContent = () => {
       })
       .map((sub: Submission) => {
         // Get semester code from grading group
-        const semesterCode = sub.gradingGroupId !== undefined
+        const semesterCode = sub.gradingGroupId !== undefined 
           ? gradingGroupToSemesterMap[sub.gradingGroupId]
           : undefined;
-
+        
         // Find semester from SemesterPlanDetail to get end date
         const semesterDetail = semesterCode ? semesters.find((s) => s.semesterCode === semesterCode) : undefined;
         const semesterEndDate = semesterDetail?.endDate;
         // Tạm comment lại check học kỳ
         // const isPassed = isSemesterPassed(semesterEndDate);
-
+        
         // Get class assessment for this submission
         const classAssessment = sub.classAssessmentId ? classAssessments[sub.classAssessmentId] : undefined;
-
+        
         // Find grading group for this submission
-        const gradingGroup = sub.gradingGroupId !== undefined
+        const gradingGroup = sub.gradingGroupId !== undefined 
           ? filteredGradingGroups.find((g) => g.id === sub.gradingGroupId)
           : undefined;
 
@@ -591,8 +591,8 @@ const MySubmissionsPageContent = () => {
         // Get total score from map
         const totalScore = submissionTotalScores[sub.id];
 
-        return {
-          ...sub,
+      return {
+        ...sub,
           courseName: courseInfo?.courseName || classAssessment?.courseName || "N/A",
           courseId: courseInfo?.courseId,
           semesterCode: semesterCode || undefined,
@@ -601,8 +601,8 @@ const MySubmissionsPageContent = () => {
           isSemesterPassed: false, // isPassed,
           gradingGroup,
           totalScore,
-        };
-      });
+      };
+    });
   }, [allSubmissions, classAssessments, semesters, filteredGradingGroups, filteredGradingGroupIds, gradingGroupToSemesterMap, gradingGroupToCourseMap, submissionTotalScores]);
 
   // Get available courses based on selected semester - only show courses that have grading groups
@@ -679,9 +679,9 @@ const MySubmissionsPageContent = () => {
       if (selectedSemester !== undefined) {
         const selectedSemesterDetail = semesters.find((s) => Number(s.id) === Number(selectedSemester));
         const selectedSemesterCode = selectedSemesterDetail?.semesterCode;
-        semesterMatch = selectedSemesterCode !== undefined &&
-          sub.semesterCode !== undefined &&
-          sub.semesterCode === selectedSemesterCode;
+        semesterMatch = selectedSemesterCode !== undefined && 
+                       sub.semesterCode !== undefined && 
+                       sub.semesterCode === selectedSemesterCode;
       }
 
       // Filter by course
@@ -711,19 +711,19 @@ const MySubmissionsPageContent = () => {
     // Group by (studentCode, gradingGroupId) and keep only the latest submission in each group
     // Use studentCode for more reliable identification
     const groupedMap = new Map<string, EnrichedSubmission>();
-
+    
     filtered.forEach((sub) => {
       const studentKey = sub.studentCode || sub.studentId?.toString() || 'unknown';
       const key = `${studentKey}_${sub.gradingGroupId || 'unknown'}`;
       const existing = groupedMap.get(key);
-
+      
       if (!existing) {
         groupedMap.set(key, sub);
       } else {
         // Compare submittedAt - keep the one with the latest date
         const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
         const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
-
+        
         if (currentDate > existingDate) {
           // Current submission has newer date
           groupedMap.set(key, sub);
@@ -733,7 +733,7 @@ const MySubmissionsPageContent = () => {
         } else {
           // Dates are equal (both 0 or same date), keep the one with the largest ID (newest)
           if (sub.id > existing.id) {
-            groupedMap.set(key, sub);
+          groupedMap.set(key, sub);
           }
         }
       }
@@ -858,7 +858,7 @@ const MySubmissionsPageContent = () => {
   const handleExportGradeReport = async (gradingGroup: GradingGroup) => {
     try {
       await exportGradeReport(gradingGroup, messageApi);
-    } catch (err) {
+          } catch (err) {
       // Error already handled in exportGradeReport
     }
   };
@@ -935,7 +935,7 @@ const MySubmissionsPageContent = () => {
           return (
             <span style={{ fontWeight: 600, color: "#52c41a" }}>
               {totalScore.toFixed(2)}
-            </span>
+        </span>
           );
         }
         return (
@@ -973,16 +973,16 @@ const MySubmissionsPageContent = () => {
     <div className={styles.wrapper}>
       <div className={styles.header}>
         <div>
-          <Title
-            level={2}
+        <Title
+          level={2}
             style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
-          >
+        >
             Grading Groups
-          </Title>
+        </Title>
           <Text type="secondary" style={{ fontSize: 14 }}>
             Manage your grading groups and submissions
           </Text>
-        </div>
+      </div>
         <Space>
         </Space>
       </div>
@@ -1025,7 +1025,7 @@ const MySubmissionsPageContent = () => {
         </>
       )}
 
-      <Modal
+    <Modal
         title="Upload Grade Sheet"
         open={uploadModalVisible}
         onCancel={() => {
@@ -1064,7 +1064,7 @@ const MySubmissionsPageContent = () => {
             <Text type="secondary">Selected: {uploadFile.name}</Text>
           )}
         </Space>
-      </Modal>
+    </Modal>
 
     </div>
   );

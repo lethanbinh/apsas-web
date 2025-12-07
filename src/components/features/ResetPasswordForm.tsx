@@ -5,6 +5,7 @@ import { Form, Input, Button, App } from "antd";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authService } from "@/services/authService";
+import { accountService } from "@/services/accountService";
 import {
   ForgotPasswordRequest,
   VerifyOtpRequest,
@@ -28,6 +29,19 @@ const ResetPasswordFormContent: React.FC = () => {
     try {
       setIsLoading(true);
       setErrors({});
+      // Check if email exists in the system
+      const emailExists = await accountService.checkEmailExists(values.email);
+      if (!emailExists) {
+        const errorMessage = "Email does not exist in the system. Please check your email address.";
+        setErrors({ general: errorMessage });
+        message.error({
+          content: errorMessage,
+          duration: 5,
+        });
+        setIsLoading(false);
+        return;
+      }
+
       setEmail(values.email);
       await authService.forgotPassword(values);
       message.success("OTP sent to your email!");

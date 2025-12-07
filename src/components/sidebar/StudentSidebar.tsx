@@ -35,14 +35,14 @@ const menuItems = [
   //   label: <Link href="/student/submissions">Submission history</Link>,
   // },
   {
-    key: "/student/members",
-    icon: <UsergroupAddOutlined />,
-    label: <Link href="/student/members">Member list</Link>,
-  },
-  {
     key: "/student/labs",
     icon: <ExperimentOutlined />,
     label: <Link href="/student/labs">Labs</Link>,
+  },
+  {
+    key: "/student/members",
+    icon: <UsergroupAddOutlined />,
+    label: <Link href="/student/members">Member list</Link>,
   },
 ];
 
