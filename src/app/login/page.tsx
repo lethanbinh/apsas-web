@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
-import { LoginForm } from '@/components/features/LoginForm';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { LoginForm } from '@/components/features/LoginForm';
+import { Metadata } from 'next';
 import Image from 'next/image';
 
 export const metadata: Metadata = {
