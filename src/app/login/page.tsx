@@ -7,7 +7,6 @@ export const metadata: Metadata = {
   title: 'Đăng nhập - APSAS Web',
   description: 'Đăng nhập vào tài khoản APSAS Web',
 };
-
 export default function LoginPage() {
   return (
     <AuthGuard requireAuth={false}>
