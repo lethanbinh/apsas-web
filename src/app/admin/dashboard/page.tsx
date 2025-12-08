@@ -1,37 +1,33 @@
 "use client";
 
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
-import type {
-  ChartData,
-  DashboardOverview,
-} from "@/services/adminDashboardService";
+import { queryKeys } from "@/lib/react-query";
 import { adminDashboardService } from "@/services/adminDashboardService";
+import { classService } from "@/services/classService";
+import { courseElementService } from "@/services/courseElementService";
+import { semesterService } from "@/services/semesterService";
 import {
   BookOutlined,
   CheckCircleOutlined,
   DashboardOutlined,
   FileTextOutlined,
   ReloadOutlined,
+  TrophyOutlined,
   UploadOutlined,
   UserOutlined,
-  TrophyOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Space, Spin, Tabs, Select, Card, DatePicker } from "antd";
-import { useEffect, useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import dayjs, { Dayjs } from "dayjs";
+import { Alert, Button, Card, DatePicker, Select, Space, Spin, Tabs } from "antd";
+import { Dayjs } from "dayjs";
+import { useMemo, useState } from "react";
+import AcademicPerformanceTab from "./components/AcademicPerformanceTab";
 import AcademicTab from "./components/AcademicTab";
 import AssessmentsTab from "./components/AssessmentsTab";
 import GradingTab from "./components/GradingTab";
 import OverviewTab from "./components/OverviewTab";
 import SubmissionsTab from "./components/SubmissionsTab";
 import UsersTab from "./components/UsersTab";
-import AcademicPerformanceTab from "./components/AcademicPerformanceTab";
 import styles from "./DashboardAdmin.module.css";
-import { classService } from "@/services/classService";
-import { semesterService } from "@/services/semesterService";
-import { courseElementService } from "@/services/courseElementService";
-import { queryKeys } from "@/lib/react-query";
 
 const AdminDashboardPage = () => {
   const queryClient = useQueryClient();
