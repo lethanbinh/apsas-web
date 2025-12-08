@@ -83,14 +83,50 @@ const TasksPageContent = () => {
 
   const semesterOptions = useMemo(() => {
     const uniqueSemesters = [
-      ...new Set(allTasks.map((task) => task.semesterName)),
+      ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
     ];
-    const options = uniqueSemesters.map((semester) => ({
+    
+    // Create a map of semesterName to Semester object for sorting
+    const semesterMap = new Map<string, Semester>();
+    uniqueSemesters.forEach((name) => {
+      const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
+      if (exactMatch) {
+        semesterMap.set(name, exactMatch);
+      } else {
+        // Try partial match
+        const partialMatch = allSemesters.find((sem) => 
+          name.includes(sem.semesterCode) || 
+          sem.semesterCode.includes(name) ||
+          name.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
+          sem.semesterCode.toLowerCase().includes(name.toLowerCase())
+        );
+        if (partialMatch) {
+          semesterMap.set(name, partialMatch);
+        }
+      }
+    });
+    
+    // Sort by startDate (newest first)
+    const sortedSemesters = uniqueSemesters.sort((a, b) => {
+      const semA = semesterMap.get(a);
+      const semB = semesterMap.get(b);
+      if (semA && semB) {
+        const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
+        const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
+        return dateB.getTime() - dateA.getTime(); // Newest first
+      }
+      // If one doesn't have date info, put it at the end
+      if (semA) return -1;
+      if (semB) return 1;
+      return 0;
+    });
+    
+    const options = sortedSemesters.map((semester) => ({
       label: semester,
       value: semester,
     }));
     return [{ label: "All Semesters", value: "all" }, ...options];
-  }, [allTasks]);
+  }, [allTasks, allSemesters]);
 
   // Set default semester to current active semester, or latest if current has no data
   useEffect(() => {

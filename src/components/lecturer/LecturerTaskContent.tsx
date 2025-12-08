@@ -203,6 +203,41 @@ export const LecturerTaskContent = ({
     refetchTemplates();
   }, [task.id, task.courseElementId, lecturerId, refetchTemplates]);
 
+  // Listen for template deletion/creation/update events to refetch templates
+  useEffect(() => {
+    const handleTemplateChange = async () => {
+      // Small delay to ensure delete operation has completed
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Invalidate and refetch templates query
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
+      });
+      
+      // Refetch templates
+      const result = await refetchTemplates();
+      const updatedTemplates = result.data || [];
+      
+      // If current template was deleted, clear it
+      if (template && !updatedTemplates.find((t) => t.id === template.id)) {
+        setTemplate(null);
+        setPapers([]);
+        setAllQuestions({});
+        setFiles([]);
+        setSelectedKey("template-details");
+      } else if (template) {
+        // Refresh data for current template
+        await fetchAllData(template.id);
+      }
+    };
+    
+    window.addEventListener('assessmentTemplatesChanged', handleTemplateChange);
+    
+    return () => {
+      window.removeEventListener('assessmentTemplatesChanged', handleTemplateChange);
+    };
+  }, [refetchTemplates, template, task.courseElementId, lecturerId, queryClient, fetchAllData]);
+
   // Handle template selection change
   const handleTemplateChange = async (templateId: number) => {
     const selectedTemplate = templates.find((t) => t.id === templateId);

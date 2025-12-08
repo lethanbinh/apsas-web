@@ -1,13 +1,15 @@
 "use client";
+import { ImportClassStudentModal } from "@/components/hod/ImportClassStudentModal";
 import { AssignRequestCrudModal } from "@/components/modals/AssignRequestCrudModal";
 import { ClassCrudModal } from "@/components/modals/ClassCrudModal";
 import { CourseCrudModal } from "@/components/modals/CourseCrudModal";
 import { CourseElementCrudModal } from "@/components/modals/CourseElementCrudModal";
 import { StudentGroupCrudModal } from "@/components/modals/StudentGroupCrudModal";
 import { ViewStudentsModal } from "@/components/modals/ViewStudentsModal";
-import { ImportClassStudentModal } from "@/components/hod/ImportClassStudentModal";
+import { queryKeys } from "@/lib/react-query";
+import { assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { assignRequestService } from "@/services/assignRequestService";
 import { classManagementService } from "@/services/classManagementService";
-import { StudentInClass } from "@/services/classService";
 import { courseElementManagementService } from "@/services/courseElementManagementService";
 import { Course } from "@/services/courseElementService";
 import { semesterCourseService } from "@/services/courseManagementService";
@@ -21,17 +23,18 @@ import {
   semesterService,
 } from "@/services/semesterService";
 import { studentManagementService } from "@/services/studentManagementService";
-import { assignRequestService } from "@/services/assignRequestService";
 import {
+  ArrowLeftOutlined,
   BookOutlined,
   DeleteOutlined,
   EditOutlined,
   PaperClipOutlined,
   PlusOutlined,
   TeamOutlined,
-  UserOutlined,
   UploadOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TableProps, TabsProps } from "antd";
 import {
   App,
@@ -43,12 +46,12 @@ import {
   Table,
   Tabs,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 import { format } from "date-fns";
-import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { use, useCallback, useEffect, useMemo, useState } from "react";
 
 const { Title, Text } = Typography;
 
@@ -210,6 +213,7 @@ interface CourseElementsTableProps {
   onEdit: (element: CourseElement) => void;
   onDelete: (elementId: number) => void;
   isSemesterEnded?: boolean;
+  elementsWithAssessment?: Set<number>;
 }
 
 const CourseElementsTable = ({
@@ -217,6 +221,7 @@ const CourseElementsTable = ({
   onEdit,
   onDelete,
   isSemesterEnded = false,
+  elementsWithAssessment = new Set(),
 }: CourseElementsTableProps) => {
   const getElementTypeLabel = (elementType: number) => {
     switch (elementType) {
@@ -269,16 +274,44 @@ const CourseElementsTable = ({
     {
       title: "Actions",
       key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button type="link" onClick={() => onEdit(record)} disabled={isSemesterEnded}>
+      render: (_, record) => {
+        const hasAssessment = elementsWithAssessment.has(record.id);
+        const isEditDisabled = isSemesterEnded || hasAssessment;
+        
+        let tooltipTitle = "";
+        if (isEditDisabled) {
+          if (hasAssessment) {
+            tooltipTitle = "This course element already has an assessment template. Editing is not allowed.";
+          } else if (isSemesterEnded) {
+            tooltipTitle = "The semester has ended. Editing is not allowed.";
+          }
+        }
+        
+        const editButton = (
+          <Button 
+            type="link" 
+            onClick={() => onEdit(record)} 
+            disabled={isEditDisabled}
+          >
             Edit
           </Button>
-          <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
-            Delete
-          </Button>
-        </Space>
-      ),
+        );
+        
+        return (
+          <Space>
+            {isEditDisabled ? (
+              <Tooltip title={tooltipTitle}>
+                <span>{editButton}</span>
+              </Tooltip>
+            ) : (
+              editButton
+            )}
+            <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
+              Delete
+            </Button>
+          </Space>
+        );
+      },
     },
   ];
 
@@ -387,18 +420,59 @@ const AssignRequestsTable = ({
       render: (_, record) => {
         const status = (record as any).status as number | undefined;
         const approved = isApproved(status);
+        const isEditDisabled = isSemesterEnded || approved;
+        const isDeleteDisabled = isSemesterEnded || approved;
         
-        return (
-        <Space>
-            {!approved && (
-          <Button type="link" onClick={() => onEdit(record)} disabled={isSemesterEnded}>
+        const editTooltipTitle = isEditDisabled
+          ? approved
+            ? "This assign request has been approved. Editing is not allowed."
+            : "The semester has ended. Editing is not allowed."
+          : "";
+        
+        const deleteTooltipTitle = isDeleteDisabled
+          ? approved
+            ? "This assign request has been approved. Deletion is not allowed."
+            : "The semester has ended. Deletion is not allowed."
+          : "";
+        
+        const editButton = (
+          <Button 
+            type="link" 
+            onClick={() => onEdit(record)} 
+            disabled={isEditDisabled}
+          >
             Edit
           </Button>
-            )}
-          <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
+        );
+        
+        const deleteButton = (
+          <Button 
+            type="link" 
+            danger 
+            onClick={() => onDelete(record.id)} 
+            disabled={isDeleteDisabled}
+          >
             Delete
           </Button>
-        </Space>
+        );
+        
+        return (
+          <Space>
+            {isEditDisabled ? (
+              <Tooltip title={editTooltipTitle}>
+                <span>{editButton}</span>
+              </Tooltip>
+            ) : (
+              editButton
+            )}
+            {isDeleteDisabled ? (
+              <Tooltip title={deleteTooltipTitle}>
+                <span>{deleteButton}</span>
+              </Tooltip>
+            ) : (
+              deleteButton
+            )}
+          </Space>
         );
       },
     },
@@ -437,6 +511,7 @@ interface SemesterCoursesTableProps {
   onImportClassStudent: (semesterCourse: SemesterCourse) => void;
   studentCountRefreshTrigger?: number;
   isSemesterEnded?: boolean;
+  elementsWithAssessment?: Set<number>;
 }
 
 const SemesterCoursesTable = ({
@@ -458,6 +533,7 @@ const SemesterCoursesTable = ({
   onImportClassStudent,
   studentCountRefreshTrigger,
   isSemesterEnded = false,
+  elementsWithAssessment = new Set(),
 }: SemesterCoursesTableProps) => {
   const columns: TableProps<SemesterCourse>["columns"] = [
     {
@@ -593,6 +669,7 @@ const SemesterCoursesTable = ({
               onEdit={onEditElement}
               onDelete={onDeleteElement}
               isSemesterEnded={isSemesterEnded}
+              elementsWithAssessment={elementsWithAssessment}
             />
           </>
         ),
@@ -689,6 +766,7 @@ const SemesterDetailPageContent = ({
   const [importingSemesterCode, setImportingSemesterCode] = useState<string>("");
   const [importingCourseCode, setImportingCourseCode] = useState<string>("");
   const [importingCourseName, setImportingCourseName] = useState<string>("");
+  const queryClient = useQueryClient();
 
   const fetchDetail = useCallback(async () => {
     if (!params.semesterCode) {
@@ -752,6 +830,47 @@ const SemesterDetailPageContent = ({
     fetchDetail();
     fetchLecturers();
   }, [fetchDetail]);
+
+  // Get all course element IDs from the semester plan
+  const allCourseElementIds = useMemo(() => {
+    if (!semesterData) return new Set<number>();
+    const ids = new Set<number>();
+    semesterData.semesterCourses.forEach(semesterCourse => {
+      semesterCourse.courseElements.forEach(element => {
+        ids.add(element.id);
+      });
+    });
+    return ids;
+  }, [semesterData]);
+
+  // Fetch assessment templates to check which course elements have assessments
+  // Use refetchInterval to automatically refresh every 3 seconds to catch template deletions
+  const { data: templatesResponse, refetch: refetchTemplates } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: allCourseElementIds.size > 0,
+    refetchInterval: 3000, // Poll every 3 seconds to catch changes (especially deletions)
+    refetchIntervalInBackground: false, // Only poll when tab is active
+  });
+
+  // Find course elements that have assessment templates
+  const elementsWithAssessment = useMemo(() => {
+    if (!templatesResponse?.items || allCourseElementIds.size === 0) {
+      return new Set<number>();
+    }
+    
+    const elementsWithAssessmentSet = new Set<number>();
+    templatesResponse.items.forEach(template => {
+      if (allCourseElementIds.has(template.courseElementId)) {
+        elementsWithAssessmentSet.add(template.courseElementId);
+      }
+    });
+    
+    return elementsWithAssessmentSet;
+  }, [templatesResponse, allCourseElementIds]);
 
   const handleOpenCreateCourseModal = () => {
     setEditingCourse(null);
@@ -884,6 +1003,16 @@ const SemesterDetailPageContent = ({
   };
 
   const handleOpenEditElementModal = (element: CourseElement) => {
+    // Check if the course element has an assessment
+    if (elementsWithAssessment.has(element.id)) {
+      notification.warning({
+        message: "Cannot Edit Course Element",
+        description: "This course element already has an assessment template. Editing is not allowed.",
+        placement: "topRight",
+      });
+      return;
+    }
+
     const semesterCourse = semesterData?.semesterCourses.find((sc) =>
       sc.courseElements.some((el) => el.id === element.id)
     );
@@ -1202,6 +1331,7 @@ const SemesterDetailPageContent = ({
         onImportClassStudent={handleImportClassStudent}
         studentCountRefreshTrigger={studentCountRefreshTrigger}
         isSemesterEnded={semesterEnded}
+        elementsWithAssessment={elementsWithAssessment}
       />
 
       <CourseCrudModal

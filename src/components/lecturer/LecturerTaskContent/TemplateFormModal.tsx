@@ -5,6 +5,8 @@ import { AssessmentTemplate } from "@/services/assessmentTemplateService";
 import { AssignRequestItem, assignRequestService } from "@/services/assignRequestService";
 import { App, Button, Form, Input, Modal, Radio } from "antd";
 import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 
 interface TemplateFormModalProps {
   open: boolean;
@@ -27,6 +29,7 @@ export const TemplateFormModal = ({
 }: TemplateFormModalProps) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
+  const queryClient = useQueryClient();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Assessment Template" : "Add New Template";
   const isRejected = task && Number(task.status) === 3;
@@ -87,6 +90,14 @@ export const TemplateFormModal = ({
             message: "Template updated successfully",
           });
         }
+        // Invalidate all assessment templates queries
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.assessmentTemplates.all,
+          exact: false
+        });
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
       }
       onFinish();
     } catch (error) {

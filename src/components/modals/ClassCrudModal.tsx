@@ -70,7 +70,7 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
     try {
       const payload = {
         ...values,
-        totalStudent: isEditMode ? 0 : 0, // Số lượng sinh viên sẽ được đếm tự động
+        totalStudent: 1, // Set to fixed value, not displayed to user
         lecturerId: Number(values.lecturerId),
         semesterCourseId: semesterCourseId,
       };

@@ -191,7 +191,7 @@ export async function downloadTemplate({
 
     // Sheet 2: Papers
     let papersData: any[][];
-    const targetPapers = finalTemplate === template ? papers : [];
+    const targetPapers = (finalTemplate === template && template) ? papers : [];
     if (targetPapers.length > 0) {
       const papersMap = new Map<string, AssessmentPaper>();
       for (const paper of targetPapers) {
@@ -234,7 +234,7 @@ export async function downloadTemplate({
 
     // Sheet 3: Questions
     let questionsData: any[][];
-    const targetAllQuestions = finalTemplate === template ? allQuestions : {};
+    const targetAllQuestions = (template && finalTemplate === template) ? allQuestions : {};
     if (targetPapers.length > 0 && Object.keys(targetAllQuestions).length > 0) {
       const questionsMap = new Map<string, { paperName: string; question: AssessmentQuestion }>();
       for (const paper of targetPapers) {
@@ -277,6 +277,9 @@ export async function downloadTemplate({
         ["QUESTIONS"],
         ["Paper Name", "Question Number", "Question Text", "Sample Input", "Sample Output", "Score", "Instructions"],
         ["Paper 1", 1, "Write a function to calculate factorial", "5", "120", 10, "Paper Name must match a paper from Papers sheet"],
+        ["Paper 1", 2, "Write a function to check if a number is prime", "7", "true", 10, ""],
+        ["Paper 1", 3, "Write a function to reverse a string", "\"hello\"", "\"olleh\"", 10, ""],
+        ["Paper 1", 4, "Write a function to find the maximum in an array", "[1, 5, 3, 9, 2]", "9", 10, ""],
         [],
         ["INSTRUCTIONS:"],
         ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
@@ -353,8 +356,10 @@ export async function downloadTemplate({
       rubricsData = [
         ["RUBRICS"],
         ["Paper Name", "Question Number", "Description", "Input", "Output", "Score", "Instructions"],
-        ["Paper 1", 1, "Correct input/output format", "4 9 2", "9", 5, "Paper Name and Question Number must match from Questions sheet"],
-        ["Paper 1", 1, "Handles edge cases", "0", "0", 3, ""],
+        ["Paper 1", 1, "Correct input/output format", "5", "120", 5, "Paper Name and Question Number must match from Questions sheet"],
+        ["Paper 1", 2, "Correct prime number check", "7", "true", 5, ""],
+        ["Paper 1", 3, "Correct string reversal", "\"hello\"", "\"olleh\"", 5, ""],
+        ["Paper 1", 4, "Correct maximum finding", "[1, 5, 3, 9, 2]", "9", 5, ""],
         [],
         ["INSTRUCTIONS:"],
         ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
