@@ -214,6 +214,7 @@ interface CourseElementsTableProps {
   onDelete: (elementId: number) => void;
   isSemesterEnded?: boolean;
   elementsWithAssessment?: Set<number>;
+  elementsWithApprovedRequest?: Set<number>;
 }
 
 const CourseElementsTable = ({
@@ -222,6 +223,7 @@ const CourseElementsTable = ({
   onDelete,
   isSemesterEnded = false,
   elementsWithAssessment = new Set(),
+  elementsWithApprovedRequest = new Set(),
 }: CourseElementsTableProps) => {
   const getElementTypeLabel = (elementType: number) => {
     switch (elementType) {
@@ -276,14 +278,27 @@ const CourseElementsTable = ({
       key: "actions",
       render: (_, record) => {
         const hasAssessment = elementsWithAssessment.has(record.id);
-        const isEditDisabled = isSemesterEnded || hasAssessment;
+        const hasApprovedRequest = elementsWithApprovedRequest.has(record.id);
+        const isEditDisabled = isSemesterEnded || hasAssessment || hasApprovedRequest;
+        const isDeleteDisabled = isSemesterEnded || hasApprovedRequest;
         
-        let tooltipTitle = "";
+        let editTooltipTitle = "";
         if (isEditDisabled) {
-          if (hasAssessment) {
-            tooltipTitle = "This course element already has an assessment template. Editing is not allowed.";
+          if (hasApprovedRequest) {
+            editTooltipTitle = "This course element has an approved assign request. Editing is not allowed.";
+          } else if (hasAssessment) {
+            editTooltipTitle = "This course element already has an assessment template. Editing is not allowed.";
           } else if (isSemesterEnded) {
-            tooltipTitle = "The semester has ended. Editing is not allowed.";
+            editTooltipTitle = "The semester has ended. Editing is not allowed.";
+          }
+        }
+        
+        let deleteTooltipTitle = "";
+        if (isDeleteDisabled) {
+          if (hasApprovedRequest) {
+            deleteTooltipTitle = "This course element has an approved assign request. Deletion is not allowed.";
+          } else if (isSemesterEnded) {
+            deleteTooltipTitle = "The semester has ended. Deletion is not allowed.";
           }
         }
         
@@ -297,18 +312,33 @@ const CourseElementsTable = ({
           </Button>
         );
         
+        const deleteButton = (
+          <Button 
+            type="link" 
+            danger 
+            onClick={() => onDelete(record.id)} 
+            disabled={isDeleteDisabled}
+          >
+            Delete
+          </Button>
+        );
+        
         return (
           <Space>
             {isEditDisabled ? (
-              <Tooltip title={tooltipTitle}>
+              <Tooltip title={editTooltipTitle}>
                 <span>{editButton}</span>
               </Tooltip>
             ) : (
               editButton
             )}
-            <Button type="link" danger onClick={() => onDelete(record.id)} disabled={isSemesterEnded}>
-              Delete
-            </Button>
+            {isDeleteDisabled ? (
+              <Tooltip title={deleteTooltipTitle}>
+                <span>{deleteButton}</span>
+              </Tooltip>
+            ) : (
+              deleteButton
+            )}
           </Space>
         );
       },
@@ -512,6 +542,7 @@ interface SemesterCoursesTableProps {
   studentCountRefreshTrigger?: number;
   isSemesterEnded?: boolean;
   elementsWithAssessment?: Set<number>;
+  elementsWithApprovedRequest?: Set<number>;
 }
 
 const SemesterCoursesTable = ({
@@ -534,6 +565,7 @@ const SemesterCoursesTable = ({
   studentCountRefreshTrigger,
   isSemesterEnded = false,
   elementsWithAssessment = new Set(),
+  elementsWithApprovedRequest = new Set(),
 }: SemesterCoursesTableProps) => {
   const columns: TableProps<SemesterCourse>["columns"] = [
     {
@@ -670,6 +702,7 @@ const SemesterCoursesTable = ({
               onDelete={onDeleteElement}
               isSemesterEnded={isSemesterEnded}
               elementsWithAssessment={elementsWithAssessment}
+              elementsWithApprovedRequest={elementsWithApprovedRequest}
             />
           </>
         ),
@@ -871,6 +904,23 @@ const SemesterDetailPageContent = ({
     
     return elementsWithAssessmentSet;
   }, [templatesResponse, allCourseElementIds]);
+
+  // Find course elements that have approved assign requests (status = 5)
+  const elementsWithApprovedRequest = useMemo(() => {
+    if (!semesterData) return new Set<number>();
+    
+    const elementsWithApprovedSet = new Set<number>();
+    semesterData.semesterCourses.forEach(semesterCourse => {
+      semesterCourse.assignRequests.forEach(assignRequest => {
+        const status = (assignRequest as any).status as number | undefined;
+        if (status === 5 && assignRequest.courseElement?.id) {
+          elementsWithApprovedSet.add(assignRequest.courseElement.id);
+        }
+      });
+    });
+    
+    return elementsWithApprovedSet;
+  }, [semesterData]);
 
   const handleOpenCreateCourseModal = () => {
     setEditingCourse(null);
@@ -1332,6 +1382,7 @@ const SemesterDetailPageContent = ({
         studentCountRefreshTrigger={studentCountRefreshTrigger}
         isSemesterEnded={semesterEnded}
         elementsWithAssessment={elementsWithAssessment}
+        elementsWithApprovedRequest={elementsWithApprovedRequest}
       />
 
       <CourseCrudModal
