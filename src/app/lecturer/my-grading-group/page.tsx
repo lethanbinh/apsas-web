@@ -202,13 +202,61 @@ const MySubmissionsPageContent = () => {
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
+      const successfulSubmissionIds = results.filter(r => r.success).map(r => r.submissionId);
+
       if (successCount > 0) {
-        messageApi.success(`Batch grading started for ${successCount}/${results.length} submission(s)`);
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-        queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
-        queryClient.invalidateQueries({ queryKey: ['submissions'] });
+        messageApi.destroy();
+        messageApi.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
+        
+        // Start polling for grading status
+        const pollInterval = setInterval(async () => {
+          try {
+            // Fetch grading sessions for all successful submissions
+            const sessionPromises = successfulSubmissionIds.map(submissionId =>
+              gradingService.getGradingSessions({
+                submissionId: submissionId,
+                pageNumber: 1,
+                pageSize: 100,
+              }).catch(() => ({ items: [] }))
+            );
+
+            const sessionResults = await Promise.all(sessionPromises);
+            
+            // Check if all sessions are completed (status !== 0)
+            let allCompleted = true;
+            for (const result of sessionResults) {
+              if (result.items.length > 0) {
+                const latestSession = result.items.sort((a, b) => 
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )[0];
+                if (latestSession.status === 0) { // Still processing
+                  allCompleted = false;
+                  break;
+                }
+              } else {
+                // No session found yet, still processing
+                allCompleted = false;
+                break;
+              }
+            }
+
+            if (allCompleted) {
+              clearInterval(pollInterval);
+              messageApi.destroy();
+              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              queryClient.invalidateQueries({ queryKey: ['submissions'] });
+              messageApi.success(`Batch grading completed for ${successCount} submission(s)`);
+            }
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+          }
+        }, 5000); // Poll every 5 seconds
+
+        // Store interval reference to cleanup if component unmounts
+        (window as any).batchGradingPollInterval = pollInterval;
       }
+
       if (failCount > 0) {
         messageApi.warning(`Failed to start grading for ${failCount} submission(s)`);
       }
@@ -720,9 +768,9 @@ const MySubmissionsPageContent = () => {
       if (!existing) {
         groupedMap.set(key, sub);
       } else {
-        // Compare submittedAt - keep the one with the latest date
-        const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-        const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+        // Compare updatedAt (or submittedAt as fallback) - keep the one with the latest date
+        const existingDate = (existing.updatedAt || existing.submittedAt) ? new Date(existing.updatedAt || existing.submittedAt || 0).getTime() : 0;
+        const currentDate = (sub.updatedAt || sub.submittedAt) ? new Date(sub.updatedAt || sub.submittedAt || 0).getTime() : 0;
         
         if (currentDate > existingDate) {
           // Current submission has newer date
@@ -739,11 +787,11 @@ const MySubmissionsPageContent = () => {
       }
     });
 
-    // Convert map back to array and sort by submittedAt (newest first)
+    // Convert map back to array and sort by updatedAt (or submittedAt) (newest first)
     const result = Array.from(groupedMap.values());
     result.sort((a, b) => {
-      const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-      const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      const dateA = (a.updatedAt || a.submittedAt) ? new Date(a.updatedAt || a.submittedAt || 0).getTime() : 0;
+      const dateB = (b.updatedAt || b.submittedAt) ? new Date(b.updatedAt || b.submittedAt || 0).getTime() : 0;
       return dateB - dateA; // Descending order (newest first)
     });
 
@@ -789,9 +837,9 @@ const MySubmissionsPageContent = () => {
         if (!existing) {
           studentMap.set(studentKey, sub);
         } else {
-          // Compare submittedAt - keep the one with the latest date
-          const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-          const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+          // Compare updatedAt (or submittedAt as fallback) - keep the one with the latest date
+          const existingDate = (existing.updatedAt || existing.submittedAt) ? new Date(existing.updatedAt || existing.submittedAt || 0).getTime() : 0;
+          const currentDate = (sub.updatedAt || sub.submittedAt) ? new Date(sub.updatedAt || sub.submittedAt || 0).getTime() : 0;
 
           if (currentDate > existingDate) {
             // Current submission has newer date
@@ -870,11 +918,7 @@ const MySubmissionsPageContent = () => {
     }
 
     messageApi.loading(`Starting batch grading for ${filteredData.length} submission(s)...`, 0);
-    batchGradingMutation.mutate(filteredData, {
-      onSettled: () => {
-        messageApi.destroy();
-      },
-    });
+    batchGradingMutation.mutate(filteredData);
   };
 
 
@@ -920,11 +964,17 @@ const MySubmissionsPageContent = () => {
     },
     {
       title: "Submitted At",
-      dataIndex: "submittedAt",
+      dataIndex: "updatedAt",
       key: "submittedAt",
-      render: (date: string) => formatUtcDate(date, "DD/MM/YYYY HH:mm"),
-      sorter: (a: EnrichedSubmission, b: EnrichedSubmission) =>
-        new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
+      render: (_: any, record: EnrichedSubmission) => {
+        const date = record.updatedAt || record.submittedAt;
+        return formatUtcDate(date, "DD/MM/YYYY HH:mm");
+      },
+      sorter: (a: EnrichedSubmission, b: EnrichedSubmission) => {
+        const dateA = (a.updatedAt || a.submittedAt) ? new Date(a.updatedAt || a.submittedAt || 0).getTime() : 0;
+        const dateB = (b.updatedAt || b.submittedAt) ? new Date(b.updatedAt || b.submittedAt || 0).getTime() : 0;
+        return dateA - dateB;
+      },
     },
     {
       title: "Grade",

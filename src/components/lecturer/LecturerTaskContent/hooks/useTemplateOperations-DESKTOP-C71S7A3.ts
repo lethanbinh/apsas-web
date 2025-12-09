@@ -1,13 +1,13 @@
-import { useState } from "react";
-import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { queryKeys } from "@/lib/react-query";
-import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assessmentFileService } from "@/services/assessmentFileService";
-import { assignRequestService } from "@/services/assignRequestService";
 import type { AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import type { AssignRequestItem } from "@/services/assignRequestService";
-import type { UploadFile } from "antd/es/upload/interface";
+import { assignRequestService } from "@/services/assignRequestService";
+import { useQueryClient } from "@tanstack/react-query";
 import type { NotificationInstance } from "antd/es/notification/interface";
+import type { UploadFile } from "antd/es/upload/interface";
+import { useState } from "react";
 
 interface UseTemplateOperationsProps {
   task: AssignRequestItem;
@@ -26,6 +26,7 @@ export function useTemplateOperations({
   refetchTemplates,
   notification,
 }: UseTemplateOperationsProps) {
+  const queryClient = useQueryClient();
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateType, setNewTemplateType] = useState(0);
@@ -224,6 +225,15 @@ export function useTemplateOperations({
         });
       }
 
+      // Invalidate all assessment templates queries
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.assessmentTemplates.all,
+        exact: false
+      });
+      
+      // Dispatch custom event to notify other components
+      window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
+      
       await refetchTemplates();
     } catch (error: any) {
       console.error("Failed to create template:", error);
@@ -238,7 +248,29 @@ export function useTemplateOperations({
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
+      
+      // Invalidate all assessment template queries
+      queryClient.invalidateQueries({ 
+        queryKey: queryKeys.assessmentTemplates.all,
+        exact: false
+      });
+      
+      // Refetch all assessment template queries immediately
+      await queryClient.refetchQueries({
+        queryKey: queryKeys.assessmentTemplates.all,
+        type: 'active', // Refetch all active queries
+      });
+      
+      // Also refetch local templates
       await refetchTemplates();
+      
+      // Dispatch custom event to notify other components (after refetch)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', { 
+          detail: { templateId: template.id, action: 'deleted' }
+        }));
+      }
+      
       await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {

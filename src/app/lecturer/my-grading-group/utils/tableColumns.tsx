@@ -71,12 +71,15 @@ export function getTableColumns(router: ReturnType<typeof useRouter>): ColumnsTy
     },
     {
       title: "Submitted At",
-      dataIndex: "submittedAt",
+      dataIndex: "updatedAt",
       key: "submittedAt",
-      render: (date: string | null | undefined) => formatUtcDate(date, "DD/MM/YYYY HH:mm:ss"),
+      render: (_: any, record: EnrichedSubmission) => {
+        const date = (record as any).updatedAt || record.submittedAt;
+        return formatUtcDate(date, "DD/MM/YYYY HH:mm:ss");
+      },
       sorter: (a: EnrichedSubmission, b: EnrichedSubmission) => {
-        const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
-        const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+        const dateA = ((a as any).updatedAt || a.submittedAt) ? new Date((a as any).updatedAt || a.submittedAt || 0).getTime() : 0;
+        const dateB = ((b as any).updatedAt || b.submittedAt) ? new Date((b as any).updatedAt || b.submittedAt || 0).getTime() : 0;
         return dateA - dateB;
       },
     },

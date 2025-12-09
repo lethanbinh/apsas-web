@@ -242,7 +242,11 @@ export default function MyClassesPage() {
     }
   };
 
-  if ((isLoading && allCourses.length === 0) || isAuthLoading || (isStudentLoading && !studentId)) {
+  // Show loading if:
+  // 1. Auth is still loading
+  // 2. Student ID is still loading (first time fetch)
+  // 3. Data is loading and we don't have any courses yet
+  if (isAuthLoading || isStudentLoading || (isLoading && allCourses.length === 0 && studentId)) {
     return (
       <Layout>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -252,10 +256,29 @@ export default function MyClassesPage() {
     );
   }
 
-  if (!user || !studentId) {
+  // Only show "No student profile found" if:
+  // 1. User is loaded but no studentId found (after loading is complete)
+  // 2. We're not still loading studentId
+  if (user && !isStudentLoading && !studentId) {
     return (
       <Layout>
-        <div>No student profile found.</div>
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <p>No student profile found.</p>
+          <p style={{ color: '#999', fontSize: '14px', marginTop: '8px' }}>
+            Please contact your administrator if you believe this is an error.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // If no user, show error (shouldn't happen if middleware works correctly)
+  if (!user) {
+    return (
+      <Layout>
+        <div style={{ padding: '24px', textAlign: 'center' }}>
+          <p>Authentication required. Please log in again.</p>
+        </div>
       </Layout>
     );
   }

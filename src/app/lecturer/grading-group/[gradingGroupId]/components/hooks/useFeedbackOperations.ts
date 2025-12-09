@@ -152,7 +152,8 @@ export function useFeedbackOperations({
         errorHandling: "",
       });
     }
-  }, [feedbackList, submission.id, setSubmissionFeedbackId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedbackList, submission.id]);
 
   const saveFeedback = async (feedbackData: FeedbackData) => {
     const feedbackText = serializeFeedback(feedbackData);

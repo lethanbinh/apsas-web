@@ -78,8 +78,8 @@ export default function GradingGroupPage() {
       if (!existing) {
         studentSubmissions.set(sub.studentId, sub);
       } else {
-        const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-        const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+        const existingDate = (existing.updatedAt || existing.submittedAt) ? new Date(existing.updatedAt || existing.submittedAt || 0).getTime() : 0;
+        const currentDate = (sub.updatedAt || sub.submittedAt) ? new Date(sub.updatedAt || sub.submittedAt || 0).getTime() : 0;
         
         if (currentDate > existingDate) {
           studentSubmissions.set(sub.studentId, sub);
@@ -264,29 +264,80 @@ export default function GradingGroupPage() {
       });
 
       const results = await Promise.all(gradingPromises);
-      message.destroy();
       
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
+      const successfulSubmissionIds = results.filter(r => r.success).map(r => r.submissionId);
+
       if (successCount > 0) {
-        message.success(`Batch grading started for ${successCount}/${results.length} submission(s)`);
-        // Invalidate relevant queries
-        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-        queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
-        queryClient.invalidateQueries({ queryKey: ['submissions'] });
+        message.destroy();
+        message.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
+        
+        // Start polling for grading status
+        const pollInterval = setInterval(async () => {
+          try {
+            // Fetch grading sessions for all successful submissions
+            const sessionPromises = successfulSubmissionIds.map(submissionId =>
+              gradingService.getGradingSessions({
+                submissionId: submissionId,
+                pageNumber: 1,
+                pageSize: 100,
+              }).catch(() => ({ items: [] }))
+            );
+
+            const sessionResults = await Promise.all(sessionPromises);
+            
+            // Check if all sessions are completed (status !== 0)
+            let allCompleted = true;
+            for (const result of sessionResults) {
+              if (result.items.length > 0) {
+                const latestSession = result.items.sort((a, b) => 
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )[0];
+                if (latestSession.status === 0) { // Still processing
+                  allCompleted = false;
+                  break;
+                }
+              } else {
+                // No session found yet, still processing
+                allCompleted = false;
+                break;
+              }
+            }
+
+            if (allCompleted) {
+              clearInterval(pollInterval);
+              message.destroy();
+              setBatchGradingLoading(false);
+              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
+              queryClient.invalidateQueries({ queryKey: ['submissions'] });
+              message.success(`Batch grading completed for ${successCount} submission(s)`);
+            }
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+          }
+        }, 5000); // Poll every 5 seconds
+
+        // Store interval reference to cleanup if component unmounts
+        (window as any).batchGradingPollInterval = pollInterval;
+      } else {
+        message.destroy();
+        setBatchGradingLoading(false);
       }
+
       if (failCount > 0) {
         message.warning(`Failed to start grading for ${failCount} submission(s)`);
       }
     } catch (err: any) {
       message.destroy();
       console.error("Failed to start batch grading:", err);
-      message.error(err.message || "Failed to start batch grading");
-    } finally {
       setBatchGradingLoading(false);
+      message.error(err.message || "Failed to start batch grading");
     }
-  }, [gradingGroup, submissions, message, queryClient]);
+  }, [gradingGroup, submissions, message, queryClient, gradingGroupId]);
 
   const loading = isLoadingGradingGroups && !gradingGroup;
 

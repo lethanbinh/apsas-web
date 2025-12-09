@@ -25,10 +25,10 @@ export const SubmissionHeaderCard = memo(function SubmissionHeaderCard({
 }: SubmissionHeaderCardProps) {
   const scoreText = useMemo(() => `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}`, [totalScore, maxScore]);
   const submittedAtText = useMemo(() => {
-    return submission.submittedAt
-      ? toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
+    return submission.updatedAt || submission.submittedAt
+      ? toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
       : "N/A";
-  }, [submission.submittedAt]);
+  }, [submission.updatedAt, submission.submittedAt]);
   
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">

@@ -192,13 +192,24 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     },
     onSuccess: (result, files) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroup'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
       messageApi.success(
         `Added ${result.createdSubmissionsCount} submissions from ${files.length} file(s) successfully!`,
         5
       );
       setFileList([]);
       onOk();
+      // Refetch queries after 3 seconds
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroup', group.id] });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroupId', group.id] });
+      }, 3000);
     },
     onError: (err: any) => {
       console.error("Failed to upload files:", err);
@@ -217,10 +228,21 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     },
     onSuccess: (_, submissionIds) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroup'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
       messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
       setSelectedRowKeys([]);
       onOk();
+      // Refetch queries after 3 seconds
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
+        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroups'] });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroup', group.id] });
+        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroupId', group.id] });
+      }, 3000);
     },
     onError: (err: any) => {
       console.error("Failed to delete submissions:", err);

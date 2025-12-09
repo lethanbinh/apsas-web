@@ -57,12 +57,15 @@ export function SubmissionsTable({
     },
     {
       title: "Submitted At",
-      dataIndex: "submittedAt",
+      dataIndex: "updatedAt",
       key: "submittedAt",
       width: 180,
-      render: (date: string) => date
-        ? dayjs.utc(date).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
-        : "N/A",
+      render: (_: any, record: Submission) => {
+        const date = record.updatedAt || record.submittedAt;
+        return date
+          ? dayjs.utc(date).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")
+          : "N/A";
+      },
     },
     {
       title: "Score",

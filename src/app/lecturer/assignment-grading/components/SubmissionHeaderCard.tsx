@@ -72,8 +72,8 @@ export function SubmissionHeaderCard({
           {submission.studentName}
         </Descriptions.Item>
         <Descriptions.Item label="Submitted At">
-          {submission.submittedAt
-            ? toVietnamTime(submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
+          {submission.updatedAt || submission.submittedAt
+            ? toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
             : "N/A"}
         </Descriptions.Item>
         <Descriptions.Item label="Submission File">

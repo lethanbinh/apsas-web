@@ -1,58 +1,50 @@
 "use client";
 
 import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
-import {
-  Collapse,
-  Spin,
-  Card,
-  Button,
-  List,
-  Typography,
-  Descriptions,
-  Space,
-  Alert,
-} from "antd";
-import { LinkOutlined } from "@ant-design/icons";
-import { useEffect, useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import styles from "@/components/student/AssignmentList.module.css";
+import { DeadlinePopover } from "@/components/student/DeadlinePopover";
+import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/react-query";
+import {
+  assessmentFileService
+} from "@/services/assessmentFileService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
+import { assessmentQuestionService } from "@/services/assessmentQuestionService";
+import {
+  AssessmentTemplate,
+  assessmentTemplateService,
+} from "@/services/assessmentTemplateService";
+import { assignRequestService } from "@/services/assignRequestService";
+import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
+import { classService } from "@/services/classService";
 import {
   CourseElement,
   courseElementService,
 } from "@/services/courseElementService";
-import { classService } from "@/services/classService";
-import {
-  assessmentTemplateService,
-  AssessmentTemplate,
-} from "@/services/assessmentTemplateService";
-import {
-  assessmentFileService,
-  AssessmentFile,
-} from "@/services/assessmentFileService";
-import {
-  PaperClipOutlined,
-  DownloadOutlined,
-  FolderOutlined,
-} from "@ant-design/icons";
-import { classAssessmentService, ClassAssessment } from "@/services/classAssessmentService";
-import { submissionService, Submission } from "@/services/submissionService";
-import { assignRequestService } from "@/services/assignRequestService";
-import { DeadlinePopover } from "@/components/student/DeadlinePopover";
-import { gradingService } from "@/services/gradingService";
-import { RobotOutlined, FileExcelOutlined } from "@ant-design/icons";
-import { App } from "antd";
-import { semesterService } from "@/services/semesterService";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import { useRouter } from "next/navigation";
-import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
-import { assessmentPaperService } from "@/services/assessmentPaperService";
-import { assessmentQuestionService } from "@/services/assessmentQuestionService";
-import { rubricItemService } from "@/services/rubricItemService";
 import { gradeItemService } from "@/services/gradeItemService";
-import { useAuth } from "@/hooks/useAuth";
-import { queryKeys } from "@/lib/react-query";
+import { gradingService } from "@/services/gradingService";
+import { rubricItemService } from "@/services/rubricItemService";
+import { Submission, submissionService } from "@/services/submissionService";
+import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
+import { DownloadOutlined, FileExcelOutlined, FolderOutlined, LinkOutlined, RobotOutlined } from "@ant-design/icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Alert,
+  App,
+  Button,
+  Card,
+  Collapse,
+  Descriptions,
+  List,
+  Space,
+  Spin,
+  Typography,
+} from "antd";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -170,12 +162,64 @@ const LabDetailItem = ({
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
-      message.destroy();
-      setBatchGradingLoading(false);
+      const successfulSubmissionIds = results.filter(r => r.success).map(r => r.submissionId);
 
       if (successCount > 0) {
-        message.success(`Batch grading started for ${successCount}/${submissions.length} submission(s)`);
+        message.destroy();
+        message.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
+        
+        // Start polling for grading status
+        const pollInterval = setInterval(async () => {
+          try {
+            // Fetch grading sessions for all successful submissions
+            const sessionPromises = successfulSubmissionIds.map(submissionId =>
+              gradingService.getGradingSessions({
+                submissionId: submissionId,
+                pageNumber: 1,
+                pageSize: 100,
+              }).catch(() => ({ items: [] }))
+            );
+
+            const sessionResults = await Promise.all(sessionPromises);
+            
+            // Check if all sessions are completed (status !== 0)
+            let allCompleted = true;
+            for (const result of sessionResults) {
+              if (result.items.length > 0) {
+                const latestSession = result.items.sort((a, b) => 
+                  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                )[0];
+                if (latestSession.status === 0) { // Still processing
+                  allCompleted = false;
+                  break;
+                }
+              } else {
+                // No session found yet, still processing
+                allCompleted = false;
+                break;
+              }
+            }
+
+            if (allCompleted) {
+              clearInterval(pollInterval);
+              message.destroy();
+              setBatchGradingLoading(false);
+              queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
+              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              message.success(`Batch grading completed for ${successCount} submission(s)`);
+            }
+          } catch (err: any) {
+            console.error("Failed to poll grading status:", err);
+          }
+        }, 5000); // Poll every 5 seconds
+
+        // Store interval reference to cleanup if component unmounts
+        (window as any).batchGradingPollInterval = pollInterval;
+      } else {
+        message.destroy();
+        setBatchGradingLoading(false);
       }
+
       if (failCount > 0) {
         message.warning(`Failed to start grading for ${failCount} submission(s)`);
       }
@@ -268,7 +312,7 @@ const LabDetailItem = ({
                       <div>
                         <div>{submission.submissionFile?.name || "No file"}</div>
                         <Text type="secondary" style={{ fontSize: "0.85rem" }}>
-                          Submitted: {dayjs(submission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                          Submitted: {dayjs(submission.updatedAt || submission.submittedAt).format("DD MMM YYYY, HH:mm")}
                         </Text>
                       </div>
                     }
@@ -424,17 +468,48 @@ const LabsPage = () => {
             }
           }
           
-          // Sort submissions by submittedAt (most recent first) and get latest per student
+          // Sort submissions by updatedAt (most recent first) and get latest per student
+          // Use updatedAt for submission date display
           for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
+            // First, sort all submissions by updatedAt (most recent first), then by id as tiebreaker
+            const sortedSubs = [...subs].sort((a, b) => {
+              const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
+              const dateB = new Date(b.updatedAt || b.submittedAt || 0).getTime();
+              if (dateB !== dateA) {
+                return dateB - dateA; // Most recent first
+              }
+              // If same date, use id as tiebreaker (higher id = newer)
+              return (b.id || 0) - (a.id || 0);
+            });
+            
+            // Get latest submission per student
             const studentSubmissions = new Map<number, Submission>();
-            for (const sub of subs) {
+            for (const sub of sortedSubs) {
+              if (!sub.studentId) continue;
               const existing = studentSubmissions.get(sub.studentId);
-              if (!existing || new Date(sub.submittedAt) > new Date(existing.submittedAt)) {
+              if (!existing) {
                 studentSubmissions.set(sub.studentId, sub);
+              } else {
+                // Compare dates and ids to ensure we have the latest
+                const existingDate = new Date(existing.updatedAt || existing.submittedAt || 0).getTime();
+                const currentDate = new Date(sub.updatedAt || sub.submittedAt || 0).getTime();
+                if (currentDate > existingDate || 
+                    (currentDate === existingDate && (sub.id || 0) > (existing.id || 0))) {
+                  studentSubmissions.set(sub.studentId, sub);
+                }
               }
             }
+            
+            // Sort final list by updatedAt (most recent first)
             const latestSubs = Array.from(studentSubmissions.values()).sort(
-              (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+              (a, b) => {
+                const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
+                const dateB = new Date(b.updatedAt || b.submittedAt || 0).getTime();
+                if (dateB !== dateA) {
+                  return dateB - dateA;
+                }
+                return (b.id || 0) - (a.id || 0);
+              }
             );
             submissionsByCourseElement.set(courseElementId, latestSubs);
       }

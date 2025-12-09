@@ -99,8 +99,8 @@ export function flattenGradingGroups(
         if (!existing) {
           studentSubmissions.set(sub.studentId, sub);
         } else {
-          const existingDate = existing.submittedAt ? new Date(existing.submittedAt).getTime() : 0;
-          const currentDate = sub.submittedAt ? new Date(sub.submittedAt).getTime() : 0;
+          const existingDate = ((existing as any).updatedAt || existing.submittedAt) ? new Date((existing as any).updatedAt || existing.submittedAt || 0).getTime() : 0;
+          const currentDate = ((sub as any).updatedAt || sub.submittedAt) ? new Date((sub as any).updatedAt || sub.submittedAt || 0).getTime() : 0;
           if (currentDate > existingDate || (currentDate === existingDate && sub.id > existing.id)) {
             studentSubmissions.set(sub.studentId, sub);
           }
