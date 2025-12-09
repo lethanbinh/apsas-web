@@ -282,6 +282,11 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return !!data.date;
   };
 
+  // Check if start date exists
+  const hasStartDate = () => {
+    return !!data.startAt;
+  };
+
   // Check if deadline has passed (using Vietnam time)
   const isDeadlinePassed = () => {
     if (!data.date) return false;
@@ -290,8 +295,29 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return currentTime.isAfter(deadlineTime);
   };
 
+  // Check if start date has not arrived yet (using Vietnam time)
+  const isBeforeStartDate = () => {
+    if (!data.startAt) return false;
+    const currentTime = getCurrentVietnamTime();
+    const startTime = toVietnamTime(data.startAt);
+    return currentTime.isBefore(startTime);
+  };
+
+  // Check if current time is within submission window (between startAt and endAt)
+  const isWithinSubmissionWindow = () => {
+    if (!data.startAt || !data.date) return false;
+    const currentTime = getCurrentVietnamTime();
+    const startTime = toVietnamTime(data.startAt);
+    const endTime = toVietnamTime(data.date);
+    return (currentTime.isAfter(startTime) || currentTime.isSame(startTime, 'minute')) && 
+           (currentTime.isBefore(endTime) || currentTime.isSame(endTime, 'minute'));
+  };
+
   const canSubmit = () => {
-    return hasDeadline() && !isDeadlinePassed();
+    if (!hasDeadline()) return false;
+    if (hasStartDate() && isBeforeStartDate()) return false;
+    if (isDeadlinePassed()) return false;
+    return true;
   };
 
   // Mutation for creating or updating submission
@@ -661,8 +687,23 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       message.error("This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting.");
       return;
     }
-    if (!canSubmit()) {
+    
+    // Check start date - if exists, must be after start date
+    if (hasStartDate() && isBeforeStartDate()) {
+      const startTime = toVietnamTime(data.startAt!);
+      message.error(`Submission is not yet open. The submission period starts on ${startTime.format("DD/MM/YYYY HH:mm")}.`);
+      return;
+    }
+    
+    // Check end date - must be before deadline
+    if (isDeadlinePassed()) {
       message.error("The deadline has passed. You can no longer submit.");
+      return;
+    }
+    
+    // Final check
+    if (!canSubmit()) {
+      message.error("You cannot submit at this time. Please check the submission period.");
       return;
     }
 
@@ -788,12 +829,12 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </div>
           )}
 
-          {/* Deadline - moved above Your Submission */}
+          {/* Submission Period - moved above Your Submission */}
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-              Deadline
+              {data.startAt ? "Submission Period" : "Deadline"}
             </Title>
-            <DeadlineDisplay date={data.date} />
+            <DeadlineDisplay date={data.date} startDate={data.startAt} />
           </div>
 
           {/* Lab Submission History - only for labs */}
@@ -967,9 +1008,9 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         <>
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
-              Deadline
+              {data.startAt ? "Submission Period" : "Deadline"}
             </Title>
-            <DeadlineDisplay date={data.date} />
+            <DeadlineDisplay date={data.date} startDate={data.startAt} />
           </div>
 
           <div className={styles.contentSection} style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #e6f7ff" }}>
