@@ -170,6 +170,7 @@ export class GradingGroupService {
         headers: {
           "Content-Type": "multipart/form-data",
         },
+        timeout: 0, // No timeout limit for file uploads
       }
     );
     return response.result;
