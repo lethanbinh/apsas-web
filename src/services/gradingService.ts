@@ -109,7 +109,10 @@ export class GradingService {
   async createGrading(payload: CreateGradingPayload): Promise<Grading> {
     const response = await apiService.post<GradingApiResponse>(
       "/grading",
-      payload
+      payload,
+      {
+        timeout: 0, // No timeout limit for grading
+      }
     );
     return response.result;
   }
@@ -126,7 +129,9 @@ export class GradingService {
         isSuccess: boolean;
         errorMessages: any[];
         result: GradingSession;
-      }>("/grading", payload);
+      }>("/grading", payload, {
+        timeout: 0, // No timeout limit for auto grading
+      });
       
       if (!response.isSuccess) {
         const errorMessage = response.errorMessages?.join(", ") || "Failed to start auto grading";
@@ -213,7 +218,7 @@ export class GradingService {
         {},
         { 
           params,
-          timeout: 300000 // 5 minutes - allow enough time for AI feedback processing
+          timeout: 0 // No timeout limit for AI feedback processing
         }
       );
       
