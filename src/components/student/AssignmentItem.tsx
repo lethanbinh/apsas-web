@@ -311,17 +311,17 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         });
       } else {
         // For assignments/exams: update if exists, create if not
-        if (submissionId) {
-          return submissionService.updateSubmission(submissionId, {
-            file: renamedFile,
-          });
-        } else {
-          return submissionService.createSubmission({
-            StudentId: studentId!,
-            ClassAssessmentId: data.classAssessmentId,
-            ExamSessionId: data.examSessionId,
-            file: renamedFile,
-          });
+      if (submissionId) {
+        return submissionService.updateSubmission(submissionId, {
+          file: renamedFile,
+        });
+      } else {
+        return submissionService.createSubmission({
+          StudentId: studentId!,
+          ClassAssessmentId: data.classAssessmentId,
+          ExamSessionId: data.examSessionId,
+          file: renamedFile,
+        });
         }
       }
     },

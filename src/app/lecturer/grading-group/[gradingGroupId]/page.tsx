@@ -310,10 +310,10 @@ export default function GradingGroupPage() {
               clearInterval(pollInterval);
               message.destroy();
               setBatchGradingLoading(false);
-              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
               queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
-              queryClient.invalidateQueries({ queryKey: ['submissions'] });
+        queryClient.invalidateQueries({ queryKey: ['submissions'] });
               message.success(`Batch grading completed for ${successCount} submission(s)`);
             }
           } catch (err: any) {

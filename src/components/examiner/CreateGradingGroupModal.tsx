@@ -13,7 +13,6 @@ import type { UploadFile, UploadProps } from "antd";
 import {
   Alert,
   App,
-  Button,
   Card,
   Form,
   Modal,
@@ -315,13 +314,12 @@ export const CreateGradingGroupModal: React.FC<
       title="Assign Teacher"
       open={open}
       onCancel={handleCancel}
+      onOk={() => form.submit()}
+      confirmLoading={isLoading}
       width={700}
       destroyOnHidden
-      footer={[
-        <Button key="cancel" onClick={handleCancel}>
-          Cancel
-        </Button>
-      ]}
+      okText="Assign"
+      cancelText="Cancel"
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {error && (
@@ -421,51 +419,6 @@ export const CreateGradingGroupModal: React.FC<
               value: t.id,
             }))}
           />
-        </Form.Item>
-
-        <Form.Item label="Upload Submissions (Optional)">
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            <Card size="small" style={{ backgroundColor: "#f0f9ff" }}>
-              <Space direction="vertical" style={{ width: "100%" }} size="small">
-                <Text strong>Upload ZIP files containing submissions</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  ZIP files will be extracted and submissions will be created automatically. 
-                  You can select multiple files. Only ZIP files are accepted, maximum size 100MB per file.
-                </Text>
-              </Space>
-            </Card>
-            <Dragger
-              fileList={fileList}
-              beforeUpload={beforeUploadZip}
-              onChange={handleFileChange}
-              accept=".zip,application/zip,application/x-zip-compressed"
-              multiple
-            >
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
-              </p>
-              <p className="ant-upload-text">Click or drag ZIP files here</p>
-              <p className="ant-upload-hint">
-                You can select multiple files. Only ZIP files are accepted. Files will be uploaded when you assign the teacher.
-              </p>
-            </Dragger>
-            {fileList.length > 0 && (
-              <Card size="small">
-                <Space direction="vertical" style={{ width: "100%" }} size="small">
-                  <Text strong>Selected files ({fileList.length}):</Text>
-                  {fileList.map((file, index) => (
-                    <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <FileZipOutlined />
-                      <Text>{file.name}</Text>
-                      <Text type="secondary">
-                        ({(file.size! / 1024 / 1024).toFixed(2)} MB)
-                      </Text>
-                    </div>
-                  ))}
-                </Space>
-              </Card>
-            )}
-          </Space>
         </Form.Item>
       </Form>
     </Modal>
