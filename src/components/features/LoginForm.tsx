@@ -15,7 +15,7 @@ import { App, Button, Checkbox, Form, Input, Modal, Select } from "antd";
 import { getApps, initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import Logo from "../../../public/logo/Logo";
@@ -63,6 +63,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const { login, isLoading } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -128,12 +129,56 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         throw new Error("Failed to process authentication token");
       }
 
-      const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
+      // Check if there's a redirect parameter from URL
+      const redirectParam = searchParams.get("redirect");
+      let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
+      
+      // If redirect parameter exists, validate it's allowed for this role
+      if (redirectParam) {
+        try {
+          const decodedRedirect = decodeURIComponent(redirectParam);
+          // Define allowed routes for each role (same as middleware)
+          const roleRoutes: Record<number, string[]> = {
+            0: ["/admin", "/profile"],
+            1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
+            2: ["/student", "/classes/my-classes/student", "/profile"],
+            3: ["/hod", "/profile"],
+            4: ["/examiner", "/profile"],
+          };
+          
+          const allowedPaths = roleRoutes[userRole] || [];
+          // Check if decoded redirect is allowed for this role
+          const isAllowed = allowedPaths.some(path => 
+            decodedRedirect === path || decodedRedirect.startsWith(path + "/")
+          );
+          
+          // Also check that redirect doesn't contain another role's identifier
+          const roleIdentifiers: Record<number, string> = {
+            0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
+          };
+          const userRoleIdentifier = roleIdentifiers[userRole];
+          const pathSegments = decodedRedirect.split("/").filter(Boolean);
+          const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
+            const otherRole = Number(roleNum);
+            return otherRole !== userRole && (
+              decodedRedirect.startsWith(`/${identifier}`) || 
+              pathSegments.includes(identifier)
+            );
+          });
+          
+          if (isAllowed && !hasOtherRole) {
+            redirectPath = decodedRedirect;
+          }
+        } catch (e) {
+          console.error("Failed to decode redirect parameter:", e);
+        }
+      }
 
       console.log("Redirecting to:", redirectPath);
       console.log("User role is:", userRole, "which maps to:", redirectPath);
 
-      router.push(redirectPath);
+      // Use window.location.href for a full page reload to ensure clean state
+      window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
       if (typeof window !== 'undefined') {
@@ -353,9 +398,54 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         userRole
       );
 
-      const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
+      // Check if there's a redirect parameter from URL
+      const redirectParam = searchParams.get("redirect");
+      let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
+      
+      // If redirect parameter exists, validate it's allowed for this role
+      if (redirectParam) {
+        try {
+          const decodedRedirect = decodeURIComponent(redirectParam);
+          // Define allowed routes for each role (same as middleware)
+          const roleRoutes: Record<number, string[]> = {
+            0: ["/admin", "/profile"],
+            1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
+            2: ["/student", "/classes/my-classes/student", "/profile"],
+            3: ["/hod", "/profile"],
+            4: ["/examiner", "/profile"],
+          };
+          
+          const allowedPaths = roleRoutes[userRole] || [];
+          // Check if decoded redirect is allowed for this role
+          const isAllowed = allowedPaths.some(path => 
+            decodedRedirect === path || decodedRedirect.startsWith(path + "/")
+          );
+          
+          // Also check that redirect doesn't contain another role's identifier
+          const roleIdentifiers: Record<number, string> = {
+            0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
+          };
+          const userRoleIdentifier = roleIdentifiers[userRole];
+          const pathSegments = decodedRedirect.split("/").filter(Boolean);
+          const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
+            const otherRole = Number(roleNum);
+            return otherRole !== userRole && (
+              decodedRedirect.startsWith(`/${identifier}`) || 
+              pathSegments.includes(identifier)
+            );
+          });
+          
+          if (isAllowed && !hasOtherRole) {
+            redirectPath = decodedRedirect;
+          }
+        } catch (e) {
+          console.error("Failed to decode redirect parameter:", e);
+        }
+      }
+
       console.log("Redirecting to:", redirectPath);
-      router.push(redirectPath);
+      // Use window.location.href for a full page reload to ensure clean state
+      window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
       console.error("Google login failed:", error);

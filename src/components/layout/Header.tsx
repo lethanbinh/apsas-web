@@ -10,6 +10,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { logout } from "@/store/slices/authSlice";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_NAVIGATION, Role } from "@/lib/constants";
 import styles from "./Header.module.css";
 
@@ -25,13 +26,22 @@ export const Header: React.FC = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, logout: logoutAuth } = useAuth();
+  const queryClient = useQueryClient();
 
   useEffect(() => setMounted(true), []);
 
   const handleLogout = async () => {
-    dispatch(logout());
-    router.push("/login");
+    // Clear React Query cache
+    queryClient.clear();
+    // Clear all sessionStorage items (including studentId cache)
+    if (typeof window !== 'undefined') {
+      sessionStorage.clear();
+    }
+    // Clear auth state and storage
+    logoutAuth();
+    // Use window.location for full page reload to ensure clean state
+    window.location.href = "/login";
   };
 
   const navigation = useMemo(() => {

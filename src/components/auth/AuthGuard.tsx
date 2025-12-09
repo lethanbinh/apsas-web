@@ -37,7 +37,7 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
   children, 
   requireAuth = true 
 }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -45,10 +45,20 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       if (requireAuth && !isAuthenticated) {
         router.push('/login');
       } else if (!requireAuth && isAuthenticated) {
-        router.push('/classes/my-classes/student');
+        // Redirect based on user role
+        const roleRedirects: { [key: number]: string } = {
+          0: "/admin/manage-users", // Admin
+          1: "/classes/my-classes/lecturer", // Lecturer
+          2: "/classes/my-classes/student", // Student
+          3: "/hod/semester-plans", // HOD
+          4: "/examiner/grading-groups", // Examiner
+        };
+        const userRole = user?.role as number;
+        const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
+        router.push(redirectPath);
       }
     }
-  }, [isAuthenticated, isLoading, requireAuth, router]);
+  }, [isAuthenticated, isLoading, requireAuth, router, user?.role]);
 
   if (isLoading) {
     return (
