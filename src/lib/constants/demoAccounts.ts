@@ -7,21 +7,10 @@ export interface DemoAccount {
 
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   { accountCode: "STU000001", email: "namle2385@gmail.com", password: "Lenam235", role: "Student" },
-  { accountCode: "LEC000001", email: "nguyenvana@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "HOD000001", email: "Hod1@example.com", password: "Lenam2386", role: "HOD" },
-  { accountCode: "LEC000002", email: "Lecturer1@example.com", password: "Lenam2385", role: "Lecturer" },
-  { accountCode: "LEC000003", email: "tranthib@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000004", email: "leminhc@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000005", email: "phamthid@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000006", email: "hoangvane@example.com", password: "123456", role: "Lecturer" },
-  { accountCode: "LEC000007", email: "ngothif@example.com", password: "123456", role: "Lecturer" },
+  { accountCode: "LEC000001", email: "lethanhbinh6122003@gmail.com", password: "123456", role: "Lecturer" },
+  { accountCode: "HOD000001", email: "binhltse173315@fpt.edu.vn", password: "Lenam2386", role: "HOD" },
+  { accountCode: "EXM000001", email: "umarusan2609@gmail.com", password: "Lenam2385", role: "Examiner" },
+  { accountCode: "ADM000001", email: "binhbeboi123@gmail.com", password: "admin@123", role: "Admin" },
   { accountCode: "STU000002", email: "dangthig@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000003", email: "vutranh@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000004", email: "doanthij@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000005", email: "phamanhk@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000006", email: "truongthil@example.com", password: "123456", role: "Student" },
-  { accountCode: "STU000007", email: "nguyenthanhm@example.com", password: "123456", role: "Student" },
-  { accountCode: "ADM000001", email: "admin1@system.com", password: "admin@123", role: "Admin" },
-  { accountCode: "EXM000001", email: "namnoname@example.com", password: "Lenam2385", role: "Examiner" },
+  { accountCode: "LEC000004", email: "phongthai003007@gmail.com", password: "123456", role: "Lecturer" },
 ];
-
