@@ -26,6 +26,7 @@ export function useTemplateOperations({
   refetchTemplates,
   notification,
 }: UseTemplateOperationsProps) {
+  const queryClient = useCustomQueryClient();
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateDesc, setNewTemplateDesc] = useState("");
   const [newTemplateType, setNewTemplateType] = useState(0);
@@ -238,7 +239,29 @@ export function useTemplateOperations({
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
+      
+      // Invalidate all assessment template queries
+      await queryClient.invalidateQueries({ 
+        queryKey: queryKeys.assessmentTemplates.all,
+        exact: false
+      });
+      
+      // Refetch all assessment template queries immediately
+      await queryClient.refetchQueries({
+        queryKey: queryKeys.assessmentTemplates.all,
+        type: 'active', // Refetch all active queries
+      });
+      
+      // Also refetch local templates
       await refetchTemplates();
+      
+      // Dispatch custom event to notify other components (after refetch)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', { 
+          detail: { templateId: template.id, action: 'deleted' }
+        }));
+      }
+      
       await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
