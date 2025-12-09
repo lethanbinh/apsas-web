@@ -241,9 +241,11 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return questionsList;
   }, [papersData, questionsQueries, rubricsQueries]);
 
-  // Calculate max score from questions (same as ScoreFeedbackModal)
+  // Calculate max score from all rubrics (not from question.score)
   const maxScore = useMemo(() => {
-    return questions.reduce((sum, q) => sum + (q.score || 0), 0);
+    return questions.reduce((sum, q) => {
+      return sum + (q.rubrics || []).reduce((rubricSum: number, rubric: any) => rubricSum + (rubric.score || 0), 0);
+    }, 0);
   }, [questions]);
 
   // Calculate total scores for each submission in lab history (same logic as ScoreFeedbackModal)

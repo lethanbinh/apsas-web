@@ -61,7 +61,7 @@ export function QuestionsGradingSection({
           <Tag color="blue">
             Score: {questionTotalScore.toFixed(2)}/{questionMaxScore.toFixed(2)}
           </Tag>
-          <Tag color="green">Max: {question.score.toFixed(2)}</Tag>
+          <Tag color="green">Max: {questionMaxScore.toFixed(2)}</Tag>
         </div>
       ),
       children: (

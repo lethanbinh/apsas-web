@@ -2,7 +2,7 @@
 
 import { FeedbackData } from "@/services/geminiService";
 import { Button, Card, Collapse, Space, Spin, Typography } from "antd";
-import { SaveOutlined } from "@ant-design/icons";
+import { SaveOutlined, RobotOutlined } from "@ant-design/icons";
 import { FeedbackFields } from "./FeedbackFields";
 
 const { Text } = Typography;
@@ -13,6 +13,7 @@ interface FeedbackSectionProps {
   loadingAiFeedback: boolean;
   onFeedbackChange: (field: keyof FeedbackData, value: string) => void;
   onSaveFeedback: () => void;
+  onGetAiFeedback?: () => void;
 }
 
 export function FeedbackSection({
@@ -21,6 +22,7 @@ export function FeedbackSection({
   loadingAiFeedback,
   onFeedbackChange,
   onSaveFeedback,
+  onGetAiFeedback,
 }: FeedbackSectionProps) {
   return (
     <Card className="feedbackCard" style={{ marginTop: 24 }}>
@@ -42,14 +44,27 @@ export function FeedbackSection({
                     <Text type="secondary" style={{ display: "block" }}>
                       Provide comprehensive feedback for the student's submission
                     </Text>
-                    <Button
-                      type="primary"
-                      icon={<SaveOutlined />}
-                      onClick={onSaveFeedback}
-                      disabled={loading || loadingAiFeedback}
-                    >
-                      Save Feedback
-                    </Button>
+                    <Space>
+                      {onGetAiFeedback && (
+                        <Button
+                          type="default"
+                          icon={<RobotOutlined />}
+                          onClick={onGetAiFeedback}
+                          disabled={loading || loadingAiFeedback}
+                          loading={loadingAiFeedback}
+                        >
+                          Get AI Feedback
+                        </Button>
+                      )}
+                      <Button
+                        type="primary"
+                        icon={<SaveOutlined />}
+                        onClick={onSaveFeedback}
+                        disabled={loading || loadingAiFeedback}
+                      >
+                        Save Feedback
+                      </Button>
+                    </Space>
                   </Space>
                   <Space direction="vertical" size="large" style={{ width: "100%" }}>
                     <FeedbackFields feedbackData={feedback} onFeedbackChange={onFeedbackChange} />

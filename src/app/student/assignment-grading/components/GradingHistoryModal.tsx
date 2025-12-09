@@ -48,29 +48,29 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     });
   }, [gradingSessionsData]);
 
-  // Fetch grade items for expanded sessions
-  const expandedSessionIds = Array.from(expandedSessions);
+  // Fetch grade items for ALL sessions (not just expanded ones) to calculate scores correctly
+  const allSessionIds = gradingHistory.map(session => session.id);
   const gradeItemsQueries = useQueries({
-    queries: expandedSessionIds.map((sessionId) => ({
+    queries: allSessionIds.map((sessionId) => ({
       queryKey: ['gradeItems', 'byGradingSessionId', sessionId],
       queryFn: () => gradeItemService.getGradeItems({
         gradingSessionId: sessionId,
         pageNumber: 1,
         pageSize: 1000,
       }),
-      enabled: expandedSessionIds.length > 0 && visible,
+      enabled: visible && allSessionIds.length > 0,
     })),
   });
 
   const sessionGradeItems = useMemo(() => {
     const map: { [sessionId: number]: GradeItem[] } = {};
-    expandedSessionIds.forEach((sessionId, index) => {
+    allSessionIds.forEach((sessionId, index) => {
       if (gradeItemsQueries[index]?.data?.items) {
         map[sessionId] = gradeItemsQueries[index].data!.items;
       }
     });
     return map;
-  }, [expandedSessionIds, gradeItemsQueries]);
+  }, [allSessionIds, gradeItemsQueries]);
 
   const getGradingTypeLabel = (type: number) => {
     switch (type) {
@@ -125,7 +125,19 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
               const isExpanded = expandedSessions.has(session.id);
               const gradeItems = sessionGradeItems[session.id] || [];
 
-              const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
+              // Calculate scores from gradeItems if available, otherwise use session.grade
+              const totalScore = gradeItems.length > 0 
+                ? gradeItems.reduce((sum, item) => sum + item.score, 0)
+                : (session.grade || 0);
+              const maxScore = gradeItems.length > 0
+                ? gradeItems.reduce((sum, item) => sum + (item.rubricItemMaxScore || 0), 0)
+                : 0;
+              
+              // Grade display: use totalScore from gradeItems if available, otherwise session.grade
+              // Only show maxScore if we have gradeItems
+              const gradeDisplay = gradeItems.length > 0 && maxScore > 0
+                ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}`
+                : totalScore.toFixed(2);
 
               return {
                 key: session.id.toString(),
@@ -136,10 +148,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                       <Space style={{ marginLeft: 16 }}>
                         {getStatusLabel(session.status)}
                         <Tag>{getGradingTypeLabel(session.gradingType)}</Tag>
-                        <Tag color="blue">Grade: {session.grade}</Tag>
-                        {gradeItems.length > 0 && (
-                          <Tag color="green">Total: {totalScore.toFixed(2)}</Tag>
-                        )}
+                        <Tag color="blue">Grade: {gradeDisplay}</Tag>
                       </Space>
                     </div>
                     <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -155,7 +164,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                       <Descriptions.Item label="Grading Type">
                         <Tag>{getGradingTypeLabel(session.gradingType)}</Tag>
                       </Descriptions.Item>
-                      <Descriptions.Item label="Grade">{session.grade}</Descriptions.Item>
+                      <Descriptions.Item label="Grade">{gradeDisplay}</Descriptions.Item>
                       <Descriptions.Item label="Grade Item Count">{session.gradeItemCount}</Descriptions.Item>
                       <Descriptions.Item label="Created At">
                         {toVietnamTime(session.createdAt).format("DD/MM/YYYY HH:mm:ss")}

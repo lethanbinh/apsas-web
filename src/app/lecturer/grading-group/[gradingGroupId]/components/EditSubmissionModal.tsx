@@ -351,6 +351,7 @@ export function EditSubmissionModal({
           loadingAiFeedback={loadingAiFeedback}
           onFeedbackChange={handleFeedbackChange}
           onSaveFeedback={handleSaveFeedback}
+          onGetAiFeedback={handleGetAiFeedback}
         />
       </Space>
 

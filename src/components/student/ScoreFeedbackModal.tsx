@@ -508,12 +508,17 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return false;
   };
 
+  // Calculate max score from all rubrics (not from question.score)
+  const maxScore = useMemo(() => {
+    return questions.reduce((sum, q) => {
+      return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
+    }, 0);
+  }, [questions]);
+
   // Calculate total score from questions or use latest grading session
   const getTotalScoreDisplay = () => {
     // If we have a grading session, use totalScore (even if it's 0)
     if (latestGradingSession && latestGradingSession.status === 1) {
-      // Calculate max score from questions
-      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
@@ -523,7 +528,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
     // If we have totalScore from state, show it (even if 0 means graded but got 0)
     if (totalScore !== undefined && totalScore !== null) {
-      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
@@ -532,13 +536,15 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
 
     // Fallback to lastSubmission.lastGrade if available
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
+      if (maxScore > 0) {
+        return `${Number(lastSubmission.lastGrade).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
+      }
       return Number(lastSubmission.lastGrade).toFixed(2);
     }
 
     // If we have grade items, calculate total from them
     if (latestGradeItems.length > 0) {
       const calculatedTotal = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
-      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0) {
         return `${Number(calculatedTotal).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
@@ -551,7 +557,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         const questionTotal = Object.values(q.rubricScores || {}).reduce((s, score) => s + (score || 0), 0);
         return sum + questionTotal;
       }, 0);
-      const maxScore = questions.reduce((sum, q) => sum + q.score, 0);
       if (maxScore > 0 && calculatedTotal > 0) {
         return `${Number(calculatedTotal).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
@@ -776,7 +781,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 <Title level={3}>Grading Details</Title>
                 <Text type="secondary">
                   Total Questions: {questions.length} | Total Max Score:{" "}
-                  {questions.reduce((sum, q) => sum + q.score, 0)}
+                  {maxScore.toFixed(2)}
                 </Text>
                 <Divider />
 
@@ -801,9 +806,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                           </span>
                           <Space>
                             <Tag color="blue">
-                              Score: {questionTotalScore}/{questionMaxScore}
+                              Score: {questionTotalScore.toFixed(2)}/{questionMaxScore.toFixed(2)}
                             </Tag>
-                            <Tag color="green">Max: {question.score}</Tag>
+                            <Tag color="green">Max: {questionMaxScore.toFixed(2)}</Tag>
                           </Space>
                         </div>
                       ),

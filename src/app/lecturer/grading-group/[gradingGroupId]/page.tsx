@@ -19,6 +19,10 @@ import { gradingService } from "@/services/gradingService";
 import { semesterService } from "@/services/semesterService";
 import { courseElementService } from "@/services/courseElementService";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
+import { assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { rubricItemService } from "@/services/rubricItemService";
+import { gradeItemService } from "@/services/gradeItemService";
 
 export default function GradingGroupPage() {
   const router = useRouter();
@@ -107,20 +111,45 @@ export default function GradingGroupPage() {
     })),
   });
 
-  // Calculate total scores for each submission
+  // Fetch grade items for all grading sessions
+  const gradeItemsQueries = useQueries({
+    queries: gradingSessionsQueries.map((sessionQuery, index) => ({
+      queryKey: ['gradeItems', 'byGradingSessionId', sessionQuery.data?.items?.[0]?.id],
+      queryFn: () => {
+        const latestSession = sessionQuery.data?.items?.[0];
+        if (!latestSession?.id) return { items: [] };
+        return gradeItemService.getGradeItems({
+          gradingSessionId: latestSession.id,
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+      },
+      enabled: submissions.length > 0 && !!sessionQuery.data?.items?.[0]?.id,
+    })),
+  });
+
+  // Calculate total scores for each submission from gradeItems if available, otherwise use session.grade
   const submissionTotalScores = useMemo(() => {
     const scoreMap: Record<number, number> = {};
     submissions.forEach((submission, index) => {
       const sessionsQuery = gradingSessionsQueries[index];
+      const gradeItemsQuery = gradeItemsQueries[index];
+      
       if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
         const latestSession = sessionsQuery.data.items[0];
-        if (latestSession.grade !== undefined && latestSession.grade !== null) {
+        
+        // Prefer calculating from gradeItems if available
+        if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
+          const totalScore = gradeItemsQuery.data.items.reduce((sum, item) => sum + item.score, 0);
+          scoreMap[submission.id] = totalScore;
+        } else if (latestSession.grade !== undefined && latestSession.grade !== null) {
+          // Fallback to session.grade if no gradeItems
           scoreMap[submission.id] = latestSession.grade;
         }
       }
     });
     return scoreMap;
-  }, [submissions, gradingSessionsQueries]);
+  }, [submissions, gradingSessionsQueries, gradeItemsQueries]);
 
   // Fetch assessment template to get course element and semester info
   const { data: templatesResponse } = useQuery({
@@ -136,6 +165,68 @@ export default function GradingGroupPage() {
     if (!templatesResponse?.items || !gradingGroup?.assessmentTemplateId) return null;
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
+
+  // Fetch papers for maxScore calculation
+  const { data: papersResponse } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplate?.id!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: assessmentTemplate!.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!assessmentTemplate?.id,
+  });
+
+  const papers = papersResponse?.items || [];
+
+  // Fetch questions for all papers
+  const questionsQueries = useQueries({
+    queries: papers.map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: papers.length > 0,
+    })),
+  });
+
+  const allQuestions = useMemo(() => {
+    const questions: any[] = [];
+    questionsQueries.forEach((query) => {
+      if (query.data?.items) {
+        questions.push(...query.data.items);
+      }
+    });
+    return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
+  }, [questionsQueries]);
+
+  // Fetch rubrics for all questions
+  const rubricsQueries = useQueries({
+    queries: allQuestions.map((question) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(question.id),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: question.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: allQuestions.length > 0,
+    })),
+  });
+
+  // Calculate maxScore from all rubrics
+  const maxScore = useMemo(() => {
+    let total = 0;
+    rubricsQueries.forEach((query) => {
+      if (query.data?.items) {
+        query.data.items.forEach((rubric: any) => {
+          total += rubric.score || 0;
+        });
+      }
+    });
+    return total;
+  }, [rubricsQueries]);
 
   // Fetch course element to get semester info
   const { data: courseElementsData } = useQuery({
@@ -376,6 +467,7 @@ export default function GradingGroupPage() {
             <SubmissionsTable
               submissions={submissions}
               submissionTotalScores={submissionTotalScores}
+              maxScore={maxScore}
               onEdit={handleOpenEditModal}
             />
           </Card>

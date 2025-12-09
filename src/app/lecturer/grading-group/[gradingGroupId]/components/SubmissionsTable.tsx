@@ -14,12 +14,14 @@ const { Text } = Typography;
 interface SubmissionsTableProps {
   submissions: Submission[];
   submissionTotalScores: Record<number, number>;
+  maxScore: number;
   onEdit: (submission: Submission) => void;
 }
 
 export function SubmissionsTable({
   submissions,
   submissionTotalScores,
+  maxScore,
   onEdit,
 }: SubmissionsTableProps) {
   const columns: TableProps<Submission>["columns"] = [
@@ -77,7 +79,7 @@ export function SubmissionsTable({
         if (totalScore !== undefined && totalScore !== null) {
           return (
             <Tag color="green" style={{ fontSize: 14, fontWeight: 600 }}>
-              {totalScore.toFixed(2)}
+              {maxScore > 0 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}` : totalScore.toFixed(2)}
             </Tag>
           );
         }
