@@ -314,12 +314,13 @@ export const CreateGradingGroupModal: React.FC<
       title="Assign Teacher"
       open={open}
       onCancel={handleCancel}
-      onOk={() => form.submit()}
-      confirmLoading={isLoading}
       width={700}
       destroyOnHidden
-      okText="Assign"
-      cancelText="Cancel"
+      footer={[
+        <Button key="cancel" onClick={handleCancel}>
+          Cancel
+        </Button>
+      ]}
     >
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         {error && (
