@@ -1,7 +1,25 @@
 .wrapper {
-    padding: 2rem;
+    padding: 2rem 3rem;
     background-color: #fff;
     min-height: 100vh;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+
+@media (max-width: 1200px) {
+    .wrapper {
+        padding: 2rem;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .wrapper {
+        padding: 1.5rem;
+    }
 }
 
 .header {

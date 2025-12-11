@@ -1609,6 +1609,8 @@ a {
   /* Make content area scrollable */
   margin: 0;
   padding: 0;
+  background-color: #ffffff;
+  /* Ensure white background for content area */
   /* You might also need to set a min-height or height if direct children have fixed heights */
 }
 
