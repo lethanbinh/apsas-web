@@ -10,6 +10,7 @@ interface GradingGroupHeaderProps {
   batchGradingLoading: boolean;
   submissionsCount: number;
   semesterEnded: boolean;
+  isGradeSheetSubmitted: boolean;
 }
 
 export function GradingGroupHeader({
@@ -21,6 +22,7 @@ export function GradingGroupHeader({
   batchGradingLoading,
   submissionsCount,
   semesterEnded,
+  isGradeSheetSubmitted,
 }: GradingGroupHeaderProps) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -56,7 +58,7 @@ export function GradingGroupHeader({
             loading={batchGradingLoading}
             type="primary"
             size="large"
-            disabled={semesterEnded}
+            disabled={semesterEnded || isGradeSheetSubmitted}
           >
             Batch Grade
           </Button>

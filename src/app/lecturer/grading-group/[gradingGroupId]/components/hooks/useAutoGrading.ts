@@ -10,6 +10,7 @@ interface UseAutoGradingProps {
   submission: Submission;
   gradingGroup: GradingGroup;
   semesterEnded: boolean;
+  isGradeSheetSubmitted: boolean;
   message: MessageInstance;
   queryClient: ReturnType<typeof useQueryClient>;
 }
@@ -18,6 +19,7 @@ export function useAutoGrading({
   submission,
   gradingGroup,
   semesterEnded,
+  isGradeSheetSubmitted,
   message,
   queryClient,
 }: UseAutoGradingProps) {
@@ -34,6 +36,11 @@ export function useAutoGrading({
 
     if (semesterEnded) {
       message.warning("Cannot use auto grading when the semester has ended");
+      return;
+    }
+
+    if (isGradeSheetSubmitted) {
+      message.warning("Cannot use auto grading when the grade sheet has been submitted");
       return;
     }
 

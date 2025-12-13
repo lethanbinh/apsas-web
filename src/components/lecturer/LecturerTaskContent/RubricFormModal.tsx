@@ -2,7 +2,7 @@
 
 import { rubricItemService } from "@/services/rubricItemService";
 import { RubricItem } from "@/services/rubricItemService";
-import { App, Button, Form, Input, Modal } from "antd";
+import { Alert, App, Button, Form, Input, Modal } from "antd";
 import { useEffect } from "react";
 
 interface RubricFormModalProps {
@@ -12,6 +12,7 @@ interface RubricFormModalProps {
   isEditable: boolean;
   initialData?: RubricItem;
   questionId?: number;
+  currentRubricsCount?: number;
 }
 
 export const RubricFormModal = ({
@@ -21,6 +22,7 @@ export const RubricFormModal = ({
   isEditable,
   initialData,
   questionId,
+  currentRubricsCount = 0,
 }: RubricFormModalProps) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
@@ -42,6 +44,14 @@ export const RubricFormModal = ({
       if (isEditing) {
         await rubricItemService.updateRubricItem(initialData!.id, values);
       } else {
+        // Check if already at maximum (4 rubrics)
+        if (currentRubricsCount >= 4) {
+          notification.error({
+            message: "Maximum rubrics reached",
+            description: "Each question can have a maximum of 4 rubrics.",
+          });
+          return;
+        }
         await rubricItemService.createRubricItem({
           ...values,
           assessmentQuestionId: questionId,
@@ -68,12 +78,26 @@ export const RubricFormModal = ({
           Cancel
         </Button>,
         isEditable ? (
-          <Button key="submit" type="primary" onClick={() => form.submit()}>
+          <Button 
+            key="submit" 
+            type="primary" 
+            onClick={() => form.submit()}
+            disabled={!isEditing && currentRubricsCount >= 4}
+          >
             {isEditing ? "Save Changes" : "Add Rubric"}
           </Button>
         ) : null,
       ]}
     >
+      {!isEditing && currentRubricsCount >= 4 && (
+        <Alert
+          message="Maximum rubrics reached"
+          description="Each question can have a maximum of 4 rubrics. Please delete an existing rubric before adding a new one."
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="description"

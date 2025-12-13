@@ -52,6 +52,7 @@ interface EditSubmissionModalProps {
   onClose: () => void;
   submission: Submission;
   gradingGroup: GradingGroup;
+  isGradeSheetSubmitted: boolean;
 }
 
 export function EditSubmissionModal({
@@ -59,6 +60,7 @@ export function EditSubmissionModal({
   onClose,
   submission,
   gradingGroup,
+  isGradeSheetSubmitted,
 }: EditSubmissionModalProps) {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
@@ -110,6 +112,7 @@ export function EditSubmissionModal({
     submission,
     gradingGroup,
     semesterEnded,
+    isGradeSheetSubmitted,
     message,
     queryClient,
   });
@@ -191,6 +194,11 @@ export function EditSubmissionModal({
 
     if (semesterEnded) {
       message.warning("Cannot save grade when the semester has ended");
+      return;
+    }
+
+    if (isGradeSheetSubmitted) {
+      message.warning("Cannot save grade when the grade sheet has been submitted");
       return;
     }
 
@@ -323,6 +331,13 @@ export function EditSubmissionModal({
             showIcon
           />
         )}
+        {isGradeSheetSubmitted && (
+          <Alert
+            message="Grade sheet has been submitted. Grading modifications are disabled."
+            type="warning"
+            showIcon
+          />
+        )}
 
         <SubmissionHeaderCard
           submission={submission}
@@ -335,6 +350,7 @@ export function EditSubmissionModal({
           latestGradingSession={latestGradingSession}
           maxScore={maxScore}
           semesterEnded={semesterEnded}
+          isGradeSheetSubmitted={isGradeSheetSubmitted}
           autoGradingLoading={autoGradingLoading}
           saving={saving}
           onAutoGrading={handleAutoGrading}

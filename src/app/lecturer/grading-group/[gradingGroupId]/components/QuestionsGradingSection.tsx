@@ -26,6 +26,7 @@ interface QuestionsGradingSectionProps {
     comment: string
   ) => void;
   isSemesterPassed: boolean;
+  isGradeSheetSubmitted: boolean;
   message: MessageInstance;
 }
 
@@ -34,6 +35,7 @@ export function QuestionsGradingSection({
   handleRubricScoreChange,
   handleRubricCommentChange,
   isSemesterPassed,
+  isGradeSheetSubmitted,
   message,
 }: QuestionsGradingSectionProps) {
   const sortedQuestions = [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
@@ -88,7 +90,7 @@ export function QuestionsGradingSection({
             Grading Criteria ({question.rubrics.length})
           </h5>
           <Table
-            columns={getQuestionColumns(question, handleRubricScoreChange, isSemesterPassed, message)}
+            columns={getQuestionColumns(question, handleRubricScoreChange, isSemesterPassed, isGradeSheetSubmitted, message)}
             dataSource={question.rubrics}
             rowKey="id"
             pagination={false}
@@ -110,7 +112,7 @@ export function QuestionsGradingSection({
               }
               placeholder="Enter comments for this question..."
               style={{ width: "100%" }}
-              disabled={isSemesterPassed}
+              disabled={isSemesterPassed || isGradeSheetSubmitted}
             />
           </div>
         </div>

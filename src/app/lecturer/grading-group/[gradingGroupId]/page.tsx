@@ -1,6 +1,13 @@
 "use client";
 
 import { Alert, App, Button, Card, Space, Spin, Typography } from "antd";
+import { DownloadOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -50,6 +57,11 @@ export default function GradingGroupPage() {
     if (!gradingGroupsData || !gradingGroupId) return null;
     return gradingGroupsData.find(g => g.id === gradingGroupId) || null;
   }, [gradingGroupsData, gradingGroupId]);
+
+  // Check if grade sheet has been submitted
+  const isGradeSheetSubmitted = useMemo(() => {
+    return !!(gradingGroup?.submittedGradeSheetUrl || gradingGroup?.gradeSheetSubmittedAt);
+  }, [gradingGroup]);
 
   const title = useMemo(() => {
     return gradingGroup?.assessmentTemplateName || "Grading Group";
@@ -461,7 +473,38 @@ export default function GradingGroupPage() {
             batchGradingLoading={batchGradingLoading}
             submissionsCount={submissions.length}
             semesterEnded={semesterEnded}
+            isGradeSheetSubmitted={isGradeSheetSubmitted}
           />
+
+          {gradingGroup && (
+            <Card title="Submitted Grade Sheet">
+              {gradingGroup.submittedGradeSheetUrl ? (
+                <Space direction="vertical" size="small">
+                  <Typography.Text strong>Grade Sheet:</Typography.Text>
+                  <Button
+                    type="link"
+                    icon={<DownloadOutlined />}
+                    href={gradingGroup.submittedGradeSheetUrl}
+                    target="_blank"
+                    style={{ padding: 0 }}
+                  >
+                    Download Grade Sheet
+                  </Button>
+                  {gradingGroup.gradeSheetSubmittedAt && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12, display: "block" }}>
+                      Submitted at: {dayjs.utc(gradingGroup.gradeSheetSubmittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
+                    </Typography.Text>
+                  )}
+                </Space>
+              ) : (
+                <Alert
+                  message="No grade sheet submitted yet"
+                  type="info"
+                  showIcon
+                />
+              )}
+            </Card>
+          )}
 
           <Card>
             <SubmissionsTable
@@ -469,6 +512,7 @@ export default function GradingGroupPage() {
               submissionTotalScores={submissionTotalScores}
               maxScore={maxScore}
               onEdit={handleOpenEditModal}
+              isGradeSheetSubmitted={isGradeSheetSubmitted}
             />
           </Card>
         </Space>
@@ -483,6 +527,7 @@ export default function GradingGroupPage() {
           }}
           submission={selectedSubmissionForEdit}
           gradingGroup={gradingGroup}
+          isGradeSheetSubmitted={isGradeSheetSubmitted}
         />
       )}
 

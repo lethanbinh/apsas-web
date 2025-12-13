@@ -16,6 +16,7 @@ interface SubmissionsTableProps {
   submissionTotalScores: Record<number, number>;
   maxScore: number;
   onEdit: (submission: Submission) => void;
+  isGradeSheetSubmitted: boolean;
 }
 
 export function SubmissionsTable({
@@ -23,6 +24,7 @@ export function SubmissionsTable({
   submissionTotalScores,
   maxScore,
   onEdit,
+  isGradeSheetSubmitted,
 }: SubmissionsTableProps) {
   const columns: TableProps<Submission>["columns"] = [
     {
@@ -100,6 +102,7 @@ export function SubmissionsTable({
           icon={<EditOutlined />}
           onClick={() => onEdit(record)}
           size="small"
+          disabled={isGradeSheetSubmitted}
         >
           Edit
         </Button>
@@ -128,8 +131,12 @@ export function SubmissionsTable({
       }}
       scroll={{ x: 1000 }}
       onRow={(record) => ({
-        onClick: () => onEdit(record),
-        style: { cursor: 'pointer' },
+        onClick: () => {
+          if (!isGradeSheetSubmitted) {
+            onEdit(record);
+          }
+        },
+        style: { cursor: isGradeSheetSubmitted ? 'not-allowed' : 'pointer' },
       })}
     />
   );

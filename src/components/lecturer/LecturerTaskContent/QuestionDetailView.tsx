@@ -225,8 +225,9 @@ export const QuestionDetailView = ({
               icon={<PlusOutlined />}
               type="dashed"
               onClick={() => openRubricModal()}
+              disabled={rubrics.length >= 4}
             >
-              Add Rubric
+              Add Rubric {rubrics.length >= 4 ? `(Max 4)` : ``}
             </Button>
           )
         }
@@ -281,6 +282,7 @@ export const QuestionDetailView = ({
         isEditable={isEditable}
         initialData={selectedRubric}
         questionId={question.id}
+        currentRubricsCount={rubrics.length}
       />
 
       <QuestionFormModal

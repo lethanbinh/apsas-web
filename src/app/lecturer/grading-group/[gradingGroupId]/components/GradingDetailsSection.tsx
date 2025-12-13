@@ -21,6 +21,7 @@ interface GradingDetailsSectionProps {
   latestGradingSession: GradingSession | null;
   maxScore: number;
   semesterEnded: boolean;
+  isGradeSheetSubmitted: boolean;
   autoGradingLoading: boolean;
   saving: boolean;
   onAutoGrading: () => void;
@@ -36,6 +37,7 @@ export function GradingDetailsSection({
   latestGradingSession,
   maxScore,
   semesterEnded,
+  isGradeSheetSubmitted,
   autoGradingLoading,
   saving,
   onAutoGrading,
@@ -104,7 +106,7 @@ export function GradingDetailsSection({
                 icon={<RobotOutlined />}
                 onClick={onAutoGrading}
                 loading={autoGradingLoading}
-                disabled={semesterEnded}
+                disabled={semesterEnded || isGradeSheetSubmitted}
                 block
               >
                 Auto Grading
@@ -114,7 +116,7 @@ export function GradingDetailsSection({
                 icon={<SaveOutlined />}
                 onClick={onSave}
                 loading={saving}
-                disabled={semesterEnded}
+                disabled={semesterEnded || isGradeSheetSubmitted}
                 block
               >
                 Save Grade
@@ -136,6 +138,7 @@ export function GradingDetailsSection({
             handleRubricScoreChange={handleRubricScoreChange}
             handleRubricCommentChange={handleRubricCommentChange}
             isSemesterPassed={semesterEnded}
+            isGradeSheetSubmitted={isGradeSheetSubmitted}
             message={message}
           />
         </Col>
