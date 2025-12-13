@@ -20,6 +20,7 @@ export default function LecturerLayout({ children }: LecturerLayoutProps) {
     "/lecturer/tasks",
     "/lecturer/my-grading-group",
     "/lecturer/grading-group",
+    "/lecturer/approval",
   ];
   
   const shouldShowSidebar = !pagesWithoutSidebar.some(path => 

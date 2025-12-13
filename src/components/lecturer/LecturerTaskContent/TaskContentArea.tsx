@@ -103,6 +103,7 @@ export function TaskContentArea({
           onRubricChange={() => onRubricChange(paperId!)}
           onQuestionChange={() => onQuestionChange(paperId!)}
           onResetStatus={onResetStatus}
+          task={task}
         />
       );
     }

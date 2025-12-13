@@ -39,10 +39,8 @@ export function useDataRefresh({
       });
       setAllQuestions(newQuestionsMap);
       
-      // Reset status if needed
-      if (shouldResetStatus) {
-        await resetStatusIfRejected();
-      }
+      // Note: Edit paper does NOT resolve question comments, so we don't reset status here
+      // Status reset is handled separately when editing questions/rubrics
     } catch (error) {
       console.error("Failed to refresh papers:", error);
     }
@@ -65,10 +63,8 @@ export function useDataRefresh({
         [paperId]: sortedQuestions,
       }));
       
-      // Reset status if needed
-      if (shouldResetStatus) {
-        await resetStatusIfRejected();
-      }
+      // Note: Status reset is handled in QuestionDetailView when editing questions/rubrics
+      // This function only refreshes the data
     } catch (error) {
       console.error("Failed to refresh questions:", error);
     }
@@ -84,10 +80,7 @@ export function useDataRefresh({
       });
       setFiles(fileResponse.items);
       
-      // Reset status if needed
-      if (shouldResetStatus) {
-        await resetStatusIfRejected();
-      }
+      // Note: Edit file does NOT resolve question comments, so we don't reset status here
     } catch (error) {
       console.error("Failed to refresh files:", error);
     }

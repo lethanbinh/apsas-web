@@ -15,6 +15,7 @@ interface QuestionFormModalProps {
   initialData?: AssessmentQuestion;
   paperId?: number;
   existingQuestionsCount?: number;
+  hasComment?: boolean; // Indicates if the question has a reviewer comment
 }
 
 export const QuestionFormModal = ({
@@ -25,6 +26,7 @@ export const QuestionFormModal = ({
   initialData,
   paperId,
   existingQuestionsCount = 0,
+  hasComment = false,
 }: QuestionFormModalProps) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
@@ -48,19 +50,34 @@ export const QuestionFormModal = ({
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing) {
+        // If editing a question that has a comment, clear the comment to mark it as resolved
+        const updatePayload = {
+          ...values,
+          reviewerComment: hasComment ? undefined : initialData?.reviewerComment,
+        };
         await assessmentQuestionService.updateAssessmentQuestion(
           initialData!.id,
-          values
+          updatePayload
         );
+        if (hasComment) {
+          notification.success({
+            message: "Question updated and comment resolved",
+            description: "The question has been updated and the reviewer comment has been marked as resolved.",
+          });
+        } else {
+          notification.success({
+            message: "Question updated successfully",
+          });
+        }
       } else {
         await assessmentQuestionService.createAssessmentQuestion({
           ...values,
           assessmentPaperId: paperId,
         });
+        notification.success({
+          message: "Question created successfully",
+        });
       }
-      notification.success({
-        message: `Question ${isEditing ? "updated" : "created"} successfully`,
-      });
       onFinish();
     } catch (error) {
       console.error("Failed to save question:", error);

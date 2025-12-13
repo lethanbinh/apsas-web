@@ -820,18 +820,24 @@ const SemesterDetailPageContent = ({
           pageSize: 1000,
         });
         
-        // Create a map of assign request ID to status
+        // Create maps of assign request ID to status and assignedApproverLecturerId
         const statusMap = new Map<number, number>();
+        const approverMap = new Map<number, number | undefined>();
         assignRequestsResponse.items.forEach(ar => {
           statusMap.set(ar.id, ar.status);
+          approverMap.set(ar.id, ar.assignedApproverLecturerId);
         });
         
-        // Enrich assign requests with status
+        // Enrich assign requests with status and assignedApproverLecturerId
         data.semesterCourses.forEach(semesterCourse => {
           semesterCourse.assignRequests.forEach(ar => {
             const status = statusMap.get(ar.id);
+            const approverId = approverMap.get(ar.id);
             if (status !== undefined) {
               (ar as any).status = status;
+            }
+            if (approverId !== undefined) {
+              (ar as any).assignedApproverLecturerId = approverId;
             }
           });
         });

@@ -1,0 +1,47 @@
+.wrapper {
+    width: 100%;
+    padding: 30px 40px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
+    min-height: 100vh;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.approvalCard {
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.approvalTable :global(.ant-table) {
+    border-radius: 12px;
+}
+
+.approvalTable :global(.ant-table-thead > tr > th) {
+    background-color: #f9faff;
+    font-weight: 600;
+    color: #2F327D;
+    border-bottom: 2px solid #e6f7ff;
+}
+
+.approvalTable :global(.ant-table-tbody > tr:hover > td) {
+    background-color: #f0f9ff;
+}
+
+.statusTag {
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.searchBar {
+    border-radius: 8px;
+}
+

@@ -124,6 +124,7 @@ export async function importTemplate({
             courseElementId: task.courseElementId,
             assignedLecturerId: task.assignedLecturerId,
             assignedByHODId: task.assignedByHODId,
+            assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
             status: 1,
             assignedAt: task.assignedAt,
           });

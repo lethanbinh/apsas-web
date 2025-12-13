@@ -2,7 +2,7 @@
 
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { AssessmentTemplate } from "@/services/assessmentTemplateService";
-import { AssignRequestItem, assignRequestService } from "@/services/assignRequestService";
+import { AssignRequestItem } from "@/services/assignRequestService";
 import { App, Button, Form, Input, Modal, Radio } from "antd";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,7 +32,6 @@ export const TemplateFormModal = ({
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Assessment Template" : "Add New Template";
-  const isRejected = task && Number(task.status) === 3;
 
   useEffect(() => {
     if (open) {
@@ -63,33 +62,11 @@ export const TemplateFormModal = ({
           }
         );
         
-        // If this was a resubmission after rejection, reset status to Pending
-        if (isRejected && task) {
-          try {
-            await assignRequestService.updateAssignRequest(task.id, {
-              message: task.message || "Template updated and resubmitted after rejection",
-              courseElementId: task.courseElementId,
-              assignedLecturerId: task.assignedLecturerId,
-              assignedByHODId: task.assignedByHODId,
-              status: 1, // Reset to Pending
-              assignedAt: task.assignedAt,
-            });
-            notification.success({
-              message: "Template Updated and Resubmitted",
-              description: "Template has been updated and status reset to Pending for HOD review.",
-            });
-          } catch (err: any) {
-            console.error("Failed to reset status:", err);
-            notification.warning({
-              message: "Template Updated",
-              description: "Template updated successfully, but failed to reset status. Please contact administrator.",
-            });
-          }
-        } else {
-          notification.success({
-            message: "Template updated successfully",
-          });
-        }
+        // Note: Editing template does NOT reset status to Pending
+        // Status only resets when all questions with comments have been edited/resolved
+        notification.success({
+          message: "Template updated successfully",
+        });
         // Invalidate all assessment templates queries
         queryClient.invalidateQueries({ 
           queryKey: queryKeys.assessmentTemplates.all,

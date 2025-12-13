@@ -1,0 +1,170 @@
+.wrapper {
+    width: 100%;
+    padding: 30px 40px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
+    min-height: 100vh;
+}
+
+.mainCollapse {
+    background-color: transparent !important;
+}
+
+.mainPanel {
+    margin-bottom: 20px !important;
+    background-color: #f9faff !important;
+    border: 1px solid #e6f7ff !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.mainPanel :global(.ant-collapse-header) {
+    padding: 20px !important;
+    align-items: center !important;
+}
+
+.mainPanel :global(.ant-collapse-content) {
+    border-top: 1px solid #e6f7ff !important;
+}
+
+.mainPanel :global(.ant-collapse-content-box) {
+    padding: 0 !important;
+}
+
+.mainPanelHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+/* --- Inner Assignment Collapse Styles --- */
+.innerAssignmentCollapse {
+    padding: 16px;
+}
+
+.assignmentPanel {
+    background-color: #fff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    margin-bottom: 16px !important;
+}
+
+.assignmentPanel :global(.ant-collapse-header) {
+    padding: 16px !important;
+    background-color: #f9faff !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.assignmentPanel :global(.ant-collapse-content-box) {
+    padding: 16px !important;
+}
+
+.assignmentPanelHeader {
+    /* Style for the assignment header text if needed */
+}
+
+/* --- Approval Item Styles --- */
+.itemWrapper {
+    padding: 0;
+}
+
+.innerCollapse {
+    /* Question collapse */
+    background-color: transparent !important;
+    margin-top: 16px;
+}
+
+.innerPanel {
+    /* Question panel */
+    margin-bottom: 15px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+}
+
+.innerPanel :global(.ant-collapse-header) {
+    padding: 15px !important;
+}
+
+.innerPanel :global(.ant-collapse-content-box) {
+    padding: 15px !important;
+}
+
+.formGroup {
+    margin-bottom: 15px;
+}
+
+.formGroup .ant-typography {
+    margin-bottom: 5px;
+    display: block;
+}
+
+.questionImage {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+    max-height: 250px;
+    object-fit: cover;
+}
+
+/* --- Criteria Styles --- */
+.criteriaCollapse {
+    margin-top: 20px;
+    background-color: transparent !important;
+}
+
+.criteriaPanel {
+    margin-bottom: 10px !important;
+    background-color: #f9f9f9 !important;
+    border: 1px solid #eee !important;
+    border-radius: 6px !important;
+}
+
+.criteriaPanel :global(.ant-collapse-header) {
+    padding: 10px 15px !important;
+}
+
+.criteriaPanel :global(.ant-collapse-content-box) {
+    padding: 15px !important;
+}
+
+/* --- Action Area Styles --- */
+.actionArea {
+    padding: 24px 0 0 0;
+    margin-top: 20px;
+    border-top: 1px solid #e6f7ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.rejectReasonInput {
+    width: 100%;
+    max-width: 500px;
+    margin-bottom: 20px;
+}
+
+.actionButtons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.approveButton,
+.rejectButton {
+    border-radius: 25px !important;
+    font-weight: bold;
+    min-width: 150px;
+}
+
+.approveButton {
+    background-color: #49BBBD;
+    border-color: #49BBBD;
+}
+
+.approveButton:hover {
+    background-color: #3daaaC;
+    border-color: #3daaaC;
+}
+

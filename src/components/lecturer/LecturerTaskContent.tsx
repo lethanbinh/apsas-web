@@ -110,6 +110,33 @@ export const LecturerTaskContent = ({
       }
       setAllQuestions(questionsMap);
 
+      // If task is rejected, initialize localStorage with questions that have comments
+      if (isRejected) {
+        try {
+          const initialKey = `task-${task.id}-initial-commented-questions`;
+          const existingInitial = localStorage.getItem(initialKey);
+          
+          // Only initialize if not already set (preserve if user already started resolving)
+          if (!existingInitial) {
+            const allQuestionsFlat: AssessmentQuestion[] = [];
+            Object.values(questionsMap).forEach(questions => {
+              allQuestionsFlat.push(...questions);
+            });
+            
+            const questionsWithComments = allQuestionsFlat
+              .filter(q => q.reviewerComment && q.reviewerComment.trim())
+              .map(q => q.id);
+            
+            if (questionsWithComments.length > 0) {
+              localStorage.setItem(initialKey, JSON.stringify(questionsWithComments));
+              console.log("Initialized localStorage with commented questions:", questionsWithComments);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to initialize localStorage:", err);
+        }
+      }
+
       const fileResponse = await assessmentFileService.getFilesForTemplate({
         assessmentTemplateId: templateId,
         pageNumber: 1,
@@ -146,6 +173,8 @@ export const LecturerTaskContent = ({
     isRejected,
     refetchTemplates,
     notification,
+    allQuestions,
+    templateId: template?.id || null,
   });
 
   const {
@@ -636,15 +665,15 @@ export const LecturerTaskContent = ({
                 allQuestions={allQuestions}
                 isEditable={isCurrentTemplateEditable}
                 task={task}
-                onFileChange={() => refreshFiles(true)}
+                onFileChange={() => refreshFiles(false)} // Edit file does NOT resolve question comments
                 onExport={handleExport}
                 onTemplateDelete={() => handleDeleteTemplate(template)}
                 onTemplateChange={async () => {
-                  await refreshTemplate(true);
+                  await refreshTemplate(false); // Template edit handles status reset separately
                 }}
-                onPaperChange={() => refreshPapers(true)}
-                onQuestionChange={(paperId) => refreshQuestions(paperId, true)}
-                onRubricChange={(paperId) => refreshQuestions(paperId, true)}
+                onPaperChange={() => refreshPapers(false)} // Edit paper does NOT resolve question comments
+                onQuestionChange={(paperId) => refreshQuestions(paperId, false)} // QuestionDetailView handles status reset
+                onRubricChange={(paperId) => refreshQuestions(paperId, false)} // QuestionDetailView handles status reset
                 onResetStatus={resetStatusIfRejected}
               />
             </Content>
@@ -660,7 +689,7 @@ export const LecturerTaskContent = ({
             onFinish={() => {
               setIsPaperModalOpen(false);
               setPaperToEdit(null);
-              refreshPapers(true); // Reset status if rejected
+              refreshPapers(false); // Edit paper does NOT resolve question comments
             }}
             isEditable={isCurrentTemplateEditable}
             templateId={template.id}
@@ -674,7 +703,7 @@ export const LecturerTaskContent = ({
             }}
             onFinish={() => {
               setIsQuestionModalOpen(false);
-              refreshQuestions(paperForNewQuestion!, true); // Reset status if rejected
+              refreshQuestions(paperForNewQuestion!, false); // QuestionDetailView handles status reset when editing existing question
               setPaperForNewQuestion(undefined);
             }}
             isEditable={isCurrentTemplateEditable}

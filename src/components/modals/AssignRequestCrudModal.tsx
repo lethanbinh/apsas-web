@@ -50,6 +50,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
           ...initialData,
           assignedLecturerId: Number(initialData.lecturer.id),
           courseElementId: initialData.courseElement.id,
+          assignedApproverLecturerId: (initialData as any).assignedApproverLecturerId || undefined,
           status: 1, // Default to Pending (status not in AssignRequest interface, will be handled in handleFinish)
         });
       } else {
@@ -102,6 +103,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
         ...values,
         assignedAt: assignedAtValue,
         assignedByHODId: 1,
+        assignedApproverLecturerId: values.assignedApproverLecturerId || undefined,
         status: values.status || 1, // Ensure status is always set (default to Pending)
       };
 
@@ -201,6 +203,14 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                 const courseElementId = form.getFieldValue("courseElementId");
                 if (!courseElementId) return Promise.resolve();
                 
+                // Check if assigned lecturer is the same as approver lecturer
+                const approverLecturerId = form.getFieldValue("assignedApproverLecturerId");
+                if (approverLecturerId && Number(value) === Number(approverLecturerId)) {
+                  return Promise.reject(
+                    new Error("Assign to Lecturer and Assign Approver Lecturer cannot be the same person!")
+                  );
+                }
+                
                 // Check for duplicate, excluding the current request if editing
                 if (existingAssignRequests) {
                   const duplicate = existingAssignRequests.find(
@@ -221,11 +231,44 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
               },
             },
           ]}
-          dependencies={["courseElementId"]}
+          dependencies={["courseElementId", "assignedApproverLecturerId"]}
         >
           <Select
             showSearch
             placeholder="Select a lecturer"
+            options={lecturerOptions}
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+          />
+        </Form.Item>
+        <Form.Item
+          name="assignedApproverLecturerId"
+          label="Assign Approver Lecturer (Optional)"
+          rules={[
+            {
+              validator: (_, value) => {
+                // If no approver selected, it's valid (field is optional)
+                if (!value) return Promise.resolve();
+                
+                // Check if approver lecturer is the same as assigned lecturer
+                const assignedLecturerId = form.getFieldValue("assignedLecturerId");
+                if (assignedLecturerId && Number(value) === Number(assignedLecturerId)) {
+                  return Promise.reject(
+                    new Error("Assign Approver Lecturer cannot be the same as Assign to Lecturer!")
+                  );
+                }
+                
+                return Promise.resolve();
+              },
+            },
+          ]}
+          dependencies={["assignedLecturerId"]}
+        >
+          <Select
+            showSearch
+            placeholder="Select an approver lecturer (optional)"
+            allowClear
             options={lecturerOptions}
             filterOption={(input, option) =>
               (option?.label ?? "").toLowerCase().includes(input.toLowerCase())

@@ -50,12 +50,10 @@ export const PaperDetailView = ({
       <PaperFormModal
         open={isPaperModalOpen}
         onCancel={() => setIsPaperModalOpen(false)}
-        onFinish={async () => {
+        onFinish={() => {
           setIsPaperModalOpen(false);
           onPaperChange();
-          if (onResetStatus) {
-            await onResetStatus();
-          }
+          // Note: Edit paper does NOT resolve question comments, so we don't reset status here
         }}
         isEditable={isEditable}
         initialData={paper}

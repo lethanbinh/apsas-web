@@ -58,6 +58,7 @@ export interface AssignRequest {
   courseElement: CourseElement;
   assignedAt: string | undefined;
   status?: number;
+  assignedApproverLecturerId?: number;
 }
 
 export interface Course {

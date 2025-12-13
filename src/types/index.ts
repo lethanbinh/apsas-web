@@ -130,6 +130,8 @@ export interface ApiApprovalItem {
   courseElementId: number;
   assignedLecturerId: number;
   assignedByHODId: number;
+  assignedApproverLecturerId?: number;
+  assignedApproverLecturerName?: string;
   createdAt: string;
   updatedAt: string;
   courseElementName: string;
@@ -146,6 +148,7 @@ export interface ApiAssignRequestUpdatePayload {
   courseElementId: number;
   assignedLecturerId: number;
   assignedByHODId: number;
+  assignedApproverLecturerId: number;
   status: number;
   assignedAt: string;
 }

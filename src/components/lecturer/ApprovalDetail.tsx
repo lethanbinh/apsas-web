@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { CollapseProps } from "antd";
-import { Alert, App, Button as AntButton, Card, Collapse, Divider, Input, List, Select, Space, Spin, Tag, Typography } from "antd";
-import { ArrowLeftOutlined, DownloadOutlined, PaperClipOutlined, UserOutlined, CloseOutlined, CheckCircleOutlined, CloseCircleOutlined, VerticalAlignTopOutlined } from "@ant-design/icons";
+import { Alert, App, Button as AntButton, Collapse, Divider, Input, List, Space, Spin, Tag, Typography } from "antd";
+import { ArrowLeftOutlined, DownloadOutlined, PaperClipOutlined, CloseOutlined, CheckCircleOutlined, CloseCircleOutlined, VerticalAlignTopOutlined } from "@ant-design/icons";
 import { Button } from "../ui/Button";
 import styles from "./ApprovalDetail.module.css";
 import { adminService } from "@/services/adminService";
@@ -17,8 +17,7 @@ import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService, AssessmentQuestion, UpdateAssessmentQuestionPayload } from "@/services/assessmentQuestionService";
 import { rubricItemService, RubricItem } from "@/services/rubricItemService";
 import { assessmentFileService } from "@/services/assessmentFileService";
-import { lecturerService, Lecturer } from "@/services/lecturerService";
-import { QuestionCommentModal } from "./QuestionCommentModal";
+import { QuestionCommentModal } from "../hod/QuestionCommentModal";
 import { useAuth } from "@/hooks/useAuth";
 import { CommentOutlined, EditOutlined } from "@ant-design/icons";
 
@@ -48,7 +47,7 @@ const getStatusProps = (status: number) => {
   }
 };
 
-export default function ApprovalDetail({
+export default function LecturerApprovalDetail({
   template,
   approvalItem,
 }: ApprovalDetailProps) {
@@ -74,14 +73,6 @@ export default function ApprovalDetail({
   const [selectedQuestionForComment, setSelectedQuestionForComment] = useState<AssessmentQuestion | null>(null);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
-  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
-  const [selectedApproverLecturerId, setSelectedApproverLecturerId] = useState<number | undefined>(
-    approvalItem.assignedApproverLecturerId && approvalItem.assignedApproverLecturerId !== 0
-      ? approvalItem.assignedApproverLecturerId
-      : undefined
-  );
-  const [isUpdatingApprover, setIsUpdatingApprover] = useState(false);
 
   // Handle scroll to top button visibility
   useEffect(() => {
@@ -97,19 +88,6 @@ export default function ApprovalDetail({
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
-  // Fetch lecturers list
-  useEffect(() => {
-    const fetchLecturers = async () => {
-      try {
-        const lecturersData = await lecturerService.getLecturerList();
-        setLecturers(lecturersData);
-      } catch (err) {
-        console.error("Failed to fetch lecturers:", err);
-      }
-    };
-    fetchLecturers();
-  }, []);
 
   // Fetch papers, questions, rubrics, and files from API
   useEffect(() => {
@@ -166,7 +144,7 @@ export default function ApprovalDetail({
                 commentsMap[q.id] = q.reviewerComment;
               }
             });
-
+            
             // Fetch rubrics for each question
             for (const question of sortedQuestions) {
               try {
@@ -203,43 +181,17 @@ export default function ApprovalDetail({
 
   const createPayload = (
     status: number,
-    message: string,
-    approverLecturerId?: number
+    message: string
   ): ApiAssignRequestUpdatePayload => {
     return {
       message: message,
       courseElementId: approvalItem.courseElementId,
       assignedLecturerId: approvalItem.assignedLecturerId,
       assignedByHODId: approvalItem.assignedByHODId,
-      assignedApproverLecturerId: approverLecturerId ?? approvalItem.assignedApproverLecturerId ?? 0,
+      assignedApproverLecturerId: approvalItem.assignedApproverLecturerId ?? 0,
       status: status,
       assignedAt: approvalItem.assignedAt,
     };
-  };
-
-  // Handle approver lecturer assignment
-  const handleApproverChange = async (lecturerId: number | null | undefined) => {
-    setIsUpdatingApprover(true);
-    try {
-      const approverId = lecturerId ?? 0;
-      const payload = createPayload(
-        currentStatus,
-        approvalItem.message || "Approver assignment updated",
-        approverId
-      );
-      await adminService.updateAssignRequestStatus(approvalItem.id, payload);
-      setSelectedApproverLecturerId(approverId === 0 ? undefined : approverId);
-      antMessage.success(
-        approverId === 0 
-          ? "Approver assignment removed successfully" 
-          : "Approver assigned successfully"
-      );
-    } catch (err: any) {
-      console.error("Failed to update approver:", err);
-      antMessage.error(err.message || "Failed to update approver assignment");
-    } finally {
-      setIsUpdatingApprover(false);
-    }
   };
 
   // Xử lý Approve
@@ -253,7 +205,7 @@ export default function ApprovalDetail({
       onOk: async () => {
         setIsSubmitting(true);
         try {
-          const payload = createPayload(5, "Approved by HOD", selectedApproverLecturerId);
+          const payload = createPayload(5, "Approved by Approver Lecturer");
           await adminService.updateAssignRequestStatus(approvalItem.id, payload);
 
           setCurrentStatus(5);
@@ -325,7 +277,7 @@ export default function ApprovalDetail({
   // Xử lý Reject
   const handleRejectClick = () => {
     if (!rejectReasonVisibleForItem) {
-      // Set reject reason visible (use first paper key as identifier)
+      // Set reject reason visible for the first paper if not set
       const firstPaperKey = papers.length > 0 ? `paper-${papers[0].id}` : null;
       if (firstPaperKey) {
         setRejectReasonVisibleForItem(firstPaperKey);
@@ -375,7 +327,7 @@ export default function ApprovalDetail({
           }
 
           // Then update the assign request status
-          const payload = createPayload(3, rejectReason, selectedApproverLecturerId);
+          const payload = createPayload(3, rejectReason);
           await adminService.updateAssignRequestStatus(approvalItem.id, payload);
 
           setCurrentStatus(3);
@@ -415,27 +367,6 @@ export default function ApprovalDetail({
   };
 
   const totalScore = calculateTotalScore();
-
-  // Filter lecturers to exclude the assigned lecturer
-  const availableApprovers = lecturers.filter(
-    (lecturer) => Number(lecturer.lecturerId) !== approvalItem.assignedLecturerId
-  );
-
-  // Get approver name if assigned (check in all lecturers, not just available ones)
-  const approverLecturer = lecturers.find(
-    (lecturer) => Number(lecturer.lecturerId) === selectedApproverLecturerId
-  );
-
-  // Include the currently selected approver in the list if they're not in availableApprovers
-  // This ensures the Select can display the selected value properly
-  const approversForSelect = approverLecturer && 
-    !availableApprovers.find(lec => Number(lec.lecturerId) === selectedApproverLecturerId)
-    ? [approverLecturer, ...availableApprovers]
-    : availableApprovers;
-
-  // Show dropdown when status is NOT approved (5) or rejected (3)
-  // Allow assignment for: Pending (1), Accepted (2), In Progress (4)
-  const canAssignApprover = currentStatus !== 3 && currentStatus !== 5;
 
   if (loading) {
     return (
@@ -672,7 +603,7 @@ export default function ApprovalDetail({
                           </div>
                           <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "#69b1ff" }}>
                             <Text type="secondary" style={{ fontSize: "12px" }}>
-                              <Text strong style={{ color: "#0958d9" }}>Commented by:</Text> {approvalItem.assignedByHODName || user?.fullName || "Unknown"}
+                              <Text strong style={{ color: "#0958d9" }}>Commented by:</Text> {approvalItem.assignedApproverLecturerName || user?.fullName || "Unknown"}
                             </Text>
                             {question.updatedAt && (
                               <Text type="secondary" style={{ fontSize: "12px" }}>
@@ -702,6 +633,7 @@ export default function ApprovalDetail({
           ) : (
             <Text type="secondary">No questions found for this paper.</Text>
           )}
+
         </div>
       ),
       className: styles.mainPanel,
@@ -730,7 +662,7 @@ export default function ApprovalDetail({
             )}
             <AntButton
               icon={<ArrowLeftOutlined />}
-              onClick={() => router.push("/hod/approval")}
+              onClick={() => router.push("/lecturer/approval")}
             >
               Back
             </AntButton>
@@ -846,98 +778,6 @@ export default function ApprovalDetail({
         </div>
       </div>
 
-      {/* Approver Assignment Section - Outside the collapse */}
-      <Card
-        style={{
-          marginBottom: "24px",
-          borderRadius: "12px",
-          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
-          backgroundColor: "#ffffff",
-        }}
-        bodyStyle={{ padding: "20px 24px" }}
-      >
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <div>
-            <Title level={4} style={{ margin: 0, color: "#2F327D", marginBottom: "8px" }}>
-              <UserOutlined style={{ marginRight: "8px" }} />
-              Approval Authority Assignment
-            </Title>
-            <Text type="secondary" style={{ fontSize: "14px" }}>
-              Assign a lecturer to review and approve this assessment template
-            </Text>
-          </div>
-
-          {approverLecturer && (
-            <Alert
-              message={
-                <Space>
-                  <Text strong>Assigned Approver:</Text>
-                  <Text>{approverLecturer.fullName} ({approverLecturer.accountCode})</Text>
-                </Space>
-              }
-              type="info"
-              showIcon
-              style={{ borderRadius: "8px" }}
-            />
-          )}
-
-          {canAssignApprover && (
-            <div>
-              <Text strong style={{ display: "block", marginBottom: "8px" }}>
-                Approver Lecturer:
-              </Text>
-              {approversForSelect.length > 0 ? (
-                <Space style={{ width: "100%", maxWidth: "400px" }}>
-                  <Select
-                    style={{ flex: 1, minWidth: "200px" }}
-                    placeholder="No approver assigned"
-                    value={selectedApproverLecturerId ?? 0}
-                    onChange={handleApproverChange}
-                    loading={isUpdatingApprover}
-                    showSearch
-                    optionFilterProp="label"
-                    disabled={isUpdatingApprover}
-                  >
-                    {(!selectedApproverLecturerId || selectedApproverLecturerId === 0) && (
-                      <Select.Option value={0} label="No approver assigned">
-                        <Text type="secondary">-- No approver assigned --</Text>
-                      </Select.Option>
-                    )}
-                    {approversForSelect.map((lecturer) => (
-                      <Select.Option
-                        key={lecturer.lecturerId}
-                        value={Number(lecturer.lecturerId)}
-                        label={`${lecturer.fullName} (${lecturer.accountCode})`}
-                      >
-                        {lecturer.fullName} ({lecturer.accountCode})
-                      </Select.Option>
-                    ))}
-                  </Select>
-                  {selectedApproverLecturerId && selectedApproverLecturerId !== 0 && (
-                    <Button
-                      variant="danger"
-                      onClick={() => handleApproverChange(0)}
-                      loading={isUpdatingApprover}
-                      disabled={isUpdatingApprover}
-                    >
-                      Unassign
-                    </Button>
-                  )}
-                </Space>
-              ) : (
-                <Alert
-                  message="No available lecturers"
-                  description="There are no other lecturers available to assign as approver."
-                  type="warning"
-                  showIcon
-                  style={{ borderRadius: "8px" }}
-                />
-              )}
-            </div>
-          )}
-        </Space>
-      </Card>
-
       <Collapse
         activeKey={outerActiveKeys}
         onChange={(keys) => setOuterActiveKeys(keys)}
@@ -984,3 +824,4 @@ export default function ApprovalDetail({
     </div>
   );
 }
+

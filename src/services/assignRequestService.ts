@@ -7,6 +7,7 @@ export interface AssignRequestItem {
   courseElementId: number;
   assignedLecturerId: number;
   assignedByHODId: number;
+  assignedApproverLecturerId?: number;
   createdAt: string;
   updatedAt: string;
   courseElementName: string;
@@ -67,6 +68,7 @@ export interface UpdateAssignRequestPayload {
   courseElementId: number;
   assignedLecturerId: number;
   assignedByHODId: number;
+  assignedApproverLecturerId?: number;
   status: number;
   assignedAt: string;
 }

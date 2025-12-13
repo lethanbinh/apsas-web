@@ -10,6 +10,7 @@ export interface AssessmentQuestion {
   assessmentPaperId: number;
   assessmentPaperName: string;
   rubricCount: number;
+  reviewerComment?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -57,6 +58,7 @@ export interface UpdateAssessmentQuestionPayload {
   questionSampleOutput: string;
   score: number;
   questionNumber: number;
+  reviewerComment?: string;
 }
 
 export interface GetAssessmentQuestionsResponse {

@@ -118,6 +118,11 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
       label: "Grading",
       href: "/lecturer/my-grading-group",
     },
+    {
+      key: "approval",
+      label: "Approval",
+      href: "/lecturer/approval",
+    },
   ],
   [ROLES.ADMIN]: [
     { key: "dashboard", label: "Dashboard", href: "/admin/dashboard" },

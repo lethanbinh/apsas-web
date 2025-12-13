@@ -11,6 +11,8 @@ import { ApiApprovalItem } from "@/types";
 import { semesterService } from "@/services/semesterService";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import type { TablePaginationConfig } from 'antd/es/table';
+import { useAuth } from "@/hooks/useAuth";
+import { lecturerService } from "@/services/lecturerService";
 
 const { Title, Text } = Typography;
 
@@ -32,24 +34,47 @@ const getStatusProps = (status: number) => {
 };
 
 
-export default function ApprovalList() {
+export default function LecturerApprovalList() {
   const [searchText, setSearchText] = useState("");
   const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
   const [selectedCourse, setSelectedCourse] = useState<string | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
   const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string | undefined>(undefined);
   const router = useRouter();
+  const { user } = useAuth();
 
   const [allApprovals, setAllApprovals] = useState<ApiApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allSemesters, setAllSemesters] = useState<any[]>([]);
+  const [currentLecturerId, setCurrentLecturerId] = useState<number | null>(null);
   const [templatesWithRequestIds, setTemplatesWithRequestIds] = useState<Set<number>>(new Set());
   const [pagination, setPagination] = useState<TablePaginationConfig>({
     current: 1,
     pageSize: 10,
     total: 0,
   });
+
+  // Get current lecturer ID
+  useEffect(() => {
+    const fetchLecturerId = async () => {
+      if (user?.id) {
+        try {
+          const lecturers = await lecturerService.getLecturerList();
+          const currentUserAccountId = String(user.id);
+          const matchingLecturer = lecturers.find(
+            (lec) => lec.accountId === currentUserAccountId
+          );
+          if (matchingLecturer) {
+            setCurrentLecturerId(Number(matchingLecturer.lecturerId));
+          }
+        } catch (err) {
+          console.error("Failed to fetch lecturer ID:", err);
+        }
+      }
+    };
+    fetchLecturerId();
+  }, [user]);
 
   // Get unique semesters from all approvals, sorted by newest first
   const uniqueSemesters = useMemo(() => {
@@ -187,6 +212,8 @@ export default function ApprovalList() {
 
   useEffect(() => {
     const fetchAllApprovals = async () => {
+      if (!currentLecturerId) return; // Wait for lecturer ID
+      
       try {
         setLoading(true);
         setError(null);
@@ -198,7 +225,12 @@ export default function ApprovalList() {
           assessmentTemplateService.getAssessmentTemplates({ pageNumber: 1, pageSize: 10000 })
         ]);
         
-        setAllApprovals(approvalsResponse.items);
+        // Filter approvals where assignedApproverLecturerId matches current lecturer ID
+        const filteredApprovals = approvalsResponse.items.filter(
+          (item) => item.assignedApproverLecturerId === currentLecturerId
+        );
+        
+        setAllApprovals(filteredApprovals);
         setAllSemesters(semesters);
         
         // Create a set of assignRequestIds that have templates
@@ -219,13 +251,12 @@ export default function ApprovalList() {
           });
           
           if (currentSemester) {
-            // Get unique semester names from approvals
+            // Get unique semester names from filtered approvals
             const uniqueSemesterNames = Array.from(
-              new Set(approvalsResponse.items.map(a => a.semesterName).filter(Boolean))
+              new Set(filteredApprovals.map(a => a.semesterName).filter(Boolean))
             );
             
             // Find semesterName that matches current semester's semesterCode
-            // semesterName might be "Fall2025 - 2025" or "Fall2025", semesterCode is "Fall2025"
             const matchingSemesterName = uniqueSemesterNames.find(
               name => name === currentSemester.semesterCode || 
                       name.startsWith(currentSemester.semesterCode) ||
@@ -236,7 +267,6 @@ export default function ApprovalList() {
             if (matchingSemesterName) {
               setSelectedSemester(matchingSemesterName);
             }
-            // If no match, don't set default (show all) - user can manually select
           }
         }
       } catch (err: any) {
@@ -250,7 +280,7 @@ export default function ApprovalList() {
     };
 
     fetchAllApprovals();
-  }, []); 
+  }, [currentLecturerId]); 
 
   // Filter all data first
   const filteredData = useMemo(() => {
@@ -310,7 +340,7 @@ export default function ApprovalList() {
   }, [filteredData.length]);
 
   const handleRowClick = (record: ApiApprovalItem) => {
-    router.push(`/hod/approval/${record.id}`);
+    router.push(`/lecturer/approval/${record.id}`);
   };
 
   const handleTableChange: TableProps<ApiApprovalItem>['onChange'] = (newPagination) => {
@@ -320,6 +350,17 @@ export default function ApprovalList() {
       pageSize: newPagination.pageSize,
     }));
   };
+
+  if (!currentLecturerId && !loading) {
+    return (
+      <Alert
+        message="Error"
+        description="Unable to identify lecturer account. Please ensure you are logged in as a lecturer."
+        type="error"
+        showIcon
+      />
+    );
+  }
 
   return (
     <div className={styles.wrapper}>
@@ -432,3 +473,4 @@ export default function ApprovalList() {
     </div>
   );
 }
+

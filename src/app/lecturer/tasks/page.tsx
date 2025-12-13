@@ -9,9 +9,10 @@ import {
   AssignRequestItem,
 } from "@/services/assignRequestService";
 import { semesterService, Semester } from "@/services/semesterService";
-import { Spin, Select, App } from "antd";
+import { Spin, Select, App, Space } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
 import { queryKeys } from "@/lib/react-query";
+import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 
 const getStatusTag = (status: number) => {
   // Map to 3 statuses: Pending (1,2,4), Approved (5), Rejected (3)
@@ -38,6 +39,9 @@ const TasksPageContent = () => {
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [currentSemesterCode, setCurrentSemesterCode] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
+  const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string | undefined>(undefined);
+  const [templatesWithRequestIds, setTemplatesWithRequestIds] = useState<Set<number>>(new Set());
 
   // Fetch all semesters
   const { data: allSemesters = [] } = useQuery({
@@ -76,6 +80,28 @@ const TasksPageContent = () => {
     }),
     enabled: !!lecturerId && !isLecturerLoading,
   });
+
+  // Fetch templates to check which tasks have templates
+  const { data: templatesResponse } = useQuery({
+    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 10000 }),
+    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
+      pageNumber: 1,
+      pageSize: 10000,
+    }),
+    enabled: !!lecturerId && !isLecturerLoading,
+  });
+
+  // Create a set of assignRequestIds that have templates
+  useEffect(() => {
+    if (templatesResponse?.items) {
+      const templateRequestIds = new Set(
+        templatesResponse.items
+          .filter(t => t.assignRequestId)
+          .map(t => t.assignRequestId!)
+      );
+      setTemplatesWithRequestIds(templateRequestIds);
+    }
+  }, [templatesResponse]);
 
   const allTasks = tasksResponse?.items || [];
   const error = queryError ? "Failed to load tasks." : null;
@@ -221,11 +247,35 @@ const TasksPageContent = () => {
   }, [currentSemesterCode, allTasks, allSemesters, isInitialLoad]);
 
   const filteredTasks = useMemo(() => {
-    if (selectedSemester === "all") {
-      return allTasks;
-    }
-    return allTasks.filter((task) => task.semesterName === selectedSemester);
-  }, [allTasks, selectedSemester]);
+    return allTasks.filter((task) => {
+      // Semester filter
+      const matchesSemester = selectedSemester === "all" || task.semesterName === selectedSemester;
+      
+      // Status filter - map status to display value
+      let matchesStatus = true;
+      if (selectedStatus !== undefined) {
+        if (selectedStatus === 1) {
+          // Pending: status 1, 2, 4
+          matchesStatus = task.status === 1 || task.status === 2 || task.status === 4;
+        } else if (selectedStatus === 3) {
+          // Rejected: status 3
+          matchesStatus = task.status === 3;
+        } else if (selectedStatus === 5) {
+          // Approved: status 5
+          matchesStatus = task.status === 5;
+        } else {
+          matchesStatus = task.status === selectedStatus;
+        }
+      }
+      
+      // Template filter
+      const matchesTemplate = !selectedTemplateFilter || 
+        (selectedTemplateFilter === "with" && templatesWithRequestIds.has(task.id)) ||
+        (selectedTemplateFilter === "without" && !templatesWithRequestIds.has(task.id));
+      
+      return matchesSemester && matchesStatus && matchesTemplate;
+    });
+  }, [allTasks, selectedSemester, selectedStatus, selectedTemplateFilter, templatesWithRequestIds]);
 
   const groupedByCourse = useMemo(() => {
     return filteredTasks.reduce((acc, task) => {
@@ -271,13 +321,38 @@ const TasksPageContent = () => {
     <div className={styles.container}>
       <h1 className={styles.title}>Tasks</h1>
 
-      <Select
-        value={selectedSemester}
-        onChange={(value) => setSelectedSemester(value)}
-        options={semesterOptions}
-        style={{ width: 240, marginBottom: "20px" }}
-        placeholder="Filter by semester"
-      />
+      <Space size="middle" style={{ display: "flex", flexWrap: "wrap", marginBottom: "20px" }}>
+        <Select
+          value={selectedSemester}
+          onChange={(value) => setSelectedSemester(value)}
+          options={semesterOptions}
+          style={{ width: 240 }}
+          placeholder="Filter by Semester"
+        />
+        <Select
+          placeholder="Filter by Status"
+          allowClear
+          style={{ minWidth: 150 }}
+          value={selectedStatus}
+          onChange={(value) => setSelectedStatus(value)}
+          options={[
+            { label: "Pending", value: 1 },
+            { label: "Approved", value: 5 },
+            { label: "Rejected", value: 3 },
+          ]}
+        />
+        <Select
+          placeholder="Filter by Template"
+          allowClear
+          style={{ minWidth: 150 }}
+          value={selectedTemplateFilter}
+          onChange={(value) => setSelectedTemplateFilter(value)}
+          options={[
+            { label: "With Template", value: "with" },
+            { label: "Without Template", value: "without" },
+          ]}
+        />
+      </Space>
 
       {filteredTasks.length === 0 ? (
         <p style={{ textAlign: "center", marginTop: "20px" }}>

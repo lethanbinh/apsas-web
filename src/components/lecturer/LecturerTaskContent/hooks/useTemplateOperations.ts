@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { queryKeys } from "@/lib/react-query";
@@ -8,6 +10,8 @@ import type { AssessmentTemplate } from "@/services/assessmentTemplateService";
 import type { AssignRequestItem } from "@/services/assignRequestService";
 import type { UploadFile } from "antd/es/upload/interface";
 import type { NotificationInstance } from "antd/es/notification/interface";
+import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
 
 interface UseTemplateOperationsProps {
   task: AssignRequestItem;
@@ -16,6 +20,8 @@ interface UseTemplateOperationsProps {
   isRejected: boolean;
   refetchTemplates: () => void;
   notification: NotificationInstance;
+  allQuestions?: { [paperId: number]: AssessmentQuestion[] };
+  templateId?: number | null;
 }
 
 export function useTemplateOperations({
@@ -25,6 +31,8 @@ export function useTemplateOperations({
   isRejected,
   refetchTemplates,
   notification,
+  allQuestions,
+  templateId,
 }: UseTemplateOperationsProps) {
   const queryClient = useCustomQueryClient();
   const [newTemplateName, setNewTemplateName] = useState("");
@@ -38,27 +46,104 @@ export function useTemplateOperations({
   const [postmanFileName, setPostmanFileName] = useState("");
 
   const resetStatusIfRejected = async () => {
-    if (isRejected) {
+    // Check if status should be reset based on localStorage only
+    // This function will be called after editing questions/rubrics that had comments
+    console.log("resetStatusIfRejected called:", { isRejected, taskId: task.id, taskStatus: task.status });
+    
+    if (!isRejected) {
+      console.log("Task is not rejected, skipping status reset check");
+      return;
+    }
+    
+    try {
+      // Get initial list of questions with comments from localStorage
+      const initialKey = `task-${task.id}-initial-commented-questions`;
+      const resolvedKey = `task-${task.id}-resolved-questions`;
+      
+      let initialQuestionIds: number[] = [];
+      let resolvedQuestionIds: number[] = [];
+      
       try {
-        await assignRequestService.updateAssignRequest(task.id, {
-          message: task.message || "Content updated and resubmitted after rejection",
-          courseElementId: task.courseElementId,
-          assignedLecturerId: task.assignedLecturerId,
-          assignedByHODId: task.assignedByHODId,
-          status: 1, // Reset to Pending
-          assignedAt: task.assignedAt,
-        });
-        notification.success({
-          message: "Status Reset to Pending",
-          description: "Content has been updated and status reset to Pending for HOD review.",
-        });
-      } catch (err: any) {
-        console.error("Failed to reset status:", err);
-        notification.warning({
-          message: "Content Updated",
-          description: "Content updated successfully, but failed to reset status. Please contact administrator.",
-        });
+        const initialStored = localStorage.getItem(initialKey);
+        if (initialStored) {
+          initialQuestionIds = JSON.parse(initialStored);
+        }
+        
+        const resolvedStored = localStorage.getItem(resolvedKey);
+        if (resolvedStored) {
+          resolvedQuestionIds = JSON.parse(resolvedStored);
+        }
+      } catch (err) {
+        console.error("Failed to read from localStorage:", err);
+        return;
       }
+
+      console.log("Status reset check from localStorage:", {
+        initialCommentedQuestions: initialQuestionIds.length,
+        resolvedQuestions: resolvedQuestionIds.length,
+        initialQuestionIds,
+        resolvedQuestionIds
+      });
+
+      // If no initial list, nothing to check
+      if (initialQuestionIds.length === 0) {
+        console.log("No initial commented questions stored, skipping status reset");
+        return;
+      }
+
+      // Check if all initial commented questions have been resolved
+      const allResolved = initialQuestionIds.every(questionId => 
+        resolvedQuestionIds.includes(questionId)
+      );
+
+      if (!allResolved) {
+        console.log("Not all comments resolved yet:", {
+          missing: initialQuestionIds.filter(id => !resolvedQuestionIds.includes(id))
+        });
+        return;
+      }
+
+      // All questions with comments have been resolved, proceed to reset status
+      console.log("✅ All comments resolved! Resetting status to Pending...");
+      await assignRequestService.updateAssignRequest(task.id, {
+        message: task.message || "All questions have been addressed. Status reset to Pending for review.",
+        courseElementId: task.courseElementId,
+        assignedLecturerId: task.assignedLecturerId,
+        assignedByHODId: task.assignedByHODId,
+        assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
+        status: 1, // Reset to Pending
+        assignedAt: task.assignedAt,
+      });
+      
+      // Clear localStorage after successful reset
+      try {
+        localStorage.removeItem(initialKey);
+        localStorage.removeItem(resolvedKey);
+        console.log("Cleared localStorage after status reset");
+      } catch (err) {
+        console.error("Failed to clear localStorage:", err);
+      }
+      
+      console.log("Status updated successfully, invalidating queries...");
+      
+      // Invalidate assign requests queries to refresh UI
+      await queryClient.invalidateQueries({ 
+        queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
+        exact: false
+      });
+      
+      console.log("✅ Status reset to Pending completed!");
+      
+      notification.success({
+        message: "Status Reset to Pending",
+        description: "All questions have been addressed. Status reset to Pending for HOD review.",
+      });
+    } catch (err: any) {
+      console.error("❌ Failed to reset status:", err);
+      notification.warning({
+        message: "Content Updated",
+        description: "Content updated successfully, but failed to reset status. Please contact administrator.",
+      });
     }
   };
 
@@ -204,9 +289,17 @@ export function useTemplateOperations({
             courseElementId: task.courseElementId,
             assignedLecturerId: task.assignedLecturerId,
             assignedByHODId: task.assignedByHODId,
+            assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
             status: 1, // Reset to Pending
             assignedAt: task.assignedAt,
           });
+          
+          // Invalidate assign requests queries to refresh UI
+          await queryClient.invalidateQueries({ 
+            queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
+            exact: false
+          });
+          
           notification.success({
             message: "Template Created and Resubmitted",
             description: "Template has been created and status reset to Pending for HOD review.",
