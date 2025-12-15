@@ -12,12 +12,12 @@ export default function LoginPage() {
     <AuthGuard requireAuth={false}>
       <div className="login-page">
         <div className="login-container">
-          {/* Left side - Login Form */}
+          {}
           <div className="login-form-section">
             <LoginForm />
           </div>
-          
-          {/* Right side - Illustration */}
+
+          {}
           <div className="login-illustration">
             <div className="illustration-wrapper">
               <Image

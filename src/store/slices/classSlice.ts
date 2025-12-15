@@ -4,9 +4,9 @@ interface ClassState {
   selectedClass: ClassInfo | null;
 }
 
-// Helper để lấy state ban đầu từ localStorage
+
 const getInitialState = (): ClassState => {
-  // Chỉ chạy ở client
+
   if (typeof window === 'undefined') {
     return {
       selectedClass: null,
@@ -14,7 +14,7 @@ const getInitialState = (): ClassState => {
   }
 
   const classDataStr = localStorage.getItem('selected_class');
-  
+
   if (classDataStr) {
     try {
       const selectedClass = JSON.parse(classDataStr);
@@ -39,7 +39,7 @@ const classSlice = createSlice({
   reducers: {
     setSelectedClass: (state, action: PayloadAction<ClassInfo>) => {
       state.selectedClass = action.payload;
-      // Lưu vào localStorage
+
       if (typeof window !== 'undefined') {
         localStorage.setItem('selected_class', JSON.stringify(action.payload));
       }

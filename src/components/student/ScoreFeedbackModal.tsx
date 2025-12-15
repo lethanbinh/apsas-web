@@ -38,7 +38,7 @@ interface QuestionWithRubrics extends AssessmentQuestion {
   questionComment?: string;
 }
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
+
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
@@ -58,7 +58,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   const { message } = App.useApp();
   const queryClient = useQueryClient();
 
-  // Initialize with empty feedback data (will be populated from API)
+
   const defaultEmptyFeedback: FeedbackData = {
     overallFeedback: "",
     strengths: "",
@@ -70,7 +70,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     errorHandling: "",
   };
 
-  // Fetch submissions
+
   const { data: submissionsData = [], isLoading: isLoadingSubmissions } = useQuery({
     queryKey: ['submissions', 'byStudentAndClassAssessment', studentId, data.classAssessmentId],
     queryFn: () => submissionService.getSubmissionList({
@@ -80,7 +80,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!studentId && !!data.classAssessmentId,
   });
 
-  // Get latest submission
+
   const lastSubmission = useMemo(() => {
     if (!submissionsData || submissionsData.length === 0) return null;
     const sorted = [...submissionsData].sort(
@@ -89,41 +89,41 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return sorted[0];
   }, [submissionsData]);
 
-  // Fetch latest grading session
+
   const { data: gradingSessionsData, isLoading: isLoadingGradingSessions } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: lastSubmission?.id!, pageNumber: 1, pageSize: 1 }),
     queryFn: () => gradingService.getGradingSessions({
       submissionId: lastSubmission!.id,
       pageNumber: 1,
-      pageSize: 1, // Only fetch latest
+      pageSize: 1,
     }),
     enabled: open && !!lastSubmission?.id,
   });
 
   const latestGradingSession = useMemo(() => {
     if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
-    return gradingSessionsData.items[0]; // Already sorted by API (latest first)
+    return gradingSessionsData.items[0];
   }, [gradingSessionsData]);
 
-  // Fetch grade items for latest session
+
   const { data: gradeItemsData, isLoading: isLoadingGradeItems } = useQuery({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: async () => {
       if (!latestGradingSession) return { items: [] };
 
-      // Check if gradeItems are already in the session response
+
       if (latestGradingSession.gradeItems && latestGradingSession.gradeItems.length > 0) {
         return { items: latestGradingSession.gradeItems };
       }
-      
-      // Fallback: fetch grade items separately
+
+
       const gradeItemsResult = await gradeItemService.getGradeItems({
         gradingSessionId: latestGradingSession.id,
         pageNumber: 1,
         pageSize: 1000,
       });
-      
-      // Convert to GradingServiceGradeItem format
+
+
           return {
         items: gradeItemsResult.items.map((item) => ({
           id: item.id,
@@ -138,7 +138,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!latestGradingSession?.id,
   });
 
-  // Get latest grade items (deduplicated by rubricItemId)
+
   const latestGradeItems = useMemo(() => {
     if (!gradeItemsData?.items || gradeItemsData.items.length === 0) return [];
     const latestGradeItemsMap = new Map<number, GradingServiceGradeItem>();
@@ -151,7 +151,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return Array.from(latestGradeItemsMap.values());
   }, [gradeItemsData]);
 
-  // Calculate total score
+
   const totalScore = useMemo(() => {
     if (latestGradeItems.length > 0) {
       return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
@@ -162,10 +162,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return 0;
   }, [latestGradeItems, latestGradingSession]);
 
-  /**
-   * Deserialize JSON string to feedback data
-   * Returns null if feedback is not JSON format
-   */
+
   const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
     if (!feedbackText || feedbackText.trim() === "") {
       return null;
@@ -191,7 +188,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     }
   };
 
-  // Fetch feedback
+
   const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', lastSubmission?.id],
     queryFn: async () => {
@@ -204,47 +201,47 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!lastSubmission?.id,
   });
 
-  // Get raw feedback text
+
   const rawFeedbackText = useMemo(() => {
     if (!feedbackList || feedbackList.length === 0) return null;
     return feedbackList[0].feedbackText;
   }, [feedbackList]);
 
-  // Check if feedback is already in JSON format
+
   const isFeedbackJson = useMemo(() => {
     if (!rawFeedbackText) return false;
     const parsed = deserializeFeedback(rawFeedbackText);
     return parsed !== null;
   }, [rawFeedbackText]);
 
-  // Format feedback with Gemini API if it's not JSON
+
   const { data: formattedFeedback, isLoading: isLoadingFormattedFeedback } = useQuery({
     queryKey: ['formattedFeedback', 'gemini', rawFeedbackText],
     queryFn: async () => {
       if (!rawFeedbackText) return null;
-      // Check if it's already JSON format
+
       const parsed = deserializeFeedback(rawFeedbackText);
-      if (parsed !== null) return null; // Already JSON, don't format
-      // Format with Gemini
+      if (parsed !== null) return null;
+
       return await geminiService.formatFeedback(rawFeedbackText);
     },
     enabled: open && !!rawFeedbackText && !isFeedbackJson,
-    staleTime: Infinity, // Cache forever since feedback doesn't change
+    staleTime: Infinity,
   });
 
-  // Process feedback - combine parsed JSON or Gemini formatted feedback
+
   const feedback = useMemo(() => {
     if (!feedbackList || feedbackList.length === 0) return defaultEmptyFeedback;
-    
+
     const existingFeedback = feedbackList[0];
         let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-        
-    // If deserialize returns null, use Gemini formatted feedback if available
+
+
         if (parsedFeedback === null) {
       if (formattedFeedback) {
         parsedFeedback = formattedFeedback;
       } else {
-        // Fallback: put entire text into overallFeedback while loading
+
             parsedFeedback = {
               overallFeedback: existingFeedback.feedbackText,
               strengths: "",
@@ -257,18 +254,18 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
             };
           }
         }
-        
+
     return parsedFeedback || defaultEmptyFeedback;
   }, [feedbackList, formattedFeedback]);
 
-  // Determine assessmentTemplateId (similar to RequirementModal)
+
   const effectiveClassId = useMemo(() => {
     if (data.classId) return data.classId;
     const stored = localStorage.getItem("selectedClassId");
     return stored ? Number(stored) : null;
   }, [data.classId]);
 
-  // Fetch class assessments to find assessmentTemplateId
+
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId?.toString()!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -279,7 +276,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
   });
 
-  // Determine assessmentTemplateId
+
   const assessmentTemplateId = useMemo(() => {
       if (data.assessmentTemplateId) {
       return data.assessmentTemplateId;
@@ -291,18 +288,18 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         return classAssessment.assessmentTemplateId;
           }
     }
-    
+
     if (data.courseElementId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId);
             if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
-    
+
     return null;
   }, [data.assessmentTemplateId, data.classAssessmentId, data.courseElementId, classAssessmentsData]);
 
-  // Fetch assign requests to filter approved templates
+
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
     queryFn: () => assignRequestService.getAssignRequests({
@@ -318,7 +315,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return new Set(approved.map(ar => ar.id));
   }, [assignRequestsData]);
 
-  // Fetch assessment templates
+
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -328,7 +325,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!assessmentTemplateId,
   });
 
-  // Find approved template
+
   const template = useMemo(() => {
     if (!templatesData?.items || !assessmentTemplateId) return null;
     return templatesData.items.find((t) => {
@@ -338,7 +335,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       });
   }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
 
-      // Fetch papers
+
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -349,7 +346,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     enabled: open && !!assessmentTemplateId && !!template,
   });
 
-  // Fetch questions for each paper
+
   const questionsQueries = useQueries({
     queries: (papersData?.items || []).map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -362,7 +359,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     })),
   });
 
-  // Fetch rubrics for each question
+
   const allQuestionIds = useMemo(() => {
     const ids: number[] = [];
     questionsQueries.forEach((query) => {
@@ -385,10 +382,10 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     })),
   });
 
-  // Build questions with rubrics and map grade items
+
   const questions = useMemo(() => {
     if (!papersData?.items || !template) return [];
-    
+
     const allQuestions: QuestionWithRubrics[] = [];
     let questionIndex = 0;
 
@@ -401,11 +398,11 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       );
 
       paperQuestions.forEach((question) => {
-        // Find rubrics for this question
+
         const rubricQuery = rubricsQueries[questionIndex];
         const questionRubrics = rubricQuery?.data?.items || [];
 
-        // Initialize rubric scores and comments
+
           const rubricScores: { [rubricId: number]: number } = {};
               const rubricComments: { [rubricId: number]: string } = {};
               let questionComment = "";
@@ -414,7 +411,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 rubricScores[rubric.id] = 0;
                 rubricComments[rubric.id] = "";
 
-          // Map grade items to rubrics
+
           const matchingGradeItem = latestGradeItems.find(
             (item) => item.rubricItemId === rubric.id
           );
@@ -442,7 +439,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return allQuestions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [papersData, template, questionsQueries, rubricsQueries, latestGradeItems]);
 
-  // Calculate loading state (after all queries are declared) - exclude formatted feedback loading
+
   const loading = useMemo(() => {
     return (
       isLoadingSubmissions ||
@@ -454,28 +451,28 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     );
   }, [isLoadingSubmissions, isLoadingGradingSessions, isLoadingGradeItems, isLoadingFeedback, questionsQueries, rubricsQueries]);
 
-  // Separate loading state for feedback formatting
+
   const isLoadingFeedbackFormatting = isLoadingFormattedFeedback;
 
-  // Check if score is available
+
   const hasScore = () => {
-    // Check if we have a completed grading session (even with score = 0, it means graded)
+
     if (latestGradingSession && latestGradingSession.status === 1) {
       return true;
     }
-    // Check if we have totalScore (including 0, which means graded but got 0)
+
     if (totalScore !== undefined && totalScore !== null) {
       return true;
     }
-    // Check if we have grade items (even with score = 0, it means graded)
+
     if (latestGradeItems.length > 0) {
       return true;
     }
-    // Check if lastSubmission has grade (including 0)
+
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
       return true;
     }
-    // Check if we have questions with rubric scores (even if 0, means grading was done)
+
     if (questions.length > 0 && questions.some(q => {
       const scores = Object.values(q.rubricScores || {});
       return scores.length > 0;
@@ -485,48 +482,48 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     return false;
   };
 
-  // Check if feedback is available
+
   const hasFeedback = () => {
-    // Check overallFeedback
+
     if (feedback?.overallFeedback && feedback.overallFeedback.trim() !== "") {
       return true;
     }
-    // Check detailed feedback sections
+
     if (feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality ||
       feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement ||
       feedback?.bestPractices || feedback?.errorHandling) {
       return true;
     }
-    // Check old format feedback
+
     if (data.overallFeedback || data.suggestionsAvoid || data.suggestionsImprove) {
       return true;
     }
-    // Check if there are comments in grade items
+
     if (latestGradeItems.length > 0 && latestGradeItems.some(item => item.comments && item.comments.trim() !== "")) {
       return true;
     }
     return false;
   };
 
-  // Calculate max score from all rubrics (not from question.score)
+
   const maxScore = useMemo(() => {
     return questions.reduce((sum, q) => {
       return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
     }, 0);
   }, [questions]);
 
-  // Calculate total score from questions or use latest grading session
+
   const getTotalScoreDisplay = () => {
-    // If we have a grading session, use totalScore (even if it's 0)
+
     if (latestGradingSession && latestGradingSession.status === 1) {
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
-      // If no questions or maxScore is 0, just return the score (even if 0)
+
       return Number(totalScore).toFixed(2);
     }
 
-    // If we have totalScore from state, show it (even if 0 means graded but got 0)
+
     if (totalScore !== undefined && totalScore !== null) {
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
@@ -534,7 +531,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       return Number(totalScore).toFixed(2);
     }
 
-    // Fallback to lastSubmission.lastGrade if available
+
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
       if (maxScore > 0) {
         return `${Number(lastSubmission.lastGrade).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
@@ -542,7 +539,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       return Number(lastSubmission.lastGrade).toFixed(2);
     }
 
-    // If we have grade items, calculate total from them
+
     if (latestGradeItems.length > 0) {
       const calculatedTotal = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
       if (maxScore > 0) {
@@ -551,7 +548,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       return Number(calculatedTotal).toFixed(2);
     }
 
-    // If we have questions with rubric scores, calculate total
+
     if (questions.length > 0) {
       const calculatedTotal = questions.reduce((sum, q) => {
         const questionTotal = Object.values(q.rubricScores || {}).reduce((s, score) => s + (score || 0), 0);
@@ -565,7 +562,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       }
     }
 
-    // If no score available, return null to show message
+
     return null;
   };
 
@@ -675,7 +672,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
           return <Text type="secondary" style={{ fontSize: "12px" }}>-</Text>;
         }
 
-        // Truncate long comments for display
+
         const maxLength = 150;
         const isLong = comment.length > maxLength;
         const displayText = isLong ? comment.substring(0, maxLength) + "..." : comment;
@@ -717,7 +714,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       <Spin spinning={loading}>
         <div className={styles.container}>
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
-            {/* Submission Information Card */}
+            {}
             <Card className={styles.headerCard}>
               <Descriptions bordered column={2}>
                 <Descriptions.Item label="Assignment">{data.title}</Descriptions.Item>
@@ -775,7 +772,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Descriptions>
             </Card>
 
-            {/* Grading Details Card - Questions and Rubrics */}
+            {}
             {questions.length > 0 && hasScore() && (
               <Card className={styles.questionsCard}>
                 <Title level={3}>Grading Details</Title>
@@ -785,7 +782,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 </Text>
                 <Divider />
 
-                <Collapse 
+                <Collapse
                   defaultActiveKey={questions.map((_, i) => i.toString())}
                   items={[...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, index) => {
                     const questionTotalScore = Object.values(question.rubricScores).reduce(
@@ -855,7 +852,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Card>
             )}
 
-            {/* Fallback to old Grade Criteria Card if no questions */}
+            {}
             {questions.length === 0 && data.gradeCriteria && data.gradeCriteria.length > 0 && (
               <Card className={styles.questionsCard}>
                 <Title level={3}>Grading Details</Title>
@@ -923,7 +920,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   />
                 </div>
 
-                  {/* Show detailed feedback sections only if feedback data exists */}
+                  {}
                   {(feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality || feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement || feedback?.bestPractices || feedback?.errorHandling) && (
                     <>
                 <Row gutter={16}>
@@ -1013,7 +1010,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     </>
                   )}
 
-                {/* Fallback to old format if no detailed feedback and old data exists */}
+                {}
                 {!feedback && data.suggestionsAvoid && (
                   <>
                     <div>
@@ -1041,7 +1038,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Spin>
             </Card>
 
-            {/* Action Buttons */}
+            {}
             <div style={{ textAlign: "right", marginTop: 16 }}>
               <Space>
               <Button type="primary" onClick={onCancel}>

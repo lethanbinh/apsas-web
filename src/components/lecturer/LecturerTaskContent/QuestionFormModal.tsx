@@ -15,7 +15,7 @@ interface QuestionFormModalProps {
   initialData?: AssessmentQuestion;
   paperId?: number;
   existingQuestionsCount?: number;
-  hasComment?: boolean; // Indicates if the question has a reviewer comment
+  hasComment?: boolean;
 }
 
 export const QuestionFormModal = ({
@@ -38,7 +38,7 @@ export const QuestionFormModal = ({
       if (initialData) {
         form.setFieldsValue(initialData);
       } else {
-        // When creating new question, auto-fill questionNumber
+
         form.resetFields();
         form.setFieldsValue({
           questionNumber: existingQuestionsCount + 1,
@@ -50,7 +50,7 @@ export const QuestionFormModal = ({
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing) {
-        // If editing a question that has a comment, clear the comment to mark it as resolved
+
         const updatePayload = {
           ...values,
           reviewerComment: hasComment ? undefined : initialData?.reviewerComment,

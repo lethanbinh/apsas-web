@@ -8,7 +8,7 @@ export class ActivityService {
     try {
       const activities: RecentActivity[] = [];
 
-      // Get recent users
+
       const { users } = await adminService.getAccountList(1, 20);
       users.slice(0, 5).forEach((user) => {
         activities.push({
@@ -16,12 +16,12 @@ export class ActivityService {
           type: 'user',
           title: 'User Registered',
           description: `${user.fullName} (${user.email})`,
-          timestamp: new Date().toISOString(), // Using current time as placeholder
+          timestamp: new Date().toISOString(),
           icon: '👤',
         });
       });
 
-      // Get recent classes
+
       const { classes } = await classService.getClassList({
         pageNumber: 1,
         pageSize: 10,
@@ -37,7 +37,7 @@ export class ActivityService {
         });
       });
 
-      // Get recent submissions
+
       const submissions = await submissionService.getSubmissionList({});
       submissions.slice(0, 5).forEach((submission) => {
         activities.push({
@@ -63,7 +63,7 @@ export class ActivityService {
     try {
       const tasks: PendingTask[] = [];
 
-      // Get pending assign requests
+
       const requests = await adminService.getApprovalList(1, 100);
       requests.items
         .filter((r) => r.status === 0)
@@ -79,7 +79,7 @@ export class ActivityService {
           });
         });
 
-      // Get ungraded submissions
+
       const submissions = await submissionService.getSubmissionList({});
       submissions
         .filter((s) => s.lastGrade === 0 && s.submittedAt)

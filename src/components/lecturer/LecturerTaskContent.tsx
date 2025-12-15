@@ -21,7 +21,6 @@ import {
 import { AssignRequestItem } from "@/services/assignRequestService";
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
-import type { UploadProps } from "antd";
 import {
   Alert,
   App,
@@ -41,7 +40,6 @@ import { TaskContentArea } from "./LecturerTaskContent/TaskContentArea";
 import { TaskSiderMenu } from "./LecturerTaskContent/TaskSiderMenu";
 import { useDataRefresh } from "./LecturerTaskContent/hooks/useDataRefresh";
 import { useTemplateOperations } from "./LecturerTaskContent/hooks/useTemplateOperations";
-import { beforeUploadPostman, beforeUploadSql } from "./LecturerTaskContent/utils/fileValidation";
 import { downloadTemplate, exportTemplate } from "./LecturerTaskContent/utils/templateExportUtils";
 import { importTemplate } from "./LecturerTaskContent/utils/templateImportUtils";
 import styles from "./Tasks.module.css";
@@ -78,12 +76,8 @@ export const LecturerTaskContent = ({
   const [databaseUploadFileList, setDatabaseUploadFileList] = useState<UploadFile[]>([]);
   const [postmanUploadFileList, setPostmanUploadFileList] = useState<UploadFile[]>([]);
 
-  // Allow editing when status is Pending (1), In Progress (4), or Rejected (3)
-  // When Rejected, lecturer can edit template and resubmit
   const isEditable = [1, 3, 4].includes(Number(task.status));
   const isRejected = Number(task.status) === 3;
-
-  // --- Logic Fetch Data ---
 
   const fetchAllData = async (templateId: number) => {
     try {
@@ -102,31 +96,31 @@ export const LecturerTaskContent = ({
             pageNumber: 1,
             pageSize: 100,
           });
-        // Sort questions by questionNumber
-        const sortedQuestions = [...questionResponse.items].sort((a, b) => 
+
+        const sortedQuestions = [...questionResponse.items].sort((a, b) =>
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         questionsMap[paper.id] = sortedQuestions;
       }
       setAllQuestions(questionsMap);
 
-      // If task is rejected, initialize localStorage with questions that have comments
+
       if (isRejected) {
         try {
           const initialKey = `task-${task.id}-initial-commented-questions`;
           const existingInitial = localStorage.getItem(initialKey);
-          
-          // Only initialize if not already set (preserve if user already started resolving)
+
+
           if (!existingInitial) {
             const allQuestionsFlat: AssessmentQuestion[] = [];
             Object.values(questionsMap).forEach(questions => {
               allQuestionsFlat.push(...questions);
             });
-            
+
             const questionsWithComments = allQuestionsFlat
               .filter(q => q.reviewerComment && q.reviewerComment.trim())
               .map(q => q.id);
-            
+
             if (questionsWithComments.length > 0) {
               localStorage.setItem(initialKey, JSON.stringify(questionsWithComments));
               console.log("Initialized localStorage with commented questions:", questionsWithComments);
@@ -148,7 +142,6 @@ export const LecturerTaskContent = ({
     }
   };
 
-  // Fetch templates using TanStack Query
   const { data: templatesResponse, isLoading: isLoadingTemplates, refetch: refetchTemplates } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
     queryFn: async () => {
@@ -157,7 +150,6 @@ export const LecturerTaskContent = ({
         pageNumber: 1,
         pageSize: 1000,
       });
-      // Filter templates by courseElementId
       return response.items.filter((t) => t.courseElementId === task.courseElementId);
     },
   });
@@ -165,7 +157,6 @@ export const LecturerTaskContent = ({
   const templates = templatesResponse || [];
   const isLoading = isLoadingTemplates;
 
-  // Template operations hook
   const templateOperations = useTemplateOperations({
     task,
     lecturerId,
@@ -201,7 +192,6 @@ export const LecturerTaskContent = ({
     handleDeleteTemplate,
   } = templateOperations;
 
-  // Data refresh hook
   const { refreshPapers, refreshQuestions, refreshFiles } = useDataRefresh({
     templateId: template?.id || null,
     allQuestions,
@@ -211,43 +201,35 @@ export const LecturerTaskContent = ({
     resetStatusIfRejected,
   });
 
-  // Auto-select template that belongs to current task
   useEffect(() => {
     if (templates.length > 0 && !template) {
-      // Find template that belongs to current assign request
       const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
       if (taskTemplate) {
         setTemplate(taskTemplate);
         fetchAllData(taskTemplate.id);
       } else if (templates.length === 1) {
-        // If only one template exists, use it
         setTemplate(templates[0]);
         fetchAllData(templates[0].id);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [templates, task.id]);
 
   useEffect(() => {
     refetchTemplates();
   }, [task.id, task.courseElementId, lecturerId, refetchTemplates]);
 
-  // Listen for template deletion/creation/update events to refetch templates
   useEffect(() => {
     const handleTemplateChange = async () => {
-      // Small delay to ensure delete operation has completed
       await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Invalidate and refetch templates query
+
       queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
       });
-      
-      // Refetch templates
+
       const result = await refetchTemplates();
       const updatedTemplates = result.data || [];
-      
-      // If current template was deleted, clear it
+
       if (template && !updatedTemplates.find((t) => t.id === template.id)) {
         setTemplate(null);
         setPapers([]);
@@ -255,50 +237,29 @@ export const LecturerTaskContent = ({
         setFiles([]);
         setSelectedKey("template-details");
       } else if (template) {
-        // Refresh data for current template
         await fetchAllData(template.id);
       }
     };
-    
+
     window.addEventListener('assessmentTemplatesChanged', handleTemplateChange);
-    
+
     return () => {
       window.removeEventListener('assessmentTemplatesChanged', handleTemplateChange);
     };
   }, [refetchTemplates, template, task.courseElementId, lecturerId, queryClient, fetchAllData]);
 
-  // Handle template selection change
   const handleTemplateChange = async (templateId: number) => {
     const selectedTemplate = templates.find((t) => t.id === templateId);
     if (selectedTemplate) {
       setTemplate(selectedTemplate);
-      setSelectedKey("template-details"); // Reset to template overview
+      setSelectedKey("template-details");
       await fetchAllData(selectedTemplate.id);
     }
   };
 
-  // --- Logic Xử lý sự kiện ---
-
-  const beforeUploadSqlHandler = beforeUploadSql(notification);
-  const beforeUploadPostmanHandler = beforeUploadPostman(notification);
-
-  const handleDatabaseFileChange: UploadProps["onChange"] = (info) => {
-    let newFileList = [...info.fileList];
-    newFileList = newFileList.slice(-1);
-    setDatabaseFileList(newFileList);
-  };
-
-  const handlePostmanFileChange: UploadProps["onChange"] = (info) => {
-    let newFileList = [...info.fileList];
-    newFileList = newFileList.slice(-1);
-    setPostmanFileList(newFileList);
-  };
-
-  // Handle upload database file via modal (when creating template)
   const handleDatabaseUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
     setDatabaseFileName(values.name);
     setDatabaseName(values.databaseName || "");
-    // Set file to databaseFileList
     const uploadFile: UploadFile = {
       uid: `-${Date.now()}`,
       name: values.file.name,
@@ -312,10 +273,8 @@ export const LecturerTaskContent = ({
     notification.success({ message: "Database file selected successfully" });
   };
 
-  // Handle upload postman file via modal (when creating template)
   const handlePostmanUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
     setPostmanFileName(values.name);
-    // Set file to postmanFileList
     const uploadFile: UploadFile = {
       uid: `-${Date.now()}`,
       name: values.file.name,
@@ -329,7 +288,6 @@ export const LecturerTaskContent = ({
     notification.success({ message: "Postman file selected successfully" });
   };
 
-  // Clear database and postman files if template type is not WEBAPI
   useEffect(() => {
     if (newTemplateType !== 1) {
       setDatabaseFileList([]);
@@ -349,7 +307,6 @@ export const LecturerTaskContent = ({
         notification,
       });
     } catch (error) {
-      // Error already handled in downloadTemplate
     }
   };
 
@@ -398,8 +355,8 @@ export const LecturerTaskContent = ({
         try {
           await assessmentPaperService.deleteAssessmentPaper(paper.id);
           notification.success({ message: "Paper deleted" });
-          await refreshPapers(true); // Reset status if rejected
-          setSelectedKey("template-details"); // Chuyển về view template
+          await refreshPapers(true);
+          setSelectedKey("template-details");
         } catch (error) {
           notification.error({ message: "Failed to delete paper" });
         }
@@ -417,8 +374,8 @@ export const LecturerTaskContent = ({
         try {
           await assessmentQuestionService.deleteAssessmentQuestion(question.id);
           notification.success({ message: "Question deleted" });
-          await refreshQuestions(question.assessmentPaperId, true); // Reset status if rejected
-          setSelectedKey(`paper-${question.assessmentPaperId}`); // Chuyển về view paper
+          await refreshQuestions(question.assessmentPaperId, true);
+          setSelectedKey(`paper-${question.assessmentPaperId}`);
         } catch (error) {
           notification.error({ message: "Failed to delete question" });
         }
@@ -428,16 +385,13 @@ export const LecturerTaskContent = ({
 
 
   const refreshTemplate = async (shouldResetStatus = false) => {
-    // Refresh toàn bộ templates và các dữ liệu liên quan
     await refetchTemplates();
-    
-    // Reset status if needed
+
     if (shouldResetStatus) {
       await resetStatusIfRejected();
     }
   };
 
-  // Check if current template is editable (belongs to current assign request)
   const isCurrentTemplateEditable = template?.assignRequestId === task.id && isEditable;
 
 
@@ -463,21 +417,17 @@ export const LecturerTaskContent = ({
       {!template ? (
         isEditable ? (
           (() => {
-            // Check if there's a template for this task
             const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
-            // Check if there are other templates (not for this task)
             const otherTemplates = templates.filter((t) => t.assignRequestId !== task.id);
-            
+
             if (otherTemplates.length > 0 && !isRejected && !taskTemplate) {
-              // If there are templates for other tasks but not for this task (and not rejected)
-              // Allow selecting existing template
               return (
                 <Card title="Select Existing Template">
-            <Alert
-              message="Template Already Exists"
+                  <Alert
+                    message="Template Already Exists"
                     description={`This course element already has ${otherTemplates.length} template(s) for other tasks. Please select an existing template to use.`}
-              type="warning"
-              showIcon
+                    type="warning"
+                    showIcon
                     style={{ marginBottom: 16 }}
                   />
                   <Select
@@ -492,10 +442,9 @@ export const LecturerTaskContent = ({
                       </Select.Option>
                     ))}
                   </Select>
-                        </Card>
+                </Card>
               );
             }
-            // No template exists, allow creation
             return (
               <CreateTemplateForm
                 newTemplateName={newTemplateName}
@@ -601,9 +550,9 @@ export const LecturerTaskContent = ({
                     </Select>
                   </div>
                 )}
-                <Title 
-                  level={5} 
-                  style={{ 
+                <Title
+                  level={5}
+                  style={{
                     margin: 0,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -665,21 +614,21 @@ export const LecturerTaskContent = ({
                 allQuestions={allQuestions}
                 isEditable={isCurrentTemplateEditable}
                 task={task}
-                onFileChange={() => refreshFiles(false)} // Edit file does NOT resolve question comments
+                onFileChange={() => refreshFiles(false)}
                 onExport={handleExport}
                 onTemplateDelete={() => handleDeleteTemplate(template)}
                 onTemplateChange={async () => {
-                  await refreshTemplate(false); // Template edit handles status reset separately
+                  await refreshTemplate(false);
                 }}
-                onPaperChange={() => refreshPapers(false)} // Edit paper does NOT resolve question comments
-                onQuestionChange={(paperId) => refreshQuestions(paperId, false)} // QuestionDetailView handles status reset
-                onRubricChange={(paperId) => refreshQuestions(paperId, false)} // QuestionDetailView handles status reset
+                onPaperChange={() => refreshPapers(false)}
+                onQuestionChange={(paperId) => refreshQuestions(paperId, false)}
+                onRubricChange={(paperId) => refreshQuestions(paperId, false)}
                 onResetStatus={resetStatusIfRejected}
               />
             </Content>
           </Layout>
 
-          {/* Modals */}
+          {}
           <PaperFormModal
             open={isPaperModalOpen}
             onCancel={() => {
@@ -689,7 +638,7 @@ export const LecturerTaskContent = ({
             onFinish={() => {
               setIsPaperModalOpen(false);
               setPaperToEdit(null);
-              refreshPapers(false); // Edit paper does NOT resolve question comments
+              refreshPapers(false);
             }}
             isEditable={isCurrentTemplateEditable}
             templateId={template.id}
@@ -703,7 +652,7 @@ export const LecturerTaskContent = ({
             }}
             onFinish={() => {
               setIsQuestionModalOpen(false);
-              refreshQuestions(paperForNewQuestion!, false); // QuestionDetailView handles status reset when editing existing question
+              refreshQuestions(paperForNewQuestion!, false);
               setPaperForNewQuestion(undefined);
             }}
             isEditable={isCurrentTemplateEditable}

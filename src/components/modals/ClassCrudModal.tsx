@@ -70,7 +70,7 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
     try {
       const payload = {
         ...values,
-        totalStudent: 1, // Set to fixed value, not displayed to user
+        totalStudent: 1,
         lecturerId: Number(values.lecturerId),
         semesterCourseId: semesterCourseId,
       };
@@ -128,11 +128,11 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Class code must be at least 2 characters!"));
                 }
-                // Check for whitespace
+
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Class code cannot contain spaces!"));
                 }
-                // Only allow alphanumeric characters, underscore, and hyphen
+
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Class code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }

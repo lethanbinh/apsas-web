@@ -1,4 +1,4 @@
-/* src/app/profile/Profile.module.css */
+
 
 .profileContainer {
   margin: 0 auto;
@@ -23,7 +23,7 @@
   color: #666;
 }
 
-/* Profile Card */
+
 .profileCard {
   background: #ffffff;
   border-radius: 16px;
@@ -63,7 +63,7 @@
   padding: 20px;
 }
 
-/* Quick Info Card */
+
 .quickInfoCard {
   margin-top: 24px;
   border-radius: 16px;
@@ -100,7 +100,7 @@
   text-align: right;
 }
 
-/* Main Card */
+
 .mainCard {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -141,7 +141,7 @@
   gap: 8px;
 }
 
-/* Detail Items */
+
 .detailItem {
   display: flex;
   flex-direction: column;
@@ -166,7 +166,7 @@
   font-weight: 500;
 }
 
-/* Responsive */
+
 @media (max-width: 768px) {
   .profileContainer {
     padding: 20px 10px;
@@ -185,7 +185,7 @@
   }
 }
 
-/* Ant Design overrides */
+
 .profileCard :global(.ant-card-body),
 .quickInfoCard :global(.ant-card-body),
 .mainCard :global(.ant-card-body),

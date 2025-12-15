@@ -2,19 +2,19 @@
 
 import React from "react";
 import { Typography } from "antd";
-import { MemberItem } from "./MemberItem"; // Import component con
+import { MemberItem } from "./MemberItem";
 import styles from "./MemberList.module.css";
 
 const { Title } = Typography;
 
-// Dữ liệu mẫu
+
 const memberData = [
   {
     id: 1,
     name: "Le Thanh Binh",
     details: "K17 HCM",
-    avatarUrl: "/classes/avatar1.png", // Thay bằng avatar của bạn
-    flagUrl: "/flags/germany.png", // Thay bằng cờ của bạn
+    avatarUrl: "/classes/avatar1.png",
+    flagUrl: "/flags/germany.png",
   },
   {
     id: 2,

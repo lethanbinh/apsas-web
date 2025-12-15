@@ -7,9 +7,9 @@ interface NoSSRProps {
   fallback?: React.ReactNode;
 }
 
-export const NoSSR: React.FC<NoSSRProps> = ({ 
-  children, 
-  fallback = null 
+export const NoSSR: React.FC<NoSSRProps> = ({
+  children,
+  fallback = null
 }) => {
   const [isClient, setIsClient] = useState(false);
 

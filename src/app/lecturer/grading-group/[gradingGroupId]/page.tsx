@@ -58,7 +58,7 @@ export default function GradingGroupPage() {
     return gradingGroupsData.find(g => g.id === gradingGroupId) || null;
   }, [gradingGroupsData, gradingGroupId]);
 
-  // Check if grade sheet has been submitted
+
   const isGradeSheetSubmitted = useMemo(() => {
     return !!(gradingGroup?.submittedGradeSheetUrl || gradingGroup?.gradeSheetSubmittedAt);
   }, [gradingGroup]);
@@ -67,16 +67,16 @@ export default function GradingGroupPage() {
     return gradingGroup?.assessmentTemplateName || "Grading Group";
   }, [gradingGroup?.assessmentTemplateName]);
 
-  // Handle grading group not found - only redirect after query has finished loading
+
   useEffect(() => {
     if (!gradingGroup && gradingGroupId && !isLoadingGradingGroups) {
       message.error("Grading group not found");
       router.back();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [gradingGroup, gradingGroupId, isLoadingGradingGroups]);
 
-  // Fetch all submissions in this grading group
+
   const { data: allSubmissionsData = [] } = useQuery({
     queryKey: ['submissions', 'byGradingGroupId', gradingGroupId],
     queryFn: () => submissionService.getSubmissionList({
@@ -85,7 +85,7 @@ export default function GradingGroupPage() {
     enabled: !!gradingGroupId,
   });
 
-  // Filter to get latest submission for each student
+
   const submissions = useMemo(() => {
     const studentSubmissions = new Map<number, Submission>();
     for (const sub of allSubmissionsData) {
@@ -96,7 +96,7 @@ export default function GradingGroupPage() {
       } else {
         const existingDate = (existing.updatedAt || existing.submittedAt) ? new Date(existing.updatedAt || existing.submittedAt || 0).getTime() : 0;
         const currentDate = (sub.updatedAt || sub.submittedAt) ? new Date(sub.updatedAt || sub.submittedAt || 0).getTime() : 0;
-        
+
         if (currentDate > existingDate) {
           studentSubmissions.set(sub.studentId, sub);
         } else if (currentDate === existingDate && sub.id > existing.id) {
@@ -104,13 +104,13 @@ export default function GradingGroupPage() {
         }
       }
     }
-    
-    return Array.from(studentSubmissions.values()).sort((a, b) => 
+
+    return Array.from(studentSubmissions.values()).sort((a, b) =>
       (a.studentCode || "").localeCompare(b.studentCode || "")
     );
   }, [allSubmissionsData]);
 
-  // Fetch latest grading sessions for all submissions to calculate total scores
+
   const gradingSessionsQueries = useQueries({
     queries: submissions.map((sub) => ({
       queryKey: queryKeys.grading.sessions.list({ submissionId: sub.id, pageNumber: 1, pageSize: 1 }),
@@ -123,7 +123,7 @@ export default function GradingGroupPage() {
     })),
   });
 
-  // Fetch grade items for all grading sessions
+
   const gradeItemsQueries = useQueries({
     queries: gradingSessionsQueries.map((sessionQuery, index) => ({
       queryKey: ['gradeItems', 'byGradingSessionId', sessionQuery.data?.items?.[0]?.id],
@@ -140,22 +140,22 @@ export default function GradingGroupPage() {
     })),
   });
 
-  // Calculate total scores for each submission from gradeItems if available, otherwise use session.grade
+
   const submissionTotalScores = useMemo(() => {
     const scoreMap: Record<number, number> = {};
     submissions.forEach((submission, index) => {
       const sessionsQuery = gradingSessionsQueries[index];
       const gradeItemsQuery = gradeItemsQueries[index];
-      
+
       if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
         const latestSession = sessionsQuery.data.items[0];
-        
-        // Prefer calculating from gradeItems if available
+
+
         if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
           const totalScore = gradeItemsQuery.data.items.reduce((sum, item) => sum + item.score, 0);
           scoreMap[submission.id] = totalScore;
         } else if (latestSession.grade !== undefined && latestSession.grade !== null) {
-          // Fallback to session.grade if no gradeItems
+
           scoreMap[submission.id] = latestSession.grade;
         }
       }
@@ -163,7 +163,7 @@ export default function GradingGroupPage() {
     return scoreMap;
   }, [submissions, gradingSessionsQueries, gradeItemsQueries]);
 
-  // Fetch assessment template to get course element and semester info
+
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -178,7 +178,7 @@ export default function GradingGroupPage() {
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
 
-  // Fetch papers for maxScore calculation
+
   const { data: papersResponse } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplate?.id!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -191,7 +191,7 @@ export default function GradingGroupPage() {
 
   const papers = papersResponse?.items || [];
 
-  // Fetch questions for all papers
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -214,7 +214,7 @@ export default function GradingGroupPage() {
     return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [questionsQueries]);
 
-  // Fetch rubrics for all questions
+
   const rubricsQueries = useQueries({
     queries: allQuestions.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -227,7 +227,7 @@ export default function GradingGroupPage() {
     })),
   });
 
-  // Calculate maxScore from all rubrics
+
   const maxScore = useMemo(() => {
     let total = 0;
     rubricsQueries.forEach((query) => {
@@ -240,7 +240,7 @@ export default function GradingGroupPage() {
     return total;
   }, [rubricsQueries]);
 
-  // Fetch course element to get semester info
+
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -255,7 +255,7 @@ export default function GradingGroupPage() {
     return courseElementsData.find((ce) => ce.id === assessmentTemplate.courseElementId) || null;
   }, [courseElementsData, assessmentTemplate]);
 
-  // Fetch semester detail to check if passed
+
   const semesterCode = courseElement?.semesterCourse?.semester?.semesterCode;
   const { data: semesterDetail } = useQuery({
     queryKey: ['semesterPlanDetail', semesterCode],
@@ -263,7 +263,7 @@ export default function GradingGroupPage() {
     enabled: !!semesterCode,
   });
 
-  // Check if semester has passed
+
   useEffect(() => {
     if (semesterDetail?.endDate) {
       const passed = isSemesterPassed(semesterDetail.endDate);
@@ -273,7 +273,7 @@ export default function GradingGroupPage() {
     }
   }, [semesterDetail?.endDate]);
 
-  // Mutation for uploading grade sheet
+
   const uploadGradeSheetMutation = useMutation({
     mutationFn: async ({ gradingGroupId, file }: { gradingGroupId: number; file: File }) => {
       return gradingGroupService.submitGradesToExaminer(gradingGroupId, file);
@@ -358,16 +358,16 @@ export default function GradingGroupPage() {
           return { success: true, submissionId: submission.id };
         } catch (err: any) {
           console.error(`Failed to grade submission ${submission.id}:`, err);
-          return { 
-            success: false, 
-            submissionId: submission.id, 
-            error: err.message || "Unknown error" 
+          return {
+            success: false,
+            submissionId: submission.id,
+            error: err.message || "Unknown error"
           };
         }
       });
 
       const results = await Promise.all(gradingPromises);
-      
+
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
 
@@ -376,11 +376,11 @@ export default function GradingGroupPage() {
       if (successCount > 0) {
         message.destroy();
         message.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
-        
-        // Start polling for grading status
+
+
         const pollInterval = setInterval(async () => {
           try {
-            // Fetch grading sessions for all successful submissions
+
             const sessionPromises = successfulSubmissionIds.map(submissionId =>
               gradingService.getGradingSessions({
                 submissionId: submissionId,
@@ -390,20 +390,20 @@ export default function GradingGroupPage() {
             );
 
             const sessionResults = await Promise.all(sessionPromises);
-            
-            // Check if all sessions are completed (status !== 0)
+
+
             let allCompleted = true;
             for (const result of sessionResults) {
               if (result.items.length > 0) {
-                const latestSession = result.items.sort((a, b) => 
+                const latestSession = result.items.sort((a, b) =>
                   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 )[0];
-                if (latestSession.status === 0) { // Still processing
+                if (latestSession.status === 0) {
                   allCompleted = false;
                   break;
                 }
               } else {
-                // No session found yet, still processing
+
                 allCompleted = false;
                 break;
               }
@@ -422,9 +422,9 @@ export default function GradingGroupPage() {
           } catch (err: any) {
             console.error("Failed to poll grading status:", err);
           }
-        }, 5000); // Poll every 5 seconds
+        }, 5000);
 
-        // Store interval reference to cleanup if component unmounts
+
         (window as any).batchGradingPollInterval = pollInterval;
       } else {
         message.destroy();

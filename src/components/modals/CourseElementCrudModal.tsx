@@ -13,7 +13,7 @@ interface CourseElementCrudModalProps {
   open: boolean;
   semesterCourseId: number;
   initialData: CourseElement | null;
-  existingElements?: CourseElement[]; // Existing course elements for validation
+  existingElements?: CourseElement[];
   onCancel: () => void;
   onOk: () => void;
 }
@@ -51,11 +51,11 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
     setIsLoading(true);
     setError(null);
 
-    const newWeight = Number(values.weight / 100); // Convert percentage to decimal
+    const newWeight = Number(values.weight / 100);
 
-    // Validate total weight
+
     const currentTotalWeight = existingElements.reduce((sum, el) => {
-      // If editing, exclude the current element's weight
+
       if (isEditMode && el.id === initialData!.id) {
         return sum;
       }
@@ -192,7 +192,7 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
                 }
                 const newWeight = Number(value / 100);
                 const currentTotalWeight = existingElements.reduce((sum, el) => {
-                  // If editing, exclude the current element's weight
+
                   if (isEditMode && el.id === initialData!.id) {
                     return sum;
                   }
@@ -213,9 +213,9 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
             },
           ]}
         >
-          <InputNumber 
-            min={0} 
-            max={100} 
+          <InputNumber
+            min={0}
+            max={100}
             style={{ width: "100%" }}
             precision={1}
             step={0.1}

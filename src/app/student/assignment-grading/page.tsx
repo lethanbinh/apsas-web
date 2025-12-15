@@ -32,7 +32,7 @@ export default function AssignmentGradingPage() {
   const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
 
   useEffect(() => {
-    // Get submissionId from localStorage
+
     const savedSubmissionId = localStorage.getItem("selectedSubmissionId");
     if (savedSubmissionId) {
       setSubmissionId(Number(savedSubmissionId));
@@ -71,7 +71,7 @@ export default function AssignmentGradingPage() {
     setFeedbackHistoryModalVisible(true);
   };
 
-  // Redirect if submission not found
+
   useEffect(() => {
     if (!loading && !finalSubmission && submissionId) {
       message.error("Submission not found");

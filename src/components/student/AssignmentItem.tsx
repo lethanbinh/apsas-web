@@ -1,4 +1,3 @@
-// Tên file: components/AssignmentList/AssignmentItem.tsx
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
@@ -41,12 +40,12 @@ import { queryKeys } from "@/lib/react-query";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
+
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
 
-// Helper function to get current Vietnam time
+
 const getCurrentVietnamTime = () => {
   return dayjs().tz("Asia/Ho_Chi_Minh");
 };
@@ -56,9 +55,9 @@ const { Dragger } = Upload;
 
 interface AssignmentItemProps {
   data: AssignmentData;
-  isExam?: boolean; // If true, hide requirement details, files, and submission
-  isLab?: boolean; // If true, allow submission with max 3 attempts and auto grading
-  isPracticalExam?: boolean; // If true, allow submission but only show requirement when deadline is set
+  isExam?: boolean;
+  isLab?: boolean;
+  isPracticalExam?: boolean;
 }
 
 export function AssignmentItem({ data, isExam = false, isLab = false, isPracticalExam = false }: AssignmentItemProps) {
@@ -74,7 +73,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
   const queryClient = useQueryClient();
   const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch last submission using TanStack Query
   const { data: submissions = [] } = useQuery({
     queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
     queryFn: async () => {
@@ -96,7 +94,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     enabled: !!studentId && (!!data.classAssessmentId || !!data.examSessionId),
   });
 
-  // Sort submissions by updatedAt (most recent first) - use updatedAt for submission date
   const sortedSubmissions = useMemo(() => {
     return [...submissions].sort((a, b) => {
       const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.submittedAt ? new Date(a.submittedAt).getTime() : 0);
@@ -107,12 +104,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
 
   const lastSubmission = sortedSubmissions.length > 0 ? sortedSubmissions[0] : null;
   const submissionCount = submissions.length;
-  
-  // For labs, get 3 most recent submissions (sorted, most recent first)
-  const labSubmissionHistory = isLab ? sortedSubmissions.slice(0, 3) : [];
-  const isLoadingSubmission = false; // useQuery handles loading state
 
-  // Fetch grading sessions for each submission in lab history
+  const labSubmissionHistory = isLab ? sortedSubmissions.slice(0, 3) : [];
+  const isLoadingSubmission = false;
+
   const labGradingSessionsQueries = useQueries({
     queries: labSubmissionHistory.map((submission) => ({
       queryKey: ['gradingSessions', 'bySubmissionId', submission.id],
@@ -122,10 +117,9 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           pageNumber: 1,
           pageSize: 100,
         });
-        // Sort by createdAt desc to get latest first
         return {
           ...result,
-          items: result.items.sort((a, b) => 
+          items: result.items.sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           ),
         };
@@ -134,7 +128,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     })),
   });
 
-  // Fetch grade items for each latest grading session
   const labGradeItemsQueries = useQueries({
     queries: labGradingSessionsQueries.map((sessionsQuery, index) => {
       const submission = labSubmissionHistory[index];
@@ -143,13 +136,11 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         queryKey: ['gradeItems', 'byGradingSessionId', latestSession?.id],
         queryFn: async () => {
           if (!latestSession) return { items: [] };
-          
-          // Check if gradeItems are already in the session response
+
           if (latestSession.gradeItems && latestSession.gradeItems.length > 0) {
             return { items: latestSession.gradeItems };
           }
-          
-          // Fallback: fetch grade items separately
+
           return await gradeItemService.getGradeItems({
             gradingSessionId: latestSession.id,
             pageNumber: 1,
@@ -161,7 +152,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     }),
   });
 
-  // Fetch questions and rubrics to calculate maxScore (same as ScoreFeedbackModal)
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(data.assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -172,7 +162,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     enabled: isLab && !!data.assessmentTemplateId,
   });
 
-  // Fetch questions for each paper
   const questionsQueries = useQueries({
     queries: (papersData?.items || []).map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -185,7 +174,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     })),
   });
 
-  // Fetch rubrics for each question
   const allQuestionIds = useMemo(() => {
     const ids: number[] = [];
     questionsQueries.forEach((query) => {
@@ -208,11 +196,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     })),
   });
 
-  // Build questions with rubrics (same structure as ScoreFeedbackModal)
   const questions = useMemo(() => {
     const questionsList: any[] = [];
     let questionIndex = 0;
-    
+
     (papersData?.items || []).forEach((paper, paperIndex) => {
       const paperQuestionsQuery = questionsQueries[paperIndex];
       if (!paperQuestionsQuery?.data?.items) return;
@@ -224,52 +211,46 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       paperQuestions.forEach((question: any) => {
         const rubricQuery = rubricsQueries[questionIndex];
         const questionRubrics = rubricQuery?.data?.items || [];
-        
-        // Calculate question max score from rubrics
+
         const questionMaxScore = questionRubrics.reduce((sum: number, r: any) => sum + (r.score || 0), 0);
-        
+
         questionsList.push({
           ...question,
           rubrics: questionRubrics,
-          score: questionMaxScore, // Question max score (sum of all rubric max scores)
+          score: questionMaxScore,
         });
-        
+
         questionIndex++;
       });
     });
-    
+
     return questionsList;
   }, [papersData, questionsQueries, rubricsQueries]);
 
-  // Calculate max score from all rubrics (not from question.score)
   const maxScore = useMemo(() => {
     return questions.reduce((sum, q) => {
       return sum + (q.rubrics || []).reduce((rubricSum: number, rubric: any) => rubricSum + (rubric.score || 0), 0);
     }, 0);
   }, [questions]);
 
-  // Calculate total scores for each submission in lab history (same logic as ScoreFeedbackModal)
   const labSubmissionScores = useMemo(() => {
     const scoreMap: Record<number, { total: number; max: number }> = {};
-    
+
     labSubmissionHistory.forEach((submission, index) => {
       const gradeItemsQuery = labGradeItemsQueries[index];
       const sessionsQuery = labGradingSessionsQueries[index];
-      
-      // Calculate total score from grade items (same logic as ScoreFeedbackModal)
+
       if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
         const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + (item.score || 0), 0);
         scoreMap[submission.id] = { total: totalScore, max: maxScore };
       } else if (sessionsQuery?.data?.items?.[0]?.grade !== undefined && sessionsQuery.data.items[0].grade !== null) {
-        // Fallback to grading session grade
         scoreMap[submission.id] = { total: sessionsQuery.data.items[0].grade, max: maxScore };
       }
     });
-    
+
     return scoreMap;
   }, [labSubmissionHistory, labGradeItemsQueries, labGradingSessionsQueries, maxScore]);
 
-  // Cleanup polling interval on unmount
   useEffect(() => {
     return () => {
       if (autoGradingPollIntervalRef.current) {
@@ -279,17 +260,14 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     };
   }, []);
 
-  // Check if deadline exists
   const hasDeadline = () => {
     return !!data.date;
   };
 
-  // Check if start date exists
   const hasStartDate = () => {
     return !!data.startAt;
   };
 
-  // Check if deadline has passed (using Vietnam time)
   const isDeadlinePassed = () => {
     if (!data.date) return false;
     const currentTime = getCurrentVietnamTime();
@@ -297,7 +275,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return currentTime.isAfter(deadlineTime);
   };
 
-  // Check if start date has not arrived yet (using Vietnam time)
   const isBeforeStartDate = () => {
     if (!data.startAt) return false;
     const currentTime = getCurrentVietnamTime();
@@ -305,14 +282,13 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return currentTime.isBefore(startTime);
   };
 
-  // Check if current time is within submission window (between startAt and endAt)
   const isWithinSubmissionWindow = () => {
     if (!data.startAt || !data.date) return false;
     const currentTime = getCurrentVietnamTime();
     const startTime = toVietnamTime(data.startAt);
     const endTime = toVietnamTime(data.date);
-    return (currentTime.isAfter(startTime) || currentTime.isSame(startTime, 'minute')) && 
-           (currentTime.isBefore(endTime) || currentTime.isSame(endTime, 'minute'));
+    return (currentTime.isAfter(startTime) || currentTime.isSame(startTime, 'minute')) &&
+      (currentTime.isBefore(endTime) || currentTime.isSame(endTime, 'minute'));
   };
 
   const canSubmit = () => {
@@ -322,14 +298,11 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     return true;
   };
 
-  // Mutation for creating or updating submission
   const submitMutation = useMutation({
     mutationFn: async ({ file, studentCode, submissionId }: { file: File; studentCode: string; submissionId?: number }) => {
       const newFileName = studentCode ? `${studentCode}.zip` : file.name;
       const renamedFile = new File([file], newFileName, { type: file.type });
 
-      // For labs, always create a new submission (max 3 times)
-      // For assignments/exams, update existing submission if available, otherwise create new
       if (isLab) {
         return submissionService.createSubmission({
           StudentId: studentId!,
@@ -338,53 +311,45 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           file: renamedFile,
         });
       } else {
-        // For assignments/exams: update if exists, create if not
-      if (submissionId) {
-        return submissionService.updateSubmission(submissionId, {
-          file: renamedFile,
-        });
-      } else {
-        return submissionService.createSubmission({
-          StudentId: studentId!,
-          ClassAssessmentId: data.classAssessmentId,
-          ExamSessionId: data.examSessionId,
-          file: renamedFile,
-        });
+        if (submissionId) {
+          return submissionService.updateSubmission(submissionId, {
+            file: renamedFile,
+          });
+        } else {
+          return submissionService.createSubmission({
+            StudentId: studentId!,
+            ClassAssessmentId: data.classAssessmentId,
+            ExamSessionId: data.examSessionId,
+            file: renamedFile,
+          });
         }
       }
     },
     onSuccess: async (newSubmission) => {
-      // Invalidate and refetch submissions queries - match exact query key
-      await queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({
         queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-        exact: false 
+        exact: false
       });
-      // Also invalidate all submissions queries for this student
-      await queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({
         queryKey: ['submissions', 'byStudent', studentId],
-        exact: false 
+        exact: false
       });
-      // Invalidate lecturer pages queries
-      await queryClient.invalidateQueries({ 
+      await queryClient.invalidateQueries({
         queryKey: ['submissions', 'byClassAssessments'],
-        exact: false 
+        exact: false
       });
-      // Invalidate all submissions queries
       await queryClient.invalidateQueries({ queryKey: queryKeys.submissions.all });
-      
-      // Refetch the current query to get latest data immediately
-      await queryClient.refetchQueries({ 
+
+      await queryClient.refetchQueries({
         queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
         type: 'active'
       });
-      
-      // Refetch lecturer pages queries if they're active
-      await queryClient.refetchQueries({ 
+
+      await queryClient.refetchQueries({
         queryKey: ['submissions', 'byClassAssessments'],
         type: 'active'
       });
 
-      // For labs, trigger auto grading and AI feedback after submission
       if (isLab && data.assessmentTemplateId) {
         try {
           const gradingSession = await gradingService.autoGrading({
@@ -419,76 +384,65 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                     }
                     message.destroy();
 
-                    // Invalidate grading queries
                     queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                    // Invalidate grading sessions for this specific submission (used in submission history)
-                    queryClient.invalidateQueries({ 
+                    queryClient.invalidateQueries({
                       queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                      exact: false 
+                      exact: false
                     });
-                    // Invalidate all grade items queries
-                    queryClient.invalidateQueries({ 
+                    queryClient.invalidateQueries({
                       queryKey: ['gradeItems'],
-                      exact: false 
+                      exact: false
                     });
-                    // Refetch queries to update submission history scores
-                    queryClient.refetchQueries({ 
+                    queryClient.refetchQueries({
                       queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
                       type: 'active'
                     });
-                    queryClient.refetchQueries({ 
+                    queryClient.refetchQueries({
                       queryKey: ['gradeItems'],
                       type: 'active'
                     });
 
                     if (latestSession.status === 1) {
                       message.success("Auto grading completed successfully");
-                      
-                      // After grading completes, trigger AI feedback
+
                       try {
                         message.loading("Getting AI feedback...", 0);
                         await gradingService.getFormattedAiFeedback(newSubmission.id, "OpenAI");
                         message.destroy();
                         message.loading("AI feedback in progress...", 0);
-                        
-                        // Start polling for AI feedback status (check if feedback exists)
+
                         const feedbackPollInterval = setInterval(async () => {
                           try {
                             const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
                               submissionId: newSubmission.id,
                             });
-                            
+
                             if (feedbackList && feedbackList.length > 0 && feedbackList[0].feedbackText) {
                               clearInterval(feedbackPollInterval);
                               message.destroy();
                               queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', newSubmission.id] });
-                              // Refetch submissions to update submission history
-                              await queryClient.invalidateQueries({ 
+                              await queryClient.invalidateQueries({
                                 queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                                exact: false 
+                                exact: false
                               });
-                              // Invalidate grading sessions for this specific submission (used in submission history)
-                              await queryClient.invalidateQueries({ 
+                              await queryClient.invalidateQueries({
                                 queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                                exact: false 
+                                exact: false
                               });
-                              // Invalidate all grading sessions queries
                               await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                              // Invalidate all grade items queries (pattern matching)
-                              await queryClient.invalidateQueries({ 
+                              await queryClient.invalidateQueries({
                                 queryKey: ['gradeItems'],
-                                exact: false 
+                                exact: false
                               });
-                              // Refetch all active queries including submissions, grading sessions, and grade items
-                              await queryClient.refetchQueries({ 
+                              await queryClient.refetchQueries({
                                 queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
                                 type: 'active'
                               });
-                              await queryClient.refetchQueries({ 
+                              await queryClient.refetchQueries({
                                 queryKey: ['gradingSessions', 'bySubmissionId'],
                                 type: 'active'
                               });
-                              await queryClient.refetchQueries({ 
+                              await queryClient.refetchQueries({
                                 queryKey: ['gradeItems'],
                                 type: 'active'
                               });
@@ -497,12 +451,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                           } catch (err: any) {
                             console.error("Failed to poll AI feedback status:", err);
                           }
-                        }, 5000); // Poll every 5 seconds
-                        
-                        // Store interval reference
+                        }, 5000);
+
                         (window as any).aiFeedbackPollInterval = feedbackPollInterval;
-                        
-                        // Timeout after 5 minutes
+
                         setTimeout(() => {
                           if ((window as any).aiFeedbackPollInterval) {
                             clearInterval((window as any).aiFeedbackPollInterval);
@@ -529,7 +481,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                 message.destroy();
                 message.error(err.message || "Failed to check grading status");
               }
-            }, 5000); // Poll every 5 seconds
+            }, 5000);
 
             autoGradingPollIntervalRef.current = pollInterval;
 
@@ -543,71 +495,63 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           } else {
             if (gradingSession.status === 1) {
               message.success("Auto grading completed successfully");
-              
-              // Invalidate and refetch queries to update submission history scores
-              queryClient.invalidateQueries({ 
+
+              queryClient.invalidateQueries({
                 queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                exact: false 
+                exact: false
               });
               queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-              queryClient.invalidateQueries({ 
+              queryClient.invalidateQueries({
                 queryKey: ['gradeItems'],
-                exact: false 
+                exact: false
               });
-              queryClient.refetchQueries({ 
+              queryClient.refetchQueries({
                 queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
                 type: 'active'
               });
-              queryClient.refetchQueries({ 
+              queryClient.refetchQueries({
                 queryKey: ['gradeItems'],
                 type: 'active'
               });
-              
-              // After grading completes, trigger AI feedback
+
               try {
                 message.loading("Getting AI feedback...", 0);
                 await gradingService.getFormattedAiFeedback(newSubmission.id, "OpenAI");
                 message.destroy();
                 message.loading("AI feedback in progress...", 0);
-                
-                // Start polling for AI feedback status
+
                 const feedbackPollInterval = setInterval(async () => {
                   try {
                     const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
                       submissionId: newSubmission.id,
                     });
-                    
+
                     if (feedbackList && feedbackList.length > 0 && feedbackList[0].feedbackText) {
                       clearInterval(feedbackPollInterval);
                       message.destroy();
                       queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', newSubmission.id] });
-                      // Refetch submissions to update submission history
-                      await queryClient.invalidateQueries({ 
+                      await queryClient.invalidateQueries({
                         queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                        exact: false 
+                        exact: false
                       });
-                      // Invalidate grading sessions for this specific submission (used in submission history)
-                      await queryClient.invalidateQueries({ 
+                      await queryClient.invalidateQueries({
                         queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                        exact: false 
+                        exact: false
                       });
-                      // Invalidate all grading sessions queries
                       await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                      // Invalidate all grade items queries (pattern matching)
-                      await queryClient.invalidateQueries({ 
+                      await queryClient.invalidateQueries({
                         queryKey: ['gradeItems'],
-                        exact: false 
+                        exact: false
                       });
-                      // Refetch all active queries including submissions, grading sessions, and grade items
-                      await queryClient.refetchQueries({ 
+                      await queryClient.refetchQueries({
                         queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
                         type: 'active'
                       });
-                      await queryClient.refetchQueries({ 
+                      await queryClient.refetchQueries({
                         queryKey: ['gradingSessions', 'bySubmissionId'],
                         type: 'active'
                       });
-                      await queryClient.refetchQueries({ 
+                      await queryClient.refetchQueries({
                         queryKey: ['gradeItems'],
                         type: 'active'
                       });
@@ -616,12 +560,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                   } catch (err: any) {
                     console.error("Failed to poll AI feedback status:", err);
                   }
-                }, 5000); // Poll every 5 seconds
-                
-                // Store interval reference
+                }, 5000);
+
                 (window as any).aiFeedbackPollInterval = feedbackPollInterval;
-                
-                // Timeout after 5 minutes
+
                 setTimeout(() => {
                   if ((window as any).aiFeedbackPollInterval) {
                     clearInterval((window as any).aiFeedbackPollInterval);
@@ -669,7 +611,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return;
     }
 
-    // Validate file type - must be zip
     const isZip = file.type === "application/zip" ||
       file.type === "application/x-zip-compressed" ||
       file.name.toLowerCase().endsWith(".zip");
@@ -678,38 +619,32 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return;
     }
 
-    // Check submission limit for labs (max 3 times)
     if (isLab && submissionCount >= 3) {
       message.error("You have reached the maximum submission limit (3 times).");
       return;
     }
 
-    // Check deadline
     if (!hasDeadline()) {
       message.error("This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting.");
       return;
     }
-    
-    // Check start date - if exists, must be after start date
+
     if (hasStartDate() && isBeforeStartDate()) {
       const startTime = toVietnamTime(data.startAt!);
       message.error(`Submission is not yet open. The submission period starts on ${startTime.format("DD/MM/YYYY HH:mm")}.`);
       return;
     }
-    
-    // Check end date - must be before deadline
+
     if (isDeadlinePassed()) {
       message.error("The deadline has passed. You can no longer submit.");
       return;
     }
-    
-    // Final check
+
     if (!canSubmit()) {
       message.error("You cannot submit at this time. Please check the submission period.");
       return;
     }
 
-    // Get studentCode
     let studentCode = user?.accountCode || "";
     if (!studentCode) {
       try {
@@ -726,8 +661,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       }
     }
 
-    // For labs, always create new submission (don't pass submissionId)
-    // For assignments/exams, update existing submission if available
     const submissionId = isLab ? undefined : lastSubmission?.id;
     submitMutation.mutate({ file, studentCode, submissionId });
   };
@@ -740,7 +673,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       setFileList((prevList) => prevList.filter((f) => f.uid !== file.uid));
     },
     beforeUpload: (file: File) => {
-      // Validate file type - must be zip
       const isZip = file.type === "application/zip" ||
         file.type === "application/x-zip-compressed" ||
         file.name.toLowerCase().endsWith(".zip");
@@ -749,15 +681,14 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         return false;
       }
 
-      // Create UploadFile object with originFileObj
       const uploadFile: UploadFile = {
         uid: `${Date.now()}-${file.name}`,
         name: file.name,
         status: 'done',
-        originFileObj: file as any, // Cast to any to satisfy RcFile type
+        originFileObj: file as any,
       };
       setFileList([uploadFile]);
-      return false; // Prevent auto upload
+      return false;
     },
   };
 
@@ -765,7 +696,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     <div className={styles.itemContent}>
       {(!isExam || isPracticalExam) && (
         <>
-          {/* For practical exam, only show requirements when deadline is set */}
           {(!isPracticalExam || hasDeadline()) && (
             <div className={styles.contentSection}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -831,7 +761,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </div>
           )}
 
-          {/* Submission Period - moved above Your Submission */}
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
               {data.startAt ? "Submission Period" : "Deadline"}
@@ -839,7 +768,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             <DeadlineDisplay date={data.date} startDate={data.startAt} />
           </div>
 
-          {/* Lab Submission History - only for labs */}
           {isLab && labSubmissionHistory.length > 0 && (
             <div className={styles.contentSection} style={{ marginTop: "24px" }}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -861,24 +789,24 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                     actions={
                       submission.submissionFile?.submissionUrl
                         ? [
-                            <AntButton
-                              key="download"
-                              type="link"
-                              size="small"
-                              icon={<DownloadOutlined />}
-                              onClick={() => {
-                                const link = document.createElement("a");
-                                link.href = submission.submissionFile!.submissionUrl;
-                                link.download = submission.submissionFile!.name || "submission.zip";
-                                link.target = "_blank";
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }}
-                            >
-                              Download
-                            </AntButton>,
-                          ]
+                          <AntButton
+                            key="download"
+                            type="link"
+                            size="small"
+                            icon={<DownloadOutlined />}
+                            onClick={() => {
+                              const link = document.createElement("a");
+                              link.href = submission.submissionFile!.submissionUrl;
+                              link.download = submission.submissionFile!.name || "submission.zip";
+                              link.target = "_blank";
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }}
+                          >
+                            Download
+                          </AntButton>,
+                        ]
                         : []
                     }
                   >
@@ -917,7 +845,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </div>
           )}
 
-          {/* Your Submission - full section for assignments */}
           {!isLab && (
             <div className={styles.submissionSection}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -984,7 +911,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </div>
           )}
 
-          {/* Submit button only for labs */}
           {isLab && (
             <div style={{ marginTop: "16px" }}>
               <Button
@@ -1060,7 +986,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         />
       )}
 
-      {/* Submit Modal */}
       <Modal
         title={isLab
           ? (lastSubmission ? `Resubmit Lab (${submissionCount}/3)` : `Submit Lab (${submissionCount}/3)`)

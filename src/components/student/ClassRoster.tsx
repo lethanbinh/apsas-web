@@ -55,14 +55,14 @@ const columns: TableProps<Member>["columns"] = [
 export default function ClassRoster({ classId }: { classId: string | number }) {
   const [searchText, setSearchText] = useState("");
 
-  // Fetch students in class
+
   const { data: studentGroup = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: queryKeys.studentsInClass.byClassId(classId),
     queryFn: () => classService.getStudentsInClass(classId),
     enabled: !!classId,
   });
 
-  // Fetch student details for all students
+
   const { data: studentDetails = [], isLoading: isLoadingDetails } = useQuery({
     queryKey: ['studentDetails', 'byStudentIds', studentGroup.map(s => s.studentId)],
     queryFn: async () => {

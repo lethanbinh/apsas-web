@@ -1,10 +1,6 @@
-/**
- * Storage utility functions - uses sessionStorage (automatically cleared when tab/browser closes)
- */
 
-/**
- * Set item in sessionStorage
- */
+
+
 export function setStorageItem(key: string, value: string): void {
   if (typeof window === 'undefined') return;
   try {
@@ -14,9 +10,7 @@ export function setStorageItem(key: string, value: string): void {
   }
 }
 
-/**
- * Get item from sessionStorage
- */
+
 export function getStorageItem(key: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -27,9 +21,7 @@ export function getStorageItem(key: string): string | null {
   }
 }
 
-/**
- * Remove item from sessionStorage
- */
+
 export function removeStorageItem(key: string): void {
   if (typeof window === 'undefined') return;
   try {
@@ -39,9 +31,7 @@ export function removeStorageItem(key: string): void {
   }
 }
 
-/**
- * Clear all sessionStorage
- */
+
 export function clearStorage(): void {
   if (typeof window === 'undefined') return;
   try {

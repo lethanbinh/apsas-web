@@ -5,7 +5,7 @@ import type { NotificationInstance } from "antd/es/notification/interface";
 export const beforeUploadSql: (notification: NotificationInstance) => UploadProps["beforeUpload"] = (notification) => (file) => {
   const fileName = file.name.toLowerCase();
   const isSqlExtension = fileName.endsWith(".sql");
-  
+
   if (!isSqlExtension) {
     notification.error({
       message: "Invalid File Type",
@@ -13,7 +13,7 @@ export const beforeUploadSql: (notification: NotificationInstance) => UploadProp
     });
     return Upload.LIST_IGNORE;
   }
-  
+
   const isLt100M = file.size / 1024 / 1024 < 100;
   if (!isLt100M) {
     notification.error({
@@ -22,14 +22,14 @@ export const beforeUploadSql: (notification: NotificationInstance) => UploadProp
     });
     return Upload.LIST_IGNORE;
   }
-  
+
   return false;
 };
 
 export const beforeUploadPostman: (notification: NotificationInstance) => UploadProps["beforeUpload"] = (notification) => (file) => {
   const fileName = file.name.toLowerCase();
   const isPostmanExtension = fileName.endsWith(".postman_collection");
-  
+
   if (!isPostmanExtension) {
     notification.error({
       message: "Invalid File Type",
@@ -37,7 +37,7 @@ export const beforeUploadPostman: (notification: NotificationInstance) => Upload
     });
     return Upload.LIST_IGNORE;
   }
-  
+
   const isLt100M = file.size / 1024 / 1024 < 100;
   if (!isLt100M) {
     notification.error({
@@ -46,7 +46,7 @@ export const beforeUploadPostman: (notification: NotificationInstance) => Upload
     });
     return Upload.LIST_IGNORE;
   }
-  
+
   return false;
 };
 

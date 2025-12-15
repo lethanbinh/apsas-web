@@ -18,14 +18,14 @@
 
 .paddedImageWrapper {
     padding: 15px;
-    /* Padding cho ảnh */
+
 }
 
 .imageWrapper {
     position: relative;
     width: 100%;
     padding-top: 60%;
-    /* Tỷ lệ ảnh */
+
     border-radius: 12px;
     overflow: hidden;
 }
@@ -36,7 +36,7 @@
 
 .cardContent {
     padding: 0 20px 20px 20px;
-    /* Padding nội dung */
+
 }
 
 .authorInfo {
@@ -54,7 +54,7 @@
 
 .courseCardLink {
     text-decoration: none;
-    /* Bỏ gạch chân của link */
+
     color: inherit;
-    /* Kế thừa màu chữ */
+
 }

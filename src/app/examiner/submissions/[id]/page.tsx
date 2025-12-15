@@ -148,7 +148,7 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
 export default function SubmissionsPage() {
   const params = useParams();
   const shiftId = params.id as string;
-  
+
   return (
     <App>
       <SubmissionsPageContent shiftId={shiftId} />

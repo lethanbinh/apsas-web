@@ -44,7 +44,7 @@ export const RubricFormModal = ({
       if (isEditing) {
         await rubricItemService.updateRubricItem(initialData!.id, values);
       } else {
-        // Check if already at maximum (4 rubrics)
+
         if (currentRubricsCount >= 4) {
           notification.error({
             message: "Maximum rubrics reached",
@@ -78,9 +78,9 @@ export const RubricFormModal = ({
           Cancel
         </Button>,
         isEditable ? (
-          <Button 
-            key="submit" 
-            type="primary" 
+          <Button
+            key="submit"
+            type="primary"
             onClick={() => form.submit()}
             disabled={!isEditing && currentRubricsCount >= 4}
           >

@@ -88,7 +88,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
       const exportData: any[] = [];
       const totalUsers = overview.users.total;
 
-      // Section 1: Key Statistics
+
       exportData.push(["USERS - KEY STATISTICS"]);
       exportData.push(["Metric", "Value"]);
       exportData.push(["Total Users", overview.users.total]);
@@ -99,7 +99,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
       exportData.push(["Active Rate (%)", totalUsers > 0 ? Math.round((overview.users.active / totalUsers) * 100) : 0]);
       exportData.push([]);
 
-      // Section 2: Users by Role
+
       exportData.push(["USERS BY ROLE"]);
       exportData.push(["Role", "Count", "Percentage"]);
       roleDistribution.forEach((item) => {
@@ -108,7 +108,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 3: Gender Distribution
+
       exportData.push(["GENDER DISTRIBUTION"]);
       exportData.push(["Gender", "Count", "Percentage"]);
       genderDistribution.forEach((item) => {
@@ -117,7 +117,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 4: Profile Completion
+
       exportData.push(["PROFILE COMPLETION"]);
       exportData.push(["Metric", "Count", "Percentage"]);
       exportData.push(["Users With Avatar", overview.users.usersWithAvatar || 0, totalUsers > 0 ? ((overview.users.usersWithAvatar || 0) / totalUsers * 100).toFixed(2) + "%" : "0%"]);
@@ -125,7 +125,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
       exportData.push(["Average Age", overview.users.averageAge?.toFixed(1) || "N/A", ""]);
       exportData.push([]);
 
-      // Section 5: User Growth (Last 12 Months)
+
       if (chartData?.userGrowth && chartData.userGrowth.length > 0) {
         exportData.push(["USER GROWTH (LAST 12 MONTHS)"]);
         exportData.push(["Month", "Total Users", "Students", "Lecturers"]);
@@ -135,7 +135,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 6: All Users
+
       const roleMap: Record<number, string> = {
         0: "Admin",
         1: "Lecturer",
@@ -196,11 +196,11 @@ const UsersTab: React.FC<UsersTabProps> = ({
     }
   };
 
-  // Filter users based on search, role, and date range
+
   const filteredUsers = useMemo(() => {
     let filtered = [...users];
 
-    // Filter by search text
+
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(
@@ -212,20 +212,20 @@ const UsersTab: React.FC<UsersTabProps> = ({
       );
     }
 
-    // Filter by role
+
     if (selectedRole !== undefined) {
       filtered = filtered.filter((user) => user.role === selectedRole);
     }
 
-    // Filter by date range - Note: User interface doesn't have createdAt, so we'll skip date filtering for users
-    // If you want to filter by dateOfBirth, uncomment below:
-    // if (dateRange && dateRange[0] && dateRange[1]) {
-    //   filtered = filtered.filter((user) => {
-    //     if (!user.dateOfBirth) return false;
-    //     const birthDate = dayjs(user.dateOfBirth);
-    //     return birthDate.isAfter(dateRange[0]!.subtract(1, "day")) && birthDate.isBefore(dateRange[1]!.add(1, "day"));
-    //   });
-    // }
+
+
+
+
+
+
+
+
+
 
     return filtered;
   }, [users, searchText, selectedRole, dateRange]);
@@ -299,7 +299,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Users Dashboard</Title>
@@ -315,7 +315,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
         </Space>
       </Card>
 
-      {/* User Statistics Overview */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>User Statistics Overview</Title>
         <Row gutter={[16, 16]}>
@@ -419,7 +419,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
         </Row>
       </Card>
 
-      {/* Role Distribution */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Users by Role</Title>
         <Row gutter={[16, 16]}>
@@ -478,7 +478,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
         </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={8}>
           <Card title="Role Distribution" loading={loading}>
@@ -538,7 +538,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
         </Col>
       </Row>
 
-      {/* Users Table */}
+      {}
       <Card
         title="All Users"
         loading={usersLoading}

@@ -1,6 +1,4 @@
-/**
- * Reset Password page
- */
+
 
 import { Metadata } from 'next';
 import ResetPasswordForm from '@/components/features/ResetPasswordForm';
@@ -17,11 +15,11 @@ export default function ResetPasswordPage() {
     <AuthGuard requireAuth={false}>
       <div className="reset-password-main-container">
         <div className="reset-password-content-wrapper">
-          {/* Left side - Reset Password Form */}
+          {}
           <div className="reset-password-form-section">
             <ResetPasswordForm />
           </div>
-          {/* Right side - Illustration */}
+          {}
           <div className="reset-password-illustration-section">
             <div className="login-illustration">
               <div className="illustration-wrapper">

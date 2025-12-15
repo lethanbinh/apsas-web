@@ -29,7 +29,7 @@ interface GradingHistoryModalProps {
 export function GradingHistoryModal({ visible, onClose, submissionId }: GradingHistoryModalProps) {
   const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set());
 
-  // Fetch grading history using TanStack Query
+
   const { data: gradingHistoryData, isLoading: loading } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -49,7 +49,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     });
   }, [gradingHistoryData]);
 
-  // Fetch grade items for ALL sessions (not just expanded ones) to calculate scores correctly
+
   const allSessionIds = gradingHistory.map(session => session.id);
   const gradeItemsQueries = useQueries({
     queries: allSessionIds.map((sessionId) => ({
@@ -117,7 +117,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     setGradeItemHistoryModalVisible(true);
   };
 
-  // Fetch grade item history using TanStack Query
+
   const { data: gradeItemHistoryData, isLoading: loadingGradeItemHistory } = useQuery({
     queryKey: ['gradeItemHistory', selectedGradeItem?.gradingSessionId, selectedGradeItem?.rubricItemDescription],
     queryFn: async () => {
@@ -239,16 +239,16 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
               const isExpanded = expandedSessions.has(session.id);
               const gradeItems = sessionGradeItems[session.id] || [];
 
-              // Calculate scores from gradeItems if available, otherwise use session.grade
-              const totalScore = gradeItems.length > 0 
+
+              const totalScore = gradeItems.length > 0
                 ? gradeItems.reduce((sum, item) => sum + item.score, 0)
                 : (session.grade || 0);
               const maxScore = gradeItems.length > 0
                 ? gradeItems.reduce((sum, item) => sum + (item.rubricItemMaxScore || 0), 0)
                 : 0;
-              
-              // Grade display: use totalScore from gradeItems if available, otherwise session.grade
-              // Only show maxScore if we have gradeItems
+
+
+
               const gradeDisplay = gradeItems.length > 0 && maxScore > 0
                 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}`
                 : totalScore.toFixed(2);
@@ -288,7 +288,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                       </Descriptions.Item>
                     </Descriptions>
 
-                    {/* Grading Logs Section */}
+                    {}
                     {session.gradingLogs && session.gradingLogs.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
                         <Title level={5} style={{ marginBottom: 8 }}>
@@ -355,7 +355,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
         )}
       </Spin>
 
-      {/* Grade Item History Modal */}
+      {}
       <Modal
         title={
           <div>

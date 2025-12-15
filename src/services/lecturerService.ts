@@ -10,12 +10,12 @@ export interface Lecturer {
   avatar: string;
   address: string;
   gender: number;
-  dateOfBirth: string; // Chuỗi ISO
+  dateOfBirth: string;
   role: number;
   department: string;
   specialization: string;
-  createdAt: string; // Chuỗi ISO
-  updatedAt: string; // Chuỗi ISO
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LecturerListApiResponse {

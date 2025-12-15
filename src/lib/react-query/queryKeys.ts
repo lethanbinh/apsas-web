@@ -1,16 +1,7 @@
-/**
- * Centralized query keys for TanStack Query
- * 
- * This helps maintain consistency and avoid typos when using query keys
- * across the application. All query keys should be defined here.
- * 
- * Usage:
- *   queryClient.getQueryData(queryKeys.users.all)
- *   queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(userId) })
- */
+
 
 export const queryKeys = {
-  // User/Account related queries
+
   users: {
     all: ['users'] as const,
     lists: () => ['users', 'list'] as const,
@@ -19,7 +10,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['users', 'detail', id] as const,
   },
 
-  // Class related queries
+
   classes: {
     all: ['classes'] as const,
     lists: () => ['classes', 'list'] as const,
@@ -28,7 +19,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['classes', 'detail', id] as const,
   },
 
-  // Assessment/Template related queries
+
   assessments: {
     all: ['assessments'] as const,
     templates: {
@@ -40,7 +31,7 @@ export const queryKeys = {
     },
   },
 
-  // Submission related queries
+
   submissions: {
     all: ['submissions'] as const,
     lists: () => ['submissions', 'list'] as const,
@@ -49,7 +40,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['submissions', 'detail', id] as const,
   },
 
-  // Grading related queries
+
   grading: {
     all: ['grading'] as const,
     sessions: {
@@ -68,7 +59,7 @@ export const queryKeys = {
     },
   },
 
-  // Course element related queries
+
   courseElements: {
     all: ['courseElements'] as const,
     lists: () => ['courseElements', 'list'] as const,
@@ -77,7 +68,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['courseElements', 'detail', id] as const,
   },
 
-  // Semester related queries
+
   semesters: {
     all: ['semesters'] as const,
     lists: () => ['semesters', 'list'] as const,
@@ -86,35 +77,35 @@ export const queryKeys = {
     detail: (semesterCode: string) => ['semesters', 'detail', semesterCode] as const,
   },
 
-  // Lecturer related queries
+
   lecturers: {
     all: ['lecturers'] as const,
     lists: () => ['lecturers', 'list'] as const,
     list: () => ['lecturers', 'list'] as const,
   },
 
-  // Student classes related queries
+
   studentClasses: {
     all: ['studentClasses'] as const,
     lists: () => ['studentClasses', 'list'] as const,
     byStudentId: (studentId: number) => ['studentClasses', 'list', 'byStudentId', studentId] as const,
   },
 
-  // Lecturer classes related queries
+
   lecturerClasses: {
     all: ['lecturerClasses'] as const,
     lists: () => ['lecturerClasses', 'list'] as const,
     byLecturerId: (lecturerId: number) => ['lecturerClasses', 'list', 'byLecturerId', lecturerId] as const,
   },
 
-  // Assign requests related queries
+
   assignRequests: {
     all: ['assignRequests'] as const,
     lists: () => ['assignRequests', 'list'] as const,
     byLecturerId: (lecturerId: number) => ['assignRequests', 'list', 'byLecturerId', lecturerId] as const,
   },
 
-  // Assessment templates related queries
+
   assessmentTemplates: {
     all: ['assessmentTemplates'] as const,
     lists: () => ['assessmentTemplates', 'list'] as const,
@@ -124,7 +115,7 @@ export const queryKeys = {
     byCourseElementId: (courseElementId: number) => ['assessmentTemplates', 'list', 'byCourseElementId', courseElementId] as const,
   },
 
-  // Assessment questions related queries
+
   assessmentQuestions: {
     all: ['assessmentQuestions'] as const,
     lists: () => ['assessmentQuestions', 'list'] as const,
@@ -133,7 +124,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['assessmentQuestions', 'detail', id] as const,
   },
 
-  // Rubric items related queries
+
   rubricItems: {
     all: ['rubricItems'] as const,
     lists: () => ['rubricItems', 'list'] as const,
@@ -142,7 +133,7 @@ export const queryKeys = {
     detail: (id: number | string) => ['rubricItems', 'detail', id] as const,
   },
 
-  // Assessment papers related queries
+
   assessmentPapers: {
     all: ['assessmentPapers'] as const,
     lists: () => ['assessmentPapers', 'list'] as const,
@@ -151,14 +142,14 @@ export const queryKeys = {
     detail: (id: number | string) => ['assessmentPapers', 'detail', id] as const,
   },
 
-  // Assessment files related queries
+
   assessmentFiles: {
     all: ['assessmentFiles'] as const,
     lists: () => ['assessmentFiles', 'list'] as const,
     byTemplateId: (templateId: number) => ['assessmentFiles', 'list', 'byTemplateId', templateId] as const,
   },
 
-  // Class assessments related queries
+
   classAssessments: {
     all: ['classAssessments'] as const,
     lists: () => ['classAssessments', 'list'] as const,
@@ -168,13 +159,13 @@ export const queryKeys = {
     byClassId: (classId: number | string) => ['classAssessments', 'list', 'byClassId', classId] as const,
   },
 
-  // Students in class related queries
+
   studentsInClass: {
     all: ['studentsInClass'] as const,
     byClassId: (classId: number | string) => ['studentsInClass', 'byClassId', classId] as const,
   },
 
-  // Student detail related queries
+
   studentDetail: {
     all: ['studentDetail'] as const,
     byStudentId: (studentId: number | string) => ['studentDetail', 'byStudentId', studentId] as const,

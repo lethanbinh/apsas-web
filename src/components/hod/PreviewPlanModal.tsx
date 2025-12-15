@@ -125,7 +125,7 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
     classRoster: classRosterDataSource,
   } = finalPreviewData;
 
-  // Determine which data type to show
+
   const hasSemesterPlan = semesterPlanDataSource.length > 0;
   const hasClassRoster = classRosterDataSource.length > 0;
 

@@ -3,12 +3,12 @@
 import React, { memo } from "react";
 import Image from "next/image";
 import { Typography } from "antd";
-import { AppstoreOutlined } from "@ant-design/icons"; // Icon lưới
+import { AppstoreOutlined } from "@ant-design/icons";
 import styles from "./CoachesSlider.module.css";
 
 const { Title, Text } = Typography;
 
-// Định nghĩa props
+
 export interface CoachCardProps {
   imageUrl: string;
   category: string;
@@ -54,7 +54,7 @@ const CoachCardComponent: React.FC<CoachCardProps> = ({
             fontWeight: 700,
             color: "#333",
             fontSize: "1.1rem",
-            margin: 0, // Bỏ margin mặc định của Title
+            margin: 0,
           }}
         >
           {name}

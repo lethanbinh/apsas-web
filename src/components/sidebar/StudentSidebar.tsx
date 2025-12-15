@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Layout, Input, Menu } from "antd";
@@ -11,12 +11,14 @@ import {
   UsergroupAddOutlined,
   FileTextOutlined,
   ExperimentOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
+import { useSidebar } from "@/components/layout/SidebarContext";
 import styles from "./StudentSidebar.module.css";
 
 const { Sider } = Layout;
 
-// Giữ nguyên mảng menuItems
+
 const menuItems = [
   {
     key: "/student/class-detail",
@@ -28,12 +30,12 @@ const menuItems = [
     icon: <BarChartOutlined />,
     label: <Link href="/student/assignments">Assignments</Link>,
   },
-  // Temporarily removed - Submission history moved to Labs page
-  // {
-  //   key: "/student/submissions",
-  //   icon: <BookOutlined />,
-  //   label: <Link href="/student/submissions">Submission history</Link>,
-  // },
+
+
+
+
+
+
   {
     key: "/student/labs",
     icon: <ExperimentOutlined />,
@@ -48,35 +50,61 @@ const menuItems = [
 
 export default function StudentSidebar() {
   const pathname = usePathname();
+  const { isOpen, close } = useSidebar();
 
-  // 2. Logic tìm key active
-  // useMemo sẽ tính toán lại activeKey mỗi khi pathname thay đổi
   const activeKey = useMemo(() => {
-    // Sắp xếp các key từ dài đến ngắn để tìm shina khớp nhất
-    // (ví dụ: /student/assignments khớp trước /student)
     const sortedKeys = [...menuItems].sort(
       (a, b) => b.key.length - a.key.length
     );
-
-    // Tìm key đầu tiên mà pathname hiện tại bắt đầu bằng key đó
     const matchingKey = sortedKeys.find((item) =>
       pathname.startsWith(item.key)
     );
-
     return matchingKey ? matchingKey.key : "";
-  }, [pathname]); // Chỉ chạy lại khi pathname thay đổi
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (isOpen && !target.closest(`.${styles.sider}`) && !target.closest('.ant-menu')) {
+        close();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, close]);
 
   return (
-    <Sider width={280} className={styles.sider}>
-      <div className={styles.siderContent}>
-        <Menu
-          mode="inline"
-          // 3. Sử dụng activeKey đã tính toán
-          selectedKeys={[activeKey]}
-          className={styles.menu}
-          items={menuItems}
-        />
-      </div>
-    </Sider>
+    <>
+      {isOpen && <div className={styles.overlay} onClick={close} />}
+      <Sider 
+        width={280} 
+        className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
+      >
+        <div className={styles.siderContent}>
+          <div className={styles.sidebarHeader}>
+            <button className={styles.closeButton} onClick={close} aria-label="Close sidebar">
+              <CloseOutlined />
+            </button>
+          </div>
+          <Menu
+            mode="inline"
+            selectedKeys={[activeKey]}
+            className={styles.menu}
+            items={menuItems}
+            onClick={close}
+          />
+        </div>
+      </Sider>
+    </>
   );
 }

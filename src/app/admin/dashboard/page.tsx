@@ -32,16 +32,16 @@ import styles from "./DashboardAdmin.module.css";
 const AdminDashboardPage = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("overview");
-  
-  // Filters
+
+
   const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
   const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(undefined);
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  
+
   const { RangePicker } = DatePicker;
 
-  // Fetch filter options using TanStack Query
+
   const { data: classesRes } = useQuery({
     queryKey: queryKeys.classes.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
@@ -57,7 +57,7 @@ const AdminDashboardPage = () => {
     queryFn: () => courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
   });
 
-  // Process filter options
+
   const classes = classesRes?.classes || [];
   const semesters = semestersRes || [];
   const courses = useMemo(() => {
@@ -73,25 +73,25 @@ const AdminDashboardPage = () => {
     return Array.from(uniqueCourses.values());
   }, [courseElementsRes]);
 
-  const filtersLoading = false; // useQuery handles loading
+  const filtersLoading = false;
 
-  // Fetch dashboard data using TanStack Query - include filters in query key
+
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['adminDashboard', 'overview', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
     queryFn: () => adminDashboardService.getDashboardOverview(),
-    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const { data: chartData, isLoading: chartLoading } = useQuery({
     queryKey: ['adminDashboard', 'chartData', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
     queryFn: () => adminDashboardService.getChartData(),
-    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const loading = overviewLoading || chartLoading;
-  const error = null; // useQuery handles errors
+  const error = null;
 
-  // Filter object to pass to tabs
+
   const filterProps = {
     classId: selectedClassId,
     courseId: selectedCourseId,
@@ -100,7 +100,7 @@ const AdminDashboardPage = () => {
   };
 
   const handleRefresh = () => {
-    // Invalidate queries to trigger refetch
+
     queryClient.invalidateQueries({ queryKey: ['adminDashboard'] });
   };
 
@@ -280,7 +280,7 @@ const AdminDashboardPage = () => {
           </Space>
         </div>
 
-        {/* Filters */}
+        {}
         <Card style={{ marginBottom: "1.5rem" }}>
           <Space size="large" wrap>
             <div>

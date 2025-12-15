@@ -110,20 +110,20 @@ export function QuestionCommentModal({
           />
         </div>
         {question?.reviewerComment && !isRejected && (
-          <div style={{ 
-            padding: "14px", 
-            backgroundColor: "#e6f4ff", 
-            borderRadius: "6px", 
+          <div style={{
+            padding: "14px",
+            backgroundColor: "#e6f4ff",
+            borderRadius: "6px",
             border: "1px solid #91caff",
             boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
           }}>
             <Text strong style={{ display: "block", marginBottom: 6, color: "#0958d9", fontSize: "13px" }}>
               Previous Comment:
             </Text>
-            <div style={{ 
-              padding: "10px", 
-              backgroundColor: "#fff", 
-              borderRadius: "4px", 
+            <div style={{
+              padding: "10px",
+              backgroundColor: "#fff",
+              borderRadius: "4px",
               border: "1px solid #91caff",
               boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.04)"
             }}>

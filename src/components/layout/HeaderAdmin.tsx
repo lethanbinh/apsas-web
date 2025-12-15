@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { DownOutlined, UserOutlined } from "@ant-design/icons";
+import { DownOutlined, UserOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDispatch } from "react-redux";
 import { LogoComponent } from "@/components/ui/Logo";
 import { logout } from "@/store/slices/authSlice";
 import { useAuth } from "@/hooks/useAuth";
+import { useSidebar } from "./SidebarContext";
 import styles from "./HeaderAdmin.module.css";
 
 const AvatarPlaceholder = () => (
@@ -23,6 +24,7 @@ export const HeaderAdmin: React.FC = () => {
   const dispatch = useDispatch();
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const { toggle: toggleSidebar } = useSidebar();
 
   useEffect(() => {
     setMounted(true);
@@ -50,9 +52,16 @@ export const HeaderAdmin: React.FC = () => {
   return (
     <header className={styles.headerRoot}>
       <div className={styles.headerLeftGroup}>
+        <button
+          className={styles.menuButton}
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+        >
+          <MenuOutlined />
+        </button>
         <Link href="/admin/dashboard" className={styles.logoLink}>
           {" "}
-          {/* Adjust href for admin dashboard */}
+          {}
           <LogoComponent />
         </Link>
       </div>

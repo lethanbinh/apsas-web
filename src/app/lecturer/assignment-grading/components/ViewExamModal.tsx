@@ -19,11 +19,11 @@ interface ViewExamModalProps {
 }
 
 export function ViewExamModal({ visible, onClose, submission }: ViewExamModalProps) {
-  // Determine assessmentTemplateId using queries
+
   const localStorageClassId = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const effectiveClassId = localStorageClassId ? Number(localStorageClassId) : undefined;
 
-  // Fetch grading groups if submission has gradingGroupId
+
   const { data: gradingGroupsData } = useQuery({
     queryKey: queryKeys.grading.groups.list({}),
     queryFn: async () => {
@@ -33,7 +33,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     enabled: visible && !!submission?.gradingGroupId,
   });
 
-  // Fetch class assessments if submission has classAssessmentId
+
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -44,7 +44,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     enabled: visible && !!submission?.classAssessmentId && !!effectiveClassId,
   });
 
-  // Also fetch all class assessments as fallback
+
   const { data: allClassAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 10000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -54,11 +54,11 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     enabled: visible && !!submission?.classAssessmentId && (!effectiveClassId || !classAssessmentsData),
   });
 
-  // Determine assessmentTemplateId
+
   const assessmentTemplateId = useMemo(() => {
     if (!submission) return null;
 
-    // Try to get from gradingGroupId first (most reliable)
+
     if (submission.gradingGroupId && gradingGroupsData) {
       const gradingGroup = gradingGroupsData.find((gg) => gg.id === submission.gradingGroupId);
       if (gradingGroup?.assessmentTemplateId) {
@@ -66,7 +66,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
       }
     }
 
-    // Try to get from classAssessmentId
+
     if (submission.classAssessmentId) {
       if (classAssessmentsData?.items) {
         const classAssessment = classAssessmentsData.items.find(
@@ -90,7 +90,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     return null;
   }, [submission, gradingGroupsData, classAssessmentsData, allClassAssessmentsData]);
 
-  // Fetch papers
+
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -103,7 +103,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
 
   const papers = papersData?.items || [];
 
-  // Fetch questions for all papers
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -116,7 +116,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     })),
   });
 
-  // Map questions by paperId
+
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
@@ -131,12 +131,12 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     return questionsMap;
   }, [papers, questionsQueries]);
 
-  // Get all question IDs for fetching rubrics
+
   const allQuestionIds = useMemo(() => {
     return Object.values(questions).flat().map(q => q.id);
   }, [questions]);
 
-  // Fetch rubrics for all questions
+
   const rubricsQueries = useQueries({
     queries: allQuestionIds.map((questionId) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(questionId),
@@ -149,7 +149,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     })),
   });
 
-  // Map rubrics by questionId
+
   const rubrics = useMemo(() => {
     const rubricsMap: { [questionId: number]: RubricItem[] } = {};
     allQuestionIds.forEach((questionId, index) => {
@@ -161,7 +161,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     return rubricsMap;
   }, [allQuestionIds, rubricsQueries]);
 
-  // Calculate loading state
+
   const loading = (
     (!!submission?.gradingGroupId && !gradingGroupsData) ||
     (!!submission?.classAssessmentId && !!effectiveClassId && !classAssessmentsData) ||

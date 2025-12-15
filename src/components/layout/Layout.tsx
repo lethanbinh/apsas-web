@@ -1,6 +1,4 @@
-/**
- * Main layout component with role-based layout
- */
+
 
 "use client";
 
@@ -12,6 +10,7 @@ import { Footer } from "./Footer";
 import { Header } from "./Header";
 import { HeaderAdmin } from "./HeaderAdmin";
 import LayoutAdmin from "./LayoutAdmin";
+import { SidebarProvider } from "./SidebarContext";
 
 const { Content } = AntLayout;
 
@@ -33,30 +32,34 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   if (!mounted) {
     return (
-      <AntLayout className="app-layout">
-        <Header />
-        <Content className="app-content">{children}</Content>
-        <Footer />
-      </AntLayout>
+      <SidebarProvider>
+        <AntLayout className="app-layout">
+          <Header />
+          <Content className="app-content">{children}</Content>
+          <Footer />
+        </AntLayout>
+      </SidebarProvider>
     );
   }
 
   if (isProfilePage) {
     return (
-      <AntLayout className="app-layout">
-        {role === 0 ? (
-          <>
-            <HeaderAdmin />
-            <Content className="app-content">{children}</Content>
-          </>
-        ) : (
-          <>
-            <Header />
-            <Content className="app-content">{children}</Content>
-          </>
-        )}
-        <Footer />
-      </AntLayout>
+      <SidebarProvider>
+        <AntLayout className="app-layout">
+          {role === 0 ? (
+            <>
+              <HeaderAdmin />
+              <Content className="app-content">{children}</Content>
+            </>
+          ) : (
+            <>
+              <Header />
+              <Content className="app-content">{children}</Content>
+            </>
+          )}
+          <Footer />
+        </AntLayout>
+      </SidebarProvider>
     );
   }
 
@@ -64,10 +67,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     return <LayoutAdmin>{children}</LayoutAdmin>;
   }
   return (
-    <AntLayout className="app-layout">
-      <Header />
-      <Content className="app-content">{children}</Content>
-      <Footer />
-    </AntLayout>
+    <SidebarProvider>
+      <AntLayout className="app-layout">
+        <Header />
+        <Content className="app-content">{children}</Content>
+        <Footer />
+      </AntLayout>
+    </SidebarProvider>
   );
 };

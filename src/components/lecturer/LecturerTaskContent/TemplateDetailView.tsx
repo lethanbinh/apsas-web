@@ -48,16 +48,16 @@ export const TemplateDetailView = ({
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [importFileList, setImportFileList] = useState<UploadFile[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [uploadFileType, setUploadFileType] = useState<0 | 1 | 2>(2); // 0=Database, 1=Postman, 2=Custom
+  const [uploadFileType, setUploadFileType] = useState<0 | 1 | 2>(2);
   const { modal, notification } = App.useApp();
 
-  // Count existing files by type
+
   const databaseFilesCount = files.filter(f => f.fileTemplate === 0).length;
   const postmanFilesCount = files.filter(f => f.fileTemplate === 1).length;
   const customFilesCount = files.filter(f => f.fileTemplate === 2).length;
 
   const handleOpenUploadModal = (fileType: 0 | 1 | 2) => {
-    // Validate: WEBAPI only allows max 1 database and 1 postman file
+
     if (template.templateType === 1) {
       if (fileType === 0 && databaseFilesCount >= 1) {
         notification.warning({
@@ -81,8 +81,8 @@ export const TemplateDetailView = ({
   const handleUploadFile = async (values: { name: string; databaseName?: string; file: File }) => {
     try {
       let fileTemplate = uploadFileType;
-      
-      // For DSA template, always use FileTemplate=2 (Custom)
+
+
       if (template.templateType === 0) {
         fileTemplate = 2;
       }
@@ -140,11 +140,11 @@ export const TemplateDetailView = ({
       <Card
         title={
           <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
-            <Title 
-              level={4} 
-              style={{ 
-                overflow: 'hidden', 
-                textOverflow: 'ellipsis', 
+            <Title
+              level={4}
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
                 margin: 0,
                 maxWidth: '100%'
@@ -236,10 +236,10 @@ export const TemplateDetailView = ({
       />
 
       <Card title="Attached Files">
-        {/* Group files by type for WEBAPI */}
+        {}
         {template.templateType === 1 ? (
           <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            {/* Database Files */}
+            {}
             <div>
               <Typography.Text strong>Database Files:</Typography.Text>
               <List
@@ -322,7 +322,7 @@ export const TemplateDetailView = ({
               )}
             </div>
 
-            {/* Custom Files */}
+            {}
             <div>
               <Typography.Text strong>Custom Files:</Typography.Text>
               <List
@@ -401,7 +401,7 @@ export const TemplateDetailView = ({
         {isEditable && (
           <Space direction="vertical" style={{ width: "100%", marginTop: "16px" }} size="small">
             {template.templateType === 1 ? (
-              // WEBAPI: Show buttons for each file type
+
               <Space wrap>
                 <Button
                   icon={<DatabaseOutlined />}
@@ -425,7 +425,7 @@ export const TemplateDetailView = ({
                 </Button>
               </Space>
             ) : (
-              // DSA: Only custom files
+
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => handleOpenUploadModal(2)}
@@ -438,7 +438,7 @@ export const TemplateDetailView = ({
         )}
       </Card>
 
-      {/* Upload File Modal */}
+      {}
       <UploadFileModal
         open={isUploadModalOpen}
         onCancel={() => {

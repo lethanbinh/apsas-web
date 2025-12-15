@@ -2,18 +2,52 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1.5rem;
-  /* py-2 px-6 */
+  padding: 0.5rem 1rem;
   background-color: #BBDEF8;
-  /* bg-blue-200 */
   height: 60px;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+@media (min-width: 640px) {
+  .headerRoot {
+    padding: 0.5rem 1.5rem;
+  }
 }
 
 .headerLeftGroup {
   display: flex;
   align-items: center;
   height: 100%;
+  gap: 12px;
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: #1f2937;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.menuButton:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 768px) {
+  .menuButton {
+    display: none;
+  }
 }
 
 .logoLink {
@@ -28,7 +62,8 @@
   align-items: center;
   cursor: pointer;
   transition: opacity 0.2s ease-in-out;
-  /* hover:opacity-90 */
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .userGroup:hover {
@@ -36,45 +71,55 @@
 }
 
 .avatarPlaceholder {
-  width: 2rem;
-  /* !w-8 */
-  height: 2rem;
-  /* !h-8 */
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 9999px;
-  /* !rounded-full */
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: #d1d5db;
-  /* !bg-gray-300 */
   border: 2px solid #ec4899;
-  /* !border-pink-500 */
-  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+  .avatarPlaceholder {
+    width: 2rem;
+    height: 2rem;
+  }
 }
 
 .userIcon {
   color: #4b5563;
-  /* !text-gray-600 */
+
   font-size: 1.125rem;
-  /* !text-lg */
+
 }
 
 .userName {
   color: #1f2937;
-  /* !text-gray-800 */
   font-weight: 500;
-  /* !font-medium */
-  font-size: 1rem;
-  /* !text-base */
+  font-size: 0.875rem;
   display: flex;
   align-items: center;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 640px) {
+  .userName {
+    font-size: 1rem;
+    max-width: 200px;
+  }
 }
 
 .downArrowIcon {
   color: #1f2937;
-  /* !text-gray-800 */
+
   font-size: 0.75rem;
-  /* !text-xs */
+
   margin-left: 0.25rem;
-  /* !ml-1 */
+
 }

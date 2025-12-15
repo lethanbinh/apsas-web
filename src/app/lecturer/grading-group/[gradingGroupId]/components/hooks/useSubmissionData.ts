@@ -34,7 +34,7 @@ export function useSubmissionData({
   setUserEdits,
   setTotalScore,
 }: UseSubmissionDataProps) {
-  // Fetch assessment template
+
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -49,7 +49,7 @@ export function useSubmissionData({
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
 
-  // Fetch papers
+
   const { data: papersResponse } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplate?.id!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -62,7 +62,7 @@ export function useSubmissionData({
 
   const papers = papersResponse?.items || [];
 
-  // Fetch questions for all papers
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -113,7 +113,7 @@ export function useSubmissionData({
     return result;
   }, [allQuestionsFromQueries, rubricsQueries]);
 
-  // Fetch latest grading session
+
   const { data: gradingSessionsData } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -134,7 +134,7 @@ export function useSubmissionData({
     return sorted[0];
   }, [gradingSessionsData]);
 
-  // Fetch grade items for latest session
+
   const { data: gradeItemsData } = useQuery({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: () => gradeItemService.getGradeItems({
@@ -147,19 +147,19 @@ export function useSubmissionData({
 
   const latestGradeItems = gradeItemsData?.items || [];
 
-  // Reset user edits when submission changes
+
   useEffect(() => {
     setUserEdits({
       rubricScores: {},
       rubricComments: {},
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [submission.id]);
 
-  // Update questions with grade items data
+
   const questions = useMemo(() => {
     if (questionsWithRubrics.length === 0) return [];
-    
+
     if (latestGradeItems.length > 0) {
       const sortedItems = [...latestGradeItems].sort((a, b) => {
         const dateA = new Date(a.updatedAt).getTime();
@@ -192,8 +192,8 @@ export function useSubmissionData({
           );
           if (matchingGradeItem) {
             const editKey = `${question.id}_${rubric.id}`;
-            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined 
-              ? userEdits.rubricScores[editKey] 
+            newRubricScores[rubric.id] = userEdits.rubricScores[editKey] !== undefined
+              ? userEdits.rubricScores[editKey]
               : matchingGradeItem.score;
             if (!questionComment && matchingGradeItem.comments) {
               questionComment = matchingGradeItem.comments;
@@ -217,7 +217,7 @@ export function useSubmissionData({
         };
       });
     }
-    
+
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
       const newRubricComments = { ...(question.rubricComments || {}) };
@@ -241,7 +241,7 @@ export function useSubmissionData({
     });
   }, [questionsWithRubrics, latestGradeItems, userEdits]);
 
-  // Calculate total score
+
   const totalScore = useMemo(() => {
     if (latestGradeItems.length > 0) {
       return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
@@ -251,7 +251,7 @@ export function useSubmissionData({
     return 0;
   }, [latestGradeItems, latestGradingSession]);
 
-  // Calculate max score
+
   const maxScore = useMemo(() => {
     return questions.reduce((sum, q) => {
       return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);

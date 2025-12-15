@@ -29,19 +29,19 @@ export async function downloadAllFiles({
   try {
     messageApi.loading("Preparing download...", 0);
 
-    // Dynamic import JSZip
+
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
-    // Process each group (course + semester)
+
     for (const group of groupedByCourse) {
-      // Create folder name: CourseName_SemesterCode
+
       const folderName = `${group.courseName.replace(/[^a-zA-Z0-9]/g, "_")}_${group.semesterCode}`;
       const groupFolder = zip.folder(folderName);
 
       if (!groupFolder) continue;
 
-      // Get unique grading groups for this course+semester
+
       const uniqueGradingGroups = new Map<number, GradingGroup>();
       group.submissions.forEach((sub) => {
         if (sub.gradingGroup && !uniqueGradingGroups.has(sub.gradingGroup.id)) {
@@ -49,12 +49,12 @@ export async function downloadAllFiles({
         }
       });
 
-      // Generate requirement Word file for each grading group (template)
+
       for (const [gradingGroupId, gradingGroup] of uniqueGradingGroups) {
         if (!gradingGroup.assessmentTemplateId) continue;
 
         try {
-          // Fetch template details
+
           const templateRes = await assessmentTemplateService.getAssessmentTemplates({
             pageNumber: 1,
             pageSize: 1000,
@@ -63,7 +63,7 @@ export async function downloadAllFiles({
 
           if (!template) continue;
 
-          // Fetch papers
+
           const papersRes = await assessmentPaperService.getAssessmentPapers({
             assessmentTemplateId: gradingGroup.assessmentTemplateId,
             pageNumber: 1,
@@ -71,7 +71,7 @@ export async function downloadAllFiles({
           });
           const papers = papersRes.items;
 
-          // Fetch questions and rubrics for each paper
+
           const questionsMap: { [paperId: number]: any[] } = {};
           const rubricsMap: { [questionId: number]: any[] } = {};
 
@@ -96,7 +96,7 @@ export async function downloadAllFiles({
             }
           }
 
-          // Generate Word document
+
           const docxModule = await import("docx");
           const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
 
@@ -115,7 +115,7 @@ export async function downloadAllFiles({
           }
           docSections.push(new Paragraph({ text: " " }));
 
-          // Add papers, questions, and rubrics
+
           for (const paper of papers) {
             docSections.push(
               new Paragraph({
@@ -165,7 +165,7 @@ export async function downloadAllFiles({
                 docSections.push(new Paragraph({ text: question.questionSampleOutput }));
               }
 
-              // Add rubrics
+
               const rubrics = rubricsMap[question.id] || [];
               if (rubrics.length > 0) {
                 docSections.push(new Paragraph({ text: " " }));
@@ -228,7 +228,7 @@ export async function downloadAllFiles({
           if (requirementFolder) {
             requirementFolder.file(`${templateName.replace(/[^a-zA-Z0-9]/g, "_")}_Requirement.docx`, wordBlob);
 
-            // Also download assessment files if any
+
             try {
               const filesRes = await assessmentFileService.getFilesForTemplate({
                 assessmentTemplateId: gradingGroup.assessmentTemplateId,
@@ -258,13 +258,13 @@ export async function downloadAllFiles({
         }
       }
 
-      // Download submissions for this group
+
       const submissionsFolder = groupFolder.folder("Submissions");
       if (submissionsFolder) {
         for (const sub of group.submissions) {
           if (sub.submissionFile?.submissionUrl) {
             try {
-              // Try to download submission file
+
               const response = await fetch(sub.submissionFile.submissionUrl, {
                 method: 'GET',
                 headers: {
@@ -278,18 +278,18 @@ export async function downloadAllFiles({
                 submissionsFolder.file(fileName, blob);
               } else {
                 console.warn(`Failed to download submission ${sub.id}: HTTP ${response.status}`);
-                // Create a placeholder file to indicate missing submission
+
                 const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_MISSING_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
                 submissionsFolder.file(fileName, new Blob([`Submission file not available. URL: ${sub.submissionFile.submissionUrl}`], { type: 'text/plain' }));
               }
             } catch (err) {
               console.error(`Failed to download submission ${sub.id}:`, err);
-              // Create a placeholder file to indicate error
+
               const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_ERROR_${sub.submissionFile.name || `submission_${sub.id}.zip`}`;
               submissionsFolder.file(fileName, new Blob([`Error downloading submission: ${err}`], { type: 'text/plain' }));
             }
           } else {
-            // No submission file URL
+
             const fileName = `${sub.studentCode}_${sub.studentName.replace(/[^a-zA-Z0-9]/g, "_")}_NO_FILE.txt`;
             submissionsFolder.file(fileName, new Blob([`No submission file available for submission ID: ${sub.id}`], { type: 'text/plain' }));
           }
@@ -297,7 +297,7 @@ export async function downloadAllFiles({
       }
     }
 
-    // Generate zip file
+
     const blob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");

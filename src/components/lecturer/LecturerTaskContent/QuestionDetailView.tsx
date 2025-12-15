@@ -37,7 +37,7 @@ export const QuestionDetailView = ({
     undefined
   );
   const { modal, notification } = App.useApp();
-  
+
   const isRejected = task && Number(task.status) === 3;
 
   const fetchRubrics = async () => {
@@ -73,9 +73,9 @@ export const QuestionDetailView = ({
   const handleRubricFinish = async () => {
     closeRubricModal();
     fetchRubrics();
-    onRubricChange(); // Báo cho component cha biết
-    
-    // If question has a comment, clear it to mark as resolved when rubric is edited
+    onRubricChange();
+
+
     const hadComment = !!(question.reviewerComment && question.reviewerComment.trim());
     if (hadComment) {
       try {
@@ -85,23 +85,23 @@ export const QuestionDetailView = ({
           questionSampleOutput: question.questionSampleOutput,
           score: question.score,
           questionNumber: question.questionNumber,
-          reviewerComment: undefined, // Clear comment to mark as resolved
+          reviewerComment: undefined,
         });
         notification.success({
           message: "Rubric updated and comment resolved",
           description: "The rubric has been updated and the reviewer comment has been marked as resolved.",
         });
-        // Refresh question data to reflect the cleared comment
+
         onQuestionChange();
       } catch (error) {
         console.error("Failed to clear comment:", error);
-        // Continue anyway
+
       }
     }
-    
-    // If a comment was cleared, save to localStorage and check reset status
+
+
     if (hadComment && task) {
-      // Save to localStorage that this question has been resolved
+
       const storageKey = `task-${task.id}-resolved-questions`;
       try {
         const resolvedQuestions = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -113,13 +113,13 @@ export const QuestionDetailView = ({
       } catch (err) {
         console.error("Failed to save to localStorage:", err);
       }
-      
-      // Wait a bit for API to commit, then check and reset status if needed
+
+
       if (onResetStatus) {
         console.log("Rubric edit cleared comment, will check and reset status after delay");
-        // Wait for API update to be committed (1.5 seconds to ensure consistency)
+
         await new Promise(resolve => setTimeout(resolve, 1500));
-        // Check if all comments are resolved and reset status if needed
+
         console.log("Calling onResetStatus to check if all comments resolved");
         await onResetStatus();
       }
@@ -181,13 +181,13 @@ export const QuestionDetailView = ({
           <Descriptions.Item label="Score">
             <Text strong>{question.score}</Text>
           </Descriptions.Item>
-          {/* Reviewer Comment - Always show if there's a comment */}
+          {}
           {question.reviewerComment && (
             <Descriptions.Item label="Reviewer Comment">
-              <div style={{ 
-                padding: "12px", 
-                backgroundColor: "#e6f4ff", 
-                borderRadius: "6px", 
+              <div style={{
+                padding: "12px",
+                backgroundColor: "#e6f4ff",
+                borderRadius: "6px",
                 border: "1px solid #91caff",
                 boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
                 marginBottom: "8px"
@@ -196,9 +196,9 @@ export const QuestionDetailView = ({
               </div>
               {question.updatedAt && (
                 <Text type="secondary" style={{ fontSize: "12px", color: "#69b1ff" }}>
-                  <Text strong style={{ color: "#0958d9" }}>Commented on:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", { 
-                    year: "numeric", 
-                    month: "short", 
+                  <Text strong style={{ color: "#0958d9" }}>Commented on:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
                     day: "numeric",
                     hour: "2-digit",
                     minute: "2-digit"
@@ -290,13 +290,13 @@ export const QuestionDetailView = ({
         onCancel={() => setIsQuestionModalOpen(false)}
         onFinish={async () => {
           setIsQuestionModalOpen(false);
-          // If question had a comment, it was cleared when editing
+
           const hadComment = !!question.reviewerComment;
-          onQuestionChange(); // Báo cho component cha biết để refresh
-          
-          // If question had a comment, save to localStorage and check reset status
+          onQuestionChange();
+
+
           if (hadComment && task) {
-            // Save to localStorage that this question has been resolved
+
             const storageKey = `task-${task.id}-resolved-questions`;
             try {
               const resolvedQuestions = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -308,13 +308,13 @@ export const QuestionDetailView = ({
             } catch (err) {
               console.error("Failed to save to localStorage:", err);
             }
-            
-            // Wait a bit for API to commit, then check and reset status if needed
+
+
             if (onResetStatus) {
               console.log("Question had comment, will check and reset status after delay");
-              // Wait for API update to be committed (1.5 seconds to ensure consistency)
+
               await new Promise(resolve => setTimeout(resolve, 1500));
-              // Check if all comments are resolved and reset status if needed
+
               console.log("Calling onResetStatus to check if all comments resolved");
               await onResetStatus();
             }

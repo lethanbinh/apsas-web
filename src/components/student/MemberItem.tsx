@@ -1,4 +1,4 @@
-// Tên file: components/MemberList/MemberItem.tsx
+
 "use client";
 
 import React from "react";
@@ -8,7 +8,7 @@ import styles from "./MemberList.module.css";
 
 const { Title, Text } = Typography;
 
-// Định nghĩa props
+
 export interface MemberItemProps {
   avatarUrl: string;
   flagUrl: string;
@@ -24,12 +24,12 @@ export const MemberItem: React.FC<MemberItemProps> = ({
 }) => {
   return (
     <div className={styles.memberItem}>
-      {/* Wrapper cho Avatar và Cờ */}
+      {}
       <div className={styles.avatarWrapper}>
         <Avatar src={avatarUrl} size={60} />
       </div>
 
-      {/* Thông tin tên */}
+      {}
       <div className={styles.textWrapper}>
         <Title
           level={5}

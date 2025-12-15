@@ -169,7 +169,7 @@ export interface ApiRubricItem {
   questionText: string;
   createdAt: string;
   updatedAt: string;
-  name?: string; 
+  name?: string;
   score?: number;
 }
 
@@ -215,10 +215,10 @@ export interface ApiAssessmentTemplate {
   updatedAt: string;
   files: ApiTemplateFile[];
   papers: ApiAssessmentPaper[];
-  status: number; 
+  status: number;
 }
 
-// --- SỬA LỖI: Quay lại SingleResponse<PaginatedResponse<...>> ---
+
 export type AssessmentTemplateListResponse = SingleResponse<PaginatedResponse<ApiAssessmentTemplate>>;
 
 export type AssessmentTemplateDetailResponse = SingleResponse<ApiAssessmentTemplate>;

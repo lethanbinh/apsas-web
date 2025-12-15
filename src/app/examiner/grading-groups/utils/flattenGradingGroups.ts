@@ -29,7 +29,7 @@ export function flattenGradingGroups(
           const semesterCode = group.semesterCode;
           if (!semesterCode) return;
 
-          // Create composite key: courseId_templateId_lecturerId
+
           const key = `${course.courseId}_${template.templateId}_${lecturer.lecturerId}`;
 
           const existing = groupedMap.get(key);
@@ -47,7 +47,7 @@ export function flattenGradingGroups(
               group: group,
             });
           } else {
-            // Merge: add submissions
+
             const existingDate = existing.group.createdAt ? new Date(existing.group.createdAt).getTime() : 0;
             const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
 

@@ -61,19 +61,19 @@ export const TemplateFormModal = ({
             assignedToHODId: assignedToHODId,
           }
         );
-        
-        // Note: Editing template does NOT reset status to Pending
-        // Status only resets when all questions with comments have been edited/resolved
+
+
+
         notification.success({
           message: "Template updated successfully",
         });
-        // Invalidate all assessment templates queries
-        queryClient.invalidateQueries({ 
+
+        queryClient.invalidateQueries({
           queryKey: queryKeys.assessmentTemplates.all,
           exact: false
         });
-        
-        // Dispatch custom event to notify other components
+
+
         window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
       }
       onFinish();

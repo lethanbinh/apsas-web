@@ -77,15 +77,15 @@ export class SubmissionService {
     payload: CreateSubmissionPayload
   ): Promise<Submission> {
     const formData = new FormData();
-    
+
     if (payload.ExamSessionId !== undefined) {
       formData.append("ExamSessionId", payload.ExamSessionId.toString());
     }
-    
+
     if (payload.ClassAssessmentId !== undefined) {
       formData.append("ClassAssessmentId", payload.ClassAssessmentId.toString());
     }
-    
+
     formData.append("StudentId", payload.StudentId.toString());
     formData.append("file", payload.file);
 
@@ -124,7 +124,7 @@ export class SubmissionService {
     const response = await apiService.delete<DeleteSubmissionApiResponse>(
       `/Submission/${submissionId}`
     );
-    
+
     if (!response.isSuccess) {
       throw new Error(
         response.errorMessages?.join(", ") || "Failed to delete submission"

@@ -38,7 +38,7 @@
     width: 100%;
 }
 
-/* --- Inner Assignment Collapse Styles --- */
+
 .innerAssignmentCollapse {
     padding: 16px;
 }
@@ -61,22 +61,22 @@
 }
 
 .assignmentPanelHeader {
-    /* Style for the assignment header text if needed */
+
 }
 
-/* --- Approval Item Styles --- */
+
 .itemWrapper {
     padding: 0;
 }
 
 .innerCollapse {
-    /* Question collapse */
+
     background-color: transparent !important;
     margin-top: 16px;
 }
 
 .innerPanel {
-    /* Question panel */
+
     margin-bottom: 15px !important;
     background-color: #ffffff !important;
     border: 1px solid #e0e0e0 !important;
@@ -108,7 +108,7 @@
     object-fit: cover;
 }
 
-/* --- Criteria Styles --- */
+
 .criteriaCollapse {
     margin-top: 20px;
     background-color: transparent !important;
@@ -129,7 +129,7 @@
     padding: 15px !important;
 }
 
-/* --- Action Area Styles --- */
+
 .actionArea {
     padding: 24px 0 0 0;
     margin-top: 20px;

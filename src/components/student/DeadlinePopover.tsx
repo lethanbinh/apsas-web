@@ -1,20 +1,18 @@
-// Tên file: components/AssignmentList/DeadlinePopover.tsx
 "use client";
 
-import React, { useState } from "react";
-import { Popover, DatePicker, Space, Tag, Typography, Alert } from "antd";
-import type { DatePickerProps } from "antd";
-import { Button } from "../ui/Button";
 import { CalendarOutlined } from "@ant-design/icons";
-import styles from "./AssignmentList.module.css";
+import type { DatePickerProps } from "antd";
+import { Alert, DatePicker, Popover, Space, Tag, Typography } from "antd";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import React, { useState } from "react";
+import { Button } from "../ui/Button";
+import styles from "./AssignmentList.module.css";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
@@ -52,7 +50,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       return "Both start date and end date are required";
     }
 
-    // Validate start date < end date
     if (start.isAfter(end) || start.isSame(end)) {
       return "Start date must be before end date";
     }
@@ -68,7 +65,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     }
 
     setValidationError(null);
-    // Convert Vietnam time back to UTC before saving
     const utcStartDate = tempStartDate ? tempStartDate.utc() : null;
     const utcEndDate = tempEndDate ? tempEndDate.utc() : null;
     onSave(id, utcStartDate, utcEndDate);
@@ -87,7 +83,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
   const onStartDateChange: DatePickerProps["onChange"] = (date) => {
     setTempStartDate(date);
     setValidationError(null);
-    // Auto-update end date if it's before new start date
     if (date && tempEndDate && date.isAfter(tempEndDate)) {
       setTempEndDate(date.add(1, 'day'));
     }
@@ -98,10 +93,8 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     setValidationError(null);
   };
 
-  // Get disabled dates for DatePicker - only validate start < end
   const getDisabledDate = (isStartDate: boolean) => {
     return (current: dayjs.Dayjs) => {
-      // For end date: disable dates before start date
       if (!isStartDate && tempStartDate) {
         return current.isBefore(tempStartDate, 'day');
       }
@@ -155,7 +148,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     </Space>
   );
 
-  // Check if semester has ended
   const isSemesterEnded = () => {
     if (semesterEndDate) {
       const semesterEnd = toVietnamTime(semesterEndDate);
@@ -199,7 +191,7 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
         icon={<CalendarOutlined />}
         color={startDate && endDate ? "default" : "blue"}
         className={styles.deadlineTag}
-        style={{ 
+        style={{
           cursor: semesterEnded ? "not-allowed" : "pointer",
           opacity: semesterEnded ? 0.6 : 1
         }}

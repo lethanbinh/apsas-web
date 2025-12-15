@@ -44,7 +44,7 @@ const ManageUsersPageContent: React.FC = () => {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
   const [usersToDelete, setUsersToDelete] = useState<User[]>([]);
 
-  // Fetch users using TanStack Query
+
   const { data: usersResponse, isLoading: loading, error: queryError } = useQuery({
     queryKey: queryKeys.users.list({ page: currentPage, pageSize }),
     queryFn: () => accountService.getAccountList(currentPage, pageSize),
@@ -54,13 +54,13 @@ const ManageUsersPageContent: React.FC = () => {
   const totalUsers = usersResponse?.total || 0;
   const error = queryError ? (queryError as any).message || "Failed to fetch users" : null;
 
-  // Filter users based on search term
+
   const filteredUsers = useMemo(() => {
     if (!searchTerm.trim()) {
       return users;
     }
     const searchLower = searchTerm.toLowerCase().trim();
-    return users.filter(user => 
+    return users.filter(user =>
       user.email?.toLowerCase().includes(searchLower) ||
       user.fullName?.toLowerCase().includes(searchLower) ||
       user.accountCode?.toLowerCase().includes(searchLower) ||
@@ -69,11 +69,11 @@ const ManageUsersPageContent: React.FC = () => {
     );
   }, [users, searchTerm]);
 
-  // Hooks for import/export
+
   const { importAccounts, importLoading } = useAccountImport();
   const { handleExportAllAccounts, exportLoading } = useAccountExport();
 
-  // Mutation for updating user
+
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, payload }: { userId: number; payload: UserUpdatePayload }) => {
       return adminService.updateAccount(userId, payload);
@@ -86,14 +86,14 @@ const ManageUsersPageContent: React.FC = () => {
     },
     onError: (err: any) => {
       console.error("Failed to update user:", err);
-      notification.error({ 
-        message: "Update Failed", 
-        description: err.message || "Failed to update user" 
+      notification.error({
+        message: "Update Failed",
+        description: err.message || "Failed to update user"
       });
     },
   });
 
-  // Mutation for creating user
+
   const createUserMutation = useMutation({
     mutationFn: async ({ payload, role }: { payload: any; role: Role }) => {
       switch (role) {
@@ -119,34 +119,34 @@ const ManageUsersPageContent: React.FC = () => {
     onError: (err: any) => {
       console.error("Failed to create user:", err);
       const errorMessage = err.response?.data?.errorMessages?.[0] || err.message || "Failed to create user";
-      notification.error({ 
-        message: "Create Failed", 
+      notification.error({
+        message: "Create Failed",
         description: errorMessage
       });
     },
   });
 
-  // Mutation for deleting account(s)
+
   const deleteAccountMutation = useMutation({
     mutationFn: async (accountIds: number[]) => {
       const results = await Promise.allSettled(
         accountIds.map(id => accountService.deleteAccount(id))
       );
-      
+
       const successful: number[] = [];
       const failed: Array<{ id: number; error: string }> = [];
-      
+
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
           successful.push(accountIds[index]);
         } else {
-          const errorMessage = result.reason?.response?.data?.errorMessages?.[0] || 
-                             result.reason?.message || 
+          const errorMessage = result.reason?.response?.data?.errorMessages?.[0] ||
+                             result.reason?.message ||
                              "Failed to delete account";
           failed.push({ id: accountIds[index], error: errorMessage });
         }
       });
-      
+
       return { successful, failed };
     },
     onSuccess: (results) => {
@@ -154,23 +154,23 @@ const ManageUsersPageContent: React.FC = () => {
       setSelectedUserIds([]);
       setIsDeleteModalVisible(false);
       setUsersToDelete([]);
-      
+
       if (results.failed.length === 0) {
-        notification.success({ 
-          message: "Delete Successful", 
-          description: `Successfully deleted ${results.successful.length} account(s).` 
+        notification.success({
+          message: "Delete Successful",
+          description: `Successfully deleted ${results.successful.length} account(s).`
         });
       } else if (results.successful.length > 0) {
-        notification.warning({ 
-          message: "Partially Successful", 
+        notification.warning({
+          message: "Partially Successful",
           description: `Deleted ${results.successful.length} account(s). ${results.failed.length} account(s) failed. Check console for details.`,
           duration: 5
         });
         console.error("Failed deletions:", results.failed);
       } else {
         const errorMessages = results.failed.map(f => f.error).join(", ");
-        notification.error({ 
-          message: "Delete Failed", 
+        notification.error({
+          message: "Delete Failed",
           description: `Failed to delete all accounts: ${errorMessages}`,
           duration: 5
         });
@@ -179,14 +179,14 @@ const ManageUsersPageContent: React.FC = () => {
     onError: (err: any) => {
       console.error("Failed to delete account(s):", err);
       const errorMessage = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete account(s)";
-      notification.error({ 
-        message: "Delete Failed", 
+      notification.error({
+        message: "Delete Failed",
         description: errorMessage
       });
     },
   });
 
-  // Handlers
+
   const showEditModal = (user: User) => {
     setEditingUser(user);
     setIsEditModalVisible(true);
@@ -229,7 +229,7 @@ const ManageUsersPageContent: React.FC = () => {
   const handleDeleteConfirm = (confirmText: string) => {
     if (!usersToDelete.length) return;
 
-    // Validate confirmation text
+
     if (usersToDelete.length === 1) {
       const user = usersToDelete[0];
       const expectedText = user.accountCode || user.email || "";
@@ -251,7 +251,7 @@ const ManageUsersPageContent: React.FC = () => {
       }
     }
 
-    // Check if trying to delete self or other admins
+
     const accountIds = usersToDelete.map(u => u.id);
     const hasSelf = accountIds.includes(currentUser?.id || -1);
     const hasOtherAdmins = usersToDelete.some(u => u.role === ROLES.ADMIN && u.id !== currentUser?.id);
@@ -272,7 +272,7 @@ const ManageUsersPageContent: React.FC = () => {
         return;
       }
 
-    // Proceed with deletion
+
     deleteAccountMutation.mutate(accountIds);
   };
 
@@ -314,7 +314,7 @@ const ManageUsersPageContent: React.FC = () => {
       });
       setImportResultVisible(true);
     } catch (error) {
-      // Error already handled in hook
+
     }
   };
 
@@ -334,7 +334,7 @@ const ManageUsersPageContent: React.FC = () => {
     }
   };
 
-  // Computed values
+
   const totalPages = Math.ceil(totalUsers / pageSize);
   const displayUsers = searchTerm ? filteredUsers : users;
   const isIndeterminate = selectedUserIds.length > 0 && selectedUserIds.length < displayUsers.filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN).length;
@@ -343,7 +343,7 @@ const ManageUsersPageContent: React.FC = () => {
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Manage users</h1>
-      
+
       <SearchAndActionsBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -436,7 +436,7 @@ const ManageUsersPageContent: React.FC = () => {
       />
     </div>
   );
-}; 
+};
 
 export default function ManageUsersPage() {
   return (

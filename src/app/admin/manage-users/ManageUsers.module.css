@@ -15,53 +15,53 @@
 
 .table-card {
   background-color: #ffffff;
-  /* padding: 1.5rem; */
-  /* p-6 */
+
+
   border-radius: 0.75rem;
-  /* rounded-lg */
+
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   overflow-x: auto;
-  /* For responsive tables */
-  /* overflow: hidden; */
-  /* Ensure border-radius is respected by children */
+
+
+
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  /* background-color: #f8f8f8; */
-  /* Light gray background for the entire table */
+
+
   border-radius: 0.75rem;
-  /* rounded-xl */
+
 }
 
 .table-header {
   background-color: #f8f8f8;
-  /* light gray background */
+
   border-top-left-radius: 0.75rem;
-  /* rounded-xl */
+
   border-top-right-radius: 0.75rem;
-  /* rounded-xl */
+
   overflow: hidden;
-  /* Ensure border-radius is respected by children */
+
 }
 
 .table-header th {
   padding: 1rem 1.5rem;
-  /* px-6 py-4 */
+
   font-size: 0.875rem;
-  /* text-sm */
+
   font-weight: 600;
-  /* font-semibold */
+
   color: #6b7280;
-  /* text-gray-700 */
-  /* text-transform: uppercase; */
-  /* letter-spacing: 0.05em; */
+
+
+
   background-color: transparent;
-  /* Allow table-header background to show */
+
   border-bottom: 1px solid #e5e7eb;
-  /* border-b border-gray-200 */
+
   text-align: left;
 }
 
@@ -73,12 +73,12 @@
 
 .table-row {
   border-bottom: 1px solid #e5e7eb;
-  /* border-b border-gray-200 */
+
 }
 
 .table-row:nth-child(odd) {
   background-color: #f9fafb;
-  /* bg-gray-50 */
+
 }
 
 .table-row:last-child {
@@ -87,11 +87,11 @@
 
 .table-row td {
   padding: 1rem 1.5rem;
-  /* px-6 py-4 */
+
   font-size: 0.875rem;
-  /* text-sm */
+
   color: #4b5563;
-  /* text-gray-700 */
+
   white-space: nowrap;
 }
 
@@ -106,7 +106,7 @@
   width: 16px;
   height: 16px;
   color: #9ca3af;
-  /* text-gray-400 */
+
 }
 
 .rounded-button {
@@ -117,7 +117,7 @@
   font-size: 1rem;
   line-height: 1.5rem;
   color: #333333;
-  /* text-gray-800 */
+
   margin-bottom: 1rem;
 }
 
@@ -126,31 +126,31 @@
   justify-content: center;
   align-items: center;
   margin-top: 2rem;
-  /* mt-8 */
+
   gap: 0.5rem;
-  /* space-x-2 */
+
 }
 
 .pagination button {
   padding: 0.5rem 1rem;
   border: 1px solid #e5e7eb;
-  /* border-gray-300 */
+
   border-radius: 0.375rem;
-  /* rounded-md */
+
   background-color: #ffffff;
   color: #4b5563;
-  /* text-gray-700 */
+
   cursor: pointer;
   transition: all 0.2s ease-in-out;
   margin: 0 0.25rem;
-  /* Added margin for spacing */
+
 }
 
 .pagination button:hover:not(:disabled) {
   background-color: #f3f4f6;
-  /* bg-gray-100 */
+
   border-color: #d1d5db;
-  /* border-gray-400 */
+
 }
 
 .pagination button:disabled {
@@ -160,7 +160,7 @@
 
 .pagination button.activePage {
   background-color: #4cbfb6;
-  /* bg-teal-500 */
+
   color: #ffffff;
   border-color: #4cbfb6;
   font-weight: 600;
@@ -169,7 +169,7 @@
 .pagination .ellipsis {
   padding: 0.5rem 0.5rem;
   color: #4b5563;
-  /* text-gray-700 */
+
   user-select: none;
   cursor: default;
 }

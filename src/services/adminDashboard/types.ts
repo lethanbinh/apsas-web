@@ -16,9 +16,9 @@ export interface UserStats {
   };
   newThisMonth: number;
   active: number;
-  inactive: number; // Haven't logged in >30 days
-  neverLoggedIn: number; // Never logged in
-  // Detailed stats
+  inactive: number;
+  neverLoggedIn: number;
+
   byGender: {
     male: number;
     female: number;
@@ -46,8 +46,8 @@ export interface AcademicStats {
   totalCourses: number;
   totalStudents: number;
   totalLecturers: number;
-  classesOverloaded: number; // >50 students
-  // Detailed stats
+  classesOverloaded: number;
+
   classesBySemester: Array<{
     semesterCode: string;
     semesterName: string;
@@ -82,7 +82,7 @@ export interface AssessmentStats {
     lab: number;
     practicalExam: number;
   };
-  // Detailed stats
+
   assessmentsByStatus: {
     active: number;
     completed: number;
@@ -116,7 +116,7 @@ export interface SubmissionStats {
   pending: number;
   notSubmitted: number;
   completionRate: number;
-  // Detailed stats
+
   submissionsByType: {
     assignment: number;
     lab: number;
@@ -124,10 +124,10 @@ export interface SubmissionStats {
   };
   averageGrade: number;
   submissionsByGradeRange: {
-    excellent: number; // >= 8.5
-    good: number; // 7.0 - 8.4
-    average: number; // 5.5 - 6.9
-    belowAverage: number; // < 5.5
+    excellent: number;
+    good: number;
+    average: number;
+    belowAverage: number;
   };
   lateSubmissions: number;
   onTimeSubmissions: number;
@@ -149,7 +149,7 @@ export interface GradingStats {
   totalGradingSessions: number;
   pendingAssignRequests: number;
   completedGradingSessions: number;
-  // Detailed stats
+
   gradingSessionsByStatus: {
     processing: number;
     completed: number;
@@ -160,7 +160,7 @@ export interface GradingStats {
     lecturer: number;
     both: number;
   };
-  averageGradingTime?: number; // in hours
+  averageGradingTime?: number;
   gradingByLecturer: Array<{
     lecturerId: number;
     lecturerName: string;

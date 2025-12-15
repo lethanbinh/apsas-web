@@ -41,13 +41,13 @@ export class AcademicStatsService {
       });
       const semesters = await adminService.getPaginatedSemesters(1, 100);
 
-      // Get course elements
+
       const courseElements = await courseElementService.getCourseElements({
         pageNumber: 1,
         pageSize: 1000,
       });
 
-      // Calculate average students per class
+
       const totalStudents = classes.reduce(
         (sum, cls) => sum + (parseInt(cls.studentCount) || 0),
         0
@@ -55,17 +55,17 @@ export class AcademicStatsService {
       const averageStudentsPerClass =
         classes.length > 0 ? totalStudents / classes.length : 0;
 
-      // Count classes without students
+
       const classesWithoutStudents = classes.filter(
         (cls) => !parseInt(cls.studentCount) || parseInt(cls.studentCount) === 0
       ).length;
 
-      // Count overloaded classes (>50 students)
+
       const classesOverloaded = classes.filter(
         (cls) => parseInt(cls.studentCount) > 50
       ).length;
 
-      // Top classes by student count
+
       const topClassesByStudents = classes
         .map((cls) => ({
           id: cls.id,
@@ -77,7 +77,7 @@ export class AcademicStatsService {
         .sort((a, b) => b.studentCount - a.studentCount)
         .slice(0, 10);
 
-      // Classes by semester - group directly from classes by semesterName
+
       const semesterMap = new Map<string, {
         semesterCode: string;
         semesterName: string;
@@ -86,13 +86,13 @@ export class AcademicStatsService {
         lecturerSet: Set<string>;
       }>();
 
-      // Count unique courses
+
       const uniqueCourses = new Set<string>();
       classes.forEach((cls) => {
         if (cls.courseName) uniqueCourses.add(cls.courseName);
       });
 
-      // Count unique lecturers
+
       const uniqueLecturers = new Set<string>();
       classes.forEach((cls) => {
         if (cls.lecturerId) uniqueLecturers.add(cls.lecturerId);
@@ -128,7 +128,7 @@ export class AcademicStatsService {
           lecturerCount: item.lecturerSet.size,
         }));
 
-      // Calculate lecturer workload
+
       const lecturerWorkloadMap = new Map<string, {
         lecturerId: string;
         lecturerName: string;
@@ -156,7 +156,7 @@ export class AcademicStatsService {
         .sort((a, b) => b.classCount - a.classCount)
         .slice(0, 20);
 
-      // Calculate student to lecturer ratio
+
       const studentToLecturerRatio = uniqueLecturers.size > 0
         ? Math.round((totalStudents / uniqueLecturers.size) * 10) / 10
         : 0;

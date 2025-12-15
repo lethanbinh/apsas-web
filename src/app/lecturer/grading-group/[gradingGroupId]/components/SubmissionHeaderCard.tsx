@@ -29,7 +29,7 @@ export const SubmissionHeaderCard = memo(function SubmissionHeaderCard({
       ? toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
       : "N/A";
   }, [submission.updatedAt, submission.submittedAt]);
-  
+
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
       <Descriptions bordered column={2}>

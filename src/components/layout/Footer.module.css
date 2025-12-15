@@ -1,0 +1,269 @@
+.footerBase {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #ffffff;
+  width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  position: relative;
+  margin-top: auto;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footerContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px 16px;
+  position: relative;
+  z-index: 1;
+}
+
+.footerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.footerMain {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.logoSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.taglineText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.taglinePrimary {
+  font-size: 13px;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.taglineSecondary {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 400;
+}
+
+.infoSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.contactLink {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.contactLink:hover {
+  color: #4cbfb6;
+}
+
+.socialIcons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.socialIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-decoration: none;
+}
+
+.socialIcon:hover {
+  background: #4cbfb6;
+  color: #ffffff;
+  transform: translateY(-2px);
+  border-color: #4cbfb6;
+}
+
+.copyrightSection {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.copyrightText {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.4;
+}
+
+@media (min-width: 640px) {
+  .footerContainer {
+    padding: 36px 24px 18px;
+  }
+
+  .footerContent {
+    gap: 20px;
+    margin-bottom: 18px;
+  }
+
+  .footerMain {
+    grid-template-columns: 1.5fr 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .logoSection {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .taglineText {
+    font-size: 13px;
+  }
+
+  .taglinePrimary {
+    font-size: 14px;
+  }
+
+  .taglineSecondary {
+    font-size: 12px;
+  }
+
+  .infoSection {
+    align-items: flex-start;
+  }
+
+  .contactInfo {
+    align-items: flex-start;
+    font-size: 13px;
+  }
+
+  .socialIcons {
+    justify-content: flex-start;
+  }
+
+  .copyrightText {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 768px) {
+  .footerContainer {
+    padding: 40px 32px 20px;
+  }
+
+  .footerMain {
+    grid-template-columns: 2fr 1fr;
+    gap: 48px;
+  }
+
+  .taglinePrimary {
+    font-size: 15px;
+  }
+
+  .socialIcon {
+    width: 38px;
+    height: 38px;
+    font-size: 17px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .footerContainer {
+    padding: 44px 40px 22px;
+  }
+
+  .footerMain {
+    gap: 60px;
+  }
+}
+
+@media (max-width: 480px) {
+  .footerContainer {
+    padding: 28px 16px 14px;
+  }
+
+  .footerContent {
+    gap: 20px;
+    margin-bottom: 16px;
+  }
+
+  .logoSection {
+    gap: 6px;
+  }
+
+  .taglineText {
+    font-size: 11px;
+  }
+
+  .taglinePrimary {
+    font-size: 12px;
+  }
+
+  .taglineSecondary {
+    font-size: 10px;
+  }
+
+  .infoSection {
+    gap: 12px;
+  }
+
+  .contactInfo {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .socialIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .copyrightSection {
+    padding-top: 14px;
+  }
+
+  .copyrightText {
+    font-size: 10px;
+  }
+}

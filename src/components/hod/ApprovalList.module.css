@@ -1,4 +1,4 @@
-/* Tên file: components/ApprovalList/ApprovalList.module.css */
+
 
 .wrapper {
     width: 100%;
@@ -36,21 +36,21 @@
     box-shadow: 0 0 0 2px rgba(73, 187, 189, 0.2) !important;
 }
 
-/* Card wrapping the table */
+
 .approvalCard {
     border: none;
     border-radius: 20px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
     overflow: hidden;
-    /* Important for table borders */
+
 }
 
 .approvalCard :global(.ant-card-body) {
     padding: 24px;
-    /* Add padding on all sides */
+
 }
 
-/* Table customization */
+
 .approvalTable :global(.ant-table) {
     background: transparent;
 }
@@ -67,7 +67,7 @@
     padding: 18px 16px;
 }
 
-/* Zebra striping for rows */
+
 .approvalTable :global(.ant-table-tbody > tr:nth-child(even) > td) {
     background: #f9faff;
 }
@@ -78,17 +78,17 @@
 
 .approvalTable :global(.ant-table-tbody > tr:hover > td) {
     background: #e6f7ff !important;
-    /* Lighter blue on hover */
+
 }
 
 .approvalTable :global(.ant-table-container) {
     border: none;
 }
 
-/* Style the status tags */
+
 .statusTag {
     min-width: 80px;
-    /* Ensure tags have consistent width */
+
     text-align: center;
     border-radius: 12px;
 }

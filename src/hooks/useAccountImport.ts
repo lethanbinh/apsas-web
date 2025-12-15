@@ -29,7 +29,7 @@ export const useAccountImport = () => {
   const importAccountsMutation = useMutation({
     mutationFn: async (file: File): Promise<ImportResults> => {
       const data = await parseExcelFile(file);
-      
+
       if (!data || data.length === 0) {
         throw new Error("Excel file is empty or invalid.");
       }
@@ -40,12 +40,12 @@ export const useAccountImport = () => {
         errors: [],
       };
 
-      // Process each row
+
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const rowNum = i + 2;
 
-        // Validate row
+
         const validationError = validateAccountData(row, i);
         if (validationError) {
           results.failed++;
@@ -57,7 +57,7 @@ export const useAccountImport = () => {
           continue;
         }
 
-        // Prepare account data
+
         const role = parseInt(row["Role"].toString().trim());
         const baseData: any = {
           username: row["Username"].toString().trim(),
@@ -71,14 +71,14 @@ export const useAccountImport = () => {
           avatar: row["Avatar"]?.toString().trim() || "",
         };
 
-        // Add role-specific fields
+
         let accountData: any = { ...baseData };
         if (role === ROLES.LECTURER) {
           accountData.department = row["Department"]?.toString().trim() || "";
           accountData.specialization = row["Specialization"]?.toString().trim() || "";
         }
 
-        // Create account using the appropriate service
+
         try {
           switch (role) {
             case ROLES.ADMIN:
@@ -102,8 +102,8 @@ export const useAccountImport = () => {
           results.success++;
         } catch (error: any) {
           results.failed++;
-          const errorMessage = error.response?.data?.errorMessages?.[0] || 
-                              error.message || 
+          const errorMessage = error.response?.data?.errorMessages?.[0] ||
+                              error.message ||
                               "Failed to create account";
           results.errors.push({
             row: rowNum,
@@ -117,7 +117,7 @@ export const useAccountImport = () => {
     },
     onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
-      
+
       if (results.success > 0) {
         notification.success({
           message: "Import Completed",

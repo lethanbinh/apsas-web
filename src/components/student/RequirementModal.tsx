@@ -1,4 +1,4 @@
-// Tên file: components/AssignmentList/RequirementModal.tsx
+
 "use client";
 
 import React, { useMemo } from "react";
@@ -69,11 +69,11 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   courseElementId,
   examSessionId,
 }) => {
-  // Determine assessmentTemplateId using queries
+
   const localStorageClassId = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const effectiveClassId = classId || (localStorageClassId ? Number(localStorageClassId) : undefined);
 
-  // Fetch class assessments if needed
+
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -84,7 +84,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     enabled: open && !!effectiveClassId && (!!classAssessmentId || !!courseElementId),
   });
 
-  // Determine assessmentTemplateId
+
   const assessmentTemplateId = useMemo(() => {
     if (propAssessmentTemplateId) {
       return propAssessmentTemplateId;
@@ -96,18 +96,18 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
         return classAssessment.assessmentTemplateId;
               }
     }
-    
+
     if (courseElementId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === courseElementId);
             if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
-    
+
     return null;
   }, [propAssessmentTemplateId, classAssessmentId, courseElementId, classAssessmentsData]);
 
-  // Fetch assign requests to filter approved templates
+
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
     queryFn: () => assignRequestService.getAssignRequests({
@@ -123,7 +123,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     return new Set(approved.map(ar => ar.id));
   }, [assignRequestsData]);
 
-  // Fetch assessment templates
+
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -133,7 +133,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     enabled: open && !!assessmentTemplateId,
   });
 
-  // Find the approved template
+
   const template = useMemo(() => {
     if (!templatesData?.items || !assessmentTemplateId) return null;
     return templatesData.items.find((t) => {
@@ -145,7 +145,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
 
   const templateDescription = template?.description || "";
 
-      // Fetch files
+
   const { data: filesData } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -158,7 +158,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
 
   const files = filesData?.items || [];
 
-      // Fetch papers
+
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -171,7 +171,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
 
   const papers = papersData?.items || [];
 
-  // Fetch questions for all papers
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -184,13 +184,13 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     })),
           });
 
-  // Map questions by paperId
+
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
       const query = questionsQueries[index];
       if (query.data?.items) {
-        const sortedQuestions = [...query.data.items].sort((a, b) => 
+        const sortedQuestions = [...query.data.items].sort((a, b) =>
             (a.questionNumber || 0) - (b.questionNumber || 0)
           );
           questionsMap[paper.id] = sortedQuestions;
@@ -199,7 +199,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     return questionsMap;
   }, [papers, questionsQueries]);
 
-  // Calculate loading state
+
   const loading = (
     (!!effectiveClassId && (!!classAssessmentId || !!courseElementId) && !classAssessmentsData) ||
     (!!assessmentTemplateId && !templatesData) ||
@@ -228,7 +228,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     >
       <Spin spinning={loading}>
         <div className={styles.modalBody}>
-          {/* Template Description */}
+          {}
           {templateDescription && (
             <>
               <Title level={5}>Description</Title>
@@ -237,7 +237,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </>
           )}
 
-          {/* Requirement Files - exclude Postman files (fileTemplate = 1) */}
+          {}
           {files.filter(f => f.fileTemplate !== 1).length > 0 && (
             <>
               <Title level={5}>Requirement Files</Title>
@@ -261,7 +261,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </>
           )}
 
-          {/* Original Content */}
+          {}
           {content && content.length > 0 && (
             <>
               <Title level={5}>Requirements</Title>
@@ -270,7 +270,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </>
           )}
 
-          {/* Papers, Questions, and Rubrics */}
+          {}
           {papers.length > 0 && (
             <>
               <Title level={5}>Exam Papers & Questions</Title>

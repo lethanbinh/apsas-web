@@ -1,4 +1,4 @@
-// Tên file: components/AssignmentList/data.ts
+
 
 import dayjs from "dayjs";
 
@@ -39,7 +39,7 @@ export interface AssignmentData {
   suggestionsAvoid: string;
   suggestionsImprove: string;
   submissions: SubmissionItem[];
-  // For deadline update
+
   classAssessmentId?: number;
   examSessionId?: number;
   courseElementId?: number;

@@ -55,21 +55,21 @@ export class GradingStatsService {
       const completedSessions = sessions.items.filter((s) => s.status === 1).length;
       const pendingRequests = requests.items.filter((r) => r.status === 0).length;
 
-      // Group by status
+
       const gradingSessionsByStatus = {
         processing: sessions.items.filter((s) => s.status === 0).length,
         completed: completedSessions,
         failed: sessions.items.filter((s) => s.status === 2).length,
       };
 
-      // Group by type
+
       const gradingSessionsByType = {
         ai: sessions.items.filter((s) => s.gradingType === 0).length,
         lecturer: sessions.items.filter((s) => s.gradingType === 1).length,
         both: sessions.items.filter((s) => s.gradingType === 2).length,
       };
 
-      // Group by lecturer
+
       const lecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
@@ -78,7 +78,7 @@ export class GradingStatsService {
       }>();
 
       sessions.items.forEach((session) => {
-        // Would need lecturerId from session
+
         const lecturerId = 0;
         if (!lecturerMap.has(lecturerId)) {
           lecturerMap.set(lecturerId, {
@@ -95,7 +95,7 @@ export class GradingStatsService {
 
       const gradingByLecturer = Array.from(lecturerMap.values());
 
-      // Pending requests by lecturer
+
       const requestLecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
@@ -118,10 +118,10 @@ export class GradingStatsService {
 
       const pendingAssignRequestsByLecturer = Array.from(requestLecturerMap.values());
 
-      // Grading groups by status
+
       const gradingGroupsByStatus = {
         active: groups.filter((g) => g.submissionCount > 0).length,
-        completed: 0, // Would need status field
+        completed: 0,
       };
 
       return {

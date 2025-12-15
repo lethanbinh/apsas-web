@@ -32,11 +32,11 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch all students
+
         const allStudents = await studentManagementService.getStudentList();
         setStudents(allStudents);
-        
-        // Fetch existing students in class
+
+
         if (classId) {
           const existing = await studentManagementService.getStudentsInClass(classId);
           setExistingStudents(existing);
@@ -108,18 +108,18 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
             {
               validator: (_, value) => {
                 if (!value) return Promise.resolve();
-                
-                // Check if student already exists in class
+
+
                 const existingStudent = existingStudents.find(
                   (s) => Number(s.studentId) === Number(value)
                 );
-                
+
                 if (existingStudent) {
                   return Promise.reject(
                     new Error("Student này đã có trong lớp rồi!")
                   );
                 }
-                
+
                 return Promise.resolve();
               },
             },
@@ -134,14 +134,14 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
             }
           />
         </Form.Item>
-        <Form.Item 
-          name="description" 
+        <Form.Item
+          name="description"
           label="Description"
           rules={[
             {
               validator: (_, value) => {
                 if (!value || value.trim().length === 0) {
-                  return Promise.resolve(); // Optional field
+                  return Promise.resolve();
                 }
                 if (value.trim().length < 5) {
                   return Promise.reject(new Error("Description must be at least 5 characters if provided!"));

@@ -14,7 +14,7 @@ import styles from "./SemesterPlans.module.css";
 
 const { Title, Text } = Typography;
 
-// Hàm sắp xếp semester theo thứ tự Spring, Summer, Fall trong từng năm
+
 const sortSemesters = (semesters: Semester[]): Semester[] => {
   const seasonOrder: { [key: string]: number } = {
     spring: 1,
@@ -23,12 +23,12 @@ const sortSemesters = (semesters: Semester[]): Semester[] => {
   };
 
   return [...semesters].sort((a, b) => {
-    // Sắp xếp theo academicYear (từ mới đến cũ)
+
     if (b.academicYear !== a.academicYear) {
       return b.academicYear - a.academicYear;
     }
 
-    // Nếu cùng năm, sắp xếp theo season: Spring -> Summer -> Fall
+
     const aSeason = a.semesterCode
       .replace(a.academicYear.toString(), "")
       .toLowerCase();

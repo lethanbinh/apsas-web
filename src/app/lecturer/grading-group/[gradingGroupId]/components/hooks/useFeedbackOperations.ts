@@ -70,12 +70,12 @@ export function useFeedbackOperations({
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [submissionFeedbackId, setSubmissionFeedbackIdLocal] = useState<number | null>(null);
-  
-  // Track processed feedback to avoid duplicate API calls
+
+
   const processedFeedbackRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
 
-  // Fetch feedback
+
   const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', submission.id],
     queryFn: async () => {
@@ -87,27 +87,27 @@ export function useFeedbackOperations({
     enabled: visible && !!submission.id,
   });
 
-  // Parse and set feedback
+
   useEffect(() => {
     if (feedbackList.length > 0) {
       const existingFeedback = feedbackList[0];
       setSubmissionFeedbackIdLocal(existingFeedback.id);
       setSubmissionFeedbackId(existingFeedback.id);
-      
-      // Check if we've already processed this feedback text
+
+
       if (processedFeedbackRef.current === existingFeedback.feedbackText) {
-        return; // Already processed, skip
+        return;
       }
-      
+
       let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-      
+
       if (parsedFeedback === null) {
-        // Only call API if not already processing and feedback text is different
+
         if (!isProcessingRef.current && processedFeedbackRef.current !== existingFeedback.feedbackText) {
           isProcessingRef.current = true;
           processedFeedbackRef.current = existingFeedback.feedbackText;
           setLoadingFeedback(true);
-          
+
           geminiService.formatFeedback(existingFeedback.feedbackText)
             .then((formatted) => {
               setFeedback(formatted);
@@ -131,12 +131,12 @@ export function useFeedbackOperations({
             });
         }
       } else {
-        // Valid parsed feedback, mark as processed
+
         processedFeedbackRef.current = existingFeedback.feedbackText;
         setFeedback(parsedFeedback);
       }
     } else {
-      // Reset refs when no feedback
+
       processedFeedbackRef.current = null;
       isProcessingRef.current = false;
       setSubmissionFeedbackIdLocal(null);
@@ -152,7 +152,7 @@ export function useFeedbackOperations({
         errorHandling: "",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [feedbackList, submission.id]);
 
   const saveFeedback = async (feedbackData: FeedbackData) => {

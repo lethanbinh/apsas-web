@@ -17,9 +17,9 @@ import { queryKeys } from "@/lib/react-query";
 
 const { Title, Text } = Typography;
 
-// Helper function to check if a course element is a Lab based on elementType
+
 function isLab(element: CourseElement): boolean {
-  return element.elementType === 1; // 1: Lab
+  return element.elementType === 1;
 }
 
 function mapCourseElementToLabData(
@@ -33,8 +33,8 @@ function mapCourseElementToLabData(
   let startAt = dayjs().toISOString();
   let assessmentTemplateId: number | undefined;
 
-  // Get deadline from classAssessment only if it exists (last set deadline)
-  // If no classAssessment, there is no deadline
+
+
   try {
     if (classAssessment?.endAt) {
       deadline = classAssessment.endAt;
@@ -43,14 +43,14 @@ function mapCourseElementToLabData(
     }
   } catch (error) {
     console.error("Error parsing deadline:", error);
-    // Continue without deadline
+
   }
 
-  // Determine status based on deadline
+
   if (deadline) {
     const endDate = dayjs(deadline);
     const startDate = dayjs(startAt);
-    
+
     if (now.isBefore(startDate)) {
       status = "Upcoming Lab";
     } else if (now.isAfter(endDate)) {
@@ -96,14 +96,14 @@ export default function Labs() {
     setSelectedClassId(classId);
   }, []);
 
-  // Fetch class data
+
   const { data: classData, isLoading: isLoadingClass } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),
     queryFn: () => classService.getClassById(selectedClassId!),
     enabled: !!selectedClassId,
   });
 
-  // Fetch all course elements
+
   const { data: allElements = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({}),
     queryFn: () => courseElementService.getCourseElements({
@@ -112,7 +112,7 @@ export default function Labs() {
     }),
   });
 
-  // Fetch assign requests
+
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -121,7 +121,7 @@ export default function Labs() {
     }),
   });
 
-  // Fetch templates
+
   const { data: templateResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({}),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -130,7 +130,7 @@ export default function Labs() {
     }),
   });
 
-  // Fetch class assessments
+
   const { data: classAssessmentRes } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -141,29 +141,29 @@ export default function Labs() {
     enabled: !!selectedClassId,
   });
 
-  // Process approved assign requests and templates
+
   const { approvedTemplateByCourseElementMap, approvedTemplateByIdMap } = useMemo(() => {
     const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
     const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-    
-    const approvedTemplates = (templateResponse?.items || []).filter(t => 
+
+    const approvedTemplates = (templateResponse?.items || []).filter(t =>
       t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
     );
-    
+
     const approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
     const approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
-    
+
           approvedTemplates.forEach(t => {
             if (t.courseElementId) {
               approvedTemplateByCourseElementMap.set(t.courseElementId, t);
             }
             approvedTemplateByIdMap.set(t.id, t);
           });
-    
+
     return { approvedTemplateByCourseElementMap, approvedTemplateByIdMap };
   }, [assignRequestResponse, templateResponse]);
 
-  // Process data
+
   const { labs, error } = useMemo(() => {
     if (!classData || !allElements.length) {
       return { labs: [], error: !selectedClassId ? "No class selected. Please select a class first." : null };
@@ -184,15 +184,15 @@ export default function Labs() {
         const mappedLabs = classElements.map((el) => {
           const classAssessment = classAssessmentMap.get(el.id);
           let approvedTemplate: AssessmentTemplate | undefined;
-          
+
           if (classAssessment?.assessmentTemplateId) {
             approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
           }
-          
+
           if (!approvedTemplate) {
             approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
           }
-          
+
           if (approvedTemplate) {
             if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
               return mapCourseElementToLabData(el, classAssessmentMap);

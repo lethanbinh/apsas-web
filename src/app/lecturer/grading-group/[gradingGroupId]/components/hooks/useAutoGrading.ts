@@ -48,7 +48,7 @@ export function useAutoGrading({
       clearInterval(autoGradingPollIntervalRef.current);
       autoGradingPollIntervalRef.current = null;
     }
-    
+
     hasShownCompletionMessageRef.current = false;
 
     try {
@@ -67,10 +67,10 @@ export function useAutoGrading({
       if (gradingSession.status === 0) {
         pollingSessionIdRef.current = gradingSession.id;
         hasShownCompletionMessageRef.current = false;
-        
+
         const loadingMessageKey = `auto-grading-${gradingSession.id}`;
         message.loading({ content: "Auto grading in progress...", key: loadingMessageKey, duration: 0 });
-        
+
         const pollInterval = setInterval(async () => {
           if (hasShownCompletionMessageRef.current || pollingSessionIdRef.current !== gradingSession.id) {
             clearInterval(pollInterval);
@@ -94,12 +94,12 @@ export function useAutoGrading({
                 autoGradingPollIntervalRef.current = null;
                 pollingSessionIdRef.current = null;
                 setAutoGradingLoading(false);
-                
+
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
                 queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
                 queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-                
+
                 if (targetSession.status === 1) {
                   message.success({ content: "Auto grading completed successfully", key: loadingMessageKey, duration: 3 });
                 } else if (targetSession.status === 2) {
@@ -146,7 +146,7 @@ export function useAutoGrading({
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
         queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
         queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-        
+
         if (gradingSession.status === 1) {
           message.success("Auto grading completed successfully");
         } else if (gradingSession.status === 2) {

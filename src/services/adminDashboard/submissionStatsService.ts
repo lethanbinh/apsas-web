@@ -17,16 +17,16 @@ export class SubmissionStatsService {
 
       const graded = submissions.filter((s) => s.lastGrade > 0).length;
       const pending = submissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
-      const notSubmitted = 0; // Would need total expected submissions to calculate
+      const notSubmitted = 0;
 
       const completionRate = submissions.length > 0
         ? (graded / submissions.length) * 100
         : 0;
 
-      // Calculate detailed stats - group by type using template name
+
       const submissionsByType = { assignment: 0, lab: 0, practicalExam: 0 };
 
-      // Create a map of templateId -> template for quick lookup
+
       const templateMap = new Map<number, any>();
       templates.items.forEach((template) => {
         templateMap.set(template.id, template);
@@ -45,11 +45,11 @@ export class SubmissionStatsService {
               submissionsByType.assignment++;
             }
           } else {
-            // If template not found, default to assignment
+
             submissionsByType.assignment++;
           }
         } else {
-          // If no assessment found, default to assignment
+
           submissionsByType.assignment++;
         }
       });
@@ -65,11 +65,11 @@ export class SubmissionStatsService {
         belowAverage: gradedSubmissions.filter((s) => s.lastGrade < 5.5).length,
       };
 
-      // Count late vs on-time (would need deadline info)
+
       const lateSubmissions = 0;
       const onTimeSubmissions = submissions.length;
 
-      // Top students by submissions
+
       const studentMap = new Map<number, { studentId: number; studentName: string; studentCode: string; submissionCount: number; totalGrade: number; gradedCount: number }>();
       submissions.forEach((sub) => {
         if (!studentMap.has(sub.studentId)) {
@@ -100,7 +100,7 @@ export class SubmissionStatsService {
         .sort((a, b) => b.submissionCount - a.submissionCount)
         .slice(0, 10);
 
-      // Submissions by day
+
       const submissionsByDayMap = new Map<string, number>();
       submissions.forEach((sub) => {
         if (sub.submittedAt) {
@@ -111,7 +111,7 @@ export class SubmissionStatsService {
       const submissionsByDay = Array.from(submissionsByDayMap.entries())
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-30); // Last 30 days
+        .slice(-30);
 
       return {
         total: submissions.length,
@@ -149,14 +149,14 @@ export class SubmissionStatsService {
         ? (graded / submissions.length) * 100
         : 0;
 
-      // Group by type
+
       const submissionsByType = {
         assignment: 0,
         lab: 0,
         practicalExam: 0,
       };
 
-      // Create a map of templateId -> template for quick lookup
+
       const templateMap = new Map<number, any>();
       templates.items.forEach((template: any) => {
         templateMap.set(template.id, template);
@@ -175,23 +175,23 @@ export class SubmissionStatsService {
               submissionsByType.assignment++;
             }
           } else {
-            // If template not found, default to assignment
+
             submissionsByType.assignment++;
           }
         } else {
-          // If no assessment found, default to assignment
+
           submissionsByType.assignment++;
         }
       });
 
-      // Calculate average grade
+
       const gradedSubmissions = submissions.filter((s) => s.lastGrade > 0);
       const totalGrade = gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0);
       const averageGrade = gradedSubmissions.length > 0
         ? Math.round((totalGrade / gradedSubmissions.length) * 100) / 100
         : 0;
 
-      // Grade ranges
+
       const submissionsByGradeRange = {
         excellent: gradedSubmissions.filter((s) => s.lastGrade >= 8.5).length,
         good: gradedSubmissions.filter((s) => s.lastGrade >= 7.0 && s.lastGrade < 8.5).length,
@@ -199,7 +199,7 @@ export class SubmissionStatsService {
         belowAverage: gradedSubmissions.filter((s) => s.lastGrade < 5.5).length,
       };
 
-      // Late vs on-time submissions
+
       let lateSubmissions = 0;
       let onTimeSubmissions = 0;
 
@@ -214,7 +214,7 @@ export class SubmissionStatsService {
         }
       });
 
-      // Top students by submissions
+
       const studentMap = new Map<number, {
         studentId: number;
         studentName: string;
@@ -256,7 +256,7 @@ export class SubmissionStatsService {
         .sort((a, b) => b.submissionCount - a.submissionCount)
         .slice(0, 10);
 
-      // Submissions by day
+
       const submissionsByDayMap = new Map<string, number>();
       submissions.forEach((submission) => {
         if (submission.submittedAt) {
@@ -268,7 +268,7 @@ export class SubmissionStatsService {
       const submissionsByDay = Array.from(submissionsByDayMap.entries())
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-30); // Last 30 days
+        .slice(-30);
 
       return {
         total: submissions.length,

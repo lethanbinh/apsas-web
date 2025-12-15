@@ -1,4 +1,4 @@
-/* Tên file: components/CategorySlider/CategorySlider.module.css */
+
 
 .sliderSection {
     width: 100%;
@@ -17,13 +17,13 @@
 }
 
 .swiperSlide {
-    /* BỎ width: 320px !important; */
-    /* Swiper sẽ tự tính toán width dựa trên slidesPerView */
+
+
     height: auto !important;
     padding-bottom: 10px;
 }
 
-/* === CẬP NHẬT CARD === */
+
 .card {
     background-color: #ffffff;
     border-radius: 20px;
@@ -31,10 +31,10 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     height: 100%;
     text-align: center;
-    /* <-- THÊM ĐỂ CĂN GIỮA TEXT */
+
 }
 
-/* === CẬP NHẬT ICON WRAPPER === */
+
 .iconWrapper {
     width: 65px;
     height: 65px;
@@ -42,7 +42,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    /* THÊM margin: auto ĐỂ CĂN GIỮA KHỐI */
+
     margin: 0 auto 25px auto;
 }
 
@@ -65,7 +65,7 @@
     margin: 0 auto;
 }
 
-/* Tùy chỉnh màu của pagination dots (Giữ nguyên) */
+
 .swiperContainer :global(.swiper-pagination-bullet) {
     background-color: #aaa;
     opacity: 0.7;
@@ -76,7 +76,7 @@
     opacity: 1;
 }
 
-/* Tùy chỉnh nút (Nếu bạn dùng Navigation) */
+
 .swiperContainer :global(.swiper-button-next),
 .swiperContainer :global(.swiper-button-prev) {
     color: #49BBBD;

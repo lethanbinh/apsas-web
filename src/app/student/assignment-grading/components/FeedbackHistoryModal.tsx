@@ -28,7 +28,7 @@ interface FeedbackHistoryModalProps {
 export function FeedbackHistoryModal({ visible, onClose, submissionId }: FeedbackHistoryModalProps) {
   const [expandedFeedbacks, setExpandedFeedbacks] = useState<Set<number>>(new Set());
 
-  // Fetch feedback history
+
   const { data: feedbackListData, isLoading: loadingFeedbackHistory } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', submissionId],
     queryFn: () => submissionFeedbackService.getSubmissionFeedbackList({

@@ -33,15 +33,15 @@ interface ApprovalDetailProps {
 
 const getStatusProps = (status: number) => {
   switch (status) {
-    case 1: // PENDING
+    case 1:
       return { color: "warning", text: "Pending" };
-    case 2: // ACCEPTED
+    case 2:
       return { color: "processing", text: "Accepted" };
-    case 3: // REJECTED
+    case 3:
       return { color: "error", text: "Rejected" };
-    case 4: // IN_PROGRESS
+    case 4:
       return { color: "processing", text: "In Progress" };
-    case 5: // COMPLETED (coi là Approved)
+    case 5:
       return { color: "success", text: "Approved" };
     default:
       return { color: "default", text: `Unknown (${status})` };
@@ -74,7 +74,7 @@ export default function ApprovalDetail({
   const [selectedQuestionForComment, setSelectedQuestionForComment] = useState<AssessmentQuestion | null>(null);
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  
+
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [selectedApproverLecturerId, setSelectedApproverLecturerId] = useState<number | undefined>(
     approvalItem.assignedApproverLecturerId && approvalItem.assignedApproverLecturerId !== 0
@@ -83,7 +83,7 @@ export default function ApprovalDetail({
   );
   const [isUpdatingApprover, setIsUpdatingApprover] = useState(false);
 
-  // Handle scroll to top button visibility
+
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
@@ -98,7 +98,7 @@ export default function ApprovalDetail({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Fetch lecturers list
+
   useEffect(() => {
     const fetchLecturers = async () => {
       try {
@@ -111,13 +111,13 @@ export default function ApprovalDetail({
     fetchLecturers();
   }, []);
 
-  // Fetch papers, questions, rubrics, and files from API
+
   useEffect(() => {
     const fetchRequirementData = async () => {
       try {
         setLoading(true);
 
-        // Fetch assessment files
+
         try {
           const filesRes = await assessmentFileService.getFilesForTemplate({
             assessmentTemplateId: template.id,
@@ -130,7 +130,7 @@ export default function ApprovalDetail({
           setFiles([]);
         }
 
-        // Fetch papers
+
         const papersRes = await assessmentPaperService.getAssessmentPapers({
           assessmentTemplateId: template.id,
           pageNumber: 1,
@@ -143,7 +143,7 @@ export default function ApprovalDetail({
           setOuterActiveKeys([`paper-${papersData[0].id}`]);
         }
 
-        // Fetch questions and rubrics for each paper
+
         const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
         const rubricsMap: { [questionId: number]: RubricItem[] } = {};
         const commentsMap: { [questionId: number]: string } = {};
@@ -155,19 +155,19 @@ export default function ApprovalDetail({
               pageNumber: 1,
               pageSize: 100,
             });
-            const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+            const sortedQuestions = [...questionsRes.items].sort((a, b) =>
               (a.questionNumber || 0) - (b.questionNumber || 0)
             );
             questionsMap[paper.id] = sortedQuestions;
-            
-            // Load existing comments
+
+
             sortedQuestions.forEach(q => {
               if (q.reviewerComment) {
                 commentsMap[q.id] = q.reviewerComment;
               }
             });
 
-            // Fetch rubrics for each question
+
             for (const question of sortedQuestions) {
               try {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
@@ -217,7 +217,7 @@ export default function ApprovalDetail({
     };
   };
 
-  // Handle approver lecturer assignment
+
   const handleApproverChange = async (lecturerId: number | null | undefined) => {
     setIsUpdatingApprover(true);
     try {
@@ -230,8 +230,8 @@ export default function ApprovalDetail({
       await adminService.updateAssignRequestStatus(approvalItem.id, payload);
       setSelectedApproverLecturerId(approverId === 0 ? undefined : approverId);
       antMessage.success(
-        approverId === 0 
-          ? "Approver assignment removed successfully" 
+        approverId === 0
+          ? "Approver assignment removed successfully"
           : "Approver assigned successfully"
       );
     } catch (err: any) {
@@ -242,7 +242,7 @@ export default function ApprovalDetail({
     }
   };
 
-  // Xử lý Approve
+
   const handleApprove = () => {
     modal.confirm({
       title: "Confirm Approval",
@@ -269,17 +269,17 @@ export default function ApprovalDetail({
     });
   };
 
-  // Handle opening comment modal
+
   const handleOpenCommentModal = (question: AssessmentQuestion) => {
     setSelectedQuestionForComment(question);
     setIsCommentModalOpen(true);
   };
 
-  // Handle comment update success
+
   const handleCommentUpdateSuccess = () => {
     if (!selectedQuestionForComment) return;
-    
-    // Refresh questions to get updated comments
+
+
     const refreshQuestions = async () => {
       try {
         const papersRes = await assessmentPaperService.getAssessmentPapers({
@@ -297,11 +297,11 @@ export default function ApprovalDetail({
               pageNumber: 1,
               pageSize: 100,
             });
-            const sortedQuestions = [...questionsRes.items].sort((a, b) => 
+            const sortedQuestions = [...questionsRes.items].sort((a, b) =>
               (a.questionNumber || 0) - (b.questionNumber || 0)
             );
             questionsMap[paper.id] = sortedQuestions;
-            
+
             sortedQuestions.forEach(q => {
               if (q.reviewerComment) {
                 commentsMap[q.id] = q.reviewerComment;
@@ -322,10 +322,10 @@ export default function ApprovalDetail({
     refreshQuestions();
   };
 
-  // Xử lý Reject
+
   const handleRejectClick = () => {
     if (!rejectReasonVisibleForItem) {
-      // Set reject reason visible (use first paper key as identifier)
+
       const firstPaperKey = papers.length > 0 ? `paper-${papers[0].id}` : null;
       if (firstPaperKey) {
         setRejectReasonVisibleForItem(firstPaperKey);
@@ -338,7 +338,7 @@ export default function ApprovalDetail({
       return;
     }
 
-    // Check if at least one question has a comment
+
     const allQuestions = Object.values(questions).flat();
     const questionsWithComments = allQuestions.filter(
       q => questionComments[q.id] && questionComments[q.id].trim()
@@ -358,7 +358,7 @@ export default function ApprovalDetail({
       onOk: async () => {
         setIsSubmitting(true);
         try {
-          // Update all question comments first
+
           for (const question of allQuestions) {
             const comment = questionComments[question.id]?.trim();
             if (comment) {
@@ -374,7 +374,7 @@ export default function ApprovalDetail({
             }
           }
 
-          // Then update the assign request status
+
           const payload = createPayload(3, rejectReason, selectedApproverLecturerId);
           await adminService.updateAssignRequestStatus(approvalItem.id, payload);
 
@@ -395,13 +395,13 @@ export default function ApprovalDetail({
     isSubmitting || currentStatus === 3 || currentStatus === 5;
   const statusInfo = getStatusProps(currentStatus);
   const isRejected = currentStatus === 3;
-  
-  // Helper to check if can comment for a specific paper
+
+
   const canCommentForPaper = (paperKey: string) => {
     return isRejected || rejectReasonVisibleForItem === paperKey;
   };
 
-  // Calculate total score from all rubrics
+
   const calculateTotalScore = () => {
     let total = 0;
     Object.values(questions).forEach((paperQuestions) => {
@@ -416,25 +416,25 @@ export default function ApprovalDetail({
 
   const totalScore = calculateTotalScore();
 
-  // Filter lecturers to exclude the assigned lecturer
+
   const availableApprovers = lecturers.filter(
     (lecturer) => Number(lecturer.lecturerId) !== approvalItem.assignedLecturerId
   );
 
-  // Get approver name if assigned (check in all lecturers, not just available ones)
+
   const approverLecturer = lecturers.find(
     (lecturer) => Number(lecturer.lecturerId) === selectedApproverLecturerId
   );
 
-  // Include the currently selected approver in the list if they're not in availableApprovers
-  // This ensures the Select can display the selected value properly
-  const approversForSelect = approverLecturer && 
+
+
+  const approversForSelect = approverLecturer &&
     !availableApprovers.find(lec => Number(lec.lecturerId) === selectedApproverLecturerId)
     ? [approverLecturer, ...availableApprovers]
     : availableApprovers;
 
-  // Show dropdown when status is NOT approved (5) or rejected (3)
-  // Allow assignment for: Pending (1), Accepted (2), In Progress (4)
+
+
   const canAssignApprover = currentStatus !== 3 && currentStatus !== 5;
 
   if (loading) {
@@ -481,7 +481,7 @@ export default function ApprovalDetail({
       ),
       children: (
         <div style={{ padding: "0 24px" }}>
-          {/* Template Description */}
+          {}
           {template.description && (
             <>
               <Title level={5}>Description</Title>
@@ -490,7 +490,7 @@ export default function ApprovalDetail({
             </>
           )}
 
-          {/* Requirement Files */}
+          {}
           {files.length > 0 && (
             <>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -515,7 +515,7 @@ export default function ApprovalDetail({
                               link.click();
                               document.body.removeChild(link);
                               URL.revokeObjectURL(url);
-                              // Small delay between downloads
+
                               await new Promise(resolve => setTimeout(resolve, 200));
                             }
                           } catch (err) {
@@ -575,7 +575,7 @@ export default function ApprovalDetail({
             </>
           )}
 
-          {/* Questions */}
+          {}
           {paperQuestions.length > 0 ? (
             <div>
               {paperQuestions.map((question, qIndex) => (
@@ -626,13 +626,13 @@ export default function ApprovalDetail({
                     </div>
                   )}
 
-                  {/* Reviewer Comment Section - Always show if there's a comment, or if can comment */}
+                  {}
                   {(question.reviewerComment || canCommentForPaper(paperKey)) && (
-                    <div style={{ 
-                      marginTop: 16, 
-                      padding: "16px", 
-                      backgroundColor: "#e6f4ff", 
-                      borderRadius: "8px", 
+                    <div style={{
+                      marginTop: 16,
+                      padding: "16px",
+                      backgroundColor: "#e6f4ff",
+                      borderRadius: "8px",
                       border: "1px solid #91caff",
                       boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
                     }}>
@@ -660,10 +660,10 @@ export default function ApprovalDetail({
                       </div>
                       {question.reviewerComment ? (
                         <div>
-                          <div style={{ 
-                            padding: "12px", 
-                            backgroundColor: "#fff", 
-                            borderRadius: "6px", 
+                          <div style={{
+                            padding: "12px",
+                            backgroundColor: "#fff",
+                            borderRadius: "6px",
                             border: "1px solid #91caff",
                             boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.04)",
                             marginBottom: "8px"
@@ -676,9 +676,9 @@ export default function ApprovalDetail({
                             </Text>
                             {question.updatedAt && (
                               <Text type="secondary" style={{ fontSize: "12px" }}>
-                                <Text strong style={{ color: "#0958d9" }}>Date:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", { 
-                                  year: "numeric", 
-                                  month: "short", 
+                                <Text strong style={{ color: "#0958d9" }}>Date:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
+                                  year: "numeric",
+                                  month: "short",
                                   day: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit"
@@ -737,10 +737,10 @@ export default function ApprovalDetail({
           </div>
         </div>
 
-        {/* Approval Actions - Beautiful Buttons */}
-        <div style={{ 
-          padding: "20px 24px", 
-          backgroundColor: "#f8f9fa", 
+        {}
+        <div style={{
+          padding: "20px 24px",
+          backgroundColor: "#f8f9fa",
           borderRadius: "12px",
           border: "1px solid #e9ecef",
           marginBottom: "24px"
@@ -763,7 +763,7 @@ export default function ApprovalDetail({
               />
             </div>
           )}
-          
+
           <Space size="large" wrap>
             <AntButton
               type="primary"
@@ -817,7 +817,7 @@ export default function ApprovalDetail({
                 if (rejectReasonVisibleForItem) {
                   handleRejectClick();
                 } else {
-                  // Set reject reason visible for the first paper
+
                   const firstPaperKey = papers.length > 0 ? `paper-${papers[0].id}` : null;
                   if (firstPaperKey) {
                     setRejectReasonVisibleForItem(firstPaperKey);
@@ -846,7 +846,7 @@ export default function ApprovalDetail({
         </div>
       </div>
 
-      {/* Approver Assignment Section - Outside the collapse */}
+      {}
       <Card
         style={{
           marginBottom: "24px",
@@ -946,7 +946,7 @@ export default function ApprovalDetail({
         items={courseCollapseItems}
       />
 
-      {/* Question Comment Modal */}
+      {}
       <QuestionCommentModal
         open={isCommentModalOpen}
         onCancel={() => {
@@ -959,7 +959,7 @@ export default function ApprovalDetail({
         disabled={isActionDisabled && !isRejected}
       />
 
-      {/* Scroll to Top Button */}
+      {}
       {showScrollTop && (
         <AntButton
           type="primary"

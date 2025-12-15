@@ -52,9 +52,9 @@ dayjs.extend(timezone);
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
 
-// Helper function to check if a course element is a Lab based on elementType
+
 function isLab(element: CourseElement): boolean {
-  return element.elementType === 1; // 1: Lab
+  return element.elementType === 1;
 }
 
 const LabDetailItem = ({
@@ -80,7 +80,7 @@ const LabDetailItem = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);
 
-  // Fetch assessment files using TanStack Query
+
   const { data: filesResponse, isLoading: isFilesLoading } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(template?.id!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -93,7 +93,7 @@ const LabDetailItem = ({
 
   const assessmentFiles = filesResponse?.items || [];
 
-  // Mutation for batch grading
+
   const batchGradingMutation = useMutation({
     mutationFn: async ({ submissionId, assessmentTemplateId }: { submissionId: number; assessmentTemplateId: number }) => {
       return gradingService.autoGrading({
@@ -102,7 +102,7 @@ const LabDetailItem = ({
       });
     },
     onSuccess: () => {
-      // Invalidate submissions queries to refetch updated data
+
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
     },
@@ -112,7 +112,7 @@ const LabDetailItem = ({
   const closeModal = () => setIsModalOpen(false);
 
   const handleSubmissionClick = (submission: Submission) => {
-    // Save submissionId to localStorage for the grading page
+
     localStorage.setItem("selectedSubmissionId", submission.id.toString());
     router.push("/lecturer/assignment-grading");
   };
@@ -123,7 +123,7 @@ const LabDetailItem = ({
       return;
     }
 
-    // Check if semester has ended
+
     if (semesterEndDate) {
       const semesterEnd = dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh");
       const now = dayjs().tz("Asia/Ho_Chi_Minh");
@@ -133,7 +133,7 @@ const LabDetailItem = ({
       }
     }
 
-    // Get assessmentTemplateId
+
     const assessmentTemplateId = template?.id || classAssessment?.assessmentTemplateId;
     if (!assessmentTemplateId) {
       message.error("Cannot find assessment template. Please contact administrator.");
@@ -143,7 +143,7 @@ const LabDetailItem = ({
       setBatchGradingLoading(true);
       message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
 
-    // Call auto grading for each submission using mutation
+
       const gradingPromises = submissions.map(async (submission) => {
         try {
         await batchGradingMutation.mutateAsync({
@@ -167,11 +167,11 @@ const LabDetailItem = ({
       if (successCount > 0) {
         message.destroy();
         message.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
-        
-        // Start polling for grading status
+
+
         const pollInterval = setInterval(async () => {
           try {
-            // Fetch grading sessions for all successful submissions
+
             const sessionPromises = successfulSubmissionIds.map(submissionId =>
               gradingService.getGradingSessions({
                 submissionId: submissionId,
@@ -181,20 +181,20 @@ const LabDetailItem = ({
             );
 
             const sessionResults = await Promise.all(sessionPromises);
-            
-            // Check if all sessions are completed (status !== 0)
+
+
             let allCompleted = true;
             for (const result of sessionResults) {
               if (result.items.length > 0) {
-                const latestSession = result.items.sort((a, b) => 
+                const latestSession = result.items.sort((a, b) =>
                   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 )[0];
-                if (latestSession.status === 0) { // Still processing
+                if (latestSession.status === 0) {
                   allCompleted = false;
                   break;
                 }
               } else {
-                // No session found yet, still processing
+
                 allCompleted = false;
                 break;
               }
@@ -211,9 +211,9 @@ const LabDetailItem = ({
           } catch (err: any) {
             console.error("Failed to poll grading status:", err);
           }
-        }, 5000); // Poll every 5 seconds
+        }, 5000);
 
-        // Store interval reference to cleanup if component unmounts
+
         (window as any).batchGradingPollInterval = pollInterval;
       } else {
         message.destroy();
@@ -264,7 +264,7 @@ const LabDetailItem = ({
           </Card>
         )}
 
-        <Card 
+        <Card
           title="Submissions"
           extra={
             submissions.length > 0 && (
@@ -344,14 +344,14 @@ const LabsPage = () => {
     setSelectedClassId(classId);
   }, []);
 
-  // Fetch class data
+
   const { data: classData, isLoading: isLoadingClass } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),
     queryFn: () => classService.getClassById(selectedClassId!),
     enabled: !!selectedClassId,
   });
 
-  // Fetch all course elements
+
   const { data: allElements = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({}),
     queryFn: () => courseElementService.getCourseElements({
@@ -360,7 +360,7 @@ const LabsPage = () => {
         }),
   });
 
-  // Fetch assign requests
+
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -369,7 +369,7 @@ const LabsPage = () => {
         }),
   });
 
-  // Fetch templates
+
   const { data: templateResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({}),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -378,7 +378,7 @@ const LabsPage = () => {
         }),
   });
 
-  // Fetch class assessments
+
   const { data: classAssessmentRes } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -389,18 +389,18 @@ const LabsPage = () => {
     enabled: !!selectedClassId,
   });
 
-  // Process data
+
   const { labs, templates, classAssessments, semesterInfo } = useMemo(() => {
     if (!classData || !allElements.length) {
       return { labs: [], templates: [], classAssessments: new Map(), semesterInfo: null };
     }
 
-      // Filter approved assign requests (status = 5)
+
     const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
       const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
 
-      // Filter assessment templates by approved assign request IDs
-    const approvedTemplates = (templateResponse?.items || []).filter(t => 
+
+    const approvedTemplates = (templateResponse?.items || []).filter(t =>
         t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
       );
       const approvedTemplateMap = new Map<number, AssessmentTemplate>();
@@ -411,12 +411,12 @@ const LabsPage = () => {
       });
 
       const allLabs = allElements.filter(
-        (el) => 
+        (el) =>
           el.semesterCourseId.toString() === classData.semesterCourseId &&
         isLab(el)
       );
 
-      // Map class assessments by course element
+
       const assessmentMap = new Map<number, ClassAssessment>();
     for (const assessment of (classAssessmentRes?.items || [])) {
         if (assessment.courseElementId) {
@@ -424,7 +424,7 @@ const LabsPage = () => {
         }
       }
 
-    // Get semester info
+
     let semesterStartDate: string | undefined;
     let semesterEndDate: string | undefined;
     const classElement = allElements.find(
@@ -443,22 +443,22 @@ const LabsPage = () => {
     };
   }, [classData, allElements, assignRequestResponse, templateResponse, classAssessmentRes]);
 
-          // Fetch submissions for each class assessment
+
   const classAssessmentIds = Array.from(classAssessments.values()).map(ca => ca.id);
   const { data: submissionsData } = useQuery({
     queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
-      
+
           const submissionPromises = classAssessmentIds.map(classAssessmentId =>
             submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
           );
           const submissionArrays = await Promise.all(submissionPromises);
           const allSubmissions = submissionArrays.flat();
-      
+
       const submissionsByCourseElement = new Map<number, Submission[]>();
-          
-          // Map submissions by course element via class assessment
+
+
           for (const submission of allSubmissions) {
         const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
             if (classAssessment && classAssessment.courseElementId) {
@@ -467,22 +467,22 @@ const LabsPage = () => {
               submissionsByCourseElement.set(classAssessment.courseElementId, existing);
             }
           }
-          
-          // Sort submissions by updatedAt (most recent first) and get latest per student
-          // Use updatedAt for submission date display
+
+
+
           for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
-            // First, sort all submissions by updatedAt (most recent first), then by id as tiebreaker
+
             const sortedSubs = [...subs].sort((a, b) => {
               const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
               const dateB = new Date(b.updatedAt || b.submittedAt || 0).getTime();
               if (dateB !== dateA) {
-                return dateB - dateA; // Most recent first
+                return dateB - dateA;
               }
-              // If same date, use id as tiebreaker (higher id = newer)
+
               return (b.id || 0) - (a.id || 0);
             });
-            
-            // Get latest submission per student
+
+
             const studentSubmissions = new Map<number, Submission>();
             for (const sub of sortedSubs) {
               if (!sub.studentId) continue;
@@ -490,17 +490,17 @@ const LabsPage = () => {
               if (!existing) {
                 studentSubmissions.set(sub.studentId, sub);
               } else {
-                // Compare dates and ids to ensure we have the latest
+
                 const existingDate = new Date(existing.updatedAt || existing.submittedAt || 0).getTime();
                 const currentDate = new Date(sub.updatedAt || sub.submittedAt || 0).getTime();
-                if (currentDate > existingDate || 
+                if (currentDate > existingDate ||
                     (currentDate === existingDate && (sub.id || 0) > (existing.id || 0))) {
                   studentSubmissions.set(sub.studentId, sub);
                 }
               }
             }
-            
-            // Sort final list by updatedAt (most recent first)
+
+
             const latestSubs = Array.from(studentSubmissions.values()).sort(
               (a, b) => {
                 const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
@@ -513,7 +513,7 @@ const LabsPage = () => {
             );
             submissionsByCourseElement.set(courseElementId, latestSubs);
       }
-      
+
       return submissionsByCourseElement;
     },
     enabled: classAssessmentIds.length > 0,
@@ -526,13 +526,13 @@ const LabsPage = () => {
   const { message } = App.useApp();
   const { user } = useAuth();
 
-  // Mutation for updating class assessment deadline
+
   const updateDeadlineMutation = useMutation({
     mutationFn: async ({ classAssessmentId, payload }: { classAssessmentId: number; payload: any }) => {
       return classAssessmentService.updateClassAssessment(classAssessmentId, payload);
     },
     onSuccess: () => {
-      // Invalidate class assessments query to refetch updated data
+
       if (selectedClassId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
       }
@@ -544,13 +544,13 @@ const LabsPage = () => {
     },
   });
 
-  // Mutation for creating class assessment
+
   const createDeadlineMutation = useMutation({
     mutationFn: async (payload: any) => {
       return classAssessmentService.createClassAssessment(payload);
     },
     onSuccess: () => {
-      // Invalidate class assessments query to refetch updated data
+
       if (selectedClassId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
       }
@@ -577,20 +577,20 @@ const LabsPage = () => {
         return;
       }
 
-      // Fetch all course elements for the class
+
       const courseElementsRes = await courseElementService.getCourseElements({
         pageNumber: 1,
         pageSize: 1000,
       });
 
-      // Fetch all class assessments
+
       const classAssessmentRes = await classAssessmentService.getClassAssessments({
         classId: Number(selectedClassId),
         pageNumber: 1,
         pageSize: 1000,
       });
 
-      // Filter only labs
+
       const labElements = courseElementsRes.filter(ce => {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
         return classAssessment && classAssessment.classId === Number(selectedClassId) && isLab(ce);
@@ -598,20 +598,20 @@ const LabsPage = () => {
 
       const reportData: GradeReportData[] = [];
 
-      // Process each lab
+
       for (const courseElement of labElements) {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === courseElement.id);
         if (!classAssessment) continue;
 
-        // Fetch all students in the class
+
         const allStudents = await classService.getStudentsInClass(Number(selectedClassId)).catch(() => []);
-        
-        // Fetch submissions for this class assessment
+
+
         const submissions = await submissionService.getSubmissionList({
           classAssessmentId: classAssessment.id,
         }).catch(() => []);
 
-        // Create a map of studentId to submission for quick lookup
+
         const submissionMap = new Map<number, Submission>();
         for (const submission of submissions) {
           if (submission.studentId) {
@@ -619,21 +619,21 @@ const LabsPage = () => {
           }
         }
 
-        // Fetch questions and rubrics ONCE per course element
+
         let questions: any[] = [];
         const rubrics: { [questionId: number]: any[] } = {};
 
         try {
           const assessmentTemplateId = classAssessment.assessmentTemplateId;
           if (assessmentTemplateId !== null) {
-            // Fetch papers
+
             const papersRes = await assessmentPaperService.getAssessmentPapers({
               assessmentTemplateId: assessmentTemplateId,
               pageNumber: 1,
               pageSize: 100,
             });
 
-            // Fetch questions for each paper
+
             for (const paper of papersRes.items) {
               const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
                 assessmentPaperId: paper.id,
@@ -642,7 +642,7 @@ const LabsPage = () => {
               });
               questions = [...questions, ...questionsRes.items];
 
-              // Fetch rubrics for each question
+
               for (const question of questionsRes.items) {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
                   assessmentQuestionId: question.id,
@@ -657,7 +657,7 @@ const LabsPage = () => {
           console.error(`Failed to fetch questions/rubrics for lab ${courseElement.id}:`, err);
         }
 
-        // Process ALL students in the class
+
         for (const student of allStudents) {
           const submission = submissionMap.get(student.studentId) || null;
           let gradingSession = null;
@@ -669,10 +669,10 @@ const LabsPage = () => {
                 submissionId: submission.id,
               });
               if (gradingSessionsResult.items.length > 0) {
-                gradingSession = gradingSessionsResult.items.sort((a, b) => 
+                gradingSession = gradingSessionsResult.items.sort((a, b) =>
                   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 )[0];
-                
+
                 const gradeItemsResult = await gradeItemService.getGradeItems({
                   gradingSessionId: gradingSession.id,
                 });
@@ -683,7 +683,7 @@ const LabsPage = () => {
             }
           }
 
-          // Create a submission object if it doesn't exist
+
           const submissionData: Submission = submission || {
             id: 0,
             studentId: student.studentId,
@@ -734,13 +734,13 @@ const LabsPage = () => {
   };
 
   const handleDeadlineSave = async (
-    courseElementId: number, 
-    startDate: dayjs.Dayjs | null, 
+    courseElementId: number,
+    startDate: dayjs.Dayjs | null,
     endDate: dayjs.Dayjs | null
   ) => {
     if (!startDate || !endDate || !selectedClassId) return;
 
-    // Validate dates - only check start < end
+
     if (startDate.isAfter(endDate) || startDate.isSame(endDate)) {
       message.error("Start date must be before end date");
       return;
@@ -750,7 +750,7 @@ const LabsPage = () => {
     const lab = labs.find(l => l.id === courseElementId);
     const matchingTemplate = templates.find(t => t.courseElementId === courseElementId);
 
-    // If classAssessment exists, update it
+
     if (classAssessment) {
       updateDeadlineMutation.mutate({
         classAssessmentId: classAssessment.id,
@@ -762,7 +762,7 @@ const LabsPage = () => {
         },
         });
     } else {
-      // If classAssessment doesn't exist, create a new one
+
       if (!matchingTemplate) {
         message.error("Assessment template not found. Cannot create deadline.");
         return;
@@ -826,27 +826,27 @@ const LabsPage = () => {
         >
           {labs.map((lab) => {
             const classAssessment = classAssessments.get(lab.id);
-            // Only show template if it's approved (templates state already contains only approved templates)
+
             let matchingTemplate: AssessmentTemplate | undefined;
             if (classAssessment?.assessmentTemplateId) {
-              // Check if the classAssessment's template is in the approved templates list
+
               matchingTemplate = templates.find(
                 (t) => t.id === classAssessment.assessmentTemplateId
               );
             } else {
-              // Check if there's an approved template directly linked to this course element
+
               matchingTemplate = templates.find(
                 (t) => t.courseElementId === lab.id
               );
             }
-            
-            // Only show classAssessment if it has an approved template
-            const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id 
-              ? classAssessment 
+
+
+            const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
+              ? classAssessment
               : undefined;
-            
+
             const labSubmissions = approvedClassAssessment ? (submissions.get(lab.id) || []) : [];
-            
+
             return (
               <Panel
                 key={lab.id}
@@ -866,8 +866,8 @@ const LabsPage = () => {
                   </div>
                 }
               >
-                <LabDetailItem 
-                  lab={lab} 
+                <LabDetailItem
+                  lab={lab}
                   template={matchingTemplate}
                   classAssessment={approvedClassAssessment}
                   submissions={labSubmissions}

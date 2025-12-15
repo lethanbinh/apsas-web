@@ -4,12 +4,10 @@ import type { UserStats, UserGrowthData } from './types';
 import { getDefaultUserStats } from './defaultStats';
 
 export class UserStatsService {
-  /**
-   * Get user statistics
-   */
+
   async getUserStats(): Promise<UserStats> {
     try {
-      // Fetch all users (with pagination if needed)
+
       const { users, total } = await adminService.getAccountList(1, 1000);
 
       const now = new Date();
@@ -25,24 +23,24 @@ export class UserStatsService {
       let newThisMonth = 0;
       let active = 0;
 
-      // Filter out examiner accounts (role 4) before counting
+
       const filteredUsers = users.filter((user) => user.role !== 4);
 
       filteredUsers.forEach((user) => {
-        // Count by role
+
         if (user.role === ROLES.ADMIN) byRole.admin++;
         else if (user.role === ROLES.LECTURER) byRole.lecturer++;
         else if (user.role === ROLES.STUDENT) byRole.student++;
         else if (user.role === ROLES.HOD) byRole.hod++;
 
-        // Count active (assuming all users in list are active)
+
         active++;
       });
 
-      // Note: newThisMonth calculation would require createdAt field in User interface
-      // For now, we'll set it to 0 or calculate from a different source if available
 
-      // Calculate detailed stats
+
+
+
       const byGender = {
         male: 0,
         female: 0,
@@ -58,20 +56,20 @@ export class UserStatsService {
       let neverLoggedIn = 0;
 
       filteredUsers.forEach((user) => {
-        // Count by gender
+
         if (user.gender === 0) byGender.male++;
         else if (user.gender === 1) byGender.female++;
         else byGender.other++;
 
-        // Count avatars
+
         if (user.avatar) usersWithAvatar++;
         else usersWithoutAvatar++;
 
-        // Count phone numbers
+
         if (user.phoneNumber && user.phoneNumber.trim() !== '') usersWithPhone++;
         else usersWithoutPhone++;
 
-        // Calculate age if dateOfBirth is available
+
         if (user.dateOfBirth) {
           try {
             const birthDate = new Date(user.dateOfBirth);
@@ -81,18 +79,18 @@ export class UserStatsService {
               ageCount++;
             }
           } catch (e) {
-            // Invalid date
+
           }
         }
 
-        // Note: inactive and neverLoggedIn would require lastLoginDate field
-        // For now, we'll set them to 0 or calculate from a different source if available
+
+
       });
 
       const averageAge = ageCount > 0 ? Math.round(totalAge / ageCount) : undefined;
 
       return {
-        total: filteredUsers.length, // Exclude examiner accounts from total
+        total: filteredUsers.length,
         byRole,
         newThisMonth,
         active,
@@ -115,14 +113,14 @@ export class UserStatsService {
     try {
       const { users } = await adminService.getAccountList(1, 1000);
 
-      // Group by month
-      // Note: Since User interface doesn't have createdAt, we'll use current month as placeholder
-      // In production, this should be calculated from actual createdAt timestamps
+
+
+
       const monthlyData: Record<string, { total: number; students: number; lecturers: number }> = {};
       const now = new Date();
       const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-      // Aggregate all users into current month (since we don't have createdAt)
+
       monthlyData[currentMonthKey] = { total: 0, students: 0, lecturers: 0 };
 
       users.forEach((user) => {
@@ -137,16 +135,14 @@ export class UserStatsService {
           ...data,
         }))
         .sort((a, b) => a.month.localeCompare(b.month))
-        .slice(-12); // Last 12 months
+        .slice(-12);
     } catch (error) {
       console.error('Error fetching user growth data:', error);
       return [];
     }
   }
 
-  /**
-   * Get detailed user statistics
-   */
+
   async getDetailedUserStats(): Promise<UserStats> {
     return this.getUserStats();
   }

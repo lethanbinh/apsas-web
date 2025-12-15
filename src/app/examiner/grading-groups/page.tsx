@@ -53,7 +53,7 @@ import styles from "./GradingGroups.module.css";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
+
 const toVietnamTime = (dateString: string | null) => {
   if (!dateString) return null;
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
@@ -74,25 +74,25 @@ const GradingGroupsPageContent = () => {
 
   const { message } = App.useApp();
 
-  // Fetch grading groups using TanStack Query
+
   const { data: allGroups = [], isLoading: isLoadingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.all,
     queryFn: () => gradingGroupService.getGradingGroups({}),
   });
 
-  // Fetch lecturers
+
   const { data: allLecturers = [] } = useQuery({
     queryKey: queryKeys.lecturers.list(),
     queryFn: () => lecturerService.getLecturerList(),
   });
 
-  // Fetch semesters
+
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
   });
 
-  // Fetch submissions for all grading groups
+
   const gradingGroupIds = allGroups.map(g => g.id);
   const { data: allSubmissionsData } = useQuery({
     queryKey: ['submissions', 'byGradingGroups', gradingGroupIds],
@@ -109,12 +109,12 @@ const GradingGroupsPageContent = () => {
 
   const allSubmissions = allSubmissionsData || [];
 
-      // Get unique classAssessmentIds from submissions
+
       const classAssessmentIds = Array.from(
     new Set(allSubmissions.filter(s => s.classAssessmentId).map(s => s.classAssessmentId!))
   );
 
-  // Fetch class assessments
+
   const { data: allClassAssessmentsRes } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -122,7 +122,7 @@ const GradingGroupsPageContent = () => {
         pageSize: 1000,
     }),
   });
-      
+
   const allClassAssessments = useMemo(() => {
     const map = new Map<number, ClassAssessment>();
     (allClassAssessmentsRes?.items || []).forEach(ca => {
@@ -133,7 +133,7 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [allClassAssessmentsRes, classAssessmentIds]);
 
-  // Get unique assessmentTemplateIds
+
       const assessmentTemplateIdsFromClassAssessments = Array.from(
     new Set(Array.from(allClassAssessments.values()).map(ca => ca.assessmentTemplateId))
       );
@@ -144,7 +144,7 @@ const GradingGroupsPageContent = () => {
         new Set([...assessmentTemplateIdsFromClassAssessments, ...assessmentTemplateIdsFromGroups])
       );
 
-  // Fetch assessment templates
+
   const { data: allAssessmentTemplatesRes } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -163,12 +163,12 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [allAssessmentTemplatesRes, allAssessmentTemplateIds]);
 
-  // Get unique courseElementIds
+
       const courseElementIds = Array.from(
     new Set(Array.from(allAssessmentTemplates.values()).map(t => t.courseElementId))
   );
 
-  // Fetch course elements
+
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -187,7 +187,7 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [allCourseElementsRes, courseElementIds]);
 
-  // Map grading groups to semester codes
+
   const gradingGroupToSemesterMap = useMemo(() => {
     const map = new Map<number, string>();
     allGroups.forEach(group => {
@@ -205,10 +205,10 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [allGroups, allAssessmentTemplates, allCourseElements]);
 
-  // Get unique classIds
+
   const classIds = Array.from(new Set(Array.from(allClassAssessments.values()).map(ca => ca.classId)));
 
-      // Fetch classes
+
   const { data: classesData } = useQuery({
     queryKey: ['classes', 'byIds', classIds],
     queryFn: async () => {
@@ -230,13 +230,13 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [classesData]);
 
-  const loading = isLoadingGroups && allGroups.length === 0; // Only show loading if fetching and no data yet
-  const error = null; // useQuery handles errors
+  const loading = isLoadingGroups && allGroups.length === 0;
+  const error = null;
 
-  // Map submission to enriched data with submission URL
+
   const enrichedSubmissionsMap = useMemo(() => {
     const map = new Map<number, Submission & { submissionUrl?: string; fileName?: string }>();
-    
+
     allSubmissions.forEach(sub => {
       map.set(sub.id, {
         ...sub,
@@ -248,22 +248,22 @@ const GradingGroupsPageContent = () => {
     return map;
   }, [allSubmissions]);
 
-  // Get available semesters from semesterService, sorted from newest to oldest
+
   const availableSemesters = useMemo(() => {
-    // Sort by startDate descending (newest first)
+
     const sorted = [...allSemesters].sort((a, b) => {
       const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
       const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
-      return dateB - dateA; // Descending order (newest first)
+      return dateB - dateA;
     });
     return sorted.map(sem => sem.semesterCode);
   }, [allSemesters]);
 
-  // Set default to current semester (semester that is currently active)
+
   useEffect(() => {
     if (allSemesters.length > 0 && selectedSemester === null) {
       const now = new Date();
-      // Find the current semester (where now is between startDate and endDate)
+
       const currentSemester = allSemesters.find((sem) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
         const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
@@ -273,11 +273,11 @@ const GradingGroupsPageContent = () => {
       if (currentSemester) {
         setSelectedSemester(currentSemester.semesterCode);
       } else {
-        // If no current semester, fallback to latest semester
+
         const latestSemester = [...allSemesters].sort((a, b) => {
           const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
           const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
-          return dateB - dateA; // Descending order (newest first)
+          return dateB - dateA;
         })[0];
         if (latestSemester) {
           setSelectedSemester(latestSemester.semesterCode);
@@ -286,12 +286,12 @@ const GradingGroupsPageContent = () => {
     }
   }, [allSemesters, selectedSemester]);
 
-  // Get available courses from course elements (filtered by semester if selected)
+
   const availableCourses = useMemo(() => {
     const courseMap = new Map<number, { id: number; name: string; code: string }>();
     allCourseElements.forEach(ce => {
       if (ce.semesterCourse?.course && ce.semesterCourse?.semester) {
-        // Filter by semester if selected (not null and not "all")
+
         if (selectedSemester !== null && selectedSemester !== "all" && ce.semesterCourse.semester.semesterCode !== selectedSemester) {
           return;
         }
@@ -308,7 +308,7 @@ const GradingGroupsPageContent = () => {
     return Array.from(courseMap.values());
   }, [allCourseElements, selectedSemester]);
 
-  // Get available templates from assessment templates
+
   const availableTemplates = useMemo(() => {
     return Array.from(allAssessmentTemplates.values()).map(t => ({
       id: t.id,
@@ -316,7 +316,7 @@ const GradingGroupsPageContent = () => {
     }));
   }, [allAssessmentTemplates]);
 
-  // Get available lecturers
+
   const availableLecturers = useMemo(() => {
     return allLecturers.map(l => ({
       id: Number(l.lecturerId),
@@ -325,7 +325,7 @@ const GradingGroupsPageContent = () => {
     }));
   }, [allLecturers]);
 
-  // Group assignments by Course -> Template -> Lecturer
+
   const groupedByCourse = useMemo(() => {
     const courseMap = new Map<number, {
       courseId: number;
@@ -343,51 +343,51 @@ const GradingGroupsPageContent = () => {
       }>;
     }>();
 
-    // Loop qua TẤT CẢ groups
+
     allGroups.forEach((group) => {
-      // Get assessment template
+
       const template = group.assessmentTemplateId
         ? allAssessmentTemplates.get(Number(group.assessmentTemplateId))
         : null;
 
       if (!template) return;
 
-      // Get course element
+
       const courseElement = allCourseElements.get(Number(template.courseElementId));
       if (!courseElement?.semesterCourse?.course) return;
 
       const course = courseElement.semesterCourse.course;
       const courseId = course.id;
 
-      // Get semester code for this group
+
       const groupSemester = gradingGroupToSemesterMap.get(Number(group.id));
 
-      // Filter by selected semester
+
       if (selectedSemester !== null && selectedSemester !== "all") {
         if (!groupSemester || groupSemester !== selectedSemester) {
           return;
         }
       }
 
-      // Filter by selected course
+
       if (selectedCourseId !== null && courseId !== selectedCourseId) {
         return;
       }
 
-      // Filter by selected template
+
       if (selectedTemplateId !== null && template.id !== selectedTemplateId) {
         return;
       }
 
-      // Filter by selected lecturer
+
       if (selectedLecturerId !== null && group.lecturerId !== selectedLecturerId) {
         return;
       }
 
-      // Get enriched submissions for this group
+
       const groupSubmissions = allSubmissions.filter(s => s.gradingGroupId === group.id);
-      
-      // Convert to enriched format
+
+
       const subs = groupSubmissions.map((sub) => {
         const enriched = enrichedSubmissionsMap.get(sub.id);
         return {
@@ -410,7 +410,7 @@ const GradingGroupsPageContent = () => {
         };
       });
 
-      // Initialize course if not exists
+
       if (!courseMap.has(courseId)) {
         courseMap.set(courseId, {
           courseId,
@@ -423,7 +423,7 @@ const GradingGroupsPageContent = () => {
       const courseData = courseMap.get(courseId)!;
       const templateId = template.id;
 
-      // Initialize template if not exists
+
       if (!courseData.templates.has(templateId)) {
         courseData.templates.set(templateId, {
           templateId,
@@ -435,7 +435,7 @@ const GradingGroupsPageContent = () => {
       const templateData = courseData.templates.get(templateId)!;
       const lecturerId = group.lecturerId;
 
-      // Initialize lecturer if not exists
+
       if (!templateData.lecturers.has(lecturerId)) {
         templateData.lecturers.set(lecturerId, {
           lecturerId,
@@ -449,7 +449,7 @@ const GradingGroupsPageContent = () => {
       lecturerData.groups.push({ ...group, subs, semesterCode: groupSemester });
     });
 
-    // Convert to array structure
+
     return Array.from(courseMap.values()).map(course => ({
       ...course,
       templates: Array.from(course.templates.values()).map(template => ({
@@ -482,13 +482,13 @@ const GradingGroupsPageContent = () => {
     setSelectedGroup(null);
   };
 
-  // Mutation for deleting grading group
+
   const deleteGradingGroupMutation = useMutation({
     mutationFn: async (groupId: number) => {
       return gradingGroupService.deleteGradingGroup(groupId);
     },
     onSuccess: () => {
-      // Invalidate queries to refetch updated data
+
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
       message.success("Assignment deleted successfully");
@@ -504,7 +504,7 @@ const GradingGroupsPageContent = () => {
     setIsCreateModalOpen(false);
     setIsAssignModalOpen(false);
     setSelectedGroup(null);
-    // Queries will automatically refetch
+
   };
 
   const handleDeleteGroup = async (group: GradingGroup) => {
@@ -520,11 +520,11 @@ const GradingGroupsPageContent = () => {
     try {
       message.loading("Preparing download...", 0);
 
-      // Dynamic import JSZip
+
       const JSZip = (await import("jszip")).default;
       const zip = new JSZip();
 
-      // Flatten all submissions from nested structure
+
       const allSubmissionsWithGroups: Array<{
         submission: any;
         gradingGroup: GradingGroup;
@@ -551,7 +551,7 @@ const GradingGroupsPageContent = () => {
         });
       });
 
-      // Group by course and semester
+
       const courseSemesterMap = new Map<string, {
         courseName: string;
         courseCode: string;
@@ -573,15 +573,15 @@ const GradingGroupsPageContent = () => {
         courseSemesterMap.get(key)!.submissions.push(item);
       });
 
-      // Process each group (course + semester)
+
       for (const group of courseSemesterMap.values()) {
-        // Create folder name: CourseName_SemesterCode
+
         const folderName = `${group.courseName.replace(/[^a-zA-Z0-9]/g, "_")}_${group.semesterCode}`;
         const groupFolder = zip.folder(folderName);
 
         if (!groupFolder) continue;
 
-        // Get unique grading groups for this course+semester
+
         const uniqueGradingGroups = new Map<number, GradingGroup>();
         group.submissions.forEach((item) => {
           if (item.gradingGroup && !uniqueGradingGroups.has(item.gradingGroup.id)) {
@@ -589,12 +589,12 @@ const GradingGroupsPageContent = () => {
           }
         });
 
-        // Generate requirement Word file for each grading group (template)
+
         for (const [gradingGroupId, gradingGroup] of uniqueGradingGroups) {
           if (!gradingGroup.assessmentTemplateId) continue;
 
           try {
-            // Fetch template details
+
             const templateRes = await assessmentTemplateService.getAssessmentTemplates({
               pageNumber: 1,
               pageSize: 1000,
@@ -603,7 +603,7 @@ const GradingGroupsPageContent = () => {
 
             if (!template) continue;
 
-            // Fetch papers
+
             const papersRes = await assessmentPaperService.getAssessmentPapers({
               assessmentTemplateId: gradingGroup.assessmentTemplateId,
               pageNumber: 1,
@@ -611,7 +611,7 @@ const GradingGroupsPageContent = () => {
             });
             const papers = papersRes.items;
 
-            // Fetch questions and rubrics for each paper
+
             const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
             const rubricsMap: { [questionId: number]: RubricItem[] } = {};
 
@@ -636,7 +636,7 @@ const GradingGroupsPageContent = () => {
               }
             }
 
-            // Generate Word document
+
             const docxModule = await import("docx");
             const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
 
@@ -655,7 +655,7 @@ const GradingGroupsPageContent = () => {
             }
             docSections.push(new Paragraph({ text: " " }));
 
-            // Add papers, questions, and rubrics
+
             for (const paper of papers) {
               docSections.push(
                 new Paragraph({
@@ -705,7 +705,7 @@ const GradingGroupsPageContent = () => {
                   docSections.push(new Paragraph({ text: question.questionSampleOutput }));
                 }
 
-                // Add rubrics
+
                 const rubrics = rubricsMap[question.id] || [];
                 if (rubrics.length > 0) {
                   docSections.push(new Paragraph({ text: " " }));
@@ -768,7 +768,7 @@ const GradingGroupsPageContent = () => {
             if (requirementFolder) {
               requirementFolder.file(`${templateName.replace(/[^a-zA-Z0-9]/g, "_")}_Requirement.docx`, wordBlob);
 
-              // Also download assessment files if any
+
               try {
                 const filesRes = await assessmentFileService.getFilesForTemplate({
                   assessmentTemplateId: gradingGroup.assessmentTemplateId,
@@ -798,7 +798,7 @@ const GradingGroupsPageContent = () => {
           }
         }
 
-        // Download submissions for this group
+
         const submissionsFolder = groupFolder.folder("Submissions");
         if (submissionsFolder) {
           for (const item of group.submissions) {
@@ -834,7 +834,7 @@ const GradingGroupsPageContent = () => {
         }
       }
 
-      // Generate and download ZIP
+
       const blob = await zip.generateAsync({ type: "blob" });
       const fileSaver = (await import("file-saver")).default;
       fileSaver.saveAs(blob, `Teacher_Assignment_Submissions_${new Date().getTime()}.zip`);
@@ -934,7 +934,7 @@ const GradingGroupsPageContent = () => {
           }}
         />
 
-        {/* Main Content - Flat Table Design */}
+        {}
           <Card
             title={
               <Space>

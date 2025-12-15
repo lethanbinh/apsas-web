@@ -1,6 +1,6 @@
-/* Global styles for Ant Design components in Tasks module */
 
-/* Fix Card title truncation for Ant Design Card */
+
+
 .ant-card-head {
   display: flex !important;
   align-items: center;
@@ -34,7 +34,7 @@
   margin-left: auto;
 }
 
-/* Fix Ant Design Menu item text truncation */
+
 .ant-menu-item,
 .ant-menu-submenu-title {
   overflow: visible !important;
@@ -52,7 +52,7 @@
   max-width: 100%;
 }
 
-/* Ensure menu items have enough space for buttons */
+
 .ant-menu-inline .ant-menu-item,
 .ant-menu-inline .ant-menu-submenu-title {
   padding-right: 40px !important;

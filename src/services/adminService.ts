@@ -1,9 +1,9 @@
 import { apiService } from './api';
 import { API_ENDPOINTS } from '@/lib/constants';
-import { 
-  User, 
-  AccountListResponse, 
-  PaginatedResponse, 
+import {
+  User,
+  AccountListResponse,
+  PaginatedResponse,
   Semester,
   ApiApprovalItem,
   ApprovalListResponse,
@@ -20,15 +20,15 @@ interface GetAccountListResponse {
   total: number;
 }
 
-// Interface cho API /Semester (trả về mảng)
+
 interface RawSemesterApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: string[];
-  result: Semester[]; 
+  result: Semester[];
 }
 
-// Interface cho API /AssessmentTemplate/list (trả về object phân trang)
+
 interface RawTemplateListResponse {
   statusCode: number;
   isSuccess: boolean;
@@ -54,7 +54,7 @@ export class AdminService {
       `${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}/profile`,
       userData
     );
-    
+
     if (response.result) {
       return response.result as User;
     }
@@ -88,17 +88,17 @@ export class AdminService {
     });
     return response as Blob;
   }
-  
+
   async getPaginatedSemesters(pageNumber: number, pageSize: number): Promise<Semester[]> {
     const response = await apiService.get<RawSemesterApiResponse>(
       `${API_ENDPOINTS.SEMESTER.PAGINATED_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`
     );
-    
+
     if (response && response.result && Array.isArray(response.result)) {
        console.log("Fetched paginated semesters, returning items array:", response.result);
        return response.result;
     }
-    
+
     console.warn("Unexpected semester response structure, returning empty array.");
     return [];
   }
@@ -129,25 +129,25 @@ export class AdminService {
     return response;
   }
 
-  // --- CÁC HÀM CHO HOD ---
+
 
   async getApprovalList(pageNumber: number, pageSize: number): Promise<PaginatedResponse<ApiApprovalItem>> {
     const response = await apiService.get<ApprovalListResponse>(
       `${API_ENDPOINTS.HOD.APPROVAL_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`
     );
-    
+
     if (response && response.result && Array.isArray(response.result.items)) {
       return response.result;
     }
-    
+
     console.error("Unexpected API response structure in getApprovalList:", response);
     throw new Error("Invalid data structure received from server.");
   }
 
-  // HÀM MỚI (trả về object phân trang)
+
   async getAssessmentTemplateList(pageNumber: number = 1, pageSize: number = 100): Promise<PaginatedResponse<ApiAssessmentTemplate>> {
     console.log("Fetching template list...");
-    const response = await apiService.get<RawTemplateListResponse>( // Dùng RawTemplateListResponse
+    const response = await apiService.get<RawTemplateListResponse>(
       `${API_ENDPOINTS.HOD.ASSESSMENT_TEMPLATE_LIST}?pageNumber=${pageNumber}&pageSize=${pageSize}`
     );
 
@@ -155,18 +155,18 @@ export class AdminService {
       console.error("Failed to fetch assessment templates or invalid data structure:", response);
       throw new Error("Failed to fetch assessment templates or invalid data structure.");
     }
-    
+
     console.log(`Found ${response.result.items.length} templates`);
     return response.result;
   }
-  
-  // HÀM MỚI
+
+
   async getRubricItemsByQuestionId(questionId: number): Promise<ApiRubricItem[]> {
     console.log(`Fetching rubrics for questionId: ${questionId}`);
     const response = await apiService.get<RubricItemListResponse>(
       `${API_ENDPOINTS.HOD.RUBRIC_ITEM_BY_QUESTION}/${questionId}`
     );
-    
+
     if (response && response.isSuccess && Array.isArray(response.result)) {
        console.log(`Found ${response.result.length} rubrics for question ${questionId}`);
       return response.result;
@@ -175,12 +175,12 @@ export class AdminService {
     if (!response.isSuccess) {
       console.error("API error fetching rubrics:", response.errorMessages);
     }
-    return []; 
+    return [];
   }
 
-  // HÀM MỚI
+
   async updateAssignRequestStatus(
-    assignRequestId: number, 
+    assignRequestId: number,
     payload: ApiAssignRequestUpdatePayload
   ): Promise<void> {
     console.log(`Updating AssignRequest ${assignRequestId} with status: ${payload.status}`);

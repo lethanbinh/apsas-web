@@ -20,7 +20,7 @@ interface ViewExamModalProps {
 }
 
 export function ViewExamModal({ visible, onClose, submission }: ViewExamModalProps) {
-  // Determine assessmentTemplateId
+
   const classIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
@@ -57,7 +57,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     return null;
   }, [submission, gradingGroupsData, classAssessmentsData]);
 
-  // Fetch papers
+
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -70,7 +70,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
 
   const papers = papersData?.items || [];
 
-  // Fetch questions for each paper
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -93,7 +93,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     return questionsMap;
   }, [questionsQueries, papers]);
 
-  // Fetch rubrics for each question
+
   const allQuestions = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {

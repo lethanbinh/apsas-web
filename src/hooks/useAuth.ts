@@ -22,14 +22,14 @@ export const useAuth = () => {
         setIsInitialized(true);
         return;
       }
-      
+
       const token = getStorageItem('auth_token');
       const userDataStr = getStorageItem('user_data');
-      
+
       console.log('🔍 useAuth - Token exists:', !!token);
       console.log('🔍 useAuth - UserData exists:', !!userDataStr);
       console.log('🔍 useAuth - isAuthenticated:', isAuthenticated);
-      
+
       if (token && !isAuthenticated) {
         console.log('🔄 Fetching user profile from server...');
         dispatch(fetchUserProfile());
@@ -50,8 +50,8 @@ export const useAuth = () => {
       console.log('👤 User ID:', result.user?.id);
       console.log('👤 User role:', result.user?.role);
       console.log('👤 User full name:', result.user?.fullName);
-      
-      // Fetch latest user profile from server using the correct API
+
+
       console.log('🔄 Fetching latest user profile from server...');
       try {
         await dispatch(fetchUserProfile());
@@ -59,11 +59,11 @@ export const useAuth = () => {
       } catch (profileError) {
         console.warn('⚠️ Could not fetch profile, using login response data:', profileError);
       }
-      
+
       return result;
     } catch (error) {
-      // Error is already handled and displayed in LoginForm
-      // Just rethrow to let LoginForm handle the UI feedback
+
+
       throw error;
     }
   };

@@ -31,7 +31,7 @@ export const SearchAndActionsBar = ({
   importLoading,
 }: SearchAndActionsBarProps) => {
   const { notification } = App.useApp();
-  
+
   const uploadProps: UploadProps = {
     beforeUpload: (file) => {
       const isExcel = file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
@@ -46,7 +46,7 @@ export const SearchAndActionsBar = ({
         return Upload.LIST_IGNORE;
       }
       onImportFile(file);
-      return false; // Prevent auto upload
+      return false;
     },
     showUploadList: false,
     maxCount: 1,

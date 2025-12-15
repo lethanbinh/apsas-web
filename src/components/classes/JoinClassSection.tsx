@@ -4,7 +4,7 @@ import { Col, Row, Typography } from "antd";
 import Image from "next/image";
 import { Button } from "../ui/Button";
 
-// Đảm bảo đường dẫn này CHÍNH XÁC
+
 import styles from "./JoinClassSection.module.css";
 
 const { Title, Paragraph, Text } = Typography;
@@ -16,7 +16,7 @@ export default function JoinClassSection() {
         <Col xs={24} lg={12}>
           <Title
             level={2}
-            // Style inline cho component AntD
+
             style={{
               fontWeight: 700,
               marginBottom: "20px",
@@ -28,7 +28,7 @@ export default function JoinClassSection() {
           </Title>
 
           <Paragraph
-            // Style inline cho component AntD
+
             style={{
               fontSize: "1.1rem",
               marginBottom: "30px",
@@ -44,7 +44,7 @@ export default function JoinClassSection() {
 
         <Col xs={24} lg={10}>
           <div
-            // Dùng CSS Module cho div
+
             className={styles.imageWrapper}
           >
             <Image
@@ -52,7 +52,7 @@ export default function JoinClassSection() {
               alt="Laptop showing an online class"
               height={523}
               width={578}
-              // Dùng CSS Module cho next/image
+
               className={styles.image}
             />
           </div>

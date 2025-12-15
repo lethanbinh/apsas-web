@@ -106,7 +106,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       setExportLoading(true);
       const wb = XLSX.utils.book_new();
 
-      // Overview Statistics Sheet
+
       const overviewData = [
         ["Metric", "Value"],
         ["Total Students", stats.totalStudents],
@@ -126,7 +126,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       const ws1 = XLSX.utils.aoa_to_sheet(overviewData);
       XLSX.utils.book_append_sheet(wb, ws1, "Overview");
 
-      // Grade Distribution Sheet
+
       const gradeDistData = [
         ["Grade", "Count"],
         ["A (>= 8.5)", stats.gradeDistribution.A],
@@ -138,7 +138,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       const ws2 = XLSX.utils.aoa_to_sheet(gradeDistData);
       XLSX.utils.book_append_sheet(wb, ws2, "Grade Distribution");
 
-      // Average Grade by Class Sheet
+
       const classData = [
         ["Class Code", "Course Name", "Average Grade", "Student Count", "Pass Count", "Fail Count"],
         ...stats.averageGradeByClass.map((c) => [
@@ -153,7 +153,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       const ws3 = XLSX.utils.aoa_to_sheet(classData);
       XLSX.utils.book_append_sheet(wb, ws3, "By Class");
 
-      // Top Students Sheet
+
       const topStudentsData = [
         ["Student Code", "Student Name", "Average Grade", "Class Code", "Course Name"],
         ...stats.topStudents.map((s) => [
@@ -167,7 +167,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       const ws4 = XLSX.utils.aoa_to_sheet(topStudentsData);
       XLSX.utils.book_append_sheet(wb, ws4, "Top Students");
 
-      // Top Classes Sheet
+
       const topClassesData = [
         ["Class Code", "Course Name", "Average Grade", "Pass Rate (%)", "Student Count"],
         ...stats.topClasses.map((c) => [
@@ -181,7 +181,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
       const ws5 = XLSX.utils.aoa_to_sheet(topClassesData);
       XLSX.utils.book_append_sheet(wb, ws5, "Top Classes");
 
-      // Export
+
       const fileName = `Academic_Performance_${new Date().toISOString().split("T")[0]}.xlsx`;
       XLSX.writeFile(wb, fileName);
       message.success("Excel file exported successfully");
@@ -193,7 +193,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
     }
   };
 
-  // Grade distribution chart data
+
   const gradeDistributionData = useMemo(() => {
     if (!stats) return [];
     return [
@@ -205,7 +205,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
     ];
   }, [stats]);
 
-  // Class performance chart data
+
   const classPerformanceData = useMemo(() => {
     if (!stats) return [];
     return stats.averageGradeByClass.slice(0, 10).map((c) => ({
@@ -362,7 +362,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
         </Button>
       </div>
 
-      {/* Key Metrics */}
+      {}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} md={6}>
           <Card>
@@ -450,7 +450,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
         </Col>
       </Row>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} md={12}>
           <Card title="Grade Distribution">
@@ -492,7 +492,7 @@ const AcademicPerformanceTab: React.FC<AcademicPerformanceTabProps> = ({
         </Col>
       </Row>
 
-      {/* Tables */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="Average Grade by Class">

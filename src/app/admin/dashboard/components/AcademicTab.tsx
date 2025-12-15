@@ -85,7 +85,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       const wb = XLSX.utils.book_new();
       const exportData: any[] = [];
 
-      // Section 1: Key Statistics
+
       exportData.push(["ACADEMIC - KEY STATISTICS"]);
       exportData.push(["Metric", "Value"]);
       exportData.push(["Total Semesters", overview.academic.totalSemesters]);
@@ -98,7 +98,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       exportData.push(["Total Students (All Classes)", classes.reduce((sum, cls) => sum + (parseInt(cls.studentCount || "0", 10) || 0), 0)]);
       exportData.push([]);
 
-      // Section 2: Semester Activity
+
       if (chartData?.semesterActivity && chartData.semesterActivity.length > 0) {
         exportData.push(["SEMESTER ACTIVITY"]);
         exportData.push(["Semester", "Classes", "Courses", "Assessments", "Submissions"]);
@@ -108,7 +108,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 3: Classes by Semester
+
       if (overview.academic.classesBySemester && overview.academic.classesBySemester.length > 0) {
         exportData.push(["CLASSES BY SEMESTER"]);
         exportData.push(["Semester Code", "Class Count", "Student Count"]);
@@ -118,7 +118,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 4: All Semesters
+
       exportData.push(["ALL SEMESTERS"]);
       exportData.push(["No", "ID", "Semester Code", "Academic Year", "Start Date", "End Date", "Note", "Status"]);
       filteredSemesters.forEach((sem, index) => {
@@ -135,7 +135,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 5: All Classes
+
       exportData.push(["ALL CLASSES"]);
       exportData.push(["No", "ID", "Class Code", "Course Name", "Semester", "Lecturer", "Students"]);
       filteredClasses.forEach((cls, index) => {
@@ -151,7 +151,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 6: Top Classes by Students
+
       if (overview.academic.topClassesByStudents && overview.academic.topClassesByStudents.length > 0) {
         exportData.push(["TOP CLASSES BY STUDENTS"]);
         exportData.push(["Rank", "Class Code", "Course Name", "Lecturer", "Students"]);
@@ -208,11 +208,11 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
     }
   };
 
-  // Filter semesters
+
   const filteredSemesters = useMemo(() => {
     let filtered = [...semesters];
 
-    // Apply global semester filter
+
     if (filters?.semesterCode) {
       filtered = filtered.filter((sem) => sem.semesterCode === filters.semesterCode);
     }
@@ -232,7 +232,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         const endDate = dayjs(sem.endDate);
         const filterStart = semesterDateRange[0]!.startOf("day");
         const filterEnd = semesterDateRange[1]!.endOf("day");
-        // Check if semester overlaps with date range
+
         return (
           (startDate.isBefore(filterEnd) || startDate.isSame(filterEnd)) &&
           (endDate.isAfter(filterStart) || endDate.isSame(filterStart))
@@ -243,20 +243,20 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
     return filtered;
   }, [semesters, semesterSearch, semesterDateRange, filters?.semesterCode]);
 
-  // Filter classes
+
   const filteredClasses = useMemo(() => {
     let filtered = [...classes];
 
-    // Apply global filters
+
     if (filters?.classId) {
       filtered = filtered.filter((cls) => cls.id === filters.classId);
     }
     if (filters?.courseId) {
-      // Need to check courseId from class data - this might need to be fetched
-      // For now, filter by courseName if available
+
+
       filtered = filtered.filter((cls) => {
-        // This is a simplified filter - in reality, you'd need to map class to courseId
-        return true; // Placeholder - will need proper courseId mapping
+
+        return true;
       });
     }
     if (filters?.semesterCode) {
@@ -368,7 +368,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Academic Dashboard</Title>
@@ -384,7 +384,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         </Space>
       </Card>
 
-      {/* Academic Statistics Overview */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Semester & Course Statistics</Title>
       <Row gutter={[16, 16]}>
@@ -431,7 +431,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         </Row>
       </Card>
 
-      {/* Class Statistics */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Class Statistics</Title>
         <Row gutter={[16, 16]}>
@@ -479,7 +479,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         </Row>
       </Card>
 
-      {/* People Statistics */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>People Statistics</Title>
         <Row gutter={[16, 16]}>
@@ -527,7 +527,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
       </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="Semester Activity" loading={loading}>
@@ -574,7 +574,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         </Col>
       </Row>
 
-      {/* Top Classes */}
+      {}
       {overview.academic.topClassesByStudents && overview.academic.topClassesByStudents.length > 0 && (
         <Card title="Top Classes by Student Count">
           <Table
@@ -611,7 +611,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         </Card>
       )}
 
-      {/* Semesters Table */}
+      {}
       <Card
         title="All Semesters"
         loading={semestersLoading}
@@ -649,7 +649,7 @@ const AcademicTab: React.FC<AcademicTabProps> = ({
         />
       </Card>
 
-      {/* Classes Table */}
+      {}
       <Card
         title="All Classes"
         loading={classesLoading}

@@ -115,8 +115,8 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course name must be at least 2 characters!"));
                 }
-                
-                // Check for duplicate name in the same semester
+
+
                 if (!isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) => sc.course.name.toLowerCase().trim() === value.toLowerCase().trim()
@@ -127,11 +127,11 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                     );
                   }
                 }
-                
-                // When editing, exclude current course
+
+
                 if (isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
-                    (sc) => 
+                    (sc) =>
                       sc.course.name.toLowerCase().trim() === value.toLowerCase().trim() &&
                       sc.course.id !== initialData?.id
                   );
@@ -141,7 +141,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                     );
                   }
                 }
-                
+
                 return Promise.resolve();
               },
             },
@@ -163,16 +163,16 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course code must be at least 2 characters!"));
                 }
-                // Check for whitespace
+
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Course code cannot contain spaces!"));
                 }
-                // Only allow alphanumeric characters, underscore, and hyphen
+
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
-                
-                // Check for duplicate code in the same semester
+
+
                 if (!isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) => sc.course.code.toLowerCase().trim() === value.toLowerCase().trim()
@@ -183,11 +183,11 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                     );
                   }
                 }
-                
-                // When editing, exclude current course
+
+
                 if (isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
-                    (sc) => 
+                    (sc) =>
                       sc.course.code.toLowerCase().trim() === value.toLowerCase().trim() &&
                       sc.course.id !== initialData?.id
                   );
@@ -197,7 +197,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                     );
                   }
                 }
-                
+
                 return Promise.resolve();
               },
             },

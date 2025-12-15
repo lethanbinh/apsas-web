@@ -24,7 +24,7 @@ export function GradeItemHistoryModal({
   onClose,
   selectedGradeItem,
 }: GradeItemHistoryModalProps) {
-  // Fetch grade item history
+
   const { data: gradeItemHistoryData, isLoading: loadingGradeItemHistory } = useQuery({
     queryKey: ['gradeItemHistory', selectedGradeItem?.gradingSessionId, selectedGradeItem?.rubricItemDescription],
     queryFn: async () => {

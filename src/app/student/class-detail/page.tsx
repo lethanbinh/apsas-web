@@ -23,10 +23,10 @@ export default function ClassDetailPage() {
 
   if (isLoading && !classData) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
         minHeight: '100vh',
         backgroundColor: '#ffffff'
       }}>
@@ -37,7 +37,7 @@ export default function ClassDetailPage() {
 
   if (error || !classData) {
     return (
-      <div style={{ 
+      <div style={{
         minHeight: '100vh',
         backgroundColor: '#ffffff',
         padding: '24px'
@@ -48,7 +48,7 @@ export default function ClassDetailPage() {
   }
 
   return (
-    <div style={{ 
+    <div style={{
       minHeight: '100vh',
       backgroundColor: '#ffffff'
     }}>

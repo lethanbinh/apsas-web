@@ -116,10 +116,10 @@ export const ViewStudentsModal = ({
         description: "The student has been successfully added to the class.",
       });
 
-      // Refresh students list
+
       const updatedStudents = await studentManagementService.getStudentsInClass(classId);
       setStudents(updatedStudents);
-      
+
       setIsAddModalOpen(false);
       addForm.resetFields();
       if (onRefresh) {
@@ -165,12 +165,12 @@ export const ViewStudentsModal = ({
         description: "The student information has been successfully updated.",
       });
 
-      // Refresh students list
+
       if (classId) {
         const updatedStudents = await studentManagementService.getStudentsInClass(classId);
         setStudents(updatedStudents);
       }
-      
+
       setIsEditModalOpen(false);
       setEditingStudent(null);
       editForm.resetFields();
@@ -196,9 +196,9 @@ export const ViewStudentsModal = ({
         description: "The student has been successfully removed from the class.",
       });
 
-      // Refresh students list
+
       setStudents(prev => prev.filter(s => s.id !== studentGroupId));
-      
+
       if (onDeleteStudent) {
         onDeleteStudent(studentGroupId);
       }
@@ -315,7 +315,7 @@ export const ViewStudentsModal = ({
         />
       </Modal>
 
-      {/* Add Student Modal */}
+      {}
       <Modal
         title="Add Student to Class"
         open={isAddModalOpen}
@@ -333,17 +333,17 @@ export const ViewStudentsModal = ({
               {
                 validator: (_, value) => {
                   if (!value) return Promise.resolve();
-                  
+
                   const existingStudent = students.find(
                     (s) => Number(s.studentId) === Number(value)
                   );
-                  
+
                   if (existingStudent) {
                     return Promise.reject(
                       new Error("This student is already in the class!")
                     );
                   }
-                  
+
                   return Promise.resolve();
                 },
               },
@@ -382,7 +382,7 @@ export const ViewStudentsModal = ({
         </Form>
       </Modal>
 
-      {/* Edit Student Modal */}
+      {}
       <Modal
         title="Edit Student Information"
         open={isEditModalOpen}

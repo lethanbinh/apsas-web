@@ -1,6 +1,4 @@
-/**
- * Redux slice for authentication
- */
+
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginCredentials, RegisterData } from '@/types';
@@ -16,10 +14,10 @@ interface AuthState {
   error: string | null;
 }
 
-// Helper to get initial state from sessionStorage
-// sessionStorage is automatically cleared when browser/tab closes
+
+
 const getInitialState = (): AuthState => {
-  // Only run on client side
+
   if (typeof window === 'undefined') {
     return {
       user: null,
@@ -30,10 +28,10 @@ const getInitialState = (): AuthState => {
     };
   }
 
-  // Check sessionStorage first (cleared when tab closes)
+
   const token = getStorageItem('auth_token');
   const userDataStr = getStorageItem('user_data');
-  
+
   if (token && userDataStr) {
     try {
       const user = JSON.parse(userDataStr);
@@ -60,8 +58,8 @@ const getInitialState = (): AuthState => {
 
 const initialState: AuthState = getInitialState();
 
-// Async thunks
-// Helper function to decode JWT token
+
+
 const decodeJWT = (token: string): any => {
   try {
     const base64Url = token.split('.')[1];
@@ -82,10 +80,10 @@ export const loginUser = createAsyncThunk(
     try {
       const response = await authService.login(credentials);
       console.log('Login response:', response);
-      
-      // Extract token from response
+
+
       let token;
-      
+
       if (response.result) {
         token = response.result.token;
         console.log('Extracted token from result wrapper');
@@ -93,26 +91,26 @@ export const loginUser = createAsyncThunk(
         token = response.token;
         console.log('Extracted token from direct format');
       }
-      
+
       console.log('Token:', token);
-      
+
       if (!token) {
         throw new Error('No token in response');
       }
-      
-      // Save token to sessionStorage (cleared when tab closes) and session cookie (cleared when browser closes)
+
+
       if (typeof window !== 'undefined') {
         setStorageItem('auth_token', token);
-        setCookie('auth_token', token); // Session cookie (no expiration, deleted when browser closes)
+        setCookie('auth_token', token);
       }
       console.log('Token saved to sessionStorage and session cookie');
-      
-      // Decode JWT to get user info
+
+
       const decoded = decodeJWT(token);
       console.log('Decoded JWT:', decoded);
-      
+
       if (decoded) {
-        // Extract user info from JWT
+
         const userId = decoded.nameid || decoded.sub;
         const userInfo = {
           id: parseInt(userId),
@@ -124,54 +122,54 @@ export const loginUser = createAsyncThunk(
           address: '',
           gender: 0,
           dateOfBirth: '',
-          role: decoded.role === 'ADMIN' ? 0 
-            : decoded.role === 'Admin' ? 0 
-            : decoded.role === 'STUDENT' ? 2 
-            : decoded.role === 'Student' ? 2 
-            : decoded.role === 'LECTURER' ? 1 
-            : decoded.role === 'Lecturer' ? 1 
-            : decoded.role === 'HOD' ? 3 
-            : decoded.role === 'hod' ? 3 
-            : decoded.role === 'EXAMINER' ? 4 
-            : decoded.role === 'Examiner' ? 4 
-            : decoded.role === 'examiner' ? 4 
-            : 2, // default to Student
+          role: decoded.role === 'ADMIN' ? 0
+            : decoded.role === 'Admin' ? 0
+            : decoded.role === 'STUDENT' ? 2
+            : decoded.role === 'Student' ? 2
+            : decoded.role === 'LECTURER' ? 1
+            : decoded.role === 'Lecturer' ? 1
+            : decoded.role === 'HOD' ? 3
+            : decoded.role === 'hod' ? 3
+            : decoded.role === 'EXAMINER' ? 4
+            : decoded.role === 'Examiner' ? 4
+            : decoded.role === 'examiner' ? 4
+            : 2,
         };
-        
+
         console.log('👤 User info from JWT:', userInfo);
         console.log('👤 User ID:', userInfo.id);
         console.log('👤 User role:', userInfo.role);
-        
-        // Save user ID for profile fetching
+
+
         if (typeof window !== 'undefined') {
           setStorageItem('user_id', String(userInfo.id));
         }
         console.log('User ID saved:', userInfo.id);
-        
-        // Return user object and token
+
+
         return { user: userInfo, token };
       }
-      
-      // Fallback: return token only
+
+
       return { user: null, token };
     } catch (error: any) {
-      // Extract error message from API response
+
       let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
-      
+
       if (error?.response) {
         const status = error.response.status;
         const errorData = error.response.data;
-        
-        // Handle specific status codes FIRST - always use Vietnamese for 401
+
+
         if (status === 401) {
-          // For 401, always return Vietnamese message regardless of API response
+
           errorMessage = 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
-          
-          // Only override if API provides a meaningful Vietnamese message
+
+
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               const apiMessage = errorData.errorMessages[0];
-              // Only use API message if it's not in English (simple check)
+
               if (apiMessage && !/^[a-zA-Z\s]+$/.test(apiMessage)) {
                 errorMessage = apiMessage;
               }
@@ -184,11 +182,11 @@ export const loginUser = createAsyncThunk(
         } else if (status >= 500) {
           errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
         } else {
-          // For other status codes, check API response
+
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = errorData.errorMessages[0];
-            } 
+            }
             else if (errorData.message) {
               errorMessage = errorData.message;
             }
@@ -197,13 +195,13 @@ export const loginUser = createAsyncThunk(
             }
           }
         }
-      } 
-      // Check for error message directly (shouldn't happen for API errors, but just in case)
+      }
+
       else if (error?.message) {
         errorMessage = error.message;
       }
-      
-      // Always return Vietnamese message for consistency
+
+
       return rejectWithValue(errorMessage);
     }
   }
@@ -216,7 +214,7 @@ export const registerUser = createAsyncThunk(
       const response = await authService.register(data);
       if (typeof window !== 'undefined') {
         setStorageItem('auth_token', response.token);
-        setCookie('auth_token', response.token); // Session cookie
+        setCookie('auth_token', response.token);
       }
       return response;
     } catch (error: any) {
@@ -259,7 +257,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Login
+
       .addCase(loginUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -270,12 +268,12 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
-        
-        // Save to sessionStorage and session cookie
+
+
         if (typeof window !== 'undefined') {
           setStorageItem('auth_token', action.payload.token);
           setStorageItem('user_data', JSON.stringify(action.payload.user));
-          setCookie('auth_token', action.payload.token); // Session cookie (no expiration)
+          setCookie('auth_token', action.payload.token);
           console.log('✅ User data saved to sessionStorage and session cookie in loginUser.fulfilled');
         }
       })
@@ -285,7 +283,7 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
-        
+
         if (typeof window !== 'undefined') {
           removeStorageItem('auth_token');
           removeStorageItem('user_data');
@@ -293,7 +291,7 @@ const authSlice = createSlice({
           deleteCookie('auth_token');
         }
       })
-      // Register
+
       .addCase(registerUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -309,7 +307,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      // Fetch Profile
+
       .addCase(fetchUserProfile.pending, (state) => {
         state.isLoading = true;
         state.error = null;

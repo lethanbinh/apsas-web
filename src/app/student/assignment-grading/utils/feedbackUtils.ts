@@ -1,8 +1,6 @@
 import type { FeedbackData } from "@/services/geminiService";
 
-/**
- * Deserialize feedback text from JSON string to FeedbackData object
- */
+
 export function deserializeFeedback(feedbackText: string): FeedbackData | null {
   if (!feedbackText || feedbackText.trim() === "") {
     return null;
@@ -28,9 +26,7 @@ export function deserializeFeedback(feedbackText: string): FeedbackData | null {
   }
 }
 
-/**
- * Get default empty feedback data
- */
+
 export function getDefaultFeedback(): FeedbackData {
   return {
     overallFeedback: "",

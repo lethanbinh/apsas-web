@@ -7,6 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  // Redirect to login page
+
   redirect('/login');
 }

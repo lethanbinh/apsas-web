@@ -1,4 +1,4 @@
-// Tên file: components/CategorySlider/CategoryCard.tsx
+
 "use client";
 
 import React from "react";
@@ -7,7 +7,7 @@ import styles from "./CategorySlider.module.css";
 
 const { Title, Paragraph } = Typography;
 
-// Định nghĩa kiểu dữ liệu cho props, giúp tránh lỗi TypeScript
+
 export interface CategoryCardProps {
   icon: React.ReactNode;
   title: string;
@@ -29,7 +29,7 @@ export const CategoryCard: React.FC<CategoryCardProps> = ({
         className={styles.iconWrapper}
         style={{
           backgroundColor: iconBgColor,
-          color: iconColor, // Đặt màu cho icon
+          color: iconColor,
         }}
       >
         {icon}

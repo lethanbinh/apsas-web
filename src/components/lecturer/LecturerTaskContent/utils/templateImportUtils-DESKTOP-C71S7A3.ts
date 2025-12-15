@@ -39,20 +39,20 @@ export async function importTemplate({
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
 
-    // ============================================
-    // STEP 1: Read and parse Assessment Template sheet
-    // ============================================
+
+
+
     const templateSheet = workbook.Sheets["Assessment Template"];
     if (!templateSheet) {
       throw new Error("Assessment Template sheet not found");
     }
     const templateRows = XLSX.utils.sheet_to_json(templateSheet, { header: 1 }) as any[][];
-    
+
     let templateName = "";
     let templateDesc = "";
     let templateType = 0;
     let startupProject = "";
-    
+
     for (let i = 2; i < templateRows.length; i++) {
       const row = templateRows[i];
       if (row && row[0]) {
@@ -86,17 +86,17 @@ export async function importTemplate({
       throw new Error("Startup Project is required for WEBAPI templates in the Assessment Template sheet");
     }
 
-    // ============================================
-    // STEP 2: Create or Update Template (FIRST)
-    // ============================================
+
+
+
     let currentTemplate: AssessmentTemplate;
     if (existingTemplate) {
-      // Update existing template
+
       const existingStartupProject = existingTemplate.startupProject || "";
       if (
-        templateName !== existingTemplate.name || 
-        templateDesc !== existingTemplate.description || 
-        templateType !== existingTemplate.templateType || 
+        templateName !== existingTemplate.name ||
+        templateDesc !== existingTemplate.description ||
+        templateType !== existingTemplate.templateType ||
         (templateType === 1 && startupProject !== existingStartupProject)
       ) {
         currentTemplate = await assessmentTemplateService.updateAssessmentTemplate(existingTemplate.id, {
@@ -110,7 +110,7 @@ export async function importTemplate({
         currentTemplate = existingTemplate;
       }
     } else {
-      // Check if template already exists (refetch to get latest data)
+
       await refetchTemplates();
       const freshTemplatesResponse = await assessmentTemplateService.getAssessmentTemplates({
         lecturerId: lecturerId,
@@ -118,12 +118,12 @@ export async function importTemplate({
         pageSize: 1000,
       });
       const freshTemplates = freshTemplatesResponse.items.filter((t) => t.courseElementId === task.courseElementId);
-      
+
       if (freshTemplates.length > 0 && !isRejected) {
         throw new Error("Template already exists. Please delete existing template first or import will update it.");
       }
-      
-      // Create new template
+
+
       currentTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: templateName,
         description: templateDesc,
@@ -134,7 +134,7 @@ export async function importTemplate({
         assignedToHODId: task.assignedByHODId,
       });
 
-      // Reset status if rejected
+
       if (isRejected) {
         try {
           await assignRequestService.updateAssignRequest(task.id, {
@@ -151,41 +151,41 @@ export async function importTemplate({
       }
     }
 
-    // ============================================
-    // STEP 3: Read and parse Papers sheet
-    // ============================================
+
+
+
     const papersSheet = workbook.Sheets["Papers"];
     if (!papersSheet) {
       throw new Error("Papers sheet not found");
     }
     const papersRows = XLSX.utils.sheet_to_json(papersSheet, { header: 1 }) as any[][];
-    
+
     const paperDataMap = new Map<string, { name: string; description: string; language: number }>();
     let foundInstructions = false;
-    
+
     for (let i = 2; i < papersRows.length; i++) {
       const row = papersRows[i];
-      if (!row || !row[0]) continue; // Skip empty rows
-      
+      if (!row || !row[0]) continue;
+
       const firstCell = String(row[0]).trim();
-      
-      // Stop reading when we hit "INSTRUCTIONS:" section
+
+
       if (firstCell.startsWith("INSTRUCTIONS")) {
         foundInstructions = true;
         break;
       }
-      
-      // Skip instruction rows that start with "- " (these are instruction lines)
+
+
       if (firstCell.startsWith("- ")) {
         continue;
       }
-      
-      // Skip header row if it appears again
+
+
       if (firstCell.toLowerCase() === "name" || firstCell === "PAPERS") {
         continue;
       }
-      
-      // Skip if any cell contains instruction keywords
+
+
       const allCells = row.map(cell => String(cell || "").toLowerCase().trim()).join(" ");
       if (
         allCells.includes("instruction") ||
@@ -195,16 +195,16 @@ export async function importTemplate({
       ) {
         continue;
       }
-      
+
       const name = firstCell;
       const description = row[1] ? String(row[1]).trim() : "";
       let language = 0;
-      
+
       if (row[2]) {
         const langStr = String(row[2]).toLowerCase().trim();
-        // Skip if it's an instruction text in the language column
+
         if (
-          langStr.includes("language:") || 
+          langStr.includes("language:") ||
           langStr.includes("instructions") ||
           langStr.includes("reference") ||
           langStr.startsWith("-") ||
@@ -217,13 +217,13 @@ export async function importTemplate({
         if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
         else if (langStr.includes("java")) language = 2;
       }
-      
-      // Final validation: ensure this looks like real data
-      // Paper name should be a reasonable length and not contain instruction patterns
+
+
+
       if (
-        name && 
-        name.length > 0 && 
-        name.length < 200 && // Reasonable length
+        name &&
+        name.length > 0 &&
+        name.length < 200 &&
         !name.startsWith("-") &&
         !name.toLowerCase().includes("instruction") &&
         !name.toLowerCase().includes("required") &&
@@ -240,15 +240,15 @@ export async function importTemplate({
     }
     const paperData = Array.from(paperDataMap.values());
 
-    // ============================================
-    // STEP 4: Read and parse Questions sheet
-    // ============================================
+
+
+
     const questionsSheet = workbook.Sheets["Questions"];
     if (!questionsSheet) {
       throw new Error("Questions sheet not found");
     }
     const questionsRows = XLSX.utils.sheet_to_json(questionsSheet, { header: 1 }) as any[][];
-    
+
     const questionDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -259,41 +259,41 @@ export async function importTemplate({
     }>();
     for (let i = 2; i < questionsRows.length; i++) {
       const row = questionsRows[i];
-      if (!row || !row[0]) continue; // Skip empty rows
-      
+      if (!row || !row[0]) continue;
+
       const firstCell = String(row[0]).trim();
-      
-      // Stop reading when we hit "INSTRUCTIONS:" section
+
+
       if (firstCell.startsWith("INSTRUCTIONS")) {
         break;
       }
-      
-      // Skip instruction rows that start with "- "
+
+
       if (firstCell.startsWith("- ") || firstCell === "") {
         continue;
       }
-      
-      // Skip header row if it appears again
+
+
       if (firstCell.toLowerCase() === "paper name" || firstCell === "QUESTIONS") {
         continue;
       }
-      
+
       const paperName = firstCell;
       const questionNumber = row[1] ? Number(row[1]) : 0;
       const questionText = row[2] ? String(row[2]).trim() : "";
       const sampleInput = row[3] ? String(row[3]).trim() : "";
       const sampleOutput = row[4] ? String(row[4]).trim() : "";
       const score = row[5] ? Number(row[5]) : 0;
-      
-      // Validate that this is actual data (not instructions)
+
+
       if (
-        paperName && 
-        !paperName.startsWith("-") && 
+        paperName &&
+        !paperName.startsWith("-") &&
         !paperName.toLowerCase().includes("instruction") &&
         !paperName.toLowerCase().includes("required") &&
         !paperName.toLowerCase().includes("optional") &&
-        questionNumber > 0 && 
-        questionText && 
+        questionNumber > 0 &&
+        questionText &&
         questionText.length > 0 &&
         !questionText.toLowerCase().includes("instruction")
       ) {
@@ -305,15 +305,15 @@ export async function importTemplate({
     }
     const questionData = Array.from(questionDataMap.values());
 
-    // ============================================
-    // STEP 5: Read and parse Rubrics sheet
-    // ============================================
+
+
+
     const rubricsSheet = workbook.Sheets["Rubrics"];
     if (!rubricsSheet) {
       throw new Error("Rubrics sheet not found");
     }
     const rubricsRows = XLSX.utils.sheet_to_json(rubricsSheet, { header: 1 }) as any[][];
-    
+
     const rubricDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -324,41 +324,41 @@ export async function importTemplate({
     }>();
     for (let i = 2; i < rubricsRows.length; i++) {
       const row = rubricsRows[i];
-      if (!row || !row[0]) continue; // Skip empty rows
-      
+      if (!row || !row[0]) continue;
+
       const firstCell = String(row[0]).trim();
-      
-      // Stop reading when we hit "INSTRUCTIONS:" section
+
+
       if (firstCell.startsWith("INSTRUCTIONS")) {
         break;
       }
-      
-      // Skip instruction rows that start with "- "
+
+
       if (firstCell.startsWith("- ") || firstCell === "") {
         continue;
       }
-      
-      // Skip header row if it appears again
+
+
       if (firstCell.toLowerCase() === "paper name" || firstCell === "RUBRICS") {
         continue;
       }
-      
+
       const paperName = firstCell;
       const questionNumber = row[1] ? Number(row[1]) : 0;
       const description = row[2] ? String(row[2]).trim() : "";
       const input = row[3] ? String(row[3]).trim() : "";
       const output = row[4] ? String(row[4]).trim() : "";
       const score = row[5] ? Number(row[5]) : 0;
-      
-      // Validate that this is actual data (not instructions)
+
+
       if (
-        paperName && 
-        !paperName.startsWith("-") && 
+        paperName &&
+        !paperName.startsWith("-") &&
         !paperName.toLowerCase().includes("instruction") &&
         !paperName.toLowerCase().includes("required") &&
         !paperName.toLowerCase().includes("optional") &&
-        questionNumber > 0 && 
-        description && 
+        questionNumber > 0 &&
+        description &&
         description.length > 0 &&
         !description.toLowerCase().includes("instruction") &&
         !description.toLowerCase().includes("required") &&
@@ -372,36 +372,36 @@ export async function importTemplate({
     }
     const rubricData = Array.from(rubricDataMap.values());
 
-    // ============================================
-    // STEP 6: Delete existing papers if updating template (BEFORE creating new ones)
-    // ============================================
+
+
+
     if (existingTemplate) {
       try {
-        // Fetch existing papers for this template
+
         const existingPapersResponse = await assessmentPaperService.getAssessmentPapers({
           assessmentTemplateId: currentTemplate.id,
           pageNumber: 1,
           pageSize: 1000,
         });
-        
-        // Delete all existing papers (this will cascade delete questions and rubrics)
+
+
         for (const existingPaper of existingPapersResponse.items) {
           try {
             await assessmentPaperService.deleteAssessmentPaper(existingPaper.id);
           } catch (error: any) {
             console.error(`Failed to delete existing paper ${existingPaper.name}:`, error);
-            // Continue deleting other papers even if one fails
+
           }
         }
       } catch (error: any) {
         console.error("Failed to fetch/delete existing papers:", error);
-        // Continue with import even if deletion fails
+
       }
     }
 
-    // ============================================
-    // STEP 7: Create Papers (SECOND - after template)
-    // ============================================
+
+
+
     const createdPapers = new Map<string, AssessmentPaper>();
     for (const paper of paperData) {
       try {
@@ -415,13 +415,13 @@ export async function importTemplate({
           assessmentTemplateId: currentTemplate.id,
           language: paper.language,
         });
-        // Store by full key (name|description|language) for deduplication
+
         createdPapers.set(paperKey, createdPaper);
-        // Also store by name for easy lookup (only if not already set to avoid overwriting)
+
         if (!createdPapers.has(paper.name)) {
           createdPapers.set(paper.name, createdPaper);
         } else {
-          // If duplicate name exists, warn but continue
+
           console.warn(`Duplicate paper name "${paper.name}" detected. Using first created paper.`);
         }
       } catch (error: any) {
@@ -433,10 +433,10 @@ export async function importTemplate({
       }
     }
 
-    // ============================================
-    // STEP 8: Create Questions (THIRD - after papers, sorted by questionNumber)
-    // ============================================
-    // Group questions by paper
+
+
+
+
     const questionsByPaper = new Map<string, typeof questionData>();
     for (const question of questionData) {
       if (!questionsByPaper.has(question.paperName)) {
@@ -456,10 +456,10 @@ export async function importTemplate({
         continue;
       }
 
-      // Sort questions by questionNumber before creating (maintain order like manual creation)
+
       const sortedQuestions = [...questions].sort((a, b) => a.questionNumber - b.questionNumber);
 
-      // Create questions in order
+
       for (const question of sortedQuestions) {
         try {
           const createdQuestion = await assessmentQuestionService.createAssessmentQuestion({
@@ -481,10 +481,10 @@ export async function importTemplate({
       }
     }
 
-    // ============================================
-    // STEP 9: Create Rubrics (FOURTH - after all questions, grouped by question)
-    // ============================================
-    // Group rubrics by question
+
+
+
+
     const rubricsByQuestion = new Map<string, typeof rubricData>();
     for (const rubric of rubricData) {
       const questionKey = `${rubric.paperName}-${rubric.questionNumber}`;
@@ -494,7 +494,7 @@ export async function importTemplate({
       rubricsByQuestion.get(questionKey)!.push(rubric);
     }
 
-    // Create rubrics for each question in order
+
     for (const [questionKey, rubrics] of rubricsByQuestion.entries()) {
       const foundQuestion = createdQuestions.get(questionKey);
 
@@ -507,7 +507,7 @@ export async function importTemplate({
         continue;
       }
 
-      // Create rubrics for this question
+
       for (const rubric of rubrics) {
         try {
           await rubricItemService.createRubricItem({
@@ -527,9 +527,9 @@ export async function importTemplate({
       }
     }
 
-    // ============================================
-    // STEP 10: Refresh data and notify
-    // ============================================
+
+
+
     await refetchTemplates();
     await fetchAllData(currentTemplate.id);
     await resetStatusIfRejected();
@@ -538,8 +538,8 @@ export async function importTemplate({
       message: "Import Successful",
       description: `Imported template "${templateName}" with ${paperData.length} papers, ${questionData.length} questions, and ${rubricData.length} rubrics.`,
     });
-    
-    // Dispatch custom event to notify other components
+
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
     }

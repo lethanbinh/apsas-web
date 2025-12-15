@@ -2,7 +2,7 @@
 
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { DownOutlined, UserOutlined } from "@ant-design/icons";
+import { DownOutlined, UserOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { LogoComponent } from "@/components/ui/Logo";
 import { useState, useMemo, useEffect } from "react";
@@ -12,6 +12,7 @@ import { logout } from "@/store/slices/authSlice";
 import { useAuth } from "@/hooks/useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_NAVIGATION, Role } from "@/lib/constants";
+import { useSidebar } from "./SidebarContext";
 import styles from "./Header.module.css";
 
 const AvatarPlaceholder = () => (
@@ -28,31 +29,32 @@ export const Header: React.FC = () => {
   const pathname = usePathname();
   const { user, logout: logoutAuth } = useAuth();
   const queryClient = useQueryClient();
+  const { toggle: toggleSidebar } = useSidebar();
 
   useEffect(() => setMounted(true), []);
 
   const handleLogout = async () => {
-    // Clear React Query cache
+
     queryClient.clear();
-    // Clear all sessionStorage items (including studentId cache)
+
     if (typeof window !== 'undefined') {
       sessionStorage.clear();
     }
-    // Clear auth state and storage
+
     logoutAuth();
-    // Use window.location for full page reload to ensure clean state
+
     window.location.href = "/login";
   };
 
   const navigation = useMemo(() => {
-    // Only compute navigation after mount to prevent hydration mismatch
+
     if (!mounted || !user?.role) return [];
     const userRole = user.role as Role;
     return ROLE_NAVIGATION[userRole] || [];
   }, [user?.role, mounted]);
 
   const activeKey = useMemo(() => {
-    // Special handling for lecturer sidebar pages - should be treated as "my-classes"
+
     if (user?.role === 1 && (
       pathname.startsWith("/lecturer/info/") ||
       pathname.startsWith("/lecturer/detail-assignment") ||
@@ -61,9 +63,9 @@ export const Header: React.FC = () => {
     )) {
       return "my-classes";
     }
-    
-    
-    // Special handling for student sidebar pages and my-classes - should be treated as "my-classes"
+
+
+
     if (user?.role === 2 && (
       pathname.startsWith("/student/class-detail") ||
       pathname.startsWith("/student/assignments") ||
@@ -73,7 +75,7 @@ export const Header: React.FC = () => {
     )) {
       return "my-classes";
     }
-    
+
     const sortedKeys = [...navigation].sort(
       (a, b) => b.href.length - a.href.length
     );
@@ -96,6 +98,13 @@ export const Header: React.FC = () => {
   return (
     <header className={styles.headerRoot}>
       <div className={styles.leftGroup}>
+        <button
+          className={styles.menuButton}
+          onClick={toggleSidebar}
+          aria-label="Toggle sidebar"
+        >
+          <MenuOutlined />
+        </button>
         <Link
           href={
             !mounted || !user?.role

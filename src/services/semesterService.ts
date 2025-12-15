@@ -46,7 +46,7 @@ export interface CourseElement {
   name: string;
   description: string;
   weight: number;
-  elementType: number; // 0: Assignment, 1: Lab, 2: PE
+  elementType: number;
 }
 
 export interface AssignRequest {

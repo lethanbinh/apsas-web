@@ -6,28 +6,28 @@
 
 .imageWrapper {
   width: 100%;
-  height: 400px; /* Chiều cao cố định cho ảnh banner */
+  height: 400px;
   position: relative;
 }
 
 .image {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Đảm bảo ảnh lấp đầy */
+  object-fit: cover;
 }
 
 .contentWrapper {
   padding: 40px;
 }
 
-/* Style cho các tags */
+
 .tagWrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 30px;
   padding-bottom: 30px;
-  border-bottom: 1px solid #f0f0f0; /* Đường kẻ ngang */
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .tag {
@@ -40,7 +40,7 @@
   border-radius: 20px;
 }
 
-/* Box tác giả */
+
 .authorBox {
   display: flex;
   align-items: center;

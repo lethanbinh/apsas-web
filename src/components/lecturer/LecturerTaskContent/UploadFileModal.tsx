@@ -36,7 +36,7 @@ export const UploadFileModal = ({
 
   const handleFileChange = (info: UploadChangeParam) => {
     onFileListChange(info.fileList);
-    // Auto-fill name when file is selected
+
     if (info.fileList.length > 0 && info.fileList[0].originFileObj) {
       const fileName = info.fileList[0].name;
       form.setFieldsValue({ name: fileName });

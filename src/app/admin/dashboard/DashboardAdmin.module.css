@@ -17,7 +17,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1.5rem;
-  /* gap-6 */
+
   margin-bottom: 2rem;
 }
 
@@ -45,16 +45,16 @@
 
 .stat-value {
   font-size: 2.25rem;
-  /* text-4xl */
+
   font-weight: 700;
-  /* font-bold */
+
   margin-bottom: 0.5rem;
   z-index: 1;
 }
 
 .stat-label {
   font-size: 0.875rem;
-  /* text-sm */
+
   font-weight: 500;
   text-transform: uppercase;
   opacity: 0.8;
@@ -94,11 +94,11 @@
 
 .chart-title {
   font-size: 1.25rem;
-  /* text-xl */
+
   font-weight: 600;
-  /* font-semibold */
+
   color: #333333;
-  /* text-gray-800 */
+
   margin-bottom: 1rem;
 }
 
@@ -124,20 +124,20 @@
 
 .dot.asm {
   background-color: #9AD0EE;
-  /* Soft Blue */
+
 }
 
 .dot.lab {
   background-color: #A8E6CF;
-  /* Soft Green */
+
 }
 
 .dot.pe {
   background-color: #B19CD9;
-  /* Soft Purple */
+
 }
 
 .dot.course {
   background-color: #B19CD9;
-  /* Soft Purple */
+
 }

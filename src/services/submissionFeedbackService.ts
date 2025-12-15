@@ -36,9 +36,7 @@ export interface GetSubmissionFeedbackListParams {
 }
 
 export class SubmissionFeedbackService {
-  /**
-   * Get list of submission feedbacks by submission ID
-   */
+
   async getSubmissionFeedbackList(
     params: GetSubmissionFeedbackListParams
   ): Promise<SubmissionFeedback[]> {
@@ -49,9 +47,7 @@ export class SubmissionFeedbackService {
     return response.result;
   }
 
-  /**
-   * Create a new submission feedback
-   */
+
   async createSubmissionFeedback(
     payload: CreateSubmissionFeedbackPayload
   ): Promise<SubmissionFeedback> {
@@ -65,9 +61,7 @@ export class SubmissionFeedbackService {
     return response.result;
   }
 
-  /**
-   * Update an existing submission feedback
-   */
+
   async updateSubmissionFeedback(
     submissionFeedbackId: number,
     payload: UpdateSubmissionFeedbackPayload
@@ -81,9 +75,7 @@ export class SubmissionFeedbackService {
     return response.result;
   }
 
-  /**
-   * Delete a submission feedback
-   */
+
   async deleteSubmissionFeedback(
     submissionFeedbackId: number
   ): Promise<void> {

@@ -1,6 +1,4 @@
-/**
- * Authentication service
- */
+
 
 import { apiService } from './api';
 import { API_ENDPOINTS } from '@/lib/constants';
@@ -21,7 +19,7 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
-    // No backend endpoint for logout, so just return a resolved promise.
+
     return Promise.resolve();
   }
 
@@ -45,28 +43,28 @@ export class AuthService {
   }
 
   async refreshToken(): Promise<{ token: string }> {
-    // This method is not actively used for automatic refresh without a backend endpoint.
-    // Keeping it for potential future use or if backend implements it later.
+
+
     const response = await apiService.post<{ token: string }>(API_ENDPOINTS.AUTH.REFRESH);
     return response;
   }
 
   async getProfile(): Promise<User> {
-    // Get user ID from sessionStorage
+
     const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
-    
+
     if (!userId) {
       console.error('❌ No user_id in sessionStorage');
       throw new Error('User ID not found in storage. Please login again.');
     }
-    
+
     console.log('🔍 Fetching user profile by ID:', userId);
-    
-    // Call the correct API endpoint: /Account/{id}
+
+
     const response = await apiService.get<any>(`${API_ENDPOINTS.USER.GET_BY_ID}/${userId}`);
     console.log('📥 Profile response:', response);
-    
-    // Extract user from result
+
+
     let userData;
     if (response.result) {
       userData = response.result as User;
@@ -75,13 +73,13 @@ export class AuthService {
       userData = response as User;
       console.log('✅ Using response as user');
     }
-    
-    // Save to sessionStorage
+
+
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('user_data', JSON.stringify(userData));
       console.log('✅ User data cached to sessionStorage');
     }
-    
+
     return userData;
   }
 
@@ -95,24 +93,24 @@ export class AuthService {
   }): Promise<User> {
     try {
       const response = await apiService.put<any>(`${API_ENDPOINTS.ACCOUNT.UPDATE_PROFILE}/${id}`, data);
-      
-      // Extract user from result
+
+
       if (response?.result) {
         return response.result as User;
       }
       if (response && typeof response === 'object' && 'id' in response) {
         return response as User;
       }
-      
-      // If response doesn't have expected structure, throw error
+
+
       throw new Error('Invalid response format from update profile API');
     } catch (error: any) {
-      // Re-throw with more context
+
       if (error?.response) {
-        // Axios error - let it propagate with full error info
+
         throw error;
       }
-      // Other errors - wrap with more context
+
       throw new Error(error?.message || 'Failed to update profile');
     }
   }

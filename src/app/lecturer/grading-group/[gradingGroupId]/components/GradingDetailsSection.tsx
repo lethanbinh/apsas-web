@@ -64,7 +64,7 @@ export function GradingDetailsSection({
 
   return (
     <div>
-      {/* Grading Logs Section */}
+      {}
       {latestGradingSession && latestGradingSession.gradingLogs && latestGradingSession.gradingLogs.length > 0 && (
         <Alert
           message="Grading Notes"

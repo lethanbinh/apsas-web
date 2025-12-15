@@ -17,7 +17,7 @@ export async function exportGradeReport(
   try {
     messageApi.info("Preparing grade report...");
 
-    // Get all submissions for this grading group
+
     const groupSubmissions = await submissionService.getSubmissionList({
       gradingGroupId: gradingGroup.id,
     });
@@ -27,7 +27,7 @@ export async function exportGradeReport(
       return;
     }
 
-    // Get assessment template
+
     if (!gradingGroup.assessmentTemplateId) {
       messageApi.error("Assessment template not found");
       return;
@@ -46,7 +46,7 @@ export async function exportGradeReport(
       return;
     }
 
-    // Get course element
+
     if (!assessmentTemplate.courseElementId) {
       messageApi.error("Course element not found");
       return;
@@ -65,7 +65,7 @@ export async function exportGradeReport(
       return;
     }
 
-    // Fetch questions and rubrics
+
     let questions: any[] = [];
     const rubrics: { [questionId: number]: any[] } = {};
 
@@ -97,7 +97,7 @@ export async function exportGradeReport(
       console.error("Failed to fetch questions/rubrics:", err);
     }
 
-    // Prepare report data
+
     const reportData: GradeReportData[] = [];
 
     for (const submission of groupSubmissions) {
@@ -122,9 +122,9 @@ export async function exportGradeReport(
         console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
       }
 
-      // Determine assignment type from elementType field
-      // elementType: 0 = Assignment, 1 = Lab, 2 = PE (Practical Exam)
-      // Now only PE is used, so only elementType === 2 is "Practical Exam"
+
+
+
       const assignmentType: "Assignment" | "Lab" | "Practical Exam" =
         courseElement.elementType === 2 ? "Practical Exam" :
           "Assignment";

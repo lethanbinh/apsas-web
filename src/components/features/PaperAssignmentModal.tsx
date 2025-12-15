@@ -35,10 +35,10 @@ export default function PaperAssignmentModal({
   classAssessmentId,
   classId,
 }: PaperAssignmentModalProps) {
-  // Determine assessmentTemplateId
+
   const effectiveClassId = classId || (typeof window !== 'undefined' ? Number(localStorage.getItem("selectedClassId")) : undefined);
 
-  // Fetch class assessments if needed
+
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -49,23 +49,23 @@ export default function PaperAssignmentModal({
     enabled: isOpen && !!classAssessmentId && !!effectiveClassId && !template?.id,
   });
 
-  // Determine assessmentTemplateId
+
   const assessmentTemplateId = useMemo(() => {
     if (template?.id) {
       return template.id;
     }
-    
+
     if (classAssessmentId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
       if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
-    
+
     return null;
   }, [template?.id, classAssessmentId, classAssessmentsData]);
 
-  // Fetch template details
+
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -85,7 +85,7 @@ export default function PaperAssignmentModal({
 
   const templateDescription = templateData?.description || "";
 
-  // Fetch files
+
   const { data: filesData } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -98,7 +98,7 @@ export default function PaperAssignmentModal({
 
   const files = filesData?.items || [];
 
-  // Fetch papers
+
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -111,7 +111,7 @@ export default function PaperAssignmentModal({
 
   const papers = papersData?.items || [];
 
-  // Fetch questions for all papers
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -124,13 +124,13 @@ export default function PaperAssignmentModal({
     })),
   });
 
-  // Map questions by paperId
+
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
       const query = questionsQueries[index];
       if (query.data?.items) {
-        const sortedQuestions = [...query.data.items].sort((a, b) => 
+        const sortedQuestions = [...query.data.items].sort((a, b) =>
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         questionsMap[paper.id] = sortedQuestions;
@@ -139,12 +139,12 @@ export default function PaperAssignmentModal({
     return questionsMap;
   }, [papers, questionsQueries]);
 
-  // Get all question IDs for fetching rubrics
+
   const allQuestionIds = useMemo(() => {
     return Object.values(questions).flat().map(q => q.id);
   }, [questions]);
 
-  // Fetch rubrics for all questions
+
   const rubricsQueries = useQueries({
     queries: allQuestionIds.map((questionId) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(questionId),
@@ -157,7 +157,7 @@ export default function PaperAssignmentModal({
     })),
   });
 
-  // Map rubrics by questionId
+
   const rubrics = useMemo(() => {
     const rubricsMap: { [questionId: number]: RubricItem[] } = {};
     allQuestionIds.forEach((questionId, index) => {
@@ -169,7 +169,7 @@ export default function PaperAssignmentModal({
     return rubricsMap;
   }, [allQuestionIds, rubricsQueries]);
 
-  // Calculate loading state
+
   const loading = (
     (!!classAssessmentId && !!effectiveClassId && !template?.id && !classAssessmentsData) ||
     (!!assessmentTemplateId && !templatesData) ||
@@ -238,7 +238,7 @@ export default function PaperAssignmentModal({
     >
       <Spin spinning={loading}>
         <div className={styles.modalBody}>
-          {/* Template Description */}
+          {}
           {templateDescription && (
             <>
               <Title level={5}>Description</Title>
@@ -247,7 +247,7 @@ export default function PaperAssignmentModal({
             </>
           )}
 
-          {/* Requirement Files */}
+          {}
           {files.length > 0 && (
             <>
               <Title level={5}>Requirement Files</Title>
@@ -271,7 +271,7 @@ export default function PaperAssignmentModal({
             </>
           )}
 
-          {/* Papers, Questions, and Rubrics */}
+          {}
           {papers.length > 0 && (
             <>
               <Title level={5}>Exam Papers & Questions</Title>
@@ -315,7 +315,7 @@ export default function PaperAssignmentModal({
                             </div>
                           )}
 
-                          {/* LECTURER CAN SEE RUBRICS/CRITERIA */}
+                          {}
                           {rubrics[question.id] && rubrics[question.id].length > 0 && (
                             <div style={{ marginTop: 12 }}>
                               <Text strong>Grading Criteria:</Text>

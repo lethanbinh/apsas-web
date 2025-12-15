@@ -32,7 +32,7 @@ export default function MyClassesPage() {
   const [currentSemesterCode, setCurrentSemesterCode] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
-  // Fetch all semesters
+
   const { data: allSemesters = [], isLoading: isLoadingSemesters } = useQuery({
     queryKey: queryKeys.semesters.list(),
     queryFn: async () => {
@@ -40,8 +40,8 @@ export default function MyClassesPage() {
         pageNumber: 1,
         pageSize: 1000,
       });
-      
-      // Find current active semester
+
+
       const now = new Date();
       const activeSemester = semesters.find((sem) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
@@ -51,15 +51,15 @@ export default function MyClassesPage() {
       if (activeSemester) {
         setCurrentSemesterCode(activeSemester.semesterCode);
       } else {
-        // If no current semester, set to null so we can use latest
+
         setCurrentSemesterCode(null);
       }
-      
+
       return semesters;
     },
   });
 
-  // Fetch classes by student ID
+
   const { data: allCourses = [], isLoading: isLoadingClasses } = useQuery({
     queryKey: queryKeys.studentClasses.byStudentId(studentId!),
     queryFn: () => classService.getClassesByStudentId(studentId!),
@@ -68,19 +68,19 @@ export default function MyClassesPage() {
 
   const isLoading = isLoadingSemesters || isLoadingClasses;
 
-  // Set default semester to current active semester, or latest if current has no data
+
   useEffect(() => {
     if (isInitialLoad && allSemesters.length > 0 && allCourses.length > 0) {
       const uniqueSemesterNames = [
         ...new Set(allCourses.map((cls) => cls.semesterName).filter(Boolean)),
       ];
-      
+
       if (uniqueSemesterNames.length === 0) {
         setIsInitialLoad(false);
         return;
       }
-      
-      // Create a map of semesterName to Semester object for sorting
+
+
       const semesterMap = new Map<string, Semester>();
       uniqueSemesterNames.forEach((name) => {
         const courseWithName = allCourses.find((cls) => cls.semesterName === name);
@@ -91,9 +91,9 @@ export default function MyClassesPage() {
           }
         }
       });
-      
-      // Try to find current semester in courses FIRST (priority)
-      // First, find current semester from allSemesters if not already set
+
+
+
       let activeSemesterCode = currentSemesterCode;
       if (!activeSemesterCode) {
         const now = new Date();
@@ -106,9 +106,9 @@ export default function MyClassesPage() {
           activeSemesterCode = activeSemester.semesterCode;
         }
       }
-      
+
       if (activeSemesterCode) {
-        // Try exact match by semesterCode first (most reliable)
+
         const exactMatchByCode = allCourses.find(
           (cls) => cls.semesterCode === activeSemesterCode
         );
@@ -117,8 +117,8 @@ export default function MyClassesPage() {
           setIsInitialLoad(false);
           return;
         }
-        
-        // Try exact match by semesterName
+
+
         const exactMatchByName = allCourses.find(
           (cls) => cls.semesterName === activeSemesterCode
         );
@@ -127,8 +127,8 @@ export default function MyClassesPage() {
           setIsInitialLoad(false);
           return;
         }
-        
-        // Try partial match
+
+
         const partialMatch = allCourses.find(
           (cls) => cls.semesterName?.includes(activeSemesterCode) ||
                    cls.semesterName?.toLowerCase().includes(activeSemesterCode.toLowerCase()) ||
@@ -140,9 +140,9 @@ export default function MyClassesPage() {
           return;
         }
       }
-      
-      // Current semester not found or has no data, use latest semester
-      // Sort by startDate (newest first) and get the first one
+
+
+
       const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
         const semA = semesterMap.get(a);
         const semB = semesterMap.get(b);
@@ -153,11 +153,11 @@ export default function MyClassesPage() {
         }
         return 0;
       });
-      
+
       if (sortedSemesters.length > 0) {
         setSelectedSemester(sortedSemesters[0]);
       }
-      
+
       setIsInitialLoad(false);
     }
   }, [currentSemesterCode, allCourses, allSemesters, isInitialLoad]);
@@ -166,13 +166,13 @@ export default function MyClassesPage() {
     const uniqueSemesterNames = [
       ...new Set(allCourses.map((cls) => cls.semesterName).filter(Boolean)),
     ];
-    
-    // Create a map of semesterName to Semester object for sorting
+
+
     const semesterMap = new Map<string, Semester>();
-    
-    // Match semesterName with Semester objects using both semesterName and semesterCode
+
+
     uniqueSemesterNames.forEach((name) => {
-      // First, try to find match using semesterCode from courses
+
       const courseWithName = allCourses.find((cls) => cls.semesterName === name);
       if (courseWithName?.semesterCode) {
         const matchByCode = allSemesters.find((sem) => sem.semesterCode === courseWithName.semesterCode);
@@ -181,17 +181,17 @@ export default function MyClassesPage() {
           return;
         }
       }
-      
-      // Try exact match with semesterCode
+
+
       const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
       if (exactMatch) {
         semesterMap.set(name, exactMatch);
         return;
       }
-      
-      // Try partial match (semesterName contains semesterCode or vice versa)
-      const partialMatch = allSemesters.find((sem) => 
-        name.includes(sem.semesterCode) || 
+
+
+      const partialMatch = allSemesters.find((sem) =>
+        name.includes(sem.semesterCode) ||
         sem.semesterCode.includes(name) ||
         name.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
         sem.semesterCode.toLowerCase().includes(name.toLowerCase())
@@ -200,23 +200,23 @@ export default function MyClassesPage() {
         semesterMap.set(name, partialMatch);
       }
     });
-    
-    // Sort semesters by startDate (newest first)
+
+
     const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
       const semA = semesterMap.get(a);
       const semB = semesterMap.get(b);
-      
+
       if (semA && semB) {
         const dateA = new Date(semA.startDate);
         const dateB = new Date(semB.startDate);
-        return dateB.getTime() - dateA.getTime(); // Newest first
+        return dateB.getTime() - dateA.getTime();
       }
-      if (semA) return -1; // A has date, B doesn't, A comes first
-      if (semB) return 1; // B has date, A doesn't, B comes first
-      // Both don't have dates, sort alphabetically (reverse for newest first)
+      if (semA) return -1;
+      if (semB) return 1;
+
       return b.localeCompare(a);
     });
-    
+
     const options = sortedSemesters.map((semester) => ({
       label: semester,
       value: semester,
@@ -236,16 +236,16 @@ export default function MyClassesPage() {
 
   const handleSemesterChange = (value: string) => {
     setSelectedSemester(value);
-    // Mark that user has manually changed the selection
+
     if (isInitialLoad) {
       setIsInitialLoad(false);
     }
   };
 
-  // Show loading if:
-  // 1. Auth is still loading
-  // 2. Student ID is still loading (first time fetch)
-  // 3. Data is loading and we don't have any courses yet
+
+
+
+
   if (isAuthLoading || isStudentLoading || (isLoading && allCourses.length === 0 && studentId)) {
     return (
       <Layout>
@@ -256,9 +256,9 @@ export default function MyClassesPage() {
     );
   }
 
-  // Only show "No student profile found" if:
-  // 1. User is loaded but no studentId found (after loading is complete)
-  // 2. We're not still loading studentId
+
+
+
   if (user && !isStudentLoading && !studentId) {
     return (
       <Layout>
@@ -272,7 +272,7 @@ export default function MyClassesPage() {
     );
   }
 
-  // If no user, show error (shouldn't happen if middleware works correctly)
+
   if (!user) {
     return (
       <Layout>

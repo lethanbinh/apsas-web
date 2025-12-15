@@ -1,28 +1,28 @@
 .wrapper {
     width: 100%;
     padding: 30px 40px;
-    background-color: #f0f7ff; 
+    background-color: #f0f7ff;
     min-height: 100vh;
 }
 
 .header {
     display: grid;
- 
-    grid-template-columns: 1fr auto 1fr; 
+
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     margin-bottom: 25px;
-    gap: 20px; 
+    gap: 20px;
 }
 
 .pageTitle {
-    grid-column: 2 / 3;   
-    justify-self: center; 
+    grid-column: 2 / 3;
+    justify-self: center;
 }
 
 .createButton {
-    grid-column: 3 / 4;   
-    justify-self: end;    
-    
+    grid-column: 3 / 4;
+    justify-self: end;
+
     background-color: #49BBBD;
     border-color: #49BBBD;
     border-radius: 25px;

@@ -46,29 +46,29 @@ export function useTemplateOperations({
   const [postmanFileName, setPostmanFileName] = useState("");
 
   const resetStatusIfRejected = async () => {
-    // Check if status should be reset based on localStorage only
-    // This function will be called after editing questions/rubrics that had comments
+
+
     console.log("resetStatusIfRejected called:", { isRejected, taskId: task.id, taskStatus: task.status });
-    
+
     if (!isRejected) {
       console.log("Task is not rejected, skipping status reset check");
       return;
     }
-    
+
     try {
-      // Get initial list of questions with comments from localStorage
+
       const initialKey = `task-${task.id}-initial-commented-questions`;
       const resolvedKey = `task-${task.id}-resolved-questions`;
-      
+
       let initialQuestionIds: number[] = [];
       let resolvedQuestionIds: number[] = [];
-      
+
       try {
         const initialStored = localStorage.getItem(initialKey);
         if (initialStored) {
           initialQuestionIds = JSON.parse(initialStored);
         }
-        
+
         const resolvedStored = localStorage.getItem(resolvedKey);
         if (resolvedStored) {
           resolvedQuestionIds = JSON.parse(resolvedStored);
@@ -85,14 +85,14 @@ export function useTemplateOperations({
         resolvedQuestionIds
       });
 
-      // If no initial list, nothing to check
+
       if (initialQuestionIds.length === 0) {
         console.log("No initial commented questions stored, skipping status reset");
         return;
       }
 
-      // Check if all initial commented questions have been resolved
-      const allResolved = initialQuestionIds.every(questionId => 
+
+      const allResolved = initialQuestionIds.every(questionId =>
         resolvedQuestionIds.includes(questionId)
       );
 
@@ -103,7 +103,7 @@ export function useTemplateOperations({
         return;
       }
 
-      // All questions with comments have been resolved, proceed to reset status
+
       console.log("✅ All comments resolved! Resetting status to Pending...");
       await assignRequestService.updateAssignRequest(task.id, {
         message: task.message || "All questions have been addressed. Status reset to Pending for review.",
@@ -111,11 +111,11 @@ export function useTemplateOperations({
         assignedLecturerId: task.assignedLecturerId,
         assignedByHODId: task.assignedByHODId,
         assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-        status: 1, // Reset to Pending
+        status: 1,
         assignedAt: task.assignedAt,
       });
-      
-      // Clear localStorage after successful reset
+
+
       try {
         localStorage.removeItem(initialKey);
         localStorage.removeItem(resolvedKey);
@@ -123,17 +123,17 @@ export function useTemplateOperations({
       } catch (err) {
         console.error("Failed to clear localStorage:", err);
       }
-      
+
       console.log("Status updated successfully, invalidating queries...");
-      
-      // Invalidate assign requests queries to refresh UI
-      await queryClient.invalidateQueries({ 
+
+
+      await queryClient.invalidateQueries({
         queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
         exact: false
       });
-      
+
       console.log("✅ Status reset to Pending completed!");
-      
+
       notification.success({
         message: "Status Reset to Pending",
         description: "All questions have been addressed. Status reset to Pending for HOD review.",
@@ -149,7 +149,7 @@ export function useTemplateOperations({
 
   const handleCreateTemplate = async () => {
     try {
-      // Validate: Check if there's already a template for this task (not rejected)
+
       const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
       if (taskTemplate && !isRejected) {
         notification.error({
@@ -159,7 +159,7 @@ export function useTemplateOperations({
         return;
       }
 
-      // Validate: Check if template name is provided
+
       if (!newTemplateName.trim()) {
         notification.error({
           message: "Template Name Required",
@@ -168,7 +168,7 @@ export function useTemplateOperations({
         return;
       }
 
-      // Validate: If template type is WEBAPI (1), both database and postman files are required
+
       if (newTemplateType === 1) {
         if (!newTemplateStartupProject.trim()) {
           notification.error({
@@ -214,7 +214,7 @@ export function useTemplateOperations({
         }
       }
 
-      // Create template
+
       const createdTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: newTemplateName,
         description: newTemplateDesc,
@@ -225,9 +225,9 @@ export function useTemplateOperations({
         assignedToHODId: task.assignedByHODId,
       });
 
-      // Upload database and postman collection files for WEBAPI template
+
       if (newTemplateType === 1 && createdTemplate.id) {
-        // Upload database file (template=0)
+
         if (databaseFileList.length > 0) {
           const databaseFile = databaseFileList[0].originFileObj;
           if (databaseFile) {
@@ -249,7 +249,7 @@ export function useTemplateOperations({
           }
         }
 
-        // Upload postman collection file (template=1)
+
         if (postmanFileList.length > 0) {
           const postmanFile = postmanFileList[0].originFileObj;
           if (postmanFile) {
@@ -281,7 +281,7 @@ export function useTemplateOperations({
       setDatabaseFileName("");
       setPostmanFileName("");
 
-      // If this was a resubmission after rejection, reset status to Pending
+
       if (isRejected) {
         try {
           await assignRequestService.updateAssignRequest(task.id, {
@@ -290,16 +290,16 @@ export function useTemplateOperations({
             assignedLecturerId: task.assignedLecturerId,
             assignedByHODId: task.assignedByHODId,
             assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-            status: 1, // Reset to Pending
+            status: 1,
             assignedAt: task.assignedAt,
           });
-          
-          // Invalidate assign requests queries to refresh UI
-          await queryClient.invalidateQueries({ 
+
+
+          await queryClient.invalidateQueries({
             queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
             exact: false
           });
-          
+
           notification.success({
             message: "Template Created and Resubmitted",
             description: "Template has been created and status reset to Pending for HOD review.",
@@ -332,29 +332,29 @@ export function useTemplateOperations({
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
-      
-      // Invalidate all assessment template queries
-      await queryClient.invalidateQueries({ 
+
+
+      await queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.all,
         exact: false
       });
-      
-      // Refetch all assessment template queries immediately
+
+
       await queryClient.refetchQueries({
         queryKey: queryKeys.assessmentTemplates.all,
-        type: 'active', // Refetch all active queries
+        type: 'active',
       });
-      
-      // Also refetch local templates
+
+
       await refetchTemplates();
-      
-      // Dispatch custom event to notify other components (after refetch)
+
+
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', { 
+        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', {
           detail: { templateId: template.id, action: 'deleted' }
         }));
       }
-      
+
       await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {

@@ -1,116 +1,70 @@
-/**
- * Footer component - redesigned to match the provided image
- */
 
 'use client';
 
-import React, { useState } from 'react';
-import { 
-    DownloadOutlined, InstagramOutlined, MailOutlined, UsergroupAddOutlined, ChromeOutlined
+import React from 'react';
+import {
+    InstagramOutlined, MailOutlined, UsergroupAddOutlined, ChromeOutlined
 } from "@ant-design/icons";
-// Giả định LogoComponent là một component đã có
-import { LogoComponent } from "@/components/ui/Logo"; 
-import { DownloadQRModal } from "@/components/common/DownloadQRModal";
+
+import { LogoComponent } from "@/components/ui/Logo";
 import Link from "next/link";
-
-interface CustomLinkProps {
-    href: string;
-    className?: string;
-    children: React.ReactNode;
-}
-
-const CustomLink: React.FC<CustomLinkProps> = ({ href, className, children }) => (
-    <Link href={href} className={className}>
-        {children}
-    </Link>
-);
+import styles from "./Footer.module.css";
 
 export const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
-    const [downloadModalOpen, setDownloadModalOpen] = useState(false);
 
-    const ContactIcons = [
+    const socialIcons = [
         { icon: <InstagramOutlined />, href: "#instagram" },
         { icon: <MailOutlined />, href: "mailto:apsas@gmail.com" },
         { icon: <UsergroupAddOutlined />, href: "#community" },
         { icon: <ChromeOutlined />, href: "#chrome-extension" },
     ];
 
-    const handleDownloadClick = (e: React.MouseEvent) => {
-        e.preventDefault();
-        setDownloadModalOpen(true);
-    };
-
     return (
-        <footer className="footer-base">
-            
-            {/* CONTAINER CHÍNH - Căn giữa nội dung */}
-            <div className="footer-container">
-                
-                {/* KHỐI 1: Logo + Tagline */}
-                <div className="logo-tagline-block">
-                    <LogoComponent size='large' />
-                    <div className="tagline-text">
-                        <div className="tagline-primary">Automated Programming</div>
-                        <div className="tagline-secondary">Skills Assessment System</div>
+        <footer className={styles.footerBase}>
+            <div className={styles.footerContainer}>
+                <div className={styles.footerContent}>
+                    <div className={styles.footerMain}>
+                        <div className={styles.logoSection}>
+                            <div className={styles.logoWrapper}>
+                                <LogoComponent size='large' />
+                            </div>
+                            <div className={styles.taglineText}>
+                                <div className={styles.taglinePrimary}>Automated Programming</div>
+                                <div className={styles.taglineSecondary}>Skills Assessment System</div>
+                            </div>
+                        </div>
+
+                        <div className={styles.infoSection}>
+                            <div className={styles.contactInfo}>
+                                <Link href="mailto:apsas@gmail.com" className={styles.contactLink}>
+                                    apsas@gmail.com
+                                </Link>
+                                <div>+84 123 456 789</div>
+                                <div>Thu Duc, Ho Chi Minh</div>
+                            </div>
+                            <div className={styles.socialIcons}>
+                                {socialIcons.map((item, index) => (
+                                    <Link
+                                        key={index}
+                                        href={item.href}
+                                        className={styles.socialIcon}
+                                        aria-label={`Social link ${index + 1}`}
+                                    >
+                                        {item.icon}
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* KHỐI 2: 3 Columns (APSAS, Contact, Download) */}
-                <div className="columns-block">
-                    
-                    {/* Column: APSAS */}
-                    <div className="apsas-column">
-                        <h4 className="column-title">APSAS</h4>
-                        <div className="apsas-details">
-                            <CustomLink href="mailto:apsas@gmail.com" className="apsas-link">apsas@gmail.com</CustomLink>
-                            <div>+84123456789</div>
-                            <div>Thu Duc, Ho Chi Minh</div>
-                        </div>
+                <div className={styles.copyrightSection}>
+                    <div className={styles.copyrightText}>
+                        © {currentYear} APSAS. All rights reserved.
                     </div>
-
-                    {/* Column: Contact (Icons) - 2x2 Grid */}
-                    <div className="contact-column">
-                        <h4 className="column-title">Contact</h4>
-                        <div className="contact-icons-grid">
-                            {ContactIcons.map((item, index) => (
-                                <CustomLink 
-                                    key={index} 
-                                    href={item.href} 
-                                    className="contact-icon-link"
-                                >
-                                    {item.icon}
-                                </CustomLink>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Column: Download - Temporarily hidden */}
-                    {/* <div className="download-column">
-                        <h4 className="column-title">Download</h4>
-                        <button 
-                            className="download-button"
-                            onClick={handleDownloadClick}
-                            type="button"
-                        >
-                            Download now <DownloadOutlined className="download-icon" />
-                        </button>
-                    </div> */}
                 </div>
-
             </div>
-            
-            {/* Dòng Copyright */}
-            <div className="copyright-text">
-                © {currentYear} APSAS. All rights reserved.
-            </div>
-
-            {/* Download QR Modal */}
-            <DownloadQRModal 
-                open={downloadModalOpen}
-                onClose={() => setDownloadModalOpen(false)}
-            />
-            
         </footer>
     );
 };

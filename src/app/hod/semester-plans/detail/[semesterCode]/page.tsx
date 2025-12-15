@@ -63,7 +63,7 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-// Helper function to check if semester has ended
+
 const isSemesterEnded = (endDate: string): boolean => {
   if (!endDate) return false;
   const now = new Date();
@@ -100,7 +100,7 @@ const ClassesTable = ({
     const fetchStudentCounts = async () => {
       setLoadingCounts(true);
       const counts = new Map<number, number>();
-      
+
       try {
         await Promise.all(
           classes.map(async (cls) => {
@@ -281,7 +281,7 @@ const CourseElementsTable = ({
         const hasApprovedRequest = elementsWithApprovedRequest.has(record.id);
         const isEditDisabled = isSemesterEnded || hasAssessment || hasApprovedRequest;
         const isDeleteDisabled = isSemesterEnded || hasApprovedRequest;
-        
+
         let editTooltipTitle = "";
         if (isEditDisabled) {
           if (hasApprovedRequest) {
@@ -292,7 +292,7 @@ const CourseElementsTable = ({
             editTooltipTitle = "The semester has ended. Editing is not allowed.";
           }
         }
-        
+
         let deleteTooltipTitle = "";
         if (isDeleteDisabled) {
           if (hasApprovedRequest) {
@@ -301,28 +301,28 @@ const CourseElementsTable = ({
             deleteTooltipTitle = "The semester has ended. Deletion is not allowed.";
           }
         }
-        
+
         const editButton = (
-          <Button 
-            type="link" 
-            onClick={() => onEdit(record)} 
+          <Button
+            type="link"
+            onClick={() => onEdit(record)}
             disabled={isEditDisabled}
           >
             Edit
           </Button>
         );
-        
+
         const deleteButton = (
-          <Button 
-            type="link" 
-            danger 
-            onClick={() => onDelete(record.id)} 
+          <Button
+            type="link"
+            danger
+            onClick={() => onDelete(record.id)}
             disabled={isDeleteDisabled}
           >
             Delete
           </Button>
         );
-        
+
         return (
           <Space>
             {isEditDisabled ? (
@@ -369,29 +369,29 @@ const AssignRequestsTable = ({
   onDelete,
   isSemesterEnded = false,
 }: AssignRequestsTableProps) => {
-  // Map status theo ApprovalDetail.tsx:
-  // 1=PENDING, 2=ACCEPTED, 3=REJECTED, 4=IN_PROGRESS, 5=COMPLETED (Approved)
-  // Hiển thị 3 status: Pending (1,2,4), Approved (5), Rejected (3)
+
+
+
   const getStatusDisplay = (status: number | undefined) => {
     if (status === undefined || status === null) return { text: "Pending", color: "default" };
-    
+
     switch (status) {
-      case 1: // PENDING
-      case 2: // ACCEPTED -> Pending (theo yêu cầu)
-      case 4: // IN_PROGRESS -> Pending (theo yêu cầu)
+      case 1:
+      case 2:
+      case 4:
         return { text: "Pending", color: "default" };
-      case 5: // COMPLETED -> Approved (đã duyệt)
+      case 5:
         return { text: "Approved", color: "success" };
-      case 3: // REJECTED
+      case 3:
         return { text: "Rejected", color: "error" };
       default:
         return { text: "Pending", color: "default" };
     }
   };
 
-  // Check if status is approved (status 5 = COMPLETED/Approved)
+
   const isApproved = (status: number | undefined) => {
-    return status === 5; // Status 5 is COMPLETED/Approved
+    return status === 5;
   };
 
   const columns: TableProps<AssignRequest>["columns"] = [
@@ -452,40 +452,40 @@ const AssignRequestsTable = ({
         const approved = isApproved(status);
         const isEditDisabled = isSemesterEnded || approved;
         const isDeleteDisabled = isSemesterEnded || approved;
-        
+
         const editTooltipTitle = isEditDisabled
           ? approved
             ? "This assign request has been approved. Editing is not allowed."
             : "The semester has ended. Editing is not allowed."
           : "";
-        
+
         const deleteTooltipTitle = isDeleteDisabled
           ? approved
             ? "This assign request has been approved. Deletion is not allowed."
             : "The semester has ended. Deletion is not allowed."
           : "";
-        
+
         const editButton = (
-          <Button 
-            type="link" 
-            onClick={() => onEdit(record)} 
+          <Button
+            type="link"
+            onClick={() => onEdit(record)}
             disabled={isEditDisabled}
           >
             Edit
           </Button>
         );
-        
+
         const deleteButton = (
-          <Button 
-            type="link" 
-            danger 
-            onClick={() => onDelete(record.id)} 
+          <Button
+            type="link"
+            danger
+            onClick={() => onDelete(record.id)}
             disabled={isDeleteDisabled}
           >
             Delete
           </Button>
         );
-        
+
         return (
           <Space>
             {isEditDisabled ? (
@@ -812,23 +812,23 @@ const SemesterDetailPageContent = ({
       const data = await semesterService.getSemesterPlanDetail(
         params.semesterCode
       );
-      
-      // Fetch assign requests to get status
+
+
       try {
         const assignRequestsResponse = await assignRequestService.getAssignRequests({
           pageNumber: 1,
           pageSize: 1000,
         });
-        
-        // Create maps of assign request ID to status and assignedApproverLecturerId
+
+
         const statusMap = new Map<number, number>();
         const approverMap = new Map<number, number | undefined>();
         assignRequestsResponse.items.forEach(ar => {
           statusMap.set(ar.id, ar.status);
           approverMap.set(ar.id, ar.assignedApproverLecturerId);
         });
-        
-        // Enrich assign requests with status and assignedApproverLecturerId
+
+
         data.semesterCourses.forEach(semesterCourse => {
           semesterCourse.assignRequests.forEach(ar => {
             const status = statusMap.get(ar.id);
@@ -843,9 +843,9 @@ const SemesterDetailPageContent = ({
         });
       } catch (err) {
         console.error("Failed to fetch assign requests status:", err);
-        // Continue without status if fetch fails
+
       }
-      
+
       setSemesterData(data);
       setError(null);
     } catch (err: any) {
@@ -870,7 +870,7 @@ const SemesterDetailPageContent = ({
     fetchLecturers();
   }, [fetchDetail]);
 
-  // Get all course element IDs from the semester plan
+
   const allCourseElementIds = useMemo(() => {
     if (!semesterData) return new Set<number>();
     const ids = new Set<number>();
@@ -882,8 +882,8 @@ const SemesterDetailPageContent = ({
     return ids;
   }, [semesterData]);
 
-  // Fetch assessment templates to check which course elements have assessments
-  // Use refetchInterval to automatically refresh every 3 seconds to catch template deletions
+
+
   const { data: templatesResponse, refetch: refetchTemplates } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -891,30 +891,30 @@ const SemesterDetailPageContent = ({
       pageSize: 1000,
     }),
     enabled: allCourseElementIds.size > 0,
-    refetchInterval: 3000, // Poll every 3 seconds to catch changes (especially deletions)
-    refetchIntervalInBackground: false, // Only poll when tab is active
+    refetchInterval: 3000,
+    refetchIntervalInBackground: false,
   });
 
-  // Find course elements that have assessment templates
+
   const elementsWithAssessment = useMemo(() => {
     if (!templatesResponse?.items || allCourseElementIds.size === 0) {
       return new Set<number>();
     }
-    
+
     const elementsWithAssessmentSet = new Set<number>();
     templatesResponse.items.forEach(template => {
       if (allCourseElementIds.has(template.courseElementId)) {
         elementsWithAssessmentSet.add(template.courseElementId);
       }
     });
-    
+
     return elementsWithAssessmentSet;
   }, [templatesResponse, allCourseElementIds]);
 
-  // Find course elements that have approved assign requests (status = 5)
+
   const elementsWithApprovedRequest = useMemo(() => {
     if (!semesterData) return new Set<number>();
-    
+
     const elementsWithApprovedSet = new Set<number>();
     semesterData.semesterCourses.forEach(semesterCourse => {
       semesterCourse.assignRequests.forEach(assignRequest => {
@@ -924,7 +924,7 @@ const SemesterDetailPageContent = ({
         }
       });
     });
-    
+
     return elementsWithApprovedSet;
   }, [semesterData]);
 
@@ -1059,7 +1059,7 @@ const SemesterDetailPageContent = ({
   };
 
   const handleOpenEditElementModal = (element: CourseElement) => {
-    // Check if the course element has an assessment
+
     if (elementsWithAssessment.has(element.id)) {
       notification.warning({
         message: "Cannot Edit Course Element",
@@ -1309,7 +1309,7 @@ const SemesterDetailPageContent = ({
     return <Text type="danger">No semester data found.</Text>;
   }
 
-  // Check if semester has ended
+
   const semesterEnded = isSemesterEnded(semesterData.endDate);
 
   return (

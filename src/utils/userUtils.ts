@@ -25,23 +25,23 @@ export const getPaginationItems = (currentPage: number, totalPages: number): (nu
   }
 
   const items: (number | string)[] = [];
-  
+
   if (currentPage <= 4) {
-    // Show: 1, 2, 3, 4, 5, 6, ..., totalPages
+
     for (let i = 1; i <= 6; i++) {
       items.push(i);
     }
     items.push('...');
     items.push(totalPages);
   } else if (currentPage >= totalPages - 3) {
-    // Show: 1, ..., totalPages-5, totalPages-4, totalPages-3, totalPages-2, totalPages-1, totalPages
+
     items.push(1);
     items.push('...');
     for (let i = totalPages - 5; i <= totalPages; i++) {
       items.push(i);
     }
   } else {
-    // Show: 1, ..., currentPage-1, currentPage, currentPage+1, ..., totalPages
+
     items.push(1);
     items.push('...');
     items.push(currentPage - 1);

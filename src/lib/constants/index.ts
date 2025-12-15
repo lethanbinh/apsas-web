@@ -29,11 +29,11 @@ export const API_ENDPOINTS = {
     CLASS_STUDENT_DATA: "/Import/excel/class-student-data",
     CLASS_STUDENT_TEMPLATE: "/Import/excel/class-student-template",
   },
-  // --- SỬA LỖI: Chỉ giữ lại endpoint chung ---
+
   SEMESTER: {
     PAGINATED_LIST: "/Semester",
   },
-  // --- KẾT THÚC SỬA LỖI ---
+
   HOD: {
     APPROVAL_LIST: "/AssignRequest/list",
     ASSIGN_REQUEST_UPDATE: "/AssignRequest",
@@ -43,11 +43,6 @@ export const API_ENDPOINTS = {
   },
   FILE: {
     UPLOAD: "/File/upload",
-  },
-  APP_DOWNLOAD: {
-    GET_CURRENT: "/api/app-download",
-    SAVE: "/api/app-download",
-    HISTORY: "/api/app-download/history",
   },
 } as const;
 

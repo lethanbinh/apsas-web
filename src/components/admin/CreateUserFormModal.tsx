@@ -27,10 +27,10 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
   const selectedRole = Form.useWatch("role", form);
   const isEditMode = !!editingUser;
 
-  // Reset form fields when role changes (except role field itself)
+
   useEffect(() => {
     if (!isEditMode && selectedRole !== undefined && selectedRole !== null) {
-      // Clear all fields except role when role changes
+
       const currentValues = form.getFieldsValue();
       const fieldsToReset = ['username', 'password', 'email', 'phoneNumber', 'fullName', 'gender', 'dateOfBirth', 'avatar', 'address', 'department', 'specialization'];
       fieldsToReset.forEach(field => {
@@ -225,8 +225,8 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
                 },
               ]}
             >
-              <DatePicker 
-                style={{ width: "100%" }} 
+              <DatePicker
+                style={{ width: "100%" }}
                 disabled={isEditMode}
                 format="DD/MM/YYYY"
                 placeholder="Select date of birth"
@@ -262,7 +262,7 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
       return commonFields;
     }
 
-    // For create mode, show role selector first, then show form fields after role is selected
+
     if (selectedRole === undefined || selectedRole === null) {
       return (
         <Row gutter={16}>
@@ -285,7 +285,7 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
       );
     }
 
-    // Show form fields after role is selected (role can be changed)
+
     return (
       <>
         <Row gutter={16}>

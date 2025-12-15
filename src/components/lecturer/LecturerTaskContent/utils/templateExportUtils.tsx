@@ -20,7 +20,7 @@ export async function exportTemplate({
   notification,
 }: ExportTemplateParams) {
   if (!template) return;
-  
+
   if (typeof window === 'undefined') {
     notification.error({
       message: "Export Failed",
@@ -28,11 +28,11 @@ export async function exportTemplate({
     });
     return;
   }
-  
+
   try {
     let docxModule: any;
     let fileSaverModule: any;
-    
+
     try {
       docxModule = await import("docx");
       fileSaverModule = await import("file-saver");
@@ -44,14 +44,14 @@ export async function exportTemplate({
       });
       return;
     }
-    
+
     const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
     const saveAs = fileSaverModule.default || fileSaverModule.saveAs;
-    
+
     if (!Document || !Packer || !saveAs) {
       throw new Error("Required exports not found in imported modules");
     }
-    
+
     const docSections = [];
     docSections.push(
       new Paragraph({
@@ -114,7 +114,7 @@ export async function exportTemplate({
     const doc = new Document({
       sections: [{ properties: {}, children: docSections }],
     });
-    
+
     const blob = await Packer.toBlob(doc);
     saveAs(blob, `${template.name || "exam"}.docx`);
   } catch (err) {
@@ -144,8 +144,8 @@ export async function downloadTemplate({
   notification,
 }: DownloadTemplateParams) {
   const targetTemplate = template;
-  
-  // If no template exists, create a sample template structure for download
+
+
   const finalTemplate = targetTemplate || {
     id: 0,
     assignRequestId: task.id,
@@ -170,7 +170,7 @@ export async function downloadTemplate({
   try {
     const wb = XLSX.utils.book_new();
 
-    // Sheet 1: Assessment Template
+
     const templateData = [
       ["ASSESSMENT TEMPLATE"],
       ["Field", "Value", "Description"],
@@ -189,7 +189,7 @@ export async function downloadTemplate({
     const templateWs = XLSX.utils.aoa_to_sheet(templateData);
     XLSX.utils.book_append_sheet(wb, templateWs, "Assessment Template");
 
-    // Sheet 2: Papers
+
     let papersData: any[][];
     const targetPapers = (finalTemplate === template && template) ? papers : [];
     if (targetPapers.length > 0) {
@@ -201,7 +201,7 @@ export async function downloadTemplate({
         }
       }
       const uniquePapers = Array.from(papersMap.values());
-      
+
       papersData = [
         ["PAPERS"],
         ["Name", "Description", "Language", "Instructions"],
@@ -232,7 +232,7 @@ export async function downloadTemplate({
     const papersWs = XLSX.utils.aoa_to_sheet(papersData);
     XLSX.utils.book_append_sheet(wb, papersWs, "Papers");
 
-    // Sheet 3: Questions
+
     let questionsData: any[][];
     const targetAllQuestions = (template && finalTemplate === template) ? allQuestions : {};
     if (targetPapers.length > 0 && Object.keys(targetAllQuestions).length > 0) {
@@ -247,7 +247,7 @@ export async function downloadTemplate({
         }
       }
       const uniqueQuestions = Array.from(questionsMap.values());
-      
+
       questionsData = [
         ["QUESTIONS"],
         ["Paper Name", "Question Number", "Question Text", "Sample Input", "Sample Output", "Score", "Instructions"],
@@ -294,7 +294,7 @@ export async function downloadTemplate({
     const questionsWs = XLSX.utils.aoa_to_sheet(questionsData);
     XLSX.utils.book_append_sheet(wb, questionsWs, "Questions");
 
-    // Sheet 4: Rubrics
+
     let rubricsData: any[][];
     if (targetPapers.length > 0 && Object.keys(targetAllQuestions).length > 0) {
       const allRubrics: Array<{ paperName: string; questionNumber: number; rubric: RubricItem }> = [];
@@ -319,7 +319,7 @@ export async function downloadTemplate({
           }
         }
       }
-      
+
       const rubricsMap = new Map<string, { paperName: string; questionNumber: number; rubric: RubricItem }>();
       for (const item of allRubrics) {
         const key = `${item.paperName}|${item.questionNumber}|${item.rubric.description || ""}|${item.rubric.input || ""}|${item.rubric.output || ""}|${item.rubric.score || 0}`;
@@ -328,7 +328,7 @@ export async function downloadTemplate({
         }
       }
       const uniqueRubrics = Array.from(rubricsMap.values());
-      
+
       rubricsData = [
         ["RUBRICS"],
         ["Paper Name", "Question Number", "Description", "Input", "Output", "Score", "Instructions"],
@@ -373,7 +373,7 @@ export async function downloadTemplate({
     const rubricsWs = XLSX.utils.aoa_to_sheet(rubricsData);
     XLSX.utils.book_append_sheet(wb, rubricsWs, "Rubrics");
 
-    // Set column widths
+
     const setColumnWidths = (ws: XLSX.WorkSheet, widths: { [key: string]: number }) => {
       ws["!cols"] = Object.keys(widths).map((col) => ({ wch: widths[col] || 15 }));
     };

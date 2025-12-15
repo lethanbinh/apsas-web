@@ -1,22 +1,21 @@
 "use client";
 
-import React from "react";
-import { Tag, Space } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
-import styles from "./AssignmentList.module.css";
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+import React from "react";
+import { Space, Tag } from "antd";
+import styles from "./AssignmentList.module.css";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 interface DeadlineDisplayProps {
-  date?: string | null; // end date
-  startDate?: string | null; // start date
+  date?: string | null;
+  startDate?: string | null;
 }
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
@@ -33,8 +32,7 @@ export const DeadlineDisplay: React.FC<DeadlineDisplayProps> = ({ date, startDat
   try {
     const endTime = toVietnamTime(date);
     const formattedEndDate = endTime.format("DD MMM YYYY, HH:mm");
-    
-    // If start date exists, show both start and end date
+
     if (startDate) {
       try {
         const startTime = toVietnamTime(startDate);
@@ -51,7 +49,6 @@ export const DeadlineDisplay: React.FC<DeadlineDisplayProps> = ({ date, startDat
         );
       } catch (error) {
         console.error("Error formatting start date:", error);
-        // Fallback to only end date if start date is invalid
         return (
           <Tag icon={<CalendarOutlined />} color="default" className={styles.deadlineTag}>
             End: {formattedEndDate}
@@ -59,8 +56,7 @@ export const DeadlineDisplay: React.FC<DeadlineDisplayProps> = ({ date, startDat
         );
       }
     }
-    
-    // Only end date (backward compatibility)
+
     return (
       <Tag icon={<CalendarOutlined />} color="default" className={styles.deadlineTag}>
         {formattedEndDate}

@@ -60,7 +60,7 @@
   margin-top: 8px;
 }
 
-/* Center align collapse icon and text */
+
 .collapseWrapper :global(.ant-collapse-header) {
   display: flex !important;
   align-items: center !important;

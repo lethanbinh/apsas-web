@@ -43,7 +43,7 @@ export function UploadGradeSheetModal({
               name: file.name,
               status: 'done',
             }]);
-            return false; // Prevent auto upload
+            return false;
           }}
           accept=".xlsx,.xls"
           maxCount={1}

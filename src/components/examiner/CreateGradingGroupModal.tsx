@@ -28,8 +28,8 @@ import { queryKeys } from "@/lib/react-query";
 
 const { Text } = Typography;
 
-// Helper function to check if an assessment template is a PE (Practical Exam)
-// Based on courseElementName, similar to isPracticalExam in student/lecturer pages
+
+
 function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
   const name = (template.courseElementName || "").toLowerCase();
   const keywords = [
@@ -77,7 +77,7 @@ export const CreateGradingGroupModal: React.FC<
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
 
-  // Fetch courses for selected semester
+
   const { data: semesterDetail, isLoading: loadingCourses } = useQuery({
     queryKey: ['semesterPlanDetail', selectedSemesterCode],
     queryFn: () => semesterService.getSemesterPlanDetail(selectedSemesterCode!),
@@ -86,7 +86,7 @@ export const CreateGradingGroupModal: React.FC<
 
   const courses = semesterDetail?.semesterCourses || [];
 
-  // Fetch course elements for selected semester
+
   const { data: courseElementsRes = [] } = useQuery({
     queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
     queryFn: () => courseElementService.getCourseElements({
@@ -97,7 +97,7 @@ export const CreateGradingGroupModal: React.FC<
     enabled: !!selectedSemesterCode && open,
   });
 
-  // Fetch all assessment templates
+
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -107,26 +107,26 @@ export const CreateGradingGroupModal: React.FC<
     enabled: open,
   });
 
-  // Filter PE templates based on selected course
+
   const assessmentTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
     let peTemplates = templatesResponse.items.filter(isPracticalExamTemplate);
-    
+
     if (selectedCourseId && selectedSemesterCode) {
       const courseElementIds = courseElementsRes
         .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
         .map(ce => ce.id);
-      peTemplates = peTemplates.filter(template => 
+      peTemplates = peTemplates.filter(template =>
         courseElementIds.includes(template.courseElementId)
       );
     }
-    
+
     return peTemplates;
   }, [templatesResponse, selectedCourseId, selectedSemesterCode, courseElementsRes]);
   const { message: messageApi } = App.useApp();
   const { user } = useAuth();
 
-  // Fetch semesters using TanStack Query
+
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
@@ -136,22 +136,22 @@ export const CreateGradingGroupModal: React.FC<
     enabled: open,
   });
 
-  // Filter semesters to only show current and future semesters (not past semesters)
+
   const semesters = useMemo(() => {
     const now = new Date();
     return allSemesters.filter((sem) => {
       const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
-      // Only include semesters where endDate >= today (current and future semesters)
+
       return endDate >= now;
     });
   }, [allSemesters]);
 
-  // Mutation for creating grading group
+
   const createGradingGroupMutation = useMutation({
     mutationFn: async (values: any) => {
-      // Fetch examiner ID from service
+
       let currentExaminerId: number | null = null;
-      
+
       if (user && user.id) {
         try {
           const examiners = await examinerService.getExaminerList();
@@ -173,7 +173,7 @@ export const CreateGradingGroupModal: React.FC<
         throw new Error("Examiner information not found. Please contact administrator.");
       }
 
-      // Validate duplicate assignment
+
       if (values.lecturerId && values.assessmentTemplateId) {
         const newSemesterCode = getSemesterCodeForTemplate(values.assessmentTemplateId);
 
@@ -192,14 +192,14 @@ export const CreateGradingGroupModal: React.FC<
         }
       }
 
-      // Step 1: Create grading group
+
       const group = await gradingGroupService.createGradingGroup({
         lecturerId: values.lecturerId,
         assessmentTemplateId: values.assessmentTemplateId || null,
         createdByExaminerId: currentExaminerId,
       });
 
-      // Step 2: Upload ZIP files if provided
+
       if (fileList.length > 0) {
         const files: File[] = [];
         for (const fileItem of fileList) {
@@ -219,7 +219,7 @@ export const CreateGradingGroupModal: React.FC<
       return group;
     },
     onSuccess: (group) => {
-      // Invalidate queries
+
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroup'] });
@@ -227,7 +227,7 @@ export const CreateGradingGroupModal: React.FC<
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
       messageApi.success("Teacher assigned successfully!");
       onOk();
-      // Refetch queries after 3 seconds
+
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
@@ -254,43 +254,43 @@ export const CreateGradingGroupModal: React.FC<
     }
   }, [open, form]);
 
-  // Get semester code for a given assessment template
+
   const getSemesterCodeForTemplate = (templateId: number): string | null => {
     const template = assessmentTemplatesMap.get(templateId);
     if (!template) return null;
-    
+
     const courseElement = courseElementsMap.get(template.courseElementId);
     return courseElement?.semesterCourse?.semester?.semesterCode || null;
   };
 
-  // Validate file is ZIP
+
   const beforeUploadZip: UploadProps["beforeUpload"] = (file) => {
     const fileName = file.name.toLowerCase();
     const isZipExtension = fileName.endsWith(".zip");
-    
+
     if (!isZipExtension) {
       messageApi.error("Only ZIP files are accepted! Please select a file with .zip extension");
       return Upload.LIST_IGNORE;
     }
-    
+
     const isLt100M = file.size / 1024 / 1024 < 100;
     if (!isLt100M) {
       messageApi.error("File must be smaller than 100MB!");
       return Upload.LIST_IGNORE;
     }
-    
+
     return false;
   };
 
 
   const handleFileChange: UploadProps["onChange"] = (info) => {
-    // Keep all files that pass validation
+
     const validFiles = info.fileList.filter(file => {
       if (file.status === 'error') return false;
       if (!file.name.toLowerCase().endsWith('.zip')) return false;
       return true;
     });
-    
+
     setFileList(validFiles);
   };
 

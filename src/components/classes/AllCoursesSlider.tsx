@@ -14,16 +14,16 @@ import styles from "./AllCoursesSlider.module.css";
 
 const { Title } = Typography;
 
-// Dữ liệu mẫu
+
 const courseData = [
   {
     id: 1,
     title: "Class SE1720 - Mobile Programing",
-    authorAvatarUrl: "/classes/avatar-teacher.png", // Thay bằng đường dẫn avatar
+    authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     description:
       "Class, launched less than a year ago by Blackboard co-founder Michael Chasen, integrates exclusively...",
-    imageUrl: "/classes/class.png", // Thay bằng đường dẫn ảnh
+    imageUrl: "/classes/class.png",
   },
   {
     id: 2,
@@ -46,11 +46,11 @@ const courseData = [
   {
     id: 4,
     title: "Class SE1720 - Mobile Programing",
-    authorAvatarUrl: "/classes/avatar-teacher.png", // Thay bằng đường dẫn avatar
+    authorAvatarUrl: "/classes/avatar-teacher.png",
     authorName: "SangNM",
     description:
       "Class, launched less than a year ago by Blackboard co-founder Michael Chasen, integrates exclusively...",
-    imageUrl: "/classes/class.png", // Thay bằng đường dẫn ảnh
+    imageUrl: "/classes/class.png",
   },
   {
     id: 5,

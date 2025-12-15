@@ -53,7 +53,7 @@ const mapRoleToNumber = (role: string | number): Role => {
   if (roleLower === "student") return 2;
   if (roleLower === "hod") return 3;
   if (roleLower === "examiner") return 4;
-  return 2; // Default to Student
+  return 2;
 };
 
 
@@ -109,11 +109,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       console.log("Login successful!");
 
       const roleRedirects: { [key: number]: string } = {
-        0: "/admin/manage-users", // Admin
-        1: "/classes/my-classes/lecturer", // Lecturer
-        2: "/classes/my-classes/student", // Student
-        3: "/hod/semester-plans", // HOD
-        4: "/examiner/grading-groups", // Examiner
+        0: "/admin/manage-users",
+        1: "/classes/my-classes/lecturer",
+        2: "/classes/my-classes/student",
+        3: "/hod/semester-plans",
+        4: "/examiner/grading-groups",
       };
 
       let userRole: Role = 2;
@@ -129,15 +129,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         throw new Error("Failed to process authentication token");
       }
 
-      // Check if there's a redirect parameter from URL
+
       const redirectParam = searchParams.get("redirect");
       let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
-      
-      // If redirect parameter exists, validate it's allowed for this role
+
+
       if (redirectParam) {
         try {
           const decodedRedirect = decodeURIComponent(redirectParam);
-          // Define allowed routes for each role (same as middleware)
+
           const roleRoutes: Record<number, string[]> = {
             0: ["/admin", "/profile"],
             1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
@@ -145,14 +145,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             3: ["/hod", "/profile"],
             4: ["/examiner", "/profile"],
           };
-          
+
           const allowedPaths = roleRoutes[userRole] || [];
-          // Check if decoded redirect is allowed for this role
-          const isAllowed = allowedPaths.some(path => 
+
+          const isAllowed = allowedPaths.some(path =>
             decodedRedirect === path || decodedRedirect.startsWith(path + "/")
           );
-          
-          // Also check that redirect doesn't contain another role's identifier
+
+
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
@@ -161,11 +161,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
             const otherRole = Number(roleNum);
             return otherRole !== userRole && (
-              decodedRedirect.startsWith(`/${identifier}`) || 
+              decodedRedirect.startsWith(`/${identifier}`) ||
               pathSegments.includes(identifier)
             );
           });
-          
+
           if (isAllowed && !hasOtherRole) {
             redirectPath = decodedRedirect;
           }
@@ -177,7 +177,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       console.log("Redirecting to:", redirectPath);
       console.log("User role is:", userRole, "which maps to:", redirectPath);
 
-      // Use window.location.href for a full page reload to ensure clean state
+
       window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
@@ -190,19 +190,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       dispatch(logout());
 
-      // Extract error message from API response
+
       let errorMessage: string = DEFAULT_ERROR_MESSAGES.LOGIN_FAILED;
 
-      // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
-      // it throws the payload directly. So we need to check multiple possible structures:
 
-      // 1. Error is a string (direct payload from rejectWithValue)
+
+
+
       if (typeof error === 'string') {
         errorMessage = formatErrorMessage(error);
       }
-      // 2. Error is an object - check common properties
+
       else if (error && typeof error === 'object') {
-        // Check for Redux SerializedError payload (when rejectWithValue is used)
+
         if (error.payload !== undefined) {
           if (typeof error.payload === 'string') {
             errorMessage = formatErrorMessage(error.payload);
@@ -210,12 +210,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = formatErrorMessage(error.payload.message);
           }
         }
-        // Check for Axios error response
+
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
 
-          // Handle specific status codes first
+
           if (status === 401) {
             errorMessage = DEFAULT_ERROR_MESSAGES.INVALID_CREDENTIALS;
           } else if (status === 403) {
@@ -226,26 +226,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = DEFAULT_ERROR_MESSAGES.SERVER_ERROR;
           }
 
-          // Check for errorMessages array (common API format)
+
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = formatErrorMessage(errorData.errorMessages[0]);
             }
-            // Check for message string
+
             else if (errorData.message) {
               errorMessage = formatErrorMessage(errorData.message);
             }
-            // Check for error string
+
             else if (errorData.error) {
               errorMessage = formatErrorMessage(errorData.error);
             }
           }
         }
-        // Check for error message property
+
         else if (error.message) {
           errorMessage = formatErrorMessage(error.message);
         }
-        // Check if error itself is the message (sometimes Redux throws the payload directly as error)
+
         else if (error.toString && error.toString() !== '[object Object]') {
           const errorStr = error.toString();
           if (errorStr && errorStr !== '[object Object]') {
@@ -254,9 +254,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         }
       }
 
-      // Ensure toast message is displayed
+
       setErrors({ general: errorMessage });
-      message.error(errorMessage, 4); // Show for 4 seconds
+      message.error(errorMessage, 4);
       onError?.(errorMessage);
     } finally {
       setIsLoggingIn(false);
@@ -284,7 +284,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       });
       setIsDemoModalOpen(false);
       setSelectedDemoAccount(null);
-      // Auto submit after a short delay to ensure form is updated
+
       setTimeout(() => {
         form.submit();
       }, 100);
@@ -334,7 +334,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       }
 
       setStorageItem("auth_token", response.result.token);
-      setCookie("auth_token", response.result.token); // Session cookie
+      setCookie("auth_token", response.result.token);
 
       const token = response.result.token;
 
@@ -350,10 +350,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       }
 
       const roleRedirects: { [key: number]: string } = {
-        0: "/admin/manage-users", // Admin
-        1: "/classes/my-classes/lecturer", // Lecturer
-        2: "/classes/my-classes/student", // Student
-        3: "/hod/semester-plans", // HOD
+        0: "/admin/manage-users",
+        1: "/classes/my-classes/lecturer",
+        2: "/classes/my-classes/student",
+        3: "/hod/semester-plans",
       };
 
       const userRole = mapRoleToNumber(decoded?.role || 2);
@@ -398,15 +398,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         userRole
       );
 
-      // Check if there's a redirect parameter from URL
+
       const redirectParam = searchParams.get("redirect");
       let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
-      
-      // If redirect parameter exists, validate it's allowed for this role
+
+
       if (redirectParam) {
         try {
           const decodedRedirect = decodeURIComponent(redirectParam);
-          // Define allowed routes for each role (same as middleware)
+
           const roleRoutes: Record<number, string[]> = {
             0: ["/admin", "/profile"],
             1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
@@ -414,14 +414,14 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             3: ["/hod", "/profile"],
             4: ["/examiner", "/profile"],
           };
-          
+
           const allowedPaths = roleRoutes[userRole] || [];
-          // Check if decoded redirect is allowed for this role
-          const isAllowed = allowedPaths.some(path => 
+
+          const isAllowed = allowedPaths.some(path =>
             decodedRedirect === path || decodedRedirect.startsWith(path + "/")
           );
-          
-          // Also check that redirect doesn't contain another role's identifier
+
+
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
@@ -430,11 +430,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
             const otherRole = Number(roleNum);
             return otherRole !== userRole && (
-              decodedRedirect.startsWith(`/${identifier}`) || 
+              decodedRedirect.startsWith(`/${identifier}`) ||
               pathSegments.includes(identifier)
             );
           });
-          
+
           if (isAllowed && !hasOtherRole) {
             redirectPath = decodedRedirect;
           }
@@ -444,7 +444,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       }
 
       console.log("Redirecting to:", redirectPath);
-      // Use window.location.href for a full page reload to ensure clean state
+
       window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
@@ -459,19 +459,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       dispatch(logout());
 
-      // Extract error message from API response
+
       let errorMessage: string = DEFAULT_ERROR_MESSAGES.GOOGLE_LOGIN_FAILED;
 
-      // When Redux thunk rejects with rejectWithValue and .unwrap() is called,
-      // it throws the payload directly. So we need to check multiple possible structures:
 
-      // 1. Error is a string (direct payload from rejectWithValue)
+
+
+
       if (typeof error === 'string') {
         errorMessage = formatErrorMessage(error);
       }
-      // 2. Error is an object - check common properties
+
       else if (error && typeof error === 'object') {
-        // Check for Redux SerializedError payload (when rejectWithValue is used)
+
         if (error.payload !== undefined) {
           if (typeof error.payload === 'string') {
             errorMessage = formatErrorMessage(error.payload);
@@ -479,12 +479,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = formatErrorMessage(error.payload.message);
           }
         }
-        // Check for Axios error response
+
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
 
-          // Handle specific status codes first
+
           if (status === 401) {
             errorMessage = DEFAULT_ERROR_MESSAGES.GOOGLE_ACCOUNT_NOT_REGISTERED;
           } else if (status === 403) {
@@ -495,26 +495,26 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = DEFAULT_ERROR_MESSAGES.SERVER_ERROR;
           }
 
-          // Check for errorMessages array (common API format)
+
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = formatErrorMessage(errorData.errorMessages[0]);
             }
-            // Check for message string
+
             else if (errorData.message) {
               errorMessage = formatErrorMessage(errorData.message);
             }
-            // Check for error string
+
             else if (errorData.error) {
               errorMessage = formatErrorMessage(errorData.error);
             }
           }
         }
-        // Check for error message property
+
         else if (error.message) {
           errorMessage = formatErrorMessage(error.message);
         }
-        // Check if error itself is the message (sometimes Redux throws the payload directly as error)
+
         else if (error.toString && error.toString() !== '[object Object]') {
           const errorStr = error.toString();
           if (errorStr && errorStr !== '[object Object]') {
@@ -523,16 +523,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         }
       }
 
-      // Ensure toast message is displayed
+
       setErrors({ general: errorMessage });
-      message.error(errorMessage, 4); // Show for 4 seconds
+      message.error(errorMessage, 4);
       onError?.(errorMessage);
     }
   };
 
   return (
     <div className="login-form-container">
-      {/* Logo */}
+      {}
       <div className="login-logo" onClick={handleLogoClick} style={{ cursor: "pointer" }}>
         <Logo />
       </div>
@@ -640,7 +640,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         <p>Forgot your password? <Link href="/reset-password" className="register-link">Reset it</Link></p>
       </div>
 
-      {/* Demo Account Modal */}
+      {}
       <Modal
         title="Select Demo Account"
         open={isDemoModalOpen}

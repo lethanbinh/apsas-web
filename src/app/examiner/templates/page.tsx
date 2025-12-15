@@ -47,7 +47,7 @@ const TemplatesPageContent = () => {
 
   const { message } = App.useApp();
 
-  // Fetch semesters
+
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
@@ -56,7 +56,7 @@ const TemplatesPageContent = () => {
     }),
   });
 
-  // Fetch assign requests
+
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -65,7 +65,7 @@ const TemplatesPageContent = () => {
     }),
   });
 
-  // Get approved course element IDs
+
   const approvedCourseElementIds = useMemo(() => {
     const ids = new Set<number>();
     if (assignRequestResponse?.items) {
@@ -79,7 +79,7 @@ const TemplatesPageContent = () => {
     return ids;
   }, [assignRequestResponse]);
 
-  // Fetch assessment templates
+
   const { data: templatesResponse, isLoading: loadingTemplates, error: templatesError } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -88,7 +88,7 @@ const TemplatesPageContent = () => {
     }),
   });
 
-  // Fetch all course elements
+
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -105,13 +105,13 @@ const TemplatesPageContent = () => {
     return map;
   }, [allCourseElementsRes]);
 
-  // Filter PE templates based on courseElement.elementType === 2 (PE)
+
   const allTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
     const peTemplates = templatesResponse.items.filter(template => {
-      // Get course element from map
+
       const courseElement = allCourseElementsMap.get(template.courseElementId);
-      // Only include if elementType === 2 (PE)
+
       if (!courseElement || courseElement.elementType !== 2) return false;
       if (approvedCourseElementIds.size > 0) {
         return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
@@ -121,9 +121,9 @@ const TemplatesPageContent = () => {
     return peTemplates;
   }, [templatesResponse, approvedCourseElementIds, allCourseElementsMap]);
 
-  // Filter semesters: only those that have templates
+
   const semesters = useMemo(() => {
-    // Get all semester codes that have templates
+
     const semesterCodesWithTemplates = new Set<string>();
     allTemplates.forEach(template => {
       const courseElement = allCourseElementsMap.get(template.courseElementId);
@@ -131,23 +131,23 @@ const TemplatesPageContent = () => {
         semesterCodesWithTemplates.add(courseElement.semesterCourse.semester.semesterCode);
       }
     });
-    
-    // Filter to only semesters that have templates
+
+
     return allSemesters.filter((s: Semester) => semesterCodesWithTemplates.has(s.semesterCode));
   }, [allSemesters, allTemplates, allCourseElementsMap]);
 
-  // Fetch courses for selected semester
+
   const { data: semesterDetail, isLoading: loadingCourses } = useQuery({
     queryKey: ['semesterPlanDetail', selectedSemesterCode],
     queryFn: () => semesterService.getSemesterPlanDetail(selectedSemesterCode!),
     enabled: !!selectedSemesterCode,
   });
 
-  // Filter courses: only those that have course elements with templates
+
   const courses = useMemo(() => {
     if (!semesterDetail?.semesterCourses) return [];
-    
-    // Get all course IDs that have course elements with templates
+
+
     const courseIdsWithTemplates = new Set<number>();
     allTemplates.forEach(template => {
       const courseElement = allCourseElementsMap.get(template.courseElementId);
@@ -155,14 +155,14 @@ const TemplatesPageContent = () => {
         courseIdsWithTemplates.add(courseElement.semesterCourse.courseId);
       }
     });
-    
-    // Filter to only courses that have templates
-    return semesterDetail.semesterCourses.filter(sc => 
+
+
+    return semesterDetail.semesterCourses.filter(sc =>
       courseIdsWithTemplates.has(sc.course.id)
     );
   }, [semesterDetail, allTemplates, allCourseElementsMap]);
 
-  // Fetch course elements for selected semester
+
   const { data: courseElementsRes = [], isLoading: loadingCourseElements } = useQuery({
     queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
     queryFn: () => courseElementService.getCourseElements({
@@ -173,24 +173,24 @@ const TemplatesPageContent = () => {
     enabled: !!selectedSemesterCode,
   });
 
-  // Filter course elements: only PE (elementType === 2), only those with templates, and remove duplicates by name
+
   const courseElements = useMemo(() => {
-    // Get all course element IDs that have templates
+
     const courseElementIdsWithTemplates = new Set(
       allTemplates.map(t => t.courseElementId)
     );
-    
-    // First filter by elementType === 2 (PE) and only those with templates
-    let filtered = courseElementsRes.filter(ce => 
+
+
+    let filtered = courseElementsRes.filter(ce =>
       ce.elementType === 2 && courseElementIdsWithTemplates.has(ce.id)
     );
-    
-    // Filter by course if selected
+
+
     if (selectedCourseId) {
       filtered = filtered.filter(ce => ce.semesterCourse?.courseId === selectedCourseId);
     }
-    
-    // Remove duplicates based on name (keep unique course element names)
+
+
     const uniqueElements = new Map<string, CourseElement>();
     filtered.forEach(ce => {
       const name = ce.name || '';
@@ -198,17 +198,17 @@ const TemplatesPageContent = () => {
         uniqueElements.set(name, ce);
       }
     });
-    
+
     return Array.from(uniqueElements.values());
   }, [courseElementsRes, selectedCourseId, allTemplates]);
 
-  // Filter templates based on selected filters
+
   const filteredTemplates = useMemo(() => {
     let filtered = [...allTemplates];
 
     if (selectedSemesterCode) {
       const semesterCourseElementIds = courseElements.map(ce => ce.id);
-      filtered = filtered.filter(template => 
+      filtered = filtered.filter(template =>
         semesterCourseElementIds.includes(template.courseElementId)
       );
     }
@@ -217,13 +217,13 @@ const TemplatesPageContent = () => {
       const courseElementIds = courseElements
         .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
         .map(ce => ce.id);
-      filtered = filtered.filter(template => 
+      filtered = filtered.filter(template =>
         courseElementIds.includes(template.courseElementId)
       );
     }
 
     if (selectedCourseElementId) {
-      filtered = filtered.filter(template => 
+      filtered = filtered.filter(template =>
         template.courseElementId === selectedCourseElementId
       );
     }
@@ -231,26 +231,26 @@ const TemplatesPageContent = () => {
     return filtered;
   }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, courseElements]);
 
-  // Set default to current semester (semester that is currently active)
+
   useEffect(() => {
     if (allSemesters.length > 0 && semesters.length > 0 && selectedSemesterCode === null) {
       const now = new Date();
-      // Find the current semester from allSemesters (where now is between startDate and endDate)
+
       const currentSemester = allSemesters.find((sem: Semester) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
         const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
         return now >= startDate && now <= endDate;
       });
-      
-      // Check if current semester has templates (is in semesters list)
+
+
       if (currentSemester && semesters.some((s: Semester) => s.semesterCode === currentSemester.semesterCode)) {
         setSelectedSemesterCode(currentSemester.semesterCode);
       } else {
-        // If no current semester or current semester has no templates, fallback to latest semester with templates
+
         const latestSemester = [...semesters].sort((a: Semester, b: Semester) => {
           const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
           const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
-          return dateB - dateA; // Descending order (newest first)
+          return dateB - dateA;
         })[0];
         if (latestSemester) {
           setSelectedSemesterCode(latestSemester.semesterCode);
@@ -275,7 +275,7 @@ const TemplatesPageContent = () => {
   const loading = loadingTemplates && !templatesResponse;
   const error = templatesError ? (templatesError as any).message || "Failed to load data." : null;
 
-  // Show loading spinner when loading and no data (after all hooks)
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -525,7 +525,7 @@ const TemplatesPageContent = () => {
   );
 };
 
-// Template Detail Modal Component
+
 function TemplateDetailModal({
   open,
   onClose,
@@ -537,7 +537,7 @@ function TemplateDetailModal({
 }) {
   const { message } = App.useApp();
 
-  // Fetch files using TanStack Query
+
   const { data: filesData, isLoading: loadingFiles } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(template.id),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -550,7 +550,7 @@ function TemplateDetailModal({
 
   const files = filesData?.items || [];
 
-  // Fetch papers using TanStack Query
+
   const { data: papersData, isLoading: loadingPapers } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(template.id),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -563,7 +563,7 @@ function TemplateDetailModal({
 
   const papers = papersData?.items || [];
 
-  // Fetch questions for all papers using useQueries
+
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -576,7 +576,7 @@ function TemplateDetailModal({
     })),
   });
 
-  // Process questions data
+
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
@@ -590,7 +590,7 @@ function TemplateDetailModal({
     return questionsMap;
   }, [papers, questionsQueries]);
 
-  // Get all question IDs from all papers
+
   const allQuestionIds = useMemo(() => {
     const ids: number[] = [];
     Object.values(questions).forEach((paperQuestions) => {
@@ -599,7 +599,7 @@ function TemplateDetailModal({
     return ids;
   }, [questions]);
 
-  // Fetch rubrics for all questions using useQueries
+
   const rubricsQueries = useQueries({
     queries: allQuestionIds.map((questionId) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(questionId),
@@ -612,7 +612,7 @@ function TemplateDetailModal({
     })),
   });
 
-  // Process rubrics data
+
   const rubrics = useMemo(() => {
     const rubricsMap: { [questionId: number]: RubricItem[] } = {};
     allQuestionIds.forEach((questionId, index) => {
@@ -623,9 +623,9 @@ function TemplateDetailModal({
     return rubricsMap;
   }, [allQuestionIds, rubricsQueries]);
 
-  // Calculate loading state
-  const loading = loadingFiles || loadingPapers || 
-    questionsQueries.some(q => q.isLoading) || 
+
+  const loading = loadingFiles || loadingPapers ||
+    questionsQueries.some(q => q.isLoading) ||
     rubricsQueries.some(q => q.isLoading);
 
   const getTypeText = (type: number) => {

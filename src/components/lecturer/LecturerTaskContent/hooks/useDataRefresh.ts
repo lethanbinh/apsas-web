@@ -30,7 +30,7 @@ export function useDataRefresh({
         pageSize: 100,
       });
       setPapers(paperResponse.items);
-      // Giữ cho questionsMap đồng bộ
+
       const newQuestionsMap = { ...allQuestions };
       paperResponse.items.forEach((p) => {
         if (!newQuestionsMap[p.id]) {
@@ -38,9 +38,9 @@ export function useDataRefresh({
         }
       });
       setAllQuestions(newQuestionsMap);
-      
-      // Note: Edit paper does NOT resolve question comments, so we don't reset status here
-      // Status reset is handled separately when editing questions/rubrics
+
+
+
     } catch (error) {
       console.error("Failed to refresh papers:", error);
     }
@@ -54,17 +54,17 @@ export function useDataRefresh({
           pageNumber: 1,
           pageSize: 100,
         });
-      // Sort questions by questionNumber
-      const sortedQuestions = [...questionResponse.items].sort((a, b) => 
+
+      const sortedQuestions = [...questionResponse.items].sort((a, b) =>
         (a.questionNumber || 0) - (b.questionNumber || 0)
       );
       setAllQuestions((prev) => ({
         ...prev,
         [paperId]: sortedQuestions,
       }));
-      
-      // Note: Status reset is handled in QuestionDetailView when editing questions/rubrics
-      // This function only refreshes the data
+
+
+
     } catch (error) {
       console.error("Failed to refresh questions:", error);
     }
@@ -79,8 +79,8 @@ export function useDataRefresh({
         pageSize: 100,
       });
       setFiles(fileResponse.items);
-      
-      // Note: Edit file does NOT resolve question comments, so we don't reset status here
+
+
     } catch (error) {
       console.error("Failed to refresh files:", error);
     }

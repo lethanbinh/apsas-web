@@ -1,4 +1,4 @@
-// Tên file: components/ApprovalDetail/data.ts
+
 
 import dayjs from "dayjs";
 
@@ -25,20 +25,18 @@ export interface QuestionData {
   name: string;
   content: string;
   imageUrl: string;
-  criteria?: CriteriaData[]; // Optional
+  criteria?: CriteriaData[];
 }
 
 export interface SubmissionItem {
-  // Assuming this structure exists
+
   id: string;
   fileName: string;
   thumbnailUrl: string;
   submissionTime: string;
 }
 
-/**
- * Grade criteria used for assignment grading summary (separate from CriteriaData).
- */
+
 export interface GradeCriteria {
   id: string;
   name: string;
@@ -47,9 +45,9 @@ export interface GradeCriteria {
 }
 
 export interface AssignmentApprovalDetails {
-  id: string; // Assignment ID (e.g., "assign01")
-  type: string; // e.g., "Basic Assignment"
-  statusLabel: string; // e.g., "Assignment 01 - NguyenNT"
+  id: string;
+  type: string;
+  statusLabel: string;
   date: string;
   questions: QuestionData[];
   databaseFileUrl?: string;
@@ -59,12 +57,12 @@ export interface AssignmentApprovalDetails {
   gradeCriteria: GradeCriteria[];
   suggestionsAvoid: string;
   suggestionsImprove: string;
-  submissions: SubmissionItem[]; // Use specific SubmissionItem type
+  submissions: SubmissionItem[];
 }
 
 export interface CourseApprovalData {
-  id: string; // Course ID (e.g., "capstone")
-  title: string; // Course Title (e.g., "Capstone Project")
+  id: string;
+  title: string;
   status: "Pending" | "Approved" | "Rejected";
   assignments: AssignmentApprovalDetails[];
 }
@@ -156,7 +154,7 @@ export const approvalListData: CourseApprovalData[] = [
             content: "Q3 Content",
             imageUrl: "https://via.placeholder.com/300",
           },
-        ], // Question without criteria
+        ],
         totalScore: "N/A",
         overallFeedback: "Pending",
         gradeCriteria: [],

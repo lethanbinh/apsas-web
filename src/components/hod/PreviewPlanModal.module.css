@@ -1,4 +1,4 @@
-/* Tên file: components/SemesterPlans/PreviewPlanModal.module.css */
+
 
 .steps {
     margin-top: 25px;
@@ -7,7 +7,7 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
-/* Style cho Tab/Steps của AntD */
+
 .steps :global(.ant-tabs-tab-btn) {
     font-weight: 500;
     color: #888;
@@ -26,7 +26,7 @@
     min-height: 300px;
 }
 
-/* --- Style cho Bảng (Tái sử dụng từ ClassRoster) --- */
+
 .previewTable :global(.ant-table) {
     background: transparent;
 }
@@ -45,7 +45,7 @@
     padding: 18px 10px;
 }
 
-/* Tùy chỉnh 2 hàng chẵn/lẻ */
+
 .previewTable :global(.ant-table-tbody > tr:nth-child(even) > td) {
     background: #f9faff;
 }

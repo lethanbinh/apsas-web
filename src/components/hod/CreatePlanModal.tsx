@@ -80,7 +80,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }
   };
 
-  // Removed handleDownloadClassStudentTemplate - moved to ImportClassStudentModal
+
 
   const handleCreate = async () => {
     const semesterCodePlaceholder = `NEW_SEMESTER_${Date.now()}`;
@@ -139,7 +139,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }, 300);
   };
 
-  // Removed handleContinue and handleBack - no longer needed with single step
+
 
   const mapToKeys = (
     data: any[],
@@ -262,7 +262,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     }
   };
 
-  // Removed handlePreviewClassStudent - moved to ImportClassStudentModal
+
 
   const uploadPropsExcel = {
     fileList: fileListExcel,
@@ -276,7 +276,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     },
   };
 
-  // Removed uploadPropsPdf - no longer needed
+
 
   const fileNameStyle: React.CSSProperties = {
     fontSize: "16px",
@@ -292,7 +292,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     textAlign: "center",
   };
 
-  // Single step content - only Semester Course import
+
   const stepContent = (
     <div className={styles.stepContent}>
       <div style={{ marginBottom: "24px" }}>

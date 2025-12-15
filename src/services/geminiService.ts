@@ -14,24 +14,22 @@ export interface FeedbackData {
   errorHandling: string;
 }
 
-// Initialize GoogleGenAI client
+
 const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY,
 });
 
-// Validate API key on service initialization
+
 if (!GEMINI_API_KEY) {
   console.warn("⚠️ GEMINI_API_KEY is not set. Please set it in your .env.local file.");
 }
 
-// Cache for formatted feedback to avoid duplicate API calls
+
 const feedbackCache = new Map<string, FeedbackData>();
 const processingCache = new Set<string>();
 
 export class GeminiService {
-  /**
-   * Analyze feedback content to determine what sections are present
-   */
+
   private analyzeFeedbackContent(feedback: string): {
     hasOverall: boolean;
     hasStrengths: boolean;
@@ -43,106 +41,104 @@ export class GeminiService {
     hasErrorHandling: boolean;
   } {
     const lowerFeedback = feedback.toLowerCase();
-    
+
     return {
-      hasOverall: lowerFeedback.includes("overall") || 
-                  lowerFeedback.includes("summary") || 
+      hasOverall: lowerFeedback.includes("overall") ||
+                  lowerFeedback.includes("summary") ||
                   lowerFeedback.includes("general") ||
                   feedback.length > 0,
-      hasStrengths: lowerFeedback.includes("strength") || 
-                    lowerFeedback.includes("well") || 
+      hasStrengths: lowerFeedback.includes("strength") ||
+                    lowerFeedback.includes("well") ||
                     lowerFeedback.includes("good") ||
                     lowerFeedback.includes("correct") ||
                     lowerFeedback.includes("went well"),
-      hasWeaknesses: lowerFeedback.includes("weakness") || 
-                     lowerFeedback.includes("improve") || 
+      hasWeaknesses: lowerFeedback.includes("weakness") ||
+                     lowerFeedback.includes("improve") ||
                      lowerFeedback.includes("issue") ||
                      lowerFeedback.includes("problem") ||
                      lowerFeedback.includes("error") ||
                      lowerFeedback.includes("wrong"),
-      hasCodeQuality: lowerFeedback.includes("code quality") || 
-                      lowerFeedback.includes("structure") || 
+      hasCodeQuality: lowerFeedback.includes("code quality") ||
+                      lowerFeedback.includes("structure") ||
                       lowerFeedback.includes("readability") ||
                       lowerFeedback.includes("maintainability") ||
                       lowerFeedback.includes("formatting") ||
                       lowerFeedback.includes("clean"),
-      hasAlgorithmEfficiency: lowerFeedback.includes("efficiency") || 
-                              lowerFeedback.includes("complexity") || 
+      hasAlgorithmEfficiency: lowerFeedback.includes("efficiency") ||
+                              lowerFeedback.includes("complexity") ||
                               lowerFeedback.includes("optimization") ||
                               lowerFeedback.includes("performance") ||
                               lowerFeedback.includes("time complexity") ||
                               lowerFeedback.includes("space complexity"),
-      hasSuggestions: lowerFeedback.includes("suggestion") || 
-                     lowerFeedback.includes("recommend") || 
+      hasSuggestions: lowerFeedback.includes("suggestion") ||
+                     lowerFeedback.includes("recommend") ||
                      lowerFeedback.includes("should") ||
                      lowerFeedback.includes("consider") ||
                      lowerFeedback.includes("improvement"),
-      hasBestPractices: lowerFeedback.includes("best practice") || 
-                       lowerFeedback.includes("standard") || 
+      hasBestPractices: lowerFeedback.includes("best practice") ||
+                       lowerFeedback.includes("standard") ||
                        lowerFeedback.includes("convention") ||
                        lowerFeedback.includes("practice"),
-      hasErrorHandling: lowerFeedback.includes("error handling") || 
-                       lowerFeedback.includes("exception") || 
+      hasErrorHandling: lowerFeedback.includes("error handling") ||
+                       lowerFeedback.includes("exception") ||
                        lowerFeedback.includes("validation") ||
                        lowerFeedback.includes("try-catch") ||
                        lowerFeedback.includes("error"),
     };
   }
 
-  /**
-   * Generate dynamic prompt based on feedback content
-   */
+
   private generateDynamicPrompt(feedback: string): string {
     const analysis = this.analyzeFeedbackContent(feedback);
-    
+
     const sections: string[] = [];
-    
-    // Always include overallFeedback
+
+
     sections.push('  "overallFeedback": "Extract or create a comprehensive overall assessment based on the feedback. If no overall assessment exists, summarize the main points."');
-    
+
     if (analysis.hasStrengths) {
       sections.push('  "strengths": "Extract and list all strengths mentioned, each on a new line starting with number (e.g., 1. Strength 1\\n2. Strength 2). If no strengths are mentioned, leave empty string."');
     } else {
       sections.push('  "strengths": ""');
     }
-    
+
     if (analysis.hasWeaknesses) {
       sections.push('  "weaknesses": "Extract and list all weaknesses or areas for improvement mentioned, each on a new line starting with number (e.g., 1. Weakness 1\\n2. Weakness 2). If no weaknesses are mentioned, leave empty string."');
     } else {
       sections.push('  "weaknesses": ""');
     }
-    
+
     if (analysis.hasCodeQuality) {
       sections.push('  "codeQuality": "Extract detailed assessment of code quality, structure, and maintainability. If not mentioned, leave empty string."');
     } else {
       sections.push('  "codeQuality": ""');
     }
-    
+
     if (analysis.hasAlgorithmEfficiency) {
       sections.push('  "algorithmEfficiency": "Extract analysis of algorithm efficiency, time/space complexity, and optimization opportunities. If not mentioned, leave empty string."');
     } else {
       sections.push('  "algorithmEfficiency": ""');
     }
-    
+
     if (analysis.hasSuggestions) {
       sections.push('  "suggestionsForImprovement": "Extract and list all suggestions for improvement, each on a new line starting with number (e.g., 1. Suggestion 1\\n2. Suggestion 2). If no suggestions are mentioned, leave empty string."');
     } else {
       sections.push('  "suggestionsForImprovement": ""');
     }
-    
+
     if (analysis.hasBestPractices) {
       sections.push('  "bestPractices": "Extract comments on adherence to coding best practices and standards. If not mentioned, leave empty string."');
     } else {
       sections.push('  "bestPractices": ""');
     }
-    
+
     if (analysis.hasErrorHandling) {
       sections.push('  "errorHandling": "Extract evaluation of error handling, input validation, and robustness. If not mentioned, leave empty string."');
     } else {
       sections.push('  "errorHandling": ""');
     }
-    
-    return `You are a code review assistant. Analyze the following feedback and organize it into a structured JSON format. 
+
+    return `You are a code review assistant. Analyze the following feedback and organize it into a structured JSON format.
 
 IMPORTANT INSTRUCTIONS:
 - Only extract information that is ACTUALLY PRESENT in the feedback
@@ -160,39 +156,35 @@ ${sections.join(",\n")}
 Feedback to analyze:
 ${feedback}
 
-Remember: 
+Remember:
 - Return ONLY the JSON object, no additional text, no markdown formatting, no code blocks
 - Use empty string "" for fields that are not present in the feedback
 - Only extract what is actually in the feedback, do not create new content`;
   }
 
-  /**
-   * Format AI feedback into structured feedback form
-   * @param rawFeedback - Raw feedback text from AI feedback API
-   * @returns Formatted feedback data
-   */
+
   async formatFeedback(rawFeedback: string): Promise<FeedbackData> {
-    // Check cache first
+
     if (feedbackCache.has(rawFeedback)) {
       return feedbackCache.get(rawFeedback)!;
     }
 
-    // Check if already processing this feedback
+
     if (processingCache.has(rawFeedback)) {
-      // Wait a bit and check cache again (in case another call finished)
+
       await new Promise(resolve => setTimeout(resolve, 100));
       if (feedbackCache.has(rawFeedback)) {
         return feedbackCache.get(rawFeedback)!;
       }
-      // If still processing, use fallback to avoid duplicate calls
+
       return this.fallbackFormatFeedback(rawFeedback);
     }
 
-    // Mark as processing
+
     processingCache.add(rawFeedback);
 
     try {
-      // Generate dynamic prompt based on feedback content
+
       const prompt = this.generateDynamicPrompt(rawFeedback);
 
       const response = await ai.models.generateContent({
@@ -206,7 +198,7 @@ Remember:
         throw new Error("No response from Gemini API");
       }
 
-      // Clean the response - remove markdown code blocks if present
+
       let cleanedText = generatedText.trim();
       if (cleanedText.startsWith("```json")) {
         cleanedText = cleanedText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
@@ -214,10 +206,10 @@ Remember:
         cleanedText = cleanedText.replace(/^```\s*/, "").replace(/\s*```$/, "");
       }
 
-      // Parse JSON
+
       const parsedData = JSON.parse(cleanedText) as FeedbackData;
 
-      // Validate and ensure all fields exist
+
       const formattedFeedback: FeedbackData = {
         overallFeedback: parsedData.overallFeedback || "",
         strengths: parsedData.strengths || "",
@@ -229,7 +221,7 @@ Remember:
         errorHandling: parsedData.errorHandling || "",
       };
 
-      // Cache the result
+
       feedbackCache.set(rawFeedback, formattedFeedback);
       processingCache.delete(rawFeedback);
 
@@ -237,29 +229,27 @@ Remember:
     } catch (error: any) {
       processingCache.delete(rawFeedback);
       console.error("Error calling Gemini API:", error);
-      
-      // Check if it's a quota/rate limit error
+
+
       if (error?.error?.code === 429 || error?.status === "RESOURCE_EXHAUSTED") {
         const retryDelay = error?.error?.details?.find((d: any) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo")?.retryDelay || "8s";
         const quotaMessage = error?.error?.message || "Quota exceeded for Gemini API";
         throw new Error(`Gemini API quota exceeded. ${quotaMessage} Please retry after ${retryDelay}.`);
       }
-      
-      // Fallback: Try to extract information from raw feedback
+
+
       const fallbackFeedback = this.fallbackFormatFeedback(rawFeedback);
-      // Cache fallback result to avoid retrying
+
       feedbackCache.set(rawFeedback, fallbackFeedback);
       return fallbackFeedback;
     }
   }
 
-  /**
-   * Fallback method to format feedback when Gemini API fails
-   */
+
   private fallbackFormatFeedback(rawFeedback: string): FeedbackData {
-    // Simple fallback - split feedback into sections based on keywords
+
     const sections = rawFeedback.split(/\n\s*\n/);
-    
+
     return {
       overallFeedback: sections[0] || rawFeedback.substring(0, 500) || "",
       strengths: this.extractSection(rawFeedback, ["strength", "well", "good", "correct"]),
@@ -272,20 +262,18 @@ Remember:
     };
   }
 
-  /**
-   * Extract section from feedback based on keywords
-   */
+
   private extractSection(text: string, keywords: string[]): string {
     const lines = text.split("\n");
     const relevantLines: string[] = [];
-    
+
     for (const line of lines) {
       const lowerLine = line.toLowerCase();
       if (keywords.some((keyword) => lowerLine.includes(keyword.toLowerCase()))) {
         relevantLines.push(line.trim());
       }
     }
-    
+
     return relevantLines.join("\n") || "";
   }
 }

@@ -23,13 +23,13 @@ const ResetPasswordFormContent: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState<string>("");
-  const [otp, setOtp] = useState<string>(""); // Add state for OTP
+  const [otp, setOtp] = useState<string>("");
 
   const handleForgotPassword = async (values: ForgotPasswordRequest) => {
     try {
       setIsLoading(true);
       setErrors({});
-      // Check if email exists in the system
+
       const emailExists = await accountService.checkEmailExists(values.email);
       if (!emailExists) {
         const errorMessage = "Email does not exist in the system. Please check your email address.";
@@ -61,7 +61,7 @@ const ResetPasswordFormContent: React.FC = () => {
       setErrors({});
       await authService.verifyOtp({ email, otp: values.otp });
       message.success("OTP verified successfully!");
-      setOtp(values.otp); // Store OTP after successful verification
+      setOtp(values.otp);
       setCurrentStep("newPassword");
     } catch (error: any) {
       const errorMessage = error.message || "Failed to verify OTP";
@@ -76,7 +76,7 @@ const ResetPasswordFormContent: React.FC = () => {
     try {
       setIsLoading(true);
       setErrors({});
-      // Use stored email and otp, and newPassword from current form values
+
       await authService.resetPassword({
         email,
         otp,
@@ -236,7 +236,7 @@ const ResetPasswordFormContent: React.FC = () => {
   );
 
   const handleGoogleLogin = () => {
-    // TODO: Implement Google login
+
     console.log("Google login clicked");
   };
 

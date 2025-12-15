@@ -93,10 +93,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const wb = XLSX.utils.book_new();
       const dataToExport = filteredChartData || chartData;
 
-      // Combine all data into one sheet with sections
+
       const exportData: any[] = [];
-      
-      // Section 1: Key Statistics
+
+
       exportData.push(["OVERVIEW - KEY STATISTICS"]);
       exportData.push(["Metric", "Value"]);
       exportData.push(["Total Users", overview.users.total]);
@@ -107,29 +107,29 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       exportData.push(["Assessment Templates", overview.assessments.totalTemplates]);
       exportData.push(["Grading Groups", overview.grading.totalGradingGroups]);
       exportData.push(["Pending Requests", overview.grading.pendingAssignRequests]);
-      exportData.push([]); // Empty row
+      exportData.push([]);
 
-      // Section 2: User Growth
+
       if (dataToExport.userGrowth && dataToExport.userGrowth.length > 0) {
         exportData.push(["USER GROWTH"]);
         exportData.push(["Month", "Total Users", "Students", "Lecturers"]);
         dataToExport.userGrowth.forEach((item) => {
           exportData.push([item.month, item.total, item.students, item.lecturers]);
         });
-        exportData.push([]); // Empty row
+        exportData.push([]);
       }
 
-      // Section 3: Semester Activity
+
       if (dataToExport.semesterActivity && dataToExport.semesterActivity.length > 0) {
         exportData.push(["SEMESTER ACTIVITY"]);
         exportData.push(["Semester", "Courses", "Classes", "Assessments", "Submissions"]);
         dataToExport.semesterActivity.forEach((item) => {
           exportData.push([item.semester, item.courses, item.classes, item.assessments, item.submissions]);
         });
-        exportData.push([]); // Empty row
+        exportData.push([]);
       }
 
-      // Section 4: Assessment Distribution
+
       if (dataToExport.assessmentDistribution && dataToExport.assessmentDistribution.length > 0) {
         const totalAssessments = dataToExport.assessmentDistribution.reduce((sum, item) => sum + item.count, 0);
         exportData.push(["ASSESSMENT DISTRIBUTION"]);
@@ -138,20 +138,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           const percentage = totalAssessments > 0 ? ((item.count / totalAssessments) * 100).toFixed(2) + "%" : "0%";
           exportData.push([item.type, item.count, percentage]);
         });
-        exportData.push([]); // Empty row
+        exportData.push([]);
       }
 
-      // Section 5: Submission Status
+
       if (dataToExport.submissionStatus && dataToExport.submissionStatus.length > 0) {
         exportData.push(["SUBMISSION STATUS"]);
         exportData.push(["Status", "Count"]);
         dataToExport.submissionStatus.forEach((item) => {
           exportData.push([item.status, item.count]);
         });
-        exportData.push([]); // Empty row
+        exportData.push([]);
       }
 
-      // Section 6: Grading Performance
+
       if (dataToExport.gradingPerformance && dataToExport.gradingPerformance.length > 0) {
         exportData.push(["GRADING PERFORMANCE"]);
         exportData.push(["Date", "Graded", "Pending"]);
@@ -174,10 +174,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
-  // Note: dateRange is now controlled by parent component via filters prop
-  // timeRange is kept for UI display purposes but doesn't control dateRange anymore
 
-  // Filter chart data based on date range
+
+
+
   const filteredChartData = useMemo(() => {
     if (!chartData) return null;
 
@@ -193,7 +193,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const startDate = dateRange[0];
       const endDate = dateRange[1];
 
-      // Filter user growth data
+
       if (filtered.userGrowth) {
         filtered.userGrowth = filtered.userGrowth.filter((item) => {
           const itemDate = dayjs(item.month + "-01");
@@ -201,7 +201,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         });
       }
 
-      // Filter grading performance data
+
       if (filtered.gradingPerformance) {
         filtered.gradingPerformance = filtered.gradingPerformance.filter((item) => {
           const itemDate = dayjs(item.date);
@@ -217,7 +217,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Dashboard Overview</Title>
@@ -233,7 +233,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Space>
       </Card>
 
-      {/* Filters */}
+      {}
       <Card>
         <Space size="large" wrap>
           <Space>
@@ -283,7 +283,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           )}
         </Space>
       </Card>
-      {/* Key Metrics - User Management */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>User Management</Title>
         <Row gutter={[16, 16]}>
@@ -330,7 +330,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Row>
       </Card>
 
-      {/* Academic Management */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Academic Management</Title>
         <Row gutter={[16, 16]}>
@@ -421,7 +421,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Row>
       </Card>
 
-      {/* Assessment & Submission */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Assessment & Submission</Title>
         <Row gutter={[16, 16]}>
@@ -512,7 +512,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Row>
       </Card>
 
-      {/* Grading & Quality */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grading & Quality</Title>
         <Row gutter={[16, 16]}>
@@ -559,10 +559,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card 
+          <Card
             title={`User Growth${dateRange ? ` (${dateRange[0]?.format("MMM DD")} - ${dateRange[1]?.format("MMM DD, YYYY")})` : " (Last 12 Months)"}`}
             loading={loading}
           >
@@ -644,7 +644,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card 
+          <Card
             title={`Grading Performance${dateRange ? ` (${dateRange[0]?.format("MMM DD")} - ${dateRange[1]?.format("MMM DD, YYYY")})` : " (Last 30 Days)"}`}
             loading={loading}
           >

@@ -91,11 +91,11 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       const exportData: any[] = [];
       const totalSubmissions = overview.submissions.total;
       const gradedSubmissions = submissions.filter((s) => s.lastGrade > 0);
-      const averageGrade = gradedSubmissions.length > 0 
+      const averageGrade = gradedSubmissions.length > 0
         ? (gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0) / gradedSubmissions.length).toFixed(2)
         : 0;
 
-      // Section 1: Key Statistics
+
       exportData.push(["SUBMISSIONS - KEY STATISTICS"]);
       exportData.push(["Metric", "Value"]);
       exportData.push(["Total Submissions", totalSubmissions]);
@@ -109,7 +109,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       exportData.push(["On-Time Submissions", overview.submissions.onTimeSubmissions || 0]);
       exportData.push([]);
 
-      // Section 2: Submissions by Type
+
       exportData.push(["SUBMISSIONS BY TYPE"]);
       exportData.push(["Type", "Count"]);
       exportData.push(["Assignments", overview.submissions.submissionsByType?.assignment || 0]);
@@ -117,7 +117,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       exportData.push(["Practical Exams", overview.submissions.submissionsByType?.practicalExam || 0]);
       exportData.push([]);
 
-      // Section 3: Submission Status Distribution
+
       exportData.push(["SUBMISSION STATUS DISTRIBUTION"]);
       exportData.push(["Status", "Count", "Percentage"]);
       submissionStatusData.forEach((item) => {
@@ -126,7 +126,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 4: Grade Distribution
+
       if (overview.submissions.submissionsByGradeRange) {
         exportData.push(["GRADE DISTRIBUTION"]);
         exportData.push(["Grade Range", "Count"]);
@@ -137,7 +137,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 5: Submissions Over Time (Last 30 Days)
+
       if (submissionsChartData && submissionsChartData.length > 0) {
         exportData.push(["SUBMISSIONS OVER TIME (LAST 30 DAYS)"]);
         exportData.push(["Date", "Total Submissions", "Graded"]);
@@ -147,7 +147,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 6: Top Students by Submissions
+
       if (overview.submissions.topStudentsBySubmissions && overview.submissions.topStudentsBySubmissions.length > 0) {
         exportData.push(["TOP STUDENTS BY SUBMISSIONS"]);
         exportData.push(["Rank", "Student Code", "Student Name", "Submission Count", "Average Grade"]);
@@ -163,7 +163,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 7: All Submissions
+
       exportData.push(["ALL SUBMISSIONS"]);
       exportData.push(["No", "ID", "Student Name", "Student Code", "Submitted At", "Last Grade", "Status", "Has File"]);
       filteredSubmissions.forEach((sub, index) => {
@@ -195,7 +195,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
 
   useEffect(() => {
     fetchSubmissions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [filters?.classId, filters?.courseId, filters?.semesterCode]);
 
   const fetchSubmissions = async () => {
@@ -212,7 +212,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
     }
   };
 
-  // Filter submissions
+
   const filteredSubmissions = useMemo(() => {
     let filtered = [...submissions];
 
@@ -319,7 +319,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
     },
   ];
 
-  // Group submissions by date for chart
+
   const submissionsByDate = submissions.reduce((acc: any, sub: any) => {
     if (sub.submittedAt) {
       const date = dayjs(sub.submittedAt).format("YYYY-MM-DD");
@@ -336,11 +336,11 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
 
   const submissionsChartData = Object.values(submissionsByDate)
     .sort((a: any, b: any) => a.date.localeCompare(b.date))
-    .slice(-30); // Last 30 days
+    .slice(-30);
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Submissions Dashboard</Title>
@@ -356,7 +356,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         </Space>
       </Card>
 
-      {/* Submission Statistics Overview */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Submission Statistics Overview</Title>
       <Row gutter={[16, 16]}>
@@ -451,7 +451,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         </Row>
       </Card>
 
-      {/* Submission by Type */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Submissions by Type</Title>
         <Row gutter={[16, 16]}>
@@ -488,7 +488,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         </Row>
       </Card>
 
-      {/* Grade Distribution */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grade Distribution</Title>
         <Row gutter={[16, 16]}>
@@ -535,7 +535,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
       </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="Submission Status Distribution" loading={loading}>
@@ -606,7 +606,7 @@ const SubmissionsTab: React.FC<SubmissionsTabProps> = ({
         </Col>
       </Row>
 
-      {/* Submissions Table */}
+      {}
       <Card
         title="All Submissions"
         loading={submissionsLoading}

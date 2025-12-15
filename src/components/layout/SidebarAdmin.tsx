@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Layout, Menu } from "antd";
@@ -8,12 +8,14 @@ import {
   TeamOutlined,
   DashboardOutlined,
   DownloadOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
+import { useSidebar } from "./SidebarContext";
 import styles from "./SidebarAdmin.module.css";
 
 const { Sider } = Layout;
 
-// --- Giữ nguyên các mục menu (như bản gốc) ---
+
 const menuItems = [
   {
     key: "/admin/manage-users",
@@ -25,18 +27,18 @@ const menuItems = [
     icon: <DashboardOutlined />,
     label: <Link href="/admin/dashboard">Dashboard</Link>,
   },
-  // Temporarily hidden - App Download management
-  // {
-  //   key: "/admin/app-download",
-  //   icon: <DownloadOutlined />,
-  //   label: <Link href="/admin/app-download">App Download</Link>,
-  // },
+
+
+
+
+
+
 ];
 
 export default function SidebarAdmin() {
   const pathname = usePathname();
+  const { isOpen, close } = useSidebar();
 
-  // --- Tìm menu đang active ---
   const activeKey = useMemo(() => {
     const sortedKeys = [...menuItems].sort(
       (a, b) => b.key.length - a.key.length
@@ -45,16 +47,49 @@ export default function SidebarAdmin() {
     return match ? match.key : "";
   }, [pathname]);
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (isOpen && !target.closest(`.${styles.sider}`) && !target.closest('.ant-menu')) {
+        close();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, close]);
+
   return (
-    <Sider width={280} className={styles.sider}>
-      <div className={styles.siderContent}>
-        <Menu
-          mode="inline"
-          selectedKeys={[activeKey]}
-          className={styles.menu}
-          items={menuItems}
-        />
-      </div>
-    </Sider>
+    <>
+      {isOpen && <div className={styles.overlay} onClick={close} />}
+      <Sider 
+        width={280} 
+        className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
+      >
+        <div className={styles.siderContent}>
+          <div className={styles.sidebarHeader}>
+            <button className={styles.closeButton} onClick={close} aria-label="Close sidebar">
+              <CloseOutlined />
+            </button>
+          </div>
+          <Menu
+            mode="inline"
+            selectedKeys={[activeKey]}
+            className={styles.menu}
+            items={menuItems}
+            onClick={close}
+          />
+        </div>
+      </Sider>
+    </>
   );
 }

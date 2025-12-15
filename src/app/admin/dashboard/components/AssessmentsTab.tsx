@@ -84,7 +84,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       const exportData: any[] = [];
       const totalAssessments = overview.assessments.totalClassAssessments;
 
-      // Section 1: Key Statistics
+
       exportData.push(["ASSESSMENTS - KEY STATISTICS"]);
       exportData.push(["Metric", "Value"]);
       exportData.push(["Total Templates", overview.assessments.totalTemplates]);
@@ -96,7 +96,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       exportData.push(["Assessments Without Submissions", overview.assessments.assessmentsWithoutSubmissions || 0]);
       exportData.push([]);
 
-      // Section 2: Assessments by Type
+
       exportData.push(["ASSESSMENTS BY TYPE"]);
       exportData.push(["Type", "Count", "Percentage"]);
       const assessmentDistribution = [
@@ -111,7 +111,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 3: Top Assessments by Submissions
+
       if (overview.assessments.topAssessmentsBySubmissions && overview.assessments.topAssessmentsBySubmissions.length > 0) {
         exportData.push(["TOP ASSESSMENTS BY SUBMISSIONS"]);
         exportData.push(["Rank", "Assessment Name", "Course Name", "Lecturer", "Submission Count"]);
@@ -127,7 +127,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 4: Upcoming Deadlines
+
       if (overview.assessments.upcomingDeadlines && overview.assessments.upcomingDeadlines.length > 0) {
         exportData.push(["UPCOMING DEADLINES (NEXT 7 DAYS)"]);
         exportData.push(["Assessment Name", "End Date", "Days Remaining"]);
@@ -141,7 +141,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         exportData.push([]);
       }
 
-      // Section 5: All Assessment Templates
+
       exportData.push(["ALL ASSESSMENT TEMPLATES"]);
       exportData.push(["No", "ID", "Template Name", "Type", "Course Element", "Lecturer", "Description", "Created At"]);
       filteredTemplates.forEach((tpl, index) => {
@@ -158,7 +158,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       });
       exportData.push([]);
 
-      // Section 6: All Class Assessments
+
       exportData.push(["ALL CLASS ASSESSMENTS"]);
       exportData.push(["No", "ID", "Assessment Name", "Course Element", "Course", "Lecturer", "Status", "Start Date", "End Date", "Submissions"]);
       filteredAssessments.forEach((ass, index) => {
@@ -218,10 +218,10 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [filters?.classId, filters?.courseId, filters?.semesterCode]);
 
-  // Filter templates
+
   const filteredTemplates = useMemo(() => {
     let filtered = [...templates];
 
@@ -250,7 +250,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
           return peKeywords.some((keyword) => nameLower.includes(keyword));
         });
       } else if (selectedTemplateType === "assignment") {
-        // Assignment is everything that's not lab or practical exam
+
         const labKeywords = ["lab", "laboratory", "thực hành", "bài thực hành", "lab session", "lab work"];
         const peKeywords = ["exam", "pe", "practical exam", "practical", "test", "kiểm tra thực hành", "thi thực hành", "bài thi", "bài kiểm tra"];
         filtered = filtered.filter((tpl) => {
@@ -279,17 +279,17 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
     return filtered;
   }, [templates, templateSearch, selectedTemplateType, templateDateRange]);
 
-  // Filter assessments
+
   const filteredAssessments = useMemo(() => {
     let filtered = [...assessments];
 
-    // Apply global filters
+
     if (filters?.courseId) {
-      // Filter by course name - this is a simplified approach
-      // In reality, you'd need to map courseId to courseName
+
+
       filtered = filtered.filter((ass) => {
-        // This would need proper courseId mapping
-        return true; // Placeholder
+
+        return true;
       });
     }
 
@@ -437,7 +437,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Assessments Dashboard</Title>
@@ -453,7 +453,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         </Space>
       </Card>
 
-      {/* Assessment Statistics Overview */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Assessment Statistics Overview</Title>
       <Row gutter={[16, 16]}>
@@ -543,7 +543,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
       </Row>
       </Card>
 
-      {/* Assessment by Type */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Assessments by Type</Title>
         <Row gutter={[16, 16]}>
@@ -580,7 +580,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="Assessment Type Distribution" loading={loading}>
@@ -623,7 +623,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         </Col>
       </Row>
 
-      {/* Top Assessments */}
+      {}
       {overview.assessments.topAssessmentsBySubmissions && overview.assessments.topAssessmentsBySubmissions.length > 0 && (
         <Card title="Top Assessments by Submissions">
           <Table
@@ -660,7 +660,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         </Card>
       )}
 
-      {/* Assessment Templates Table */}
+      {}
       <Card
         title="Assessment Templates"
         loading={assessmentsLoading}
@@ -711,7 +711,7 @@ const AssessmentsTab: React.FC<AssessmentsTabProps> = ({
         />
       </Card>
 
-      {/* Class Assessments Table */}
+      {}
       <Card
         title="Class Assessments"
         loading={assessmentsLoading}

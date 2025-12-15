@@ -44,23 +44,23 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
   useEffect(() => {
     if (open) {
       if (isEditMode) {
-        // When editing, status field is hidden (not editable)
-        // Status will be kept from existing data or default to 1 in handleFinish
+
+
         form.setFieldsValue({
           ...initialData,
           assignedLecturerId: Number(initialData.lecturer.id),
           courseElementId: initialData.courseElement.id,
           assignedApproverLecturerId: (initialData as any).assignedApproverLecturerId || undefined,
-          status: 1, // Default to Pending (status not in AssignRequest interface, will be handled in handleFinish)
+          status: 1,
         });
       } else {
-        // When creating, use current date
+
         const currentDate = moment();
         const formattedDate = currentDate.format("DD/MM/YYYY HH:mm:ss");
         form.resetFields();
-        form.setFieldsValue({ 
+        form.setFieldsValue({
           status: 1,
-          assignedAt: formattedDate, // Use current date when creating
+          assignedAt: formattedDate,
         });
       }
     }
@@ -90,21 +90,21 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
     try {
       let assignedAtValue: string;
       if (isEditMode) {
-        // When editing, keep the original assignedAt date
-        assignedAtValue = initialData?.assignedAt 
+
+        assignedAtValue = initialData?.assignedAt
           ? (initialData.assignedAt.endsWith("Z") ? initialData.assignedAt : initialData.assignedAt + "Z")
           : moment().toISOString();
       } else {
-        // When creating, use current date
+
         assignedAtValue = moment().toISOString();
       }
-      
+
       const payload = {
         ...values,
         assignedAt: assignedAtValue,
         assignedByHODId: 1,
         assignedApproverLecturerId: values.assignedApproverLecturerId || undefined,
-        status: values.status || 1, // Ensure status is always set (default to Pending)
+        status: values.status || 1,
       };
 
       if (isEditMode) {
@@ -160,14 +160,14 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                 if (!value) return Promise.resolve();
                 const lecturerId = form.getFieldValue("assignedLecturerId");
                 if (!lecturerId) return Promise.resolve();
-                
-                // Check for duplicate, excluding the current request if editing
+
+
                 if (existingAssignRequests) {
                   const duplicate = existingAssignRequests.find(
                     (req) =>
                       req.courseElement.id === value &&
                       req.lecturer.id === Number(lecturerId) &&
-                      (!isEditMode || req.id !== initialData?.id) // Exclude current request when editing
+                      (!isEditMode || req.id !== initialData?.id)
                   );
                   if (duplicate) {
                     return Promise.reject(
@@ -202,22 +202,22 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                 if (!value) return Promise.resolve();
                 const courseElementId = form.getFieldValue("courseElementId");
                 if (!courseElementId) return Promise.resolve();
-                
-                // Check if assigned lecturer is the same as approver lecturer
+
+
                 const approverLecturerId = form.getFieldValue("assignedApproverLecturerId");
                 if (approverLecturerId && Number(value) === Number(approverLecturerId)) {
                   return Promise.reject(
                     new Error("Assign to Lecturer and Assign Approver Lecturer cannot be the same person!")
                   );
                 }
-                
-                // Check for duplicate, excluding the current request if editing
+
+
                 if (existingAssignRequests) {
                   const duplicate = existingAssignRequests.find(
                     (req) =>
                       req.courseElement.id === courseElementId &&
                       req.lecturer.id === Number(value) &&
-                      (!isEditMode || req.id !== initialData?.id) // Exclude current request when editing
+                      (!isEditMode || req.id !== initialData?.id)
                   );
                   if (duplicate) {
                     return Promise.reject(
@@ -248,17 +248,17 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
           rules={[
             {
               validator: (_, value) => {
-                // If no approver selected, it's valid (field is optional)
+
                 if (!value) return Promise.resolve();
-                
-                // Check if approver lecturer is the same as assigned lecturer
+
+
                 const assignedLecturerId = form.getFieldValue("assignedLecturerId");
                 if (assignedLecturerId && Number(value) === Number(assignedLecturerId)) {
                   return Promise.reject(
                     new Error("Assign Approver Lecturer cannot be the same as Assign to Lecturer!")
                   );
                 }
-                
+
                 return Promise.resolve();
               },
             },
@@ -275,7 +275,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
             }
           />
         </Form.Item>
-        {/* Status is hidden: default to Pending (1) when creating, and not editable when editing */}
+        {}
         <Form.Item name="status" hidden>
           <Input type="hidden" />
         </Form.Item>

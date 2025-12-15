@@ -77,7 +77,7 @@ export function EditSubmissionModal({
     rubricComments: {},
   });
 
-  // Use custom hooks for data fetching and operations
+
   const {
     questions,
     latestGradingSession,
@@ -117,7 +117,7 @@ export function EditSubmissionModal({
     queryClient,
   });
 
-  // Fetch assessment template to get course element and semester info
+
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -132,7 +132,7 @@ export function EditSubmissionModal({
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
 
-  // Fetch course element to get semester info
+
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -147,7 +147,7 @@ export function EditSubmissionModal({
     return courseElementsData.find((ce) => ce.id === assessmentTemplate.courseElementId) || null;
   }, [courseElementsData, assessmentTemplate]);
 
-  // Fetch semester detail to check if passed
+
   const semesterCode = courseElement?.semesterCourse?.semester?.semesterCode;
   const { data: semesterDetail } = useQuery({
     queryKey: ['semesterPlanDetail', semesterCode],
@@ -155,7 +155,7 @@ export function EditSubmissionModal({
     enabled: visible && !!semesterCode,
   });
 
-  // Check if semester has passed
+
   useEffect(() => {
     if (semesterDetail?.endDate) {
       const passed = isSemesterPassed(semesterDetail.endDate);

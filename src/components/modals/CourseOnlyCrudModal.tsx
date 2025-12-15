@@ -64,8 +64,8 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
         });
       } else {
         const newCourse = await courseService.createCourse(values as CreateCoursePayload);
-        
-        // If a semester is selected, link the course to that semester
+
+
         if (selectedSemesterId) {
           try {
             await semesterCourseService.createSemesterCourse({
@@ -78,7 +78,7 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
               description: "The new course has been created and linked to the selected semester.",
             });
           } catch (linkErr: any) {
-            // Course created but linking failed
+
             console.error("Failed to link course to semester:", linkErr);
             notification.warning({
               message: "Course Created",
@@ -132,40 +132,40 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course name must be at least 2 characters!"));
                 }
-                
-                // Check for duplicate name
-                // If semester is selected, check in that semester; otherwise check all courses
-                const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0 
-                  ? existingSemesterCourses 
+
+
+
+                const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0
+                  ? existingSemesterCourses
                   : allCourses;
-                
+
                 if (coursesToCheck.length > 0) {
                   if (!isEditMode) {
                     const duplicate = coursesToCheck.find(
                       (c) => c.name.toLowerCase().trim() === value.toLowerCase().trim()
                     );
                     if (duplicate) {
-                      const message = selectedSemesterId 
+                      const message = selectedSemesterId
                         ? "Đã tồn tại course với tên này trong học kỳ này!"
                         : "Đã tồn tại course với tên này!";
                       return Promise.reject(new Error(message));
                     }
                   } else {
-                    // When editing, exclude current course
+
                     const duplicate = coursesToCheck.find(
-                      (c) => 
+                      (c) =>
                         c.name.toLowerCase().trim() === value.toLowerCase().trim() &&
                         c.id !== initialData?.id
                     );
                     if (duplicate) {
-                      const message = selectedSemesterId 
+                      const message = selectedSemesterId
                         ? "Đã tồn tại course với tên này trong học kỳ này!"
                         : "Đã tồn tại course với tên này!";
                       return Promise.reject(new Error(message));
                     }
                   }
                 }
-                
+
                 return Promise.resolve();
               },
             },
@@ -187,48 +187,48 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course code must be at least 2 characters!"));
                 }
-                // Check for whitespace
+
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Course code cannot contain spaces!"));
                 }
-                // Only allow alphanumeric characters, underscore, and hyphen
+
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
-                
-                // Check for duplicate code
-                // If semester is selected, check in that semester; otherwise check all courses
-                const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0 
-                  ? existingSemesterCourses 
+
+
+
+                const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0
+                  ? existingSemesterCourses
                   : allCourses;
-                
+
                 if (coursesToCheck.length > 0) {
                   if (!isEditMode) {
                     const duplicate = coursesToCheck.find(
                       (c) => c.code.toLowerCase().trim() === value.toLowerCase().trim()
                     );
                     if (duplicate) {
-                      const message = selectedSemesterId 
+                      const message = selectedSemesterId
                         ? "Đã tồn tại course với mã code này trong học kỳ này!"
                         : "Đã tồn tại course với mã code này!";
                       return Promise.reject(new Error(message));
                     }
                   } else {
-                    // When editing, exclude current course
+
                     const duplicate = coursesToCheck.find(
-                      (c) => 
+                      (c) =>
                         c.code.toLowerCase().trim() === value.toLowerCase().trim() &&
                         c.id !== initialData?.id
                     );
                     if (duplicate) {
-                      const message = selectedSemesterId 
+                      const message = selectedSemesterId
                         ? "Đã tồn tại course với mã code này trong học kỳ này!"
                         : "Đã tồn tại course với mã code này!";
                       return Promise.reject(new Error(message));
                     }
                   }
                 }
-                
+
                 return Promise.resolve();
               },
             },

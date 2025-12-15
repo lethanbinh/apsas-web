@@ -19,7 +19,7 @@ class ApiService {
   }
 
   private setupInterceptors() {
-    // Request interceptor
+
     this.api.interceptors.request.use(
       (config) => {
         const token = getStorageItem('auth_token');
@@ -34,7 +34,7 @@ class ApiService {
       }
     );
 
-    // Response interceptor
+
     this.api.interceptors.response.use(
       (response) => {
         console.log('✅ API Response:', response.status, response.config.url);
@@ -46,19 +46,19 @@ class ApiService {
         const isLoginRequest = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/google');
         const isExamSessionList = requestUrl.includes('/examsession/list');
         const isStudentGroupEndpoint = requestUrl.includes('/studentgroup/student/');
-        
-        // Don't log 401 errors for login requests (expected behavior - user entered wrong credentials)
-        // Don't log 404 errors for endpoints that have graceful fallback handling
-        const shouldLogError = (status !== 401 || !isLoginRequest) && 
+
+
+
+        const shouldLogError = (status !== 401 || !isLoginRequest) &&
                                (status !== 404 || (!isExamSessionList && !isStudentGroupEndpoint));
         if (shouldLogError) {
           console.error('❌ API Error:', status, requestUrl, error.response?.data);
         }
-        
+
         if (status === 401) {
           const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
-          
-          // Only redirect if it's not a login request and not already on login page
+
+
           if (!isLoginPage && !isLoginRequest) {
             removeStorageItem('auth_token');
             deleteCookie('auth_token');
@@ -70,7 +70,7 @@ class ApiService {
     );
   }
 
-  // Generic methods
+
   async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
     const response: AxiosResponse<T> = await this.api.get(url, config);
     return response.data;

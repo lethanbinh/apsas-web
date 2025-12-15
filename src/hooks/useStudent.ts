@@ -4,7 +4,7 @@ import { studentManagementService } from "@/services/studentManagementService";
 import { useEffect, useState } from "react";
 import { useAuth } from "./useAuth";
 
-// Helper functions for sessionStorage
+
 const getStorageItem = (key: string): string | null => {
   if (typeof window === 'undefined') return null;
   try {
@@ -19,7 +19,7 @@ const setStorageItem = (key: string, value: string): void => {
   try {
     sessionStorage.setItem(key, value);
   } catch {
-    // Ignore storage errors
+
   }
 };
 
@@ -33,23 +33,23 @@ export const useStudent = () => {
       if (user && user.id) {
         const currentUserAccountId = String(user.id);
         const cacheKey = `studentId_${currentUserAccountId}`;
-        
-        // Try to get from cache first
+
+
         const cachedStudentId = getStorageItem(cacheKey);
         if (cachedStudentId) {
           const parsedId = parseInt(cachedStudentId, 10);
           if (!isNaN(parsedId)) {
             setStudentId(parsedId);
             setIsLoading(false);
-            return; // Use cached value, skip API call
+            return;
           }
         }
 
-        // If not in cache, fetch from API
+
         try {
           setIsLoading(true);
           const students = await studentManagementService.getStudentList();
-          
+
           const matchingStudent = students.find(
             (stu) => stu.accountId === currentUserAccountId
           );
@@ -57,11 +57,11 @@ export const useStudent = () => {
           if (matchingStudent) {
             const foundStudentId = parseInt(matchingStudent.studentId, 10);
             setStudentId(foundStudentId);
-            // Cache the result
+
             setStorageItem(cacheKey, String(foundStudentId));
           } else {
             setStudentId(null);
-            // Cache null result to avoid repeated API calls
+
             setStorageItem(cacheKey, '');
           }
         } catch (error) {

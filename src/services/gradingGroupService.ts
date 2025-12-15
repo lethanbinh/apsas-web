@@ -170,7 +170,7 @@ export class GradingGroupService {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-        timeout: 0, // No timeout limit for file uploads
+        timeout: 0,
       }
     );
     return response.result;
@@ -194,7 +194,7 @@ export class GradingGroupService {
         }
       );
     } catch (error: any) {
-      // Extract error messages from API response
+
       if (error.response?.data?.errorMessages && Array.isArray(error.response.data.errorMessages)) {
         const errorMessage = error.response.data.errorMessages.join(", ");
         const customError = new Error(errorMessage);

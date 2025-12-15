@@ -15,15 +15,14 @@ import { queryKeys } from "@/lib/react-query";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 
 const getStatusTag = (status: number) => {
-  // Map to 3 statuses: Pending (1,2,4), Approved (5), Rejected (3)
   switch (status) {
-    case 1: // PENDING
-    case 2: // ACCEPTED -> map to Pending
-    case 4: // IN_PROGRESS -> map to Pending
+    case 1:
+    case 2:
+    case 4:
       return <span className={styles["status-tag-pending"]}>Pending</span>;
-    case 5: // COMPLETED -> Approved
+    case 5:
       return <span className={styles["status-tag-completed"]}>Approved</span>;
-    case 3: // REJECTED
+    case 3:
       return <span className={styles["status-tag-rejected"]}>Rejected</span>;
     default:
       return <span className={styles["status-tag-pending"]}>Pending</span>;
@@ -43,7 +42,6 @@ const TasksPageContent = () => {
   const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string | undefined>(undefined);
   const [templatesWithRequestIds, setTemplatesWithRequestIds] = useState<Set<number>>(new Set());
 
-  // Fetch all semesters
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list(),
     queryFn: async () => {
@@ -51,8 +49,7 @@ const TasksPageContent = () => {
         pageNumber: 1,
         pageSize: 1000,
       });
-      
-      // Find current active semester
+
       const now = new Date();
       const activeSemester = semesters.find((sem) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
@@ -62,15 +59,13 @@ const TasksPageContent = () => {
       if (activeSemester) {
         setCurrentSemesterCode(activeSemester.semesterCode);
       } else {
-        // If no current semester, set to null so we can use latest
         setCurrentSemesterCode(null);
       }
-      
+
       return semesters;
     },
   });
 
-  // Fetch tasks using TanStack Query
   const { data: tasksResponse, isLoading, error: queryError } = useQuery({
     queryKey: queryKeys.assignRequests.byLecturerId(Number(lecturerId!)),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -81,7 +76,6 @@ const TasksPageContent = () => {
     enabled: !!lecturerId && !isLecturerLoading,
   });
 
-  // Fetch templates to check which tasks have templates
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 10000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -91,7 +85,6 @@ const TasksPageContent = () => {
     enabled: !!lecturerId && !isLecturerLoading,
   });
 
-  // Create a set of assignRequestIds that have templates
   useEffect(() => {
     if (templatesResponse?.items) {
       const templateRequestIds = new Set(
@@ -111,17 +104,15 @@ const TasksPageContent = () => {
     const uniqueSemesters = [
       ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
     ];
-    
-    // Create a map of semesterName to Semester object for sorting
+
     const semesterMap = new Map<string, Semester>();
     uniqueSemesters.forEach((name) => {
       const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
       if (exactMatch) {
         semesterMap.set(name, exactMatch);
       } else {
-        // Try partial match
-        const partialMatch = allSemesters.find((sem) => 
-          name.includes(sem.semesterCode) || 
+        const partialMatch = allSemesters.find((sem) =>
+          name.includes(sem.semesterCode) ||
           sem.semesterCode.includes(name) ||
           name.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
           sem.semesterCode.toLowerCase().includes(name.toLowerCase())
@@ -131,22 +122,20 @@ const TasksPageContent = () => {
         }
       }
     });
-    
-    // Sort by startDate (newest first)
+
     const sortedSemesters = uniqueSemesters.sort((a, b) => {
       const semA = semesterMap.get(a);
       const semB = semesterMap.get(b);
       if (semA && semB) {
         const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
         const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
-        return dateB.getTime() - dateA.getTime(); // Newest first
+        return dateB.getTime() - dateA.getTime();
       }
-      // If one doesn't have date info, put it at the end
       if (semA) return -1;
       if (semB) return 1;
       return 0;
     });
-    
+
     const options = sortedSemesters.map((semester) => ({
       label: semester,
       value: semester,
@@ -154,11 +143,8 @@ const TasksPageContent = () => {
     return [{ label: "All Semesters", value: "all" }, ...options];
   }, [allTasks, allSemesters]);
 
-  // Set default semester to current active semester, or latest if current has no data
   useEffect(() => {
     if (isInitialLoad && allSemesters.length > 0 && allTasks.length > 0) {
-      // Try to find current semester in tasks FIRST (priority)
-      // First, find current semester from allSemesters if not already set
       let activeSemesterCode = currentSemesterCode;
       if (!activeSemesterCode) {
         const now = new Date();
@@ -171,14 +157,12 @@ const TasksPageContent = () => {
           activeSemesterCode = activeSemester.semesterCode;
         }
       }
-      
+
       if (activeSemesterCode) {
-        // Get unique semester names from tasks
         const uniqueSemesterNames = [
           ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
         ];
-        
-        // Try exact match first
+
         const exactMatch = uniqueSemesterNames.find(
           (name) => name === activeSemesterCode
         );
@@ -187,11 +171,10 @@ const TasksPageContent = () => {
           setIsInitialLoad(false);
           return;
         }
-        
-        // Try partial match
+
         const partialMatch = uniqueSemesterNames.find(
           (name) => name?.includes(activeSemesterCode!) ||
-                   name?.toLowerCase().includes(activeSemesterCode!.toLowerCase())
+            name?.toLowerCase().includes(activeSemesterCode!.toLowerCase())
         );
         if (partialMatch) {
           setSelectedSemester(partialMatch);
@@ -199,22 +182,20 @@ const TasksPageContent = () => {
           return;
         }
       }
-      
-      // Current semester not found or has no data, use latest semester
+
       const uniqueSemesterNames = [
         ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
       ];
-      
+
       if (uniqueSemesterNames.length > 0) {
-        // Create a map of semesterName to Semester object for sorting
         const semesterMap = new Map<string, Semester>();
         uniqueSemesterNames.forEach((name) => {
           const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
           if (exactMatch) {
             semesterMap.set(name, exactMatch);
           } else {
-            const partialMatch = allSemesters.find((sem) => 
-              name.includes(sem.semesterCode) || 
+            const partialMatch = allSemesters.find((sem) =>
+              name.includes(sem.semesterCode) ||
               sem.semesterCode.includes(name) ||
               name.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
               sem.semesterCode.toLowerCase().includes(name.toLowerCase())
@@ -224,8 +205,7 @@ const TasksPageContent = () => {
             }
           }
         });
-        
-        // Sort by startDate (newest first) and get the first one
+
         const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
           const semA = semesterMap.get(a);
           const semB = semesterMap.get(b);
@@ -236,51 +216,43 @@ const TasksPageContent = () => {
           }
           return 0;
         });
-        
+
         if (sortedSemesters.length > 0) {
           setSelectedSemester(sortedSemesters[0]);
         }
       }
-      
+
       setIsInitialLoad(false);
     }
   }, [currentSemesterCode, allTasks, allSemesters, isInitialLoad]);
 
   const filteredTasks = useMemo(() => {
     return allTasks.filter((task) => {
-      // Semester filter
       const matchesSemester = selectedSemester === "all" || task.semesterName === selectedSemester;
-      
-      // Status filter - map status to display value
+
       let matchesStatus = true;
       if (selectedStatus !== undefined) {
         if (selectedStatus === 1) {
-          // Pending: status 1, 2, 4
           matchesStatus = task.status === 1 || task.status === 2 || task.status === 4;
         } else if (selectedStatus === 3) {
-          // Rejected: status 3
           matchesStatus = task.status === 3;
         } else if (selectedStatus === 5) {
-          // Approved: status 5
           matchesStatus = task.status === 5;
         } else {
           matchesStatus = task.status === selectedStatus;
         }
       }
-      
-      // Template filter
-      const matchesTemplate = !selectedTemplateFilter || 
+
+      const matchesTemplate = !selectedTemplateFilter ||
         (selectedTemplateFilter === "with" && templatesWithRequestIds.has(task.id)) ||
         (selectedTemplateFilter === "without" && !templatesWithRequestIds.has(task.id));
-      
+
       return matchesSemester && matchesStatus && matchesTemplate;
     });
   }, [allTasks, selectedSemester, selectedStatus, selectedTemplateFilter, templatesWithRequestIds]);
 
   const groupedByCourse = useMemo(() => {
     return filteredTasks.reduce((acc, task) => {
-      // Group by both courseName and semesterName to handle same course in different semesters
-      // Use a separator that's unlikely to appear in course names
       const courseKey = `${task.courseName || "Uncategorized"}|||${task.semesterName || "Unknown"}`;
       if (!acc[courseKey]) {
         acc[courseKey] = [];
@@ -360,75 +332,94 @@ const TasksPageContent = () => {
         </p>
       ) : (
         Object.keys(groupedByCourse).map((courseKey) => {
-          // Extract courseName and semesterName from the key
-          // Use the first task in the group to get semesterName (all tasks in same group have same semester)
           const tasks = groupedByCourse[courseKey];
           const firstTask = tasks[0];
           const courseName = firstTask.courseName || "Uncategorized";
           const semesterName = firstTask.semesterName;
-          const displayTitle = semesterName && semesterName !== "Unknown" 
+          const displayTitle = semesterName && semesterName !== "Unknown"
             ? `${courseName} (${semesterName})`
             : courseName;
-          
+
           return (
-          <div className={styles["task-section"]} key={courseKey}>
-            <div
-              className={styles["task-header"]}
-              onClick={() => toggleCourse(courseKey)}
-            >
-              <div className={styles["task-title"]}>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-                <span className={styles["task-title-text"]}>
-                  {displayTitle}
-                </span>
-              </div>
-              <div className={styles["task-meta"]}>
-                <span>{groupedByCourse[courseKey].length} Tasks</span>
-                <svg
-                  className={`${styles["question-dropdown-arrow"]} ${
-                    openCourses[courseKey] ? styles.rotate : ""
-                  }`}
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-              </div>
-            </div>
-            {openCourses[courseKey] && (
+            <div className={styles["task-section"]} key={courseKey}>
               <div
-                className={`${styles["task-content"]} ${styles["nested-content"]}`}
+                className={styles["task-header"]}
+                onClick={() => toggleCourse(courseKey)}
               >
-                {groupedByCourse[courseKey].map((task) => (
-                  <div className={styles["sub-task-section"]} key={task.id}>
-                    <div
-                      className={styles["task-header"]}
-                      onClick={() => toggleAssignment(task.id.toString())}
-                    >
-                      <div className={styles["task-title"]}>
+                <div className={styles["task-title"]}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                  <span className={styles["task-title-text"]}>
+                    {displayTitle}
+                  </span>
+                </div>
+                <div className={styles["task-meta"]}>
+                  <span>{groupedByCourse[courseKey].length} Tasks</span>
+                  <svg
+                    className={`${styles["question-dropdown-arrow"]} ${openCourses[courseKey] ? styles.rotate : ""
+                      }`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </div>
+              </div>
+              {openCourses[courseKey] && (
+                <div
+                  className={`${styles["task-content"]} ${styles["nested-content"]}`}
+                >
+                  {groupedByCourse[courseKey].map((task) => (
+                    <div className={styles["sub-task-section"]} key={task.id}>
+                      <div
+                        className={styles["task-header"]}
+                        onClick={() => toggleAssignment(task.id.toString())}
+                      >
+                        <div className={styles["task-title"]}>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                          <span className={styles["task-title-text"]}>
+                            {task.courseElementName}
+                          </span>
+                          {getStatusTag(task.status)}
+                        </div>
                         <svg
+                          className={`${styles["question-dropdown-arrow"]} ${openAssignments[task.id.toString()]
+                              ? styles.rotate
+                              : ""
+                            }`}
                           xmlns="http://www.w3.org/2000/svg"
-                          width="20"
-                          height="20"
+                          width="16"
+                          height="16"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
@@ -438,41 +429,18 @@ const TasksPageContent = () => {
                         >
                           <polyline points="6 9 12 15 18 9" />
                         </svg>
-                        <span className={styles["task-title-text"]}>
-                          {task.courseElementName}
-                        </span>
-                        {getStatusTag(task.status)}
                       </div>
-                      <svg
-                        className={`${styles["question-dropdown-arrow"]} ${
-                          openAssignments[task.id.toString()]
-                            ? styles.rotate
-                            : ""
-                        }`}
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
+                      {openAssignments[task.id.toString()] && (
+                        <LecturerTaskContent
+                          task={task}
+                          lecturerId={Number(lecturerId)}
+                        />
+                      )}
                     </div>
-                    {openAssignments[task.id.toString()] && (
-                      <LecturerTaskContent
-                        task={task}
-                        lecturerId={Number(lecturerId)}
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })
       )}

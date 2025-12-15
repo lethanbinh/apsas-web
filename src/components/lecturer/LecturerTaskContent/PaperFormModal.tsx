@@ -32,11 +32,11 @@ export const PaperFormModal = ({
       if (initialData) {
         form.setFieldsValue({
           ...initialData,
-          language: initialData.language ?? 0, // Default to 0 (CSharp) if not set
+          language: initialData.language ?? 0,
         });
       } else {
         form.resetFields();
-        form.setFieldsValue({ language: 0 }); // Default to CSharp for new paper
+        form.setFieldsValue({ language: 0 });
       }
     }
   }, [initialData, form, open]);
@@ -88,9 +88,9 @@ export const PaperFormModal = ({
         <Form.Item name="description" label="Paper Description">
           <Input.TextArea rows={3} disabled={!isEditable} />
         </Form.Item>
-        <Form.Item 
-          name="language" 
-          label="Language" 
+        <Form.Item
+          name="language"
+          label="Language"
           rules={[{ required: true, message: "Please select a language" }]}
         >
           <Select disabled={!isEditable}>

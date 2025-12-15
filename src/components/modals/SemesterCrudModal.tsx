@@ -104,7 +104,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
   useEffect(() => {
     if (open) {
       if (isEditMode && initialData) {
-        // Tự tính toán 'season'
+
         const season =
           initialData.semesterCode.replace(
             initialData.academicYear.toString(),
@@ -113,7 +113,7 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
 
         form.setFieldsValue({
           ...initialData,
-          season: season, // Thêm dòng này
+          season: season,
           startDate: moment(
             initialData.startDate.endsWith("Z")
               ? initialData.startDate
@@ -136,16 +136,16 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
     allValues: { academicYear: number; season: string }
   ) => {
     if (isEditMode) return;
-    
-    // Tránh circular reference bằng cách kiểm tra flag
+
+
     if (isUpdatingRef.current) {
       return;
     }
 
     if (changedValues.academicYear || changedValues.season) {
       const { academicYear, season } = allValues;
-      
-      // Nếu academicYear thay đổi, reset season (sử dụng setTimeout để tránh circular update)
+
+
       if (changedValues.academicYear) {
         isUpdatingRef.current = true;
         setTimeout(() => {
@@ -153,8 +153,8 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
           isUpdatingRef.current = false;
         }, 0);
       }
-      
-      // Chỉ update semesterCode và dates nếu cả hai đều có giá trị
+
+
       if (academicYear && season) {
         isUpdatingRef.current = true;
         setTimeout(() => {

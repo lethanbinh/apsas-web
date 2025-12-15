@@ -11,17 +11,17 @@ interface AuthGuardProps {
   requireAuth?: boolean;
 }
 
-export const AuthGuard: React.FC<AuthGuardProps> = ({ 
-  children, 
-  requireAuth = true 
+export const AuthGuard: React.FC<AuthGuardProps> = ({
+  children,
+  requireAuth = true
 }) => {
   return (
     <NoSSR fallback={
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         <Spin size="large" />
       </div>
@@ -33,9 +33,9 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   );
 };
 
-const AuthGuardContent: React.FC<AuthGuardProps> = ({ 
-  children, 
-  requireAuth = true 
+const AuthGuardContent: React.FC<AuthGuardProps> = ({
+  children,
+  requireAuth = true
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
@@ -45,13 +45,13 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       if (requireAuth && !isAuthenticated) {
         router.push('/login');
       } else if (!requireAuth && isAuthenticated) {
-        // Redirect based on user role
+
         const roleRedirects: { [key: number]: string } = {
-          0: "/admin/manage-users", // Admin
-          1: "/classes/my-classes/lecturer", // Lecturer
-          2: "/classes/my-classes/student", // Student
-          3: "/hod/semester-plans", // HOD
-          4: "/examiner/grading-groups", // Examiner
+          0: "/admin/manage-users",
+          1: "/classes/my-classes/lecturer",
+          2: "/classes/my-classes/student",
+          3: "/hod/semester-plans",
+          4: "/examiner/grading-groups",
         };
         const userRole = user?.role as number;
         const redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
@@ -62,11 +62,11 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh'
       }}>
         <Spin size="large" />
       </div>
@@ -74,11 +74,11 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
   }
 
   if (requireAuth && !isAuthenticated) {
-    return null; // Will redirect to login
+    return null;
   }
 
   if (!requireAuth && isAuthenticated) {
-    return null; // Will redirect to dashboard
+    return null;
   }
 
   return <>{children}</>;

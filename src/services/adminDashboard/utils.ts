@@ -1,6 +1,4 @@
-/**
- * Helper function to check if assessment template is a Practical Exam based on name
- */
+
 export function isPracticalExamTemplate(template: any): boolean {
   const name = (template.name || "").toLowerCase();
   const keywords = [
@@ -17,9 +15,7 @@ export function isPracticalExamTemplate(template: any): boolean {
   return keywords.some((keyword) => name.includes(keyword));
 }
 
-/**
- * Helper function to check if assessment template is a Lab based on name
- */
+
 export function isLabTemplate(template: any): boolean {
   const name = (template.name || "").toLowerCase();
   const keywords = [

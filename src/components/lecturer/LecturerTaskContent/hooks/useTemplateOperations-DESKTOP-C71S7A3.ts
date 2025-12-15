@@ -45,7 +45,7 @@ export function useTemplateOperations({
           courseElementId: task.courseElementId,
           assignedLecturerId: task.assignedLecturerId,
           assignedByHODId: task.assignedByHODId,
-          status: 1, // Reset to Pending
+          status: 1,
           assignedAt: task.assignedAt,
         });
         notification.success({
@@ -64,7 +64,7 @@ export function useTemplateOperations({
 
   const handleCreateTemplate = async () => {
     try {
-      // Validate: Check if there's already a template for this task (not rejected)
+
       const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
       if (taskTemplate && !isRejected) {
         notification.error({
@@ -74,7 +74,7 @@ export function useTemplateOperations({
         return;
       }
 
-      // Validate: Check if template name is provided
+
       if (!newTemplateName.trim()) {
         notification.error({
           message: "Template Name Required",
@@ -83,7 +83,7 @@ export function useTemplateOperations({
         return;
       }
 
-      // Validate: If template type is WEBAPI (1), both database and postman files are required
+
       if (newTemplateType === 1) {
         if (!newTemplateStartupProject.trim()) {
           notification.error({
@@ -129,7 +129,7 @@ export function useTemplateOperations({
         }
       }
 
-      // Create template
+
       const createdTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: newTemplateName,
         description: newTemplateDesc,
@@ -140,9 +140,9 @@ export function useTemplateOperations({
         assignedToHODId: task.assignedByHODId,
       });
 
-      // Upload database and postman collection files for WEBAPI template
+
       if (newTemplateType === 1 && createdTemplate.id) {
-        // Upload database file (template=0)
+
         if (databaseFileList.length > 0) {
           const databaseFile = databaseFileList[0].originFileObj;
           if (databaseFile) {
@@ -164,7 +164,7 @@ export function useTemplateOperations({
           }
         }
 
-        // Upload postman collection file (template=1)
+
         if (postmanFileList.length > 0) {
           const postmanFile = postmanFileList[0].originFileObj;
           if (postmanFile) {
@@ -196,7 +196,7 @@ export function useTemplateOperations({
       setDatabaseFileName("");
       setPostmanFileName("");
 
-      // If this was a resubmission after rejection, reset status to Pending
+
       if (isRejected) {
         try {
           await assignRequestService.updateAssignRequest(task.id, {
@@ -204,7 +204,7 @@ export function useTemplateOperations({
             courseElementId: task.courseElementId,
             assignedLecturerId: task.assignedLecturerId,
             assignedByHODId: task.assignedByHODId,
-            status: 1, // Reset to Pending
+            status: 1,
             assignedAt: task.assignedAt,
           });
           notification.success({
@@ -225,15 +225,15 @@ export function useTemplateOperations({
         });
       }
 
-      // Invalidate all assessment templates queries
-      queryClient.invalidateQueries({ 
+
+      queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.all,
         exact: false
       });
-      
-      // Dispatch custom event to notify other components
+
+
       window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
-      
+
       await refetchTemplates();
     } catch (error: any) {
       console.error("Failed to create template:", error);
@@ -248,29 +248,29 @@ export function useTemplateOperations({
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
-      
-      // Invalidate all assessment template queries
-      queryClient.invalidateQueries({ 
+
+
+      queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.all,
         exact: false
       });
-      
-      // Refetch all assessment template queries immediately
+
+
       await queryClient.refetchQueries({
         queryKey: queryKeys.assessmentTemplates.all,
-        type: 'active', // Refetch all active queries
+        type: 'active',
       });
-      
-      // Also refetch local templates
+
+
       await refetchTemplates();
-      
-      // Dispatch custom event to notify other components (after refetch)
+
+
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', { 
+        window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', {
           detail: { templateId: template.id, action: 'deleted' }
         }));
       }
-      
+
       await resetStatusIfRejected();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {

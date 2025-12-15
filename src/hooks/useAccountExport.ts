@@ -13,7 +13,7 @@ export const useAccountExport = () => {
   const fetchAllAccounts = async (): Promise<User[]> => {
     const allUsers: User[] = [];
     let currentPage = 1;
-    const pageSize = 100; // Use large page size to minimize requests
+    const pageSize = 100;
     let hasMore = true;
 
     while (hasMore) {
@@ -21,7 +21,7 @@ export const useAccountExport = () => {
         const response = await accountService.getAccountList(currentPage, pageSize);
         if (response.users && response.users.length > 0) {
           allUsers.push(...response.users);
-          // Check if there are more pages
+
           if (allUsers.length >= response.total) {
             hasMore = false;
           } else {

@@ -3,9 +3,9 @@ import { User } from "@/types";
 import * as XLSX from "xlsx";
 
 export const validateAccountData = (row: any, rowIndex: number): string | null => {
-  const rowNum = rowIndex + 2; // +2 because Excel rows start at 1 and we have header
+  const rowNum = rowIndex + 2;
 
-  // Required fields
+
   if (!row["Username"] || !row["Username"].toString().trim()) {
     return `Row ${rowNum}: Username is required`;
   }
@@ -60,7 +60,7 @@ export const validateAccountData = (row: any, rowIndex: number): string | null =
   if (isNaN(role) || role < 0 || role > 4) {
     return `Row ${rowNum}: Role must be 0-4 (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
   }
-  // Validate Lecturer-specific fields
+
   if (role === ROLES.LECTURER) {
     if (!row["Department"] || !row["Department"].toString().trim()) {
       return `Row ${rowNum}: Department is required for Lecturer role`;
@@ -134,16 +134,16 @@ export const exportUsersToExcel = (users: User[]): void => {
   XLSX.utils.book_append_sheet(wb, ws, "All Accounts");
 
   ws["!cols"] = [
-    { wch: 8 },  // No
-    { wch: 15 }, // Account Code
-    { wch: 15 }, // Username
-    { wch: 25 }, // Email
-    { wch: 15 }, // Phone Number
-    { wch: 20 }, // Full Name
-    { wch: 40 }, // Address
-    { wch: 10 }, // Gender
-    { wch: 15 }, // Date of Birth
-    { wch: 12 }, // Role
+    { wch: 8 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 15 },
+    { wch: 20 },
+    { wch: 40 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 12 },
   ];
 
   const timestamp = new Date().toISOString().split("T")[0].replace(/-/g, "");
@@ -160,7 +160,7 @@ export const generateSampleTemplate = (): void => {
     { value: "3", name: "HOD" },
     { value: "4", name: "Examiner" },
   ];
-  const genders = ["0", "1"]; // Male, Female
+  const genders = ["0", "1"];
   const departments = ["Computer Science", "Information Technology", "Software Engineering", "Data Science", "Cybersecurity", "Network Engineering", "Artificial Intelligence", "Web Development", "Mobile Development", "Database Systems"];
   const specializations = ["Web Development", "Mobile Development", "Data Science", "Machine Learning", "Cybersecurity", "Cloud Computing", "Database Management", "Software Architecture", "Network Security", "AI & Robotics"];
   const firstNames = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Vu", "Vo", "Dang", "Bui", "Do"];
@@ -180,7 +180,7 @@ export const generateSampleTemplate = (): void => {
   ];
 
   for (let i = 1; i <= 50; i++) {
-    const roleIndex = Math.floor((i - 1) / 10); // Distribute roles: 10 each
+    const roleIndex = Math.floor((i - 1) / 10);
     const role = roles[roleIndex % roles.length];
     const gender = genders[Math.floor(Math.random() * genders.length)];
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
@@ -192,13 +192,13 @@ export const generateSampleTemplate = (): void => {
     const email = `user${String(i).padStart(3, "0")}@example.com`;
     const phoneNumber = `0${Math.floor(Math.random() * 9) + 1}${Math.floor(Math.random() * 10000000).toString().padStart(8, "0")}`;
     const address = addresses[Math.floor(Math.random() * addresses.length)];
-    
-    // Generate date of birth between 1990 and 2005
+
+
     const year = 1990 + Math.floor(Math.random() * 16);
     const month = Math.floor(Math.random() * 12) + 1;
     const day = Math.floor(Math.random() * 28) + 1;
     const dateOfBirth = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    
+
     const password = `Pass${i}@123`;
 
     const accountData: any = {
@@ -213,7 +213,7 @@ export const generateSampleTemplate = (): void => {
       "Password": password
     };
 
-    // Add Department and Specialization for Lecturer role
+
     if (role.value === "1") {
       accountData["Department"] = departments[Math.floor(Math.random() * departments.length)];
       accountData["Specialization"] = specializations[Math.floor(Math.random() * specializations.length)];
@@ -227,17 +227,17 @@ export const generateSampleTemplate = (): void => {
   XLSX.utils.book_append_sheet(wb, ws, "Accounts");
 
   ws["!cols"] = [
-    { wch: 15 }, // Username
-    { wch: 25 }, // Email
-    { wch: 15 }, // Phone Number
-    { wch: 20 }, // Full Name
-    { wch: 40 }, // Address
-    { wch: 10 }, // Gender
-    { wch: 15 }, // Date of Birth
-    { wch: 10 }, // Role
-    { wch: 15 }, // Password
-    { wch: 20 }, // Department (for Lecturer)
-    { wch: 20 }, // Specialization (for Lecturer)
+    { wch: 15 },
+    { wch: 25 },
+    { wch: 15 },
+    { wch: 20 },
+    { wch: 40 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 20 },
+    { wch: 20 },
   ];
 
   XLSX.writeFile(wb, "Account_Import_Template.xlsx");

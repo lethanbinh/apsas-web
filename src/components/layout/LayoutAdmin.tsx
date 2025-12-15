@@ -1,7 +1,13 @@
+'use client';
+
 import React from 'react';
-import { HeaderAdmin } from './HeaderAdmin'; // Import HeaderAdmin
-import SidebarAdmin from './SidebarAdmin';   // Import SidebarAdmin
-import { Footer } from './Footer'; // Assuming a shared Footer is still used, adjust if not.
+import { Layout as AntLayout } from 'antd';
+import { HeaderAdmin } from './HeaderAdmin';
+import SidebarAdmin from './SidebarAdmin';
+import { Footer } from './Footer';
+import { SidebarProvider } from './SidebarContext';
+
+const { Content } = AntLayout;
 
 interface LayoutAdminProps {
   children: React.ReactNode;
@@ -9,16 +15,21 @@ interface LayoutAdminProps {
 
 const LayoutAdmin: React.FC<LayoutAdminProps> = ({ children }) => {
   return (
-    <div className="flex flex-col min-h-screen">
-      <HeaderAdmin /> {/* Use HeaderAdmin */}
-      <div className="flex flex-1">
-        <SidebarAdmin /> {/* Use SidebarAdmin */}
-        <main className="flex-1 p-8 bg-gray-50">
-          {children}
-        </main>
-      </div>
-      <Footer />
-    </div>
+    <SidebarProvider>
+      <AntLayout className="app-layout">
+        <HeaderAdmin />
+        <AntLayout
+          className="sticky-container"
+          style={{
+            overflow: "visible !important",
+          }}
+        >
+          <SidebarAdmin />
+          <Content className="app-content">{children}</Content>
+        </AntLayout>
+        <Footer />
+      </AntLayout>
+    </SidebarProvider>
   );
 };
 

@@ -5,7 +5,7 @@ import { courseElementService } from './courseElementService';
 import { gradingGroupService } from './gradingGroupService';
 import { gradingService } from './gradingService';
 import { submissionService } from './submissionService';
-// Import types for internal use
+
 import type {
   DashboardOverview,
   UserStats,
@@ -22,7 +22,7 @@ import type {
   RecentActivity,
   PendingTask,
 } from './adminDashboard/types';
-// Export types from types file
+
 export type {
   DashboardOverview,
   UserStats,
@@ -39,7 +39,7 @@ export type {
   RecentActivity,
   PendingTask,
 } from './adminDashboard/types';
-// Import services and utilities
+
 import { userStatsService } from './adminDashboard/userStatsService';
 import { academicStatsService } from './adminDashboard/academicStatsService';
 import { assessmentStatsService } from './adminDashboard/assessmentStatsService';
@@ -51,12 +51,10 @@ import { isPracticalExamTemplate, isLabTemplate } from './adminDashboard/utils';
 import { getDefaultUserStats, getDefaultAssessmentStats, getDefaultSubmissionStats } from './adminDashboard/defaultStats';
 
 export class AdminDashboardService {
-  /**
-   * Get comprehensive dashboard overview
-   */
+
   async getDashboardOverview(): Promise<DashboardOverview> {
     try {
-      // Fetch all data in parallel
+
       const [
         usersData,
         semestersData,
@@ -78,8 +76,8 @@ export class AdminDashboardService {
       ]);
 
       const users = usersData.status === 'fulfilled' ? usersData.value : getDefaultUserStats();
-      
-      // Get detailed academic stats
+
+
       const academicDetailed = await academicStatsService.getDetailedAcademicStats();
       const academic: AcademicStats = {
         totalSemesters: semestersData.status === 'fulfilled' ? semestersData.value.total : 0,
@@ -98,8 +96,8 @@ export class AdminDashboardService {
         lecturerWorkload: academicDetailed.lecturerWorkload || [],
         studentToLecturerRatio: academicDetailed.studentToLecturerRatio || 0,
       };
-      
-      // Get detailed assessment stats
+
+
       const assessmentDetailed = await assessmentStatsService.getDetailedAssessmentStats();
       const baseAssessments = assessmentsData.status === 'fulfilled' ? assessmentsData.value : getDefaultAssessmentStats();
       const assessments: AssessmentStats = {
@@ -111,10 +109,10 @@ export class AdminDashboardService {
         topAssessmentsBySubmissions: assessmentDetailed.topAssessmentsBySubmissions || [],
         upcomingDeadlines: assessmentDetailed.upcomingDeadlines || [],
       };
-      
+
       const submissions = submissionsData.status === 'fulfilled' ? submissionsData.value : getDefaultSubmissionStats();
 
-      // Get detailed grading stats
+
       const gradingDetailed = await gradingStatsService.getDetailedGradingStats();
       const grading: GradingStats = {
         totalGradingGroups: gradingGroupsData.status === 'fulfilled' ? gradingGroupsData.value.total : 0,
@@ -144,12 +142,10 @@ export class AdminDashboardService {
 
 
 
-  /**
-   * Get chart data for visualizations
-   */
+
   async getChartData(): Promise<ChartData> {
     try {
-      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] = 
+      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] =
         await Promise.allSettled([
           userStatsService.getUserGrowthData(),
           chartDataService.getSemesterActivityData(),
@@ -179,14 +175,12 @@ export class AdminDashboardService {
 
 
 
-  /**
-   * Get recent activities
-   */
+
   async getRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
     try {
       const activities: RecentActivity[] = [];
-      
-      // Get recent users
+
+
       const { users } = await adminService.getAccountList(1, 20);
       users.slice(0, 5).forEach((user) => {
         activities.push({
@@ -194,12 +188,12 @@ export class AdminDashboardService {
           type: 'user',
           title: 'User Registered',
           description: `${user.fullName} (${user.email})`,
-          timestamp: new Date().toISOString(), // Using current time as placeholder
+          timestamp: new Date().toISOString(),
           icon: '👤',
         });
       });
 
-      // Get recent classes
+
       const { classes } = await classService.getClassList({
         pageNumber: 1,
         pageSize: 10,
@@ -215,7 +209,7 @@ export class AdminDashboardService {
         });
       });
 
-      // Get recent submissions
+
       const submissions = await submissionService.getSubmissionList({});
       submissions.slice(0, 5).forEach((submission) => {
         activities.push({
@@ -237,14 +231,12 @@ export class AdminDashboardService {
     }
   }
 
-  /**
-   * Get pending tasks
-   */
+
   async getPendingTasks(): Promise<PendingTask[]> {
     try {
       const tasks: PendingTask[] = [];
-      
-      // Get pending assign requests
+
+
       const requests = await adminService.getApprovalList(1, 100);
       requests.items
         .filter((r) => r.status === 0)
@@ -260,7 +252,7 @@ export class AdminDashboardService {
           });
         });
 
-      // Get ungraded submissions
+
       const submissions = await submissionService.getSubmissionList({});
       submissions
         .filter((s) => s.lastGrade === 0 && s.submittedAt)
@@ -285,17 +277,13 @@ export class AdminDashboardService {
     }
   }
 
-  // Default values for error cases
-  /**
-   * Get detailed user statistics
-   */
+
+
   async getDetailedUserStats(): Promise<UserStats> {
     return userStatsService.getUserStats();
   }
 
-  /**
-   * Get detailed academic statistics (DEPRECATED - use private method)
-   */
+
   private async getDetailedAcademicStatsOld(): Promise<AcademicStats> {
     try {
       const [semesters, classes, assessments] = await Promise.all([
@@ -311,7 +299,7 @@ export class AdminDashboardService {
         return now >= start && now <= end;
       });
 
-      // Group classes by semester
+
       const classesBySemesterMap = new Map<string, {
         semesterCode: string;
         semesterName: string;
@@ -345,36 +333,36 @@ export class AdminDashboardService {
         lecturerCount: d.lecturerSet.size,
       }));
 
-      // Calculate average students per class
-      const totalStudents = classes.classes.reduce((sum, cls) => 
+
+      const totalStudents = classes.classes.reduce((sum, cls) =>
         sum + parseInt(cls.studentCount || '0', 10), 0);
-      const averageStudentsPerClass = classes.classes.length > 0 
-        ? Math.round(totalStudents / classes.classes.length) 
+      const averageStudentsPerClass = classes.classes.length > 0
+        ? Math.round(totalStudents / classes.classes.length)
         : 0;
 
-      // Find classes without students
+
       const classesWithoutStudents = classes.classes.filter(
         (cls) => parseInt(cls.studentCount || '0', 10) === 0
       ).length;
 
-      // Count overloaded classes (>50 students)
+
       const classesOverloaded = classes.classes.filter(
         (cls) => parseInt(cls.studentCount || '0', 10) > 50
       ).length;
 
-      // Count unique courses
+
       const uniqueCourses = new Set<string>();
       classes.classes.forEach((cls) => {
         if (cls.courseName) uniqueCourses.add(cls.courseName);
       });
 
-      // Count unique lecturers
+
       const uniqueLecturers = new Set<string>();
       classes.classes.forEach((cls) => {
         if (cls.lecturerId) uniqueLecturers.add(cls.lecturerId);
       });
 
-      // Calculate lecturer workload
+
       const lecturerWorkloadMap = new Map<string, {
         lecturerId: string;
         lecturerName: string;
@@ -402,12 +390,12 @@ export class AdminDashboardService {
         .sort((a, b) => b.classCount - a.classCount)
         .slice(0, 20);
 
-      // Calculate student to lecturer ratio
+
       const studentToLecturerRatio = uniqueLecturers.size > 0
         ? Math.round((totalStudents / uniqueLecturers.size) * 10) / 10
         : 0;
 
-      // Top classes by students
+
       const topClassesByStudents = classes.classes
         .map((cls) => ({
           id: cls.id,
@@ -458,9 +446,7 @@ export class AdminDashboardService {
     }
   }
 
-  /**
-   * Get detailed assessment statistics (DEPRECATED - use private method)
-   */
+
   private async getDetailedAssessmentStatsOld(): Promise<AssessmentStats> {
     try {
       const [templates, assessments] = await Promise.all([
@@ -499,8 +485,8 @@ export class AdminDashboardService {
         if (now < endDate) assessmentsByStatus.active++;
         else assessmentsByStatus.completed++;
 
-        // Count by lecturer
-        const lecturerId = assessment.lecturerName ? 0 : 0; // Would need lecturerId
+
+        const lecturerId = assessment.lecturerName ? 0 : 0;
         if (!lecturerMap.has(lecturerId)) {
           lecturerMap.set(lecturerId, {
             lecturerId,
@@ -510,7 +496,7 @@ export class AdminDashboardService {
         }
         lecturerMap.get(lecturerId)!.count++;
 
-        // Count submissions for this assessment
+
         const assessmentSubmissions = submissions.filter(
           (s) => s.classAssessmentId === assessment.id
         );
@@ -518,13 +504,13 @@ export class AdminDashboardService {
 
       const assessmentsByLecturer = Array.from(lecturerMap.values());
 
-      // Calculate average submissions per assessment
+
       const totalSubmissions = submissions.length;
       const averageSubmissionsPerAssessment = assessments.items.length > 0
         ? Math.round(totalSubmissions / assessments.items.length)
         : 0;
 
-      // Find assessments without submissions
+
       const assessmentsWithoutSubmissions = assessments.items.filter((assessment) => {
         const assessmentSubmissions = submissions.filter(
           (s) => s.classAssessmentId === assessment.id
@@ -532,7 +518,7 @@ export class AdminDashboardService {
         return assessmentSubmissions.length === 0;
       }).length;
 
-      // Top assessments by submissions
+
       const topAssessmentsBySubmissions = assessments.items
         .map((assessment) => {
           const assessmentSubmissions = submissions.filter(
@@ -549,7 +535,7 @@ export class AdminDashboardService {
         .sort((a, b) => b.submissionCount - a.submissionCount)
         .slice(0, 10);
 
-      // Upcoming deadlines
+
       const upcomingDeadlines = assessments.items
         .filter((assessment) => {
           const endDate = new Date(assessment.endAt);
@@ -585,16 +571,12 @@ export class AdminDashboardService {
     }
   }
 
-  /**
-   * Get detailed submission statistics
-   */
+
   async getDetailedSubmissionStats(): Promise<SubmissionStats> {
     return submissionStatsService.getDetailedSubmissionStats();
   }
 
-  /**
-   * Get detailed grading statistics
-   */
+
   async getDetailedGradingStats(): Promise<GradingStats> {
     try {
       const [groups, sessions, requests] = await Promise.all([
@@ -606,21 +588,21 @@ export class AdminDashboardService {
       const completedSessions = sessions.items.filter((s) => s.status === 1).length;
       const pendingRequests = requests.items.filter((r) => r.status === 0).length;
 
-      // Group by status
+
       const gradingSessionsByStatus = {
         processing: sessions.items.filter((s) => s.status === 0).length,
         completed: completedSessions,
         failed: sessions.items.filter((s) => s.status === 2).length,
       };
 
-      // Group by type
+
       const gradingSessionsByType = {
         ai: sessions.items.filter((s) => s.gradingType === 0).length,
         lecturer: sessions.items.filter((s) => s.gradingType === 1).length,
         both: sessions.items.filter((s) => s.gradingType === 2).length,
       };
 
-      // Group by lecturer
+
       const lecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
@@ -629,7 +611,7 @@ export class AdminDashboardService {
       }>();
 
       sessions.items.forEach((session) => {
-        // Would need lecturerId from session
+
         const lecturerId = 0;
         if (!lecturerMap.has(lecturerId)) {
           lecturerMap.set(lecturerId, {
@@ -646,7 +628,7 @@ export class AdminDashboardService {
 
       const gradingByLecturer = Array.from(lecturerMap.values());
 
-      // Pending requests by lecturer
+
       const requestLecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
@@ -669,10 +651,10 @@ export class AdminDashboardService {
 
       const pendingAssignRequestsByLecturer = Array.from(requestLecturerMap.values());
 
-      // Grading groups by status
+
       const gradingGroupsByStatus = {
         active: groups.filter((g) => g.submissionCount > 0).length,
-        completed: 0, // Would need status field
+        completed: 0,
       };
 
       return {
@@ -703,16 +685,12 @@ export class AdminDashboardService {
   }
 
 
-  /**
-   * Get detailed academic statistics (delegated to academicStatsService)
-   */
+
   private async getDetailedAcademicStats(): Promise<Partial<AcademicStats>> {
     return academicStatsService.getDetailedAcademicStats();
   }
 
-  /**
-   * Get detailed assessment statistics (delegated to assessmentStatsService)
-   */
+
   private async getDetailedAssessmentStats(): Promise<Partial<AssessmentStats>> {
     return assessmentStatsService.getDetailedAssessmentStats();
   }

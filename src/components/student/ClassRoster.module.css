@@ -1,4 +1,4 @@
-/* Tên file: components/ClassRoster/ClassRoster.module.css */
+
 
 .wrapper {
     width: 100%;
@@ -18,7 +18,7 @@
     max-width: 350px;
 }
 
-/* --- ĐÃ SỬA LẠI --- */
+
 .searchBar :global(.ant-input-affix-wrapper) {
     border-radius: 25px !important;
     overflow: hidden;
@@ -37,9 +37,9 @@
     box-shadow: 0 0 0 2px rgba(73, 187, 189, 0.2) !important;
 }
 
-/* --- KẾT THÚC SỬA --- */
 
-/* Thẻ Card bọc Table */
+
+
 .rosterCard {
     border: none;
     border-radius: 20px;
@@ -51,7 +51,7 @@
     padding: 0;
 }
 
-/* Tùy chỉnh Table */
+
 .memberTable :global(.ant-table) {
     background: transparent;
 }

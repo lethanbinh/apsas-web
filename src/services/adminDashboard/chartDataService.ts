@@ -26,10 +26,10 @@ export class ChartDataService {
       const classes = classListResult.classes;
       const submissions = await submissionService.getSubmissionList({});
 
-      // Group by semesterName directly from classes (no need to match with semester list)
+
       const semesterMap = new Map<string, SemesterActivityData>();
 
-      // Count classes per semester
+
       classes.forEach((cls) => {
         const semesterKey = cls.semesterName || 'Unknown';
         if (!semesterMap.has(semesterKey)) {
@@ -45,7 +45,7 @@ export class ChartDataService {
         data.classes++;
       });
 
-      // Count assessments per semester - group by courseName or semester from class
+
       const courseToSemesterMap = new Map<string, string>();
       classes.forEach((cls) => {
         if (cls.courseName && cls.semesterName) {
@@ -54,7 +54,7 @@ export class ChartDataService {
       });
 
       assessments.items.forEach((assessment) => {
-        // Try to find semester from course name
+
         const semesterKey = courseToSemesterMap.get(assessment.courseName || '') || 'Unknown';
         if (!semesterMap.has(semesterKey)) {
           semesterMap.set(semesterKey, {
@@ -69,7 +69,7 @@ export class ChartDataService {
         data.assessments++;
       });
 
-      // Count submissions per semester - via assessment -> course -> semester
+
       submissions.forEach((submission) => {
         if (!submission.classAssessmentId) return;
 
@@ -90,7 +90,7 @@ export class ChartDataService {
         }
       });
 
-      // Count unique courses per semester
+
       const courseCountMap = new Map<string, Set<string>>();
       classes.forEach((cls) => {
         const semesterKey = cls.semesterName || 'Unknown';
@@ -102,17 +102,17 @@ export class ChartDataService {
         }
       });
 
-      // Update courses count
+
       semesterMap.forEach((data, semesterKey) => {
         const courses = courseCountMap.get(semesterKey);
         data.courses = courses ? courses.size : 0;
       });
 
-      // Return all semesters with data, sorted by semester code
+
       const result = Array.from(semesterMap.values())
         .filter((data) => data.classes > 0 || data.assessments > 0 || data.submissions > 0)
         .sort((a, b) => a.semester.localeCompare(b.semester))
-        .slice(-12); // Last 12 semesters with activity
+        .slice(-12);
 
       return result.length > 0 ? result : [];
     } catch (error) {
@@ -178,7 +178,7 @@ export class ChartDataService {
         pageSize: 1000,
       });
 
-      // Group by date
+
       const dailyData: Record<string, { graded: number; pending: number }> = {};
 
       sessions.items.forEach((session) => {
@@ -200,7 +200,7 @@ export class ChartDataService {
           ...data,
         }))
         .sort((a, b) => a.date.localeCompare(b.date))
-        .slice(-30); // Last 30 days
+        .slice(-30);
     } catch (error) {
       console.error('Error fetching grading performance data:', error);
       return [];

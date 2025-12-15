@@ -39,19 +39,19 @@ export async function importTemplate({
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
 
-    // Read Assessment Template sheet
+
     const templateSheet = workbook.Sheets["Assessment Template"];
     if (!templateSheet) {
       throw new Error("Assessment Template sheet not found");
     }
     const templateRows = XLSX.utils.sheet_to_json(templateSheet, { header: 1 }) as any[][];
-    
-    // Extract template info (skip header rows)
+
+
     let templateName = "";
     let templateDesc = "";
     let templateType = 0;
     let startupProject = "";
-    
+
     for (let i = 2; i < templateRows.length; i++) {
       const row = templateRows[i];
       if (row && row[0]) {
@@ -77,17 +77,17 @@ export async function importTemplate({
       }
     }
 
-    // Validate template name
+
     if (!templateName) {
       throw new Error("Template name is required in the Assessment Template sheet");
     }
 
-    // Validate startupProject for WEBAPI template
+
     if (templateType === 1 && !startupProject) {
       throw new Error("Startup Project is required for WEBAPI templates in the Assessment Template sheet");
     }
 
-    // Create or update template
+
     let currentTemplate: AssessmentTemplate;
     if (existingTemplate) {
       const existingStartupProject = existingTemplate.startupProject || "";
@@ -106,7 +106,7 @@ export async function importTemplate({
       if (templates.length > 0 && !isRejected) {
         throw new Error("Template already exists. Please delete existing template first or import will update it.");
       }
-      
+
       currentTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: templateName,
         description: templateDesc,
@@ -134,13 +134,13 @@ export async function importTemplate({
       }
     }
 
-    // Read Papers sheet
+
     const papersSheet = workbook.Sheets["Papers"];
     if (!papersSheet) {
       throw new Error("Papers sheet not found");
     }
     const papersRows = XLSX.utils.sheet_to_json(papersSheet, { header: 1 }) as any[][];
-    
+
     const paperDataMap = new Map<string, { name: string; description: string; language: number }>();
     for (let i = 2; i < papersRows.length; i++) {
       const row = papersRows[i];
@@ -161,13 +161,13 @@ export async function importTemplate({
     }
     const paperData = Array.from(paperDataMap.values());
 
-    // Read Questions sheet
+
     const questionsSheet = workbook.Sheets["Questions"];
     if (!questionsSheet) {
       throw new Error("Questions sheet not found");
     }
     const questionsRows = XLSX.utils.sheet_to_json(questionsSheet, { header: 1 }) as any[][];
-    
+
     const questionDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -195,13 +195,13 @@ export async function importTemplate({
     }
     const questionData = Array.from(questionDataMap.values());
 
-    // Read Rubrics sheet
+
     const rubricsSheet = workbook.Sheets["Rubrics"];
     if (!rubricsSheet) {
       throw new Error("Rubrics sheet not found");
     }
     const rubricsRows = XLSX.utils.sheet_to_json(rubricsSheet, { header: 1 }) as any[][];
-    
+
     const rubricDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -229,7 +229,7 @@ export async function importTemplate({
     }
     const rubricData = Array.from(rubricDataMap.values());
 
-    // Create papers
+
     const createdPapers = new Map<string, AssessmentPaper>();
     for (const paper of paperData) {
       try {
@@ -256,7 +256,7 @@ export async function importTemplate({
       }
     }
 
-    // Create questions
+
     const questionsByPaper = new Map<string, typeof questionData>();
     for (const question of questionData) {
       if (!questionsByPaper.has(question.paperName)) {
@@ -297,7 +297,7 @@ export async function importTemplate({
       }
     }
 
-    // Create rubrics
+
     for (const rubric of rubricData) {
       const questionKey = `${rubric.paperName}-${rubric.questionNumber}`;
       const foundQuestion = createdQuestions.get(questionKey);

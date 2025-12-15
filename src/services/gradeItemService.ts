@@ -53,11 +53,7 @@ export interface GetGradeItemsParams {
 }
 
 export class GradeItemService {
-  /**
-   * Create a new grade item
-   * @param payload - Grade item creation payload
-   * @returns Created grade item
-   */
+
   async createGradeItem(payload: CreateGradeItemPayload): Promise<GradeItem> {
     const response = await apiService.post<GradeItemApiResponse>(
       "/GradeItem/create",
@@ -66,11 +62,7 @@ export class GradeItemService {
     return response.result;
   }
 
-  /**
-   * Get a grade item by ID
-   * @param gradeItemId - Grade item ID
-   * @returns Grade item
-   */
+
   async getGradeItem(gradeItemId: number): Promise<GradeItem> {
     const response = await apiService.get<GradeItemApiResponse>(
       `/GradeItem/${gradeItemId}`
@@ -78,12 +70,7 @@ export class GradeItemService {
     return response.result;
   }
 
-  /**
-   * Update a grade item
-   * @param gradeItemId - Grade item ID
-   * @param payload - Update payload (score and comments)
-   * @returns Updated grade item
-   */
+
   async updateGradeItem(
     gradeItemId: number,
     payload: UpdateGradeItemPayload
@@ -95,10 +82,7 @@ export class GradeItemService {
     return response.result;
   }
 
-  /**
-   * Delete a grade item
-   * @param gradeItemId - Grade item ID
-   */
+
   async deleteGradeItem(gradeItemId: number): Promise<void> {
     await apiService.delete<{
       statusCode: number;
@@ -108,11 +92,7 @@ export class GradeItemService {
     }>(`/GradeItem/${gradeItemId}`);
   }
 
-  /**
-   * Get paginated list of grade items
-   * @param params - Query parameters for filtering and pagination
-   * @returns Paginated grade items
-   */
+
   async getGradeItems(
     params?: GetGradeItemsParams
   ): Promise<PaginatedGradeItemsResponse["result"]> {

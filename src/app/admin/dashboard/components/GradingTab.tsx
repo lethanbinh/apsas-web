@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
-import { Card, Row, Col, Statistic, Table, Tag, Typography, Space, Progress, Input, Select, DatePicker, Button, App } from "antd";
+import React, { useMemo, useState } from "react";
+import { Card, Row, Col, Statistic, Table, Typography, Space, Progress, Input, Select, DatePicker, Button, App } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   BarChartOutlined,
-  UserOutlined,
   FileTextOutlined,
   TeamOutlined,
   SearchOutlined,
@@ -19,7 +18,6 @@ import {
   TrophyOutlined,
 } from "@ant-design/icons";
 import { Dayjs } from "dayjs";
-import * as XLSX from "xlsx";
 import {
   BarChart,
   Bar,
@@ -32,11 +30,11 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { gradingGroupService } from "@/services/gradingGroupService";
-import { gradingService } from "@/services/gradingService";
-import { adminService } from "@/services/adminService";
 import type { DashboardOverview, ChartData } from "@/services/adminDashboardService";
-import dayjs from "dayjs";
+import { useGradingData } from "./hooks/useGradingData";
+import { useGradingFilters } from "./hooks/useGradingFilters";
+import { exportGradingDataToExcel } from "./utils/exportGradingData";
+import { gradingGroupColumns, sessionColumns, requestColumns } from "./utils/gradingTableColumns";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -70,13 +68,42 @@ const GradingTab: React.FC<GradingTabProps> = ({
   filters,
 }) => {
   const { message } = App.useApp();
-  const [gradingGroups, setGradingGroups] = useState<any[]>([]);
-  const [gradingSessions, setGradingSessions] = useState<any[]>([]);
-  const [assignRequests, setAssignRequests] = useState<any[]>([]);
-  const [gradingGroupsLoading, setGradingGroupsLoading] = useState(false);
-  const [sessionsLoading, setSessionsLoading] = useState(false);
-  const [requestsLoading, setRequestsLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState(false);
+
+
+  const {
+    gradingGroups,
+    gradingSessions,
+    assignRequests,
+    gradingGroupsLoading,
+    sessionsLoading,
+    requestsLoading,
+  } = useGradingData();
+
+
+  const {
+    groupSearch,
+    setGroupSearch,
+    groupDateRange,
+    setGroupDateRange,
+    filteredGradingGroups,
+    sessionSearch,
+    setSessionSearch,
+    selectedSessionStatus,
+    setSelectedSessionStatus,
+    selectedSessionType,
+    setSelectedSessionType,
+    sessionDateRange,
+    setSessionDateRange,
+    filteredGradingSessions,
+    requestSearch,
+    setRequestSearch,
+    selectedRequestStatus,
+    setSelectedRequestStatus,
+    requestDateRange,
+    setRequestDateRange,
+    filteredAssignRequests,
+  } = useGradingFilters(gradingGroups, gradingSessions, assignRequests);
 
   const handleExportExcel = () => {
     if (!overview) {
@@ -86,115 +113,14 @@ const GradingTab: React.FC<GradingTabProps> = ({
 
     try {
       setExportLoading(true);
-      const wb = XLSX.utils.book_new();
-      const exportData: any[] = [];
-      const totalSessions = gradingSessions.length;
-      const aiSessions = gradingSessions.filter((s) => s.gradingType === 0).length;
-      const lecturerSessions = gradingSessions.filter((s) => s.gradingType === 1).length;
-      const bothSessions = gradingSessions.filter((s) => s.gradingType === 2).length;
-
-      // Section 1: Key Statistics
-      exportData.push(["GRADING - KEY STATISTICS"]);
-      exportData.push(["Metric", "Value"]);
-      exportData.push(["Total Grading Groups", overview.grading.totalGradingGroups]);
-      exportData.push(["Total Grading Sessions", overview.grading.totalGradingSessions]);
-      exportData.push(["Completed Sessions", overview.grading.completedGradingSessions || 0]);
-      exportData.push(["Processing Sessions", processingSessions.length]);
-      exportData.push(["Failed Sessions", failedSessions.length]);
-      exportData.push(["Pending Assign Requests", overview.grading.pendingAssignRequests]);
-      exportData.push(["Average Grading Time (hours)", overview.grading.averageGradingTime?.toFixed(2) || "N/A"]);
-      exportData.push([]);
-
-      // Section 2: Session Status Distribution
-      exportData.push(["GRADING SESSION STATUS DISTRIBUTION"]);
-      exportData.push(["Status", "Count", "Percentage"]);
-      exportData.push(["Completed", completedSessions.length, totalSessions > 0 ? ((completedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push(["Processing", processingSessions.length, totalSessions > 0 ? ((processingSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push(["Failed", failedSessions.length, totalSessions > 0 ? ((failedSessions.length / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push([]);
-
-      // Section 3: Session Type Distribution
-      exportData.push(["GRADING SESSION TYPE DISTRIBUTION"]);
-      exportData.push(["Type", "Count", "Percentage"]);
-      exportData.push(["AI", aiSessions, totalSessions > 0 ? ((aiSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push(["Lecturer", lecturerSessions, totalSessions > 0 ? ((lecturerSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push(["Both", bothSessions, totalSessions > 0 ? ((bothSessions / totalSessions) * 100).toFixed(2) + "%" : "0%"]);
-      exportData.push([]);
-
-      // Section 4: Grading Performance (Last 30 Days)
-      if (chartData?.gradingPerformance && chartData.gradingPerformance.length > 0) {
-        exportData.push(["GRADING PERFORMANCE (LAST 30 DAYS)"]);
-        exportData.push(["Date", "Graded", "Pending"]);
-        chartData.gradingPerformance.forEach((item) => {
-          exportData.push([item.date, item.graded, item.pending]);
-        });
-        exportData.push([]);
-      }
-
-      // Section 5: Grading by Lecturer
-      if (overview.grading.gradingByLecturer && overview.grading.gradingByLecturer.length > 0) {
-        exportData.push(["GRADING BY LECTURER"]);
-        exportData.push(["Lecturer", "Session Count", "Completed Count"]);
-        overview.grading.gradingByLecturer.forEach((item) => {
-          exportData.push([item.lecturerName, item.sessionCount, item.completedCount]);
-        });
-        exportData.push([]);
-      }
-
-      // Section 6: All Grading Groups
-      exportData.push(["ALL GRADING GROUPS"]);
-      exportData.push(["No", "ID", "Lecturer", "Lecturer Code", "Assessment Template", "Submissions", "Created At"]);
-      filteredGradingGroups.forEach((group, index) => {
-        exportData.push([
-          index + 1,
-          group.id,
-          group.lecturerName || "",
-          group.lecturerCode || "",
-          group.assessmentTemplateName || "",
-          group.submissionCount || 0,
-          group.createdAt ? dayjs(group.createdAt).format("YYYY-MM-DD") : "",
-        ]);
-      });
-      exportData.push([]);
-
-      // Section 7: All Grading Sessions
-      exportData.push(["ALL GRADING SESSIONS"]);
-      exportData.push(["No", "ID", "Student Name", "Student Code", "Status", "Type", "Grade", "Created At"]);
-      filteredGradingSessions.forEach((session, index) => {
-        exportData.push([
-          index + 1,
-          session.id,
-          session.submissionStudentName || "",
-          session.submissionStudentCode || "",
-          session.status === 0 ? "Processing" : session.status === 1 ? "Completed" : "Failed",
-          session.gradingType === 0 ? "AI" : session.gradingType === 1 ? "Lecturer" : "Both",
-          session.grade || 0,
-          session.createdAt ? dayjs(session.createdAt).format("YYYY-MM-DD HH:mm") : "",
-        ]);
-      });
-      exportData.push([]);
-
-      // Section 8: All Assign Requests
-      exportData.push(["ALL ASSIGN REQUESTS"]);
-      exportData.push(["No", "ID", "Course Element", "Course", "Assigned Lecturer", "Assigned By HOD", "Status", "Created At"]);
-      filteredAssignRequests.forEach((request, index) => {
-        exportData.push([
-          index + 1,
-          request.id,
-          request.courseElementName || "",
-          request.courseName || "",
-          request.assignedLecturerName || "",
-          request.assignedByHODName || "",
-          request.status === 0 ? "Pending" : request.status === 1 ? "Approved" : "Rejected",
-          request.createdAt ? dayjs(request.createdAt).format("YYYY-MM-DD") : "",
-        ]);
-      });
-
-      const ws = XLSX.utils.aoa_to_sheet(exportData);
-      XLSX.utils.book_append_sheet(wb, ws, "Grading");
-
-      const fileName = `Grading_Dashboard_${dayjs().format("YYYY-MM-DD")}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      exportGradingDataToExcel(
+        overview,
+        gradingSessions,
+        filteredGradingGroups,
+        filteredGradingSessions,
+        filteredAssignRequests,
+        chartData
+      );
       message.success("Grading data exported successfully");
     } catch (error) {
       console.error("Export error:", error);
@@ -203,309 +129,16 @@ const GradingTab: React.FC<GradingTabProps> = ({
       setExportLoading(false);
     }
   };
-  
-  // Filters for grading groups
-  const [groupSearch, setGroupSearch] = useState("");
-  const [groupDateRange, setGroupDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  
-  // Filters for grading sessions
-  const [sessionSearch, setSessionSearch] = useState("");
-  const [selectedSessionStatus, setSelectedSessionStatus] = useState<number | undefined>(undefined);
-  const [selectedSessionType, setSelectedSessionType] = useState<number | undefined>(undefined);
-  const [sessionDateRange, setSessionDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  
-  // Filters for assign requests
-  const [requestSearch, setRequestSearch] = useState("");
-  const [selectedRequestStatus, setSelectedRequestStatus] = useState<number | undefined>(undefined);
-  const [requestDateRange, setRequestDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      setGradingGroupsLoading(true);
-      setSessionsLoading(true);
-      setRequestsLoading(true);
-      
-      const [groupsData, sessionsData, requestsData] = await Promise.all([
-        gradingGroupService.getGradingGroups({}),
-        gradingService.getGradingSessions({ pageNumber: 1, pageSize: 1000 }),
-        adminService.getApprovalList(1, 1000),
-      ]);
-      
-      setGradingGroups(groupsData);
-      setGradingSessions(sessionsData.items);
-      setAssignRequests(requestsData.items);
-    } catch (error) {
-      console.error("Error fetching grading data:", error);
-    } finally {
-      setGradingGroupsLoading(false);
-      setSessionsLoading(false);
-      setRequestsLoading(false);
-    }
-  };
-
-  // Filter grading groups
-  const filteredGradingGroups = useMemo(() => {
-    let filtered = [...gradingGroups];
-
-    if (groupSearch) {
-      const searchLower = groupSearch.toLowerCase();
-      filtered = filtered.filter(
-        (group) =>
-          group.lecturerName?.toLowerCase().includes(searchLower) ||
-          group.lecturerCode?.toLowerCase().includes(searchLower) ||
-          group.assessmentTemplateName?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (groupDateRange && groupDateRange[0] && groupDateRange[1]) {
-      filtered = filtered.filter((group) => {
-        if (!group.createdAt) return false;
-        const createdAt = dayjs(group.createdAt);
-        const startDate = groupDateRange[0]!.startOf("day");
-        const endDate = groupDateRange[1]!.endOf("day");
-        return (
-          (createdAt.isAfter(startDate) || createdAt.isSame(startDate)) &&
-          (createdAt.isBefore(endDate) || createdAt.isSame(endDate))
-        );
-      });
-    }
-
-    return filtered;
-  }, [gradingGroups, groupSearch, groupDateRange]);
-
-  // Filter grading sessions
-  const filteredGradingSessions = useMemo(() => {
-    let filtered = [...gradingSessions];
-
-    if (sessionSearch) {
-      const searchLower = sessionSearch.toLowerCase();
-      filtered = filtered.filter(
-        (session) =>
-          session.submissionStudentName?.toLowerCase().includes(searchLower) ||
-          session.submissionStudentCode?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (selectedSessionStatus !== undefined) {
-      filtered = filtered.filter((session) => session.status === selectedSessionStatus);
-    }
-
-    if (selectedSessionType !== undefined) {
-      filtered = filtered.filter((session) => session.gradingType === selectedSessionType);
-    }
-
-    if (sessionDateRange && sessionDateRange[0] && sessionDateRange[1]) {
-      filtered = filtered.filter((session) => {
-        if (!session.createdAt) return false;
-        const createdAt = dayjs(session.createdAt);
-        const startDate = sessionDateRange[0]!.startOf("day");
-        const endDate = sessionDateRange[1]!.endOf("day");
-        return (
-          (createdAt.isAfter(startDate) || createdAt.isSame(startDate)) &&
-          (createdAt.isBefore(endDate) || createdAt.isSame(endDate))
-        );
-      });
-    }
-
-    return filtered;
-  }, [gradingSessions, sessionSearch, selectedSessionStatus, selectedSessionType, sessionDateRange]);
-
-  // Filter assign requests
-  const filteredAssignRequests = useMemo(() => {
-    let filtered = [...assignRequests];
-
-    if (requestSearch) {
-      const searchLower = requestSearch.toLowerCase();
-      filtered = filtered.filter(
-        (request) =>
-          request.courseElementName?.toLowerCase().includes(searchLower) ||
-          request.courseName?.toLowerCase().includes(searchLower) ||
-          request.assignedLecturerName?.toLowerCase().includes(searchLower) ||
-          request.assignedByHODName?.toLowerCase().includes(searchLower)
-      );
-    }
-
-    if (selectedRequestStatus !== undefined) {
-      filtered = filtered.filter((request) => request.status === selectedRequestStatus);
-    }
-
-    if (requestDateRange && requestDateRange[0] && requestDateRange[1]) {
-      filtered = filtered.filter((request) => {
-        if (!request.createdAt) return false;
-        const createdAt = dayjs(request.createdAt);
-        const startDate = requestDateRange[0]!.startOf("day");
-        const endDate = requestDateRange[1]!.endOf("day");
-        return (
-          (createdAt.isAfter(startDate) || createdAt.isSame(startDate)) &&
-          (createdAt.isBefore(endDate) || createdAt.isSame(endDate))
-        );
-      });
-    }
-
-    return filtered;
-  }, [assignRequests, requestSearch, selectedRequestStatus, requestDateRange]);
 
   if (!overview) return null;
 
-  const gradingGroupColumns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-    },
-    {
-      title: "Lecturer",
-      key: "lecturer",
-      render: (_: any, record: any) => (
-        <Space>
-          <UserOutlined />
-          <span>{record.lecturerName || "N/A"} ({record.lecturerCode || "N/A"})</span>
-        </Space>
-      ),
-    },
-    {
-      title: "Assessment Template",
-      dataIndex: "assessmentTemplateName",
-      key: "assessmentTemplateName",
-      render: (name: string) => name || "N/A",
-    },
-    {
-      title: "Submissions",
-      dataIndex: "submissionCount",
-      key: "submissionCount",
-      render: (count: number) => (
-        <Tag color="blue">{count || 0}</Tag>
-      ),
-    },
-    {
-      title: "Created At",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => dayjs(date).format("MMM DD, YYYY"),
-    },
-  ];
-
-  const sessionColumns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-    },
-    {
-      title: "Student",
-      key: "student",
-      render: (_: any, record: any) => (
-        <Space>
-          <UserOutlined />
-          <span>{record.submissionStudentName} ({record.submissionStudentCode})</span>
-        </Space>
-      ),
-    },
-    {
-      title: "Grade",
-      dataIndex: "grade",
-      key: "grade",
-      render: (grade: number) => (
-        <Tag color={grade > 0 ? "green" : "default"}>
-          {grade > 0 ? grade.toFixed(2) : "N/A"}
-        </Tag>
-      ),
-    },
-    {
-      title: "Type",
-      dataIndex: "gradingType",
-      key: "gradingType",
-      render: (type: number) => {
-        const types = ["AI", "Lecturer", "Both"];
-        const colors = ["blue", "purple", "green"];
-        return <Tag color={colors[type] || "default"}>{types[type] || "Unknown"}</Tag>;
-      },
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: number) => {
-        const statusMap: Record<number, { text: string; color: string }> = {
-          0: { text: "Processing", color: "orange" },
-          1: { text: "Completed", color: "green" },
-          2: { text: "Failed", color: "red" },
-        };
-        const statusInfo = statusMap[status] || { text: "Unknown", color: "default" };
-        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
-      },
-    },
-    {
-      title: "Created At",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => dayjs(date).format("MMM DD, YYYY HH:mm"),
-    },
-  ];
-
-  const requestColumns = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-    },
-    {
-      title: "Course Element",
-      dataIndex: "courseElementName",
-      key: "courseElementName",
-    },
-    {
-      title: "Course",
-      dataIndex: "courseName",
-      key: "courseName",
-    },
-    {
-      title: "Lecturer",
-      dataIndex: "assignedLecturerName",
-      key: "assignedLecturerName",
-    },
-    {
-      title: "HOD",
-      dataIndex: "assignedByHODName",
-      key: "assignedByHODName",
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status: number) => {
-        const statusMap: Record<number, { text: string; color: string }> = {
-          0: { text: "Pending", color: "orange" },
-          1: { text: "Approved", color: "green" },
-          2: { text: "Rejected", color: "red" },
-        };
-        const statusInfo = statusMap[status] || { text: "Unknown", color: "default" };
-        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
-      },
-    },
-    {
-      title: "Created At",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      render: (date: string) => dayjs(date).format("MMM DD, YYYY"),
-    },
-  ];
-
-  const pendingRequests = assignRequests.filter((r) => r.status === 0);
   const completedSessions = gradingSessions.filter((s) => s.status === 1);
   const processingSessions = gradingSessions.filter((s) => s.status === 0);
   const failedSessions = gradingSessions.filter((s) => s.status === 2);
 
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
-      {/* Export Button Header */}
+      {}
       <Card>
         <Space style={{ width: "100%", justifyContent: "space-between" }}>
           <Title level={4} style={{ margin: 0 }}>Grading Dashboard</Title>
@@ -521,7 +154,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         </Space>
       </Card>
 
-      {/* Grading Statistics Overview */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grading Statistics Overview</Title>
       <Row gutter={[16, 16]}>
@@ -626,7 +259,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         </Row>
       </Card>
 
-      {/* Grading Sessions by Type */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grading Sessions by Type</Title>
         <Row gutter={[16, 16]}>
@@ -663,7 +296,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
       </Row>
       </Card>
 
-      {/* Grading Groups by Status */}
+      {}
       <Card>
         <Title level={5} style={{ marginBottom: 16 }}>Grading Groups by Status</Title>
         <Row gutter={[16, 16]}>
@@ -690,7 +323,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         </Row>
       </Card>
 
-      {/* Charts */}
+      {}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="Grading Performance (Last 30 Days)" loading={loading}>
@@ -739,7 +372,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         </Col>
       </Row>
 
-      {/* Grading Groups Table */}
+      {}
       <Card
         title="Grading Groups"
         loading={gradingGroupsLoading}
@@ -778,7 +411,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         />
       </Card>
 
-      {/* Grading Sessions Table */}
+      {}
       <Card
         title="Grading Sessions"
         loading={sessionsLoading}
@@ -841,7 +474,7 @@ const GradingTab: React.FC<GradingTabProps> = ({
         />
       </Card>
 
-      {/* Assign Requests Table */}
+      {}
       <Card
         title="Assign Requests"
         loading={requestsLoading}

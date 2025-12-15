@@ -43,7 +43,7 @@ export interface AssessmentTemplate {
   updatedAt: string;
   files: FileTemplate[];
   papers: PaperTemplate[];
-  status?: number; // 1: PENDING, 2: ACCEPTED, 3: REJECTED, 4: IN_PROGRESS, 5: COMPLETED (Approved)
+  status?: number;
 }
 
 export interface AssessmentTemplateListResult {

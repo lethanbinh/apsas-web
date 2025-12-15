@@ -36,7 +36,7 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Helper function to convert UTC to Vietnam time (UTC+7)
+
 const toVietnamTime = (dateString: string | null) => {
   if (!dateString) return null;
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
@@ -66,19 +66,19 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { message: messageApi } = App.useApp();
 
-  // Fetch grading group with submissions
+
   const { data: updatedGroup, isLoading: loadingSubmissions } = useQuery({
     queryKey: queryKeys.grading.groups.detail(group.id),
     queryFn: () => gradingGroupService.getGradingGroupById(group.id),
     enabled: open && !!group?.id,
   });
 
-  // Get submission IDs from grading group
+
   const submissionIds = useMemo(() => {
     return (updatedGroup?.submissions || []).map(s => s.id);
   }, [updatedGroup]);
 
-  // Fetch full submission details with submissionFile
+
   const { data: fullSubmissionsData = [] } = useQuery({
     queryKey: ['submissions', 'byGradingGroup', group.id],
     queryFn: () => submissionService.getSubmissionList({
@@ -87,12 +87,12 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     enabled: open && !!group?.id,
   });
 
-  // Map submissions with full details
+
   const submissions = useMemo(() => {
     if (fullSubmissionsData.length > 0) {
       return fullSubmissionsData;
     }
-    // Fallback to basic submissions from grading group if full data not available
+
     return (updatedGroup?.submissions || []).map(gSub => ({
       id: gSub.id,
       studentId: gSub.studentId,
@@ -102,13 +102,13 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       submittedAt: gSub.submittedAt || "",
       status: gSub.status,
       lastGrade: gSub.lastGrade,
-      submissionFile: null, // Will be null if not fetched
+      submissionFile: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     } as Submission));
   }, [fullSubmissionsData, updatedGroup]);
 
-  // Fetch assessment template
+
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -132,58 +132,58 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     }
   }, [open]);
 
-  // Validate file name format: STUXXXXXX.zip (X is digit)
+
   const validateFileName = (fileName: string): boolean => {
-    // Pattern: STU + 6 digits + .zip (case insensitive)
+
     const pattern = /^STU\d{6}\.zip$/i;
     return pattern.test(fileName);
   };
 
-  // Validate file is ZIP and has correct name format
+
   const beforeUpload: UploadProps["beforeUpload"] = (file) => {
-    // Check file extension - must end with .zip
+
     const fileName = file.name;
     const isZipExtension = fileName.toLowerCase().endsWith(".zip");
-    
+
     if (!isZipExtension) {
       messageApi.error("Only ZIP files are accepted! Please select a file with .zip extension");
       return Upload.LIST_IGNORE;
     }
-    
-    // Validate file name format: STUXXXXXX.zip
+
+
     if (!validateFileName(fileName)) {
       messageApi.error(`Invalid file name format! File name must be in format STUXXXXXX.zip (e.g., STU123456.zip). Current: ${fileName}`);
       return Upload.LIST_IGNORE;
     }
-    
-    // Check file size (max 100MB)
+
+
     const isLt100M = file.size / 1024 / 1024 < 100;
     if (!isLt100M) {
       messageApi.error("File must be smaller than 100MB!");
       return Upload.LIST_IGNORE;
     }
-    
-    return false; // Prevent auto upload
+
+    return false;
   };
 
   const handleFileChange: UploadProps["onChange"] = (info) => {
-    // Keep all files that pass validation
+
     const validFiles = info.fileList.filter(file => {
       if (file.status === 'error') return false;
       if (!file.name.toLowerCase().endsWith('.zip')) return false;
       return validateFileName(file.name);
     });
-    
+
     setFileList(validFiles);
   };
 
-  // Extract student code from file name (STUXXXXXX.zip -> XXXXXX)
+
   const extractStudentCode = (fileName: string): string | null => {
     const match = fileName.match(/^STU(\d{6})\.zip$/i);
     return match ? match[1] : null;
   };
 
-  // Mutation for uploading submissions
+
   const uploadSubmissionsMutation = useMutation({
     mutationFn: async (files: File[]) => {
       return gradingGroupService.addSubmissionsByFile(group.id, {
@@ -202,7 +202,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       );
       setFileList([]);
       onOk();
-      // Refetch queries after 3 seconds
+
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
@@ -219,7 +219,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     },
   });
 
-  // Mutation for deleting submissions
+
   const deleteSubmissionsMutation = useMutation({
     mutationFn: async (submissionIds: number[]) => {
       await Promise.all(
@@ -235,7 +235,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
       setSelectedRowKeys([]);
       onOk();
-      // Refetch queries after 3 seconds
+
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
@@ -258,28 +258,28 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       return;
     }
 
-    // Validate all files before upload
+
     const files: File[] = [];
     const invalidFiles: string[] = [];
-    
+
     for (const fileItem of fileList) {
       const file = fileItem.originFileObj;
     if (!file) {
         invalidFiles.push(fileItem.name || "Unknown file");
         continue;
       }
-      
-      // Double check validation
+
+
       if (!file.name.toLowerCase().endsWith('.zip')) {
         invalidFiles.push(file.name);
         continue;
       }
-      
+
       if (!validateFileName(file.name)) {
         invalidFiles.push(file.name);
         continue;
       }
-      
+
       files.push(file);
     }
 
@@ -418,13 +418,13 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                         onClick={() => {
                           const selectedSubmissions = submissions.filter(s => selectedRowKeys.includes(s.id));
                           const submissionsWithFiles = selectedSubmissions.filter(s => s.submissionFile?.submissionUrl);
-                          
+
                           if (submissionsWithFiles.length === 0) {
                             messageApi.warning("No submissions with files selected");
                             return;
                           }
 
-                          // Download each file
+
                           submissionsWithFiles.forEach((sub) => {
                             if (sub.submissionFile?.submissionUrl) {
                               const link = document.createElement("a");
@@ -436,7 +436,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                               document.body.removeChild(link);
                             }
                           });
-                          
+
                           messageApi.success(`Downloading ${submissionsWithFiles.length} file(s)...`);
                         }}
                       >
@@ -467,7 +467,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                     dataSource={submissions}
                     rowKey="id"
                     loading={loadingSubmissions}
-                    pagination={{ 
+                    pagination={{
                       pageSize: 10,
                       showSizeChanger: true,
                       showTotal: (total) => `Total ${total} submissions`,
@@ -493,7 +493,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                   <Space direction="vertical" style={{ width: "100%" }} size="middle">
                     <Text strong>Upload ZIP files containing submissions</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      ZIP files will be extracted and submissions will be created automatically. 
+                      ZIP files will be extracted and submissions will be created automatically.
                       Only ZIP files are accepted, maximum size 100MB per file.
                       <br />
                       <Text strong style={{ color: "#ff4d4f" }}>

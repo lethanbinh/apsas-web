@@ -27,7 +27,7 @@ interface FeedbackHistoryModalProps {
 }
 
 export function FeedbackHistoryModal({ visible, onClose, submissionId }: FeedbackHistoryModalProps) {
-  // Fetch feedback history using TanStack Query
+
   const { data: feedbackHistoryData, isLoading: loading } = useQuery({
     queryKey: ['submissionFeedbackHistory', 'bySubmissionId', submissionId],
     queryFn: async () => {
@@ -47,9 +47,7 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
   const feedbackHistory = feedbackHistoryData || [];
   const [expandedFeedbacks, setExpandedFeedbacks] = useState<Set<number>>(new Set());
 
-  /**
-   * Deserialize feedback text to FeedbackData
-   */
+
   const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
     if (!feedbackText || feedbackText.trim() === "") {
       return null;
@@ -71,7 +69,7 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
       }
       return null;
     } catch (error) {
-      // Not JSON, return null to indicate plain text
+
       return null;
     }
   };

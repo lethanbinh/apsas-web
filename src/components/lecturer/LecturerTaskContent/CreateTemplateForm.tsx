@@ -98,8 +98,8 @@ export const CreateTemplateForm = ({
         </Form.Item>
 
         {newTemplateType === 1 && (
-          <Form.Item 
-            label="Startup Project" 
+          <Form.Item
+            label="Startup Project"
             required
             rules={[{ required: true, message: "Startup Project is required for WEBAPI templates" }]}
           >
@@ -175,8 +175,8 @@ export const CreateTemplateForm = ({
         )}
 
         <Space>
-        <Button 
-          type="primary" 
+        <Button
+          type="primary"
           onClick={onCreateTemplate}
           disabled={!newTemplateName.trim()}
         >
@@ -206,7 +206,7 @@ export const CreateTemplateForm = ({
         </Space>
       </Form>
 
-      {/* Upload Database File Modal (when creating template) */}
+      {}
       <UploadFileModal
         open={isDatabaseUploadModalOpen}
         onCancel={onDatabaseUploadModalClose}
@@ -217,7 +217,7 @@ export const CreateTemplateForm = ({
         onFileListChange={onDatabaseUploadFileListChange}
       />
 
-      {/* Upload Postman File Modal (when creating template) */}
+      {}
       <UploadFileModal
         open={isPostmanUploadModalOpen}
         onCancel={onPostmanUploadModalClose}

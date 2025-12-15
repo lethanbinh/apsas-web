@@ -15,7 +15,7 @@
     align-items: center;
 }
 
-/* THÊM CLASS MỚI NÀY */
+
 .deadlineTag {
     cursor: pointer;
     transition: all 0.2s;
@@ -137,7 +137,7 @@
     color: rgba(0, 0, 0, 0.25) !important;
 }
 
-/* Modal Styles */
+
 .requirementModal :global(.ant-modal-content) {
     border-radius: 16px;
     padding: 0;

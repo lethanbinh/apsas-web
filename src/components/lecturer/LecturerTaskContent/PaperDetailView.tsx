@@ -53,7 +53,7 @@ export const PaperDetailView = ({
         onFinish={() => {
           setIsPaperModalOpen(false);
           onPaperChange();
-          // Note: Edit paper does NOT resolve question comments, so we don't reset status here
+
         }}
         isEditable={isEditable}
         initialData={paper}

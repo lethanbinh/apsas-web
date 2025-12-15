@@ -91,10 +91,10 @@ export interface StudentDetail {
   avatar: string;
   address: string;
   gender: number;
-  dateOfBirth: string; // Chuỗi ISO
+  dateOfBirth: string;
   role: number;
-  createdAt: string; // Chuỗi ISO
-  updatedAt: string; // Chuỗi ISO
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface StudentApiResponse {
@@ -144,25 +144,25 @@ export class ClassService {
     studentId: number
   ): Promise<StudentInClass[]> {
     try {
-      // Try endpoint for getting classes by student ID
+
       const response = await apiService.get<StudentGroupApiResponse>(
         `/StudentGroup/student/${studentId}`
       );
       return response.result || [];
     } catch (error: any) {
-      // Handle 404 gracefully - endpoint might not exist
+
       if (error?.response?.status === 404) {
         console.warn(`StudentGroup/student/${studentId} endpoint not found, using fallback method`);
       } else {
         console.warn("Direct endpoint not available, using fallback method", error);
       }
-      
-      // Fallback: Get all classes and filter by student
+
+
       const { classes } = await this.getClassList({
         pageNumber: 1,
         pageSize: 1000,
       });
-      
+
       const studentClasses: StudentInClass[] = [];
       for (const cls of classes) {
         try {
@@ -174,7 +174,7 @@ export class ClassService {
             studentClasses.push(studentInClass);
           }
         } catch (err) {
-          // Skip this class if error
+
           console.warn(`Failed to get students for class ${cls.id}:`, err);
         }
       }

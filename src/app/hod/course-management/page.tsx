@@ -10,7 +10,7 @@ import { semesterService, Semester } from "@/services/semesterService";
 
 const { Title } = Typography;
 
-// Kiểm tra xem semester đã bắt đầu chưa
+
 const isSemesterStarted = (startDate: string): boolean => {
   if (!startDate) return false;
   const semesterStartDate = new Date(
@@ -32,7 +32,7 @@ const CourseManagementPageContent = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [selectedSemesterCourses, setSelectedSemesterCourses] = useState<Course[]>([]);
-  // Lưu mapping courseId -> semesterIds để biết course thuộc semester nào
+
   const [courseSemesterMap, setCourseSemesterMap] = useState<Map<number, number[]>>(new Map());
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; record: Course | null; confirmValue: string }>({
     open: false,
@@ -53,12 +53,12 @@ const CourseManagementPageContent = () => {
     }
   }, []);
 
-  // Fetch tất cả semester courses để build courseSemesterMap
+
   const fetchAllCourseSemesterMapping = useCallback(async (semestersList: Semester[]) => {
     try {
       const newMap = new Map<number, number[]>();
-      
-      // Fetch tất cả semester details để biết course thuộc semester nào
+
+
       for (const semester of semestersList) {
         try {
           const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
@@ -72,7 +72,7 @@ const CourseManagementPageContent = () => {
           console.error(`Failed to fetch semester detail for ${semester.semesterCode}:`, err);
         }
       }
-      
+
       setCourseSemesterMap(newMap);
     } catch (err) {
       console.error("Failed to fetch course-semester mapping:", err);
@@ -108,7 +108,7 @@ const CourseManagementPageContent = () => {
         setLoading(false);
         return;
       }
-      
+
       const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
       const semesterCourses: Course[] = semesterDetail.semesterCourses.map(sc => ({
         ...sc.course,
@@ -117,8 +117,8 @@ const CourseManagementPageContent = () => {
       }));
       setSelectedSemesterCourses(semesterCourses);
       setCourses(semesterCourses);
-      
-      // Cập nhật mapping course -> semester sử dụng functional update để tránh dependency
+
+
       setCourseSemesterMap(prevMap => {
         const newMap = new Map(prevMap);
         semesterCourses.forEach(course => {
@@ -147,13 +147,13 @@ const CourseManagementPageContent = () => {
     fetchCourses();
   }, [fetchSemesters, fetchCourses]);
 
-  // Fetch course-semester mapping khi semesters đã load (chỉ chạy một lần)
+
   useEffect(() => {
     if (semesters.length > 0) {
       fetchAllCourseSemesterMapping(semesters);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [semesters.length]); // Chỉ phụ thuộc vào length để tránh loop
+
+  }, [semesters.length]);
 
   useEffect(() => {
     if (selectedSemesterId && semesters.length > 0) {
@@ -174,7 +174,7 @@ const CourseManagementPageContent = () => {
   };
 
   const handleOpenEdit = (record: Course) => {
-    // Kiểm tra xem course có thể edit được không
+
     if (!canEditCourse(record)) {
       notification.warning({
         message: "Cannot edit course",
@@ -197,9 +197,9 @@ const CourseManagementPageContent = () => {
     fetchCourses();
   };
 
-  // Kiểm tra xem course có thể xóa được không
+
   const canDeleteCourse = useCallback((course: Course): boolean => {
-    // Nếu đang filter theo semester, kiểm tra semester đó đã bắt đầu chưa
+
     if (selectedSemesterId) {
       const semester = semesters.find(s => s.id === selectedSemesterId);
       if (semester && isSemesterStarted(semester.startDate)) {
@@ -207,30 +207,30 @@ const CourseManagementPageContent = () => {
       }
       return true;
     }
-    
-    // Nếu không filter, kiểm tra xem course có thuộc semester nào đã bắt đầu không
+
+
     const courseSemesterIds = courseSemesterMap.get(course.id) || [];
     if (courseSemesterIds.length === 0) {
-      // Nếu course chưa thuộc semester nào, có thể xóa
+
       return true;
     }
-    
-    // Kiểm tra xem course có thuộc semester nào đã bắt đầu không
+
+
     const startedSemesterIds = semesters
       .filter(s => isSemesterStarted(s.startDate))
       .map(s => s.id);
-    
-    // Nếu course thuộc bất kỳ semester nào đã bắt đầu thì không cho xóa
-    const hasStartedSemester = courseSemesterIds.some(semesterId => 
+
+
+    const hasStartedSemester = courseSemesterIds.some(semesterId =>
       startedSemesterIds.includes(semesterId)
     );
-    
+
     return !hasStartedSemester;
   }, [selectedSemesterId, semesters, courseSemesterMap]);
 
-  // Kiểm tra xem course có thể edit được không (tương tự canDeleteCourse)
+
   const canEditCourse = useCallback((course: Course): boolean => {
-    // Nếu đang filter theo semester, kiểm tra semester đó đã bắt đầu chưa
+
     if (selectedSemesterId) {
       const semester = semesters.find(s => s.id === selectedSemesterId);
       if (semester && isSemesterStarted(semester.startDate)) {
@@ -238,29 +238,29 @@ const CourseManagementPageContent = () => {
       }
       return true;
     }
-    
-    // Nếu không filter, kiểm tra xem course có thuộc semester nào đã bắt đầu không
+
+
     const courseSemesterIds = courseSemesterMap.get(course.id) || [];
     if (courseSemesterIds.length === 0) {
-      // Nếu course chưa thuộc semester nào, có thể edit
+
       return true;
     }
-    
-    // Kiểm tra xem course có thuộc semester nào đã bắt đầu không
+
+
     const startedSemesterIds = semesters
       .filter(s => isSemesterStarted(s.startDate))
       .map(s => s.id);
-    
-    // Nếu course thuộc bất kỳ semester nào đã bắt đầu thì không cho edit
-    const hasStartedSemester = courseSemesterIds.some(semesterId => 
+
+
+    const hasStartedSemester = courseSemesterIds.some(semesterId =>
       startedSemesterIds.includes(semesterId)
     );
-    
+
     return !hasStartedSemester;
   }, [selectedSemesterId, semesters, courseSemesterMap]);
 
   const handleDelete = (record: Course) => {
-    // Kiểm tra xem course có thể xóa được không
+
     if (!canDeleteCourse(record)) {
       notification.warning({
         message: "Cannot delete course",
@@ -286,7 +286,7 @@ const CourseManagementPageContent = () => {
 
   const handleDeleteConfirmOk = async () => {
     if (!deleteConfirm.record) return;
-    
+
     if (deleteConfirm.confirmValue !== deleteConfirm.record.name) {
       notification.error({
         message: "Confirmation failed",

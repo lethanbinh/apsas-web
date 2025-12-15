@@ -10,7 +10,7 @@ import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeRe
 import type { GradingGroup } from "@/services/gradingGroupService";
 
 export async function exportGradeReport(gradingGroup: GradingGroup) {
-  // Get all submissions for this grading group
+
   const groupSubmissions = await submissionService.getSubmissionList({
     gradingGroupId: gradingGroup.id,
   });
@@ -19,7 +19,7 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
     throw new Error("No submissions found for this grading group");
   }
 
-  // Get assessment template
+
   if (!gradingGroup.assessmentTemplateId) {
     throw new Error("Assessment template not found");
   }
@@ -36,7 +36,7 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
     throw new Error("Assessment template not found");
   }
 
-  // Get course element
+
   if (!assessmentTemplate.courseElementId) {
     throw new Error("Course element not found");
   }
@@ -53,7 +53,7 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
     throw new Error("Course element not found");
   }
 
-  // Fetch questions and rubrics
+
   let questions: AssessmentQuestion[] = [];
   const rubrics: { [questionId: number]: any[] } = {};
 
@@ -85,7 +85,7 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
     console.error("Failed to fetch questions/rubrics:", err);
   }
 
-  // Prepare report data
+
   const reportData: GradeReportData[] = [];
 
   for (const submission of groupSubmissions) {
@@ -97,10 +97,10 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
         submissionId: submission.id,
       });
       if (gradingSessionsResult.items.length > 0) {
-        gradingSession = gradingSessionsResult.items.sort((a, b) => 
+        gradingSession = gradingSessionsResult.items.sort((a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )[0];
-        
+
         const gradeItemsResult = await gradeItemService.getGradeItems({
           gradingSessionId: gradingSession.id,
         });
@@ -110,8 +110,8 @@ export async function exportGradeReport(gradingGroup: GradingGroup) {
       console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
     }
 
-    // Determine assignment type from elementType field
-    const assignmentType: "Assignment" | "Lab" | "Practical Exam" = 
+
+    const assignmentType: "Assignment" | "Lab" | "Practical Exam" =
       courseElement.elementType === 2 ? "Practical Exam" :
       "Assignment";
 

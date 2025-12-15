@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Avatar, 
-  Descriptions, 
-  Tag, 
+import {
+  Card,
+  Row,
+  Col,
+  Avatar,
+  Descriptions,
+  Tag,
   Spin,
   Empty,
   Button,
@@ -18,10 +18,10 @@ import {
   DatePicker,
   App
 } from 'antd';
-import { 
-  UserOutlined, 
-  MailOutlined, 
-  PhoneOutlined, 
+import {
+  UserOutlined,
+  MailOutlined,
+  PhoneOutlined,
   HomeOutlined,
   CalendarOutlined,
   IdcardOutlined,
@@ -52,10 +52,10 @@ const ProfilePage = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        
-        // Get user ID from sessionStorage
+
+
         const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
-        
+
         if (!userId) {
           console.error('No user ID found');
           setError('User ID not found. Please login again.');
@@ -64,11 +64,11 @@ const ProfilePage = () => {
         }
 
         console.log('Fetching profile for user ID:', userId);
-        
-        // Fetch user profile from API
+
+
         const userProfile = await authService.getProfile();
         console.log('Profile fetched:', userProfile);
-        
+
         setProfile(userProfile);
       } catch (err: any) {
         console.error('Error fetching profile:', err);
@@ -112,47 +112,47 @@ const ProfilePage = () => {
   const handleEditOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (!profile?.id) {
         message.error('Profile ID not found');
         return;
       }
 
       setUpdating(true);
-      
+
       const updateData = {
         phoneNumber: values.phoneNumber,
         fullName: values.fullName,
-        avatar: profile.avatar || '', // Keep current avatar, don't update from form
+        avatar: profile.avatar || '',
         address: values.address,
         gender: values.gender,
         dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : profile.dateOfBirth,
       };
 
       const updatedProfile = await authService.updateProfile(profile.id, updateData);
-      
+
       setProfile(updatedProfile);
       setIsEditModalVisible(false);
       message.success('Profile updated successfully');
-      
-      // Refresh profile data
+
+
       const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
       if (userId) {
         const freshProfile = await authService.getProfile();
         setProfile(freshProfile);
       }
     } catch (err: any) {
-      // Enhanced error logging
+
       console.error('Error updating profile:', err);
       console.error('Error type:', typeof err);
       console.error('Error constructor:', err?.constructor?.name);
-      
-      // Try to stringify error with error handling
+
+
       try {
         console.error('Error stringified:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
       } catch (stringifyError) {
         console.error('Could not stringify error:', stringifyError);
-        // Try to get error properties manually
+
         const errorProps: any = {};
         if (err) {
           Object.getOwnPropertyNames(err).forEach(key => {
@@ -165,7 +165,7 @@ const ProfilePage = () => {
         }
         console.error('Error properties:', errorProps);
       }
-      
+
       console.error('Error details:', {
         message: err?.message,
         name: err?.name,
@@ -177,36 +177,36 @@ const ProfilePage = () => {
         stack: err?.stack,
         code: err?.code,
       });
-      
-      // Extract error message from various possible locations
+
+
       let errorMessage = 'Failed to update profile';
-      
-      // Check if error is a string
+
+
       if (typeof err === 'string') {
         errorMessage = err;
       }
-      // Check for Axios error response
+
       else if (err?.response) {
         const errorData = err.response.data;
         const status = err.response.status;
-        
-        // Check for errorMessages array
+
+
         if (errorData?.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
           errorMessage = errorData.errorMessages.join(', ');
         }
-        // Check for message string
+
         else if (errorData?.message) {
           errorMessage = errorData.message;
         }
-        // Check for error string
+
         else if (errorData?.error) {
           errorMessage = errorData.error;
         }
-        // Check if errorData is a string
+
         else if (typeof errorData === 'string' && errorData.trim().length > 0) {
           errorMessage = errorData;
         }
-        // Check for status-based messages
+
         else if (status === 400) {
           errorMessage = 'Invalid data. Please check your input.';
         } else if (status === 401) {
@@ -221,22 +221,22 @@ const ProfilePage = () => {
           errorMessage = `Request failed with status ${status}.`;
         }
       }
-      // Check for direct message
+
       else if (err?.message) {
         errorMessage = err.message;
       }
-      // Check if error has toString method
+
       else if (err?.toString && typeof err.toString === 'function') {
         const errorString = err.toString();
         if (errorString !== '[object Object]' && errorString !== '{}') {
           errorMessage = errorString;
         }
       }
-      // Check for error name
+
       else if (err?.name) {
         errorMessage = `${err.name}: Failed to update profile`;
       }
-      
+
       message.error(errorMessage);
     } finally {
       setUpdating(false);
@@ -256,15 +256,15 @@ const ProfilePage = () => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
+
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
       message.error('Please upload a valid image file (JPG, PNG, or GIF)');
       return;
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       message.error('File size must be less than 5MB');
       return;
@@ -272,11 +272,11 @@ const ProfilePage = () => {
 
     try {
       setUploadingAvatar(true);
-      
-      // Upload file
+
+
       const fileUrl = await authService.uploadAvatar(file);
-      
-      // Update profile with new avatar URL
+
+
       if (!profile?.id) {
         message.error('Profile ID not found');
         return;
@@ -294,8 +294,8 @@ const ProfilePage = () => {
       const updatedProfile = await authService.updateProfile(profile.id, updateData);
       setProfile(updatedProfile);
       message.success('Avatar updated successfully');
-      
-      // Refresh profile data
+
+
       const freshProfile = await authService.getProfile();
       setProfile(freshProfile);
     } catch (err: any) {
@@ -306,34 +306,34 @@ const ProfilePage = () => {
         responseData: err?.response?.data,
         errorMessages: err?.response?.data?.errorMessages,
       });
-      
-      // Extract error message from various possible locations
+
+
       let errorMessage = 'Failed to upload avatar';
-      
+
       if (err?.response?.data) {
         const errorData = err.response.data;
-        // Check for errorMessages array
+
         if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
           errorMessage = errorData.errorMessages.join(', ');
         }
-        // Check for message string
+
         else if (errorData.message) {
           errorMessage = errorData.message;
         }
-        // Check for error string
+
         else if (errorData.error) {
           errorMessage = errorData.error;
         }
       }
-      // Check for direct message
+
       else if (err?.message) {
         errorMessage = err.message;
       }
-      
+
       message.error(errorMessage);
     } finally {
       setUploadingAvatar(false);
-      // Reset input
+
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -373,31 +373,31 @@ const ProfilePage = () => {
     <Layout>
       <div className={styles.profileContainer}>
         <Row gutter={[24, 24]}>
-          {/* Profile Card */}
+          {}
           <Col xs={24} md={8}>
             <Card className={styles.profileCard}>
               <div className={styles.avatarSection}>
                 <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <Avatar 
-                    size={120} 
+                  <Avatar
+                    size={120}
                     src={avatarSrc}
                     icon={<UserOutlined />}
                     className={styles.avatar}
-                    style={{ 
+                    style={{
                       cursor: 'pointer',
                       opacity: uploadingAvatar ? 0.6 : 1,
                     }}
                     onClick={handleAvatarClick}
                   />
                   {uploadingAvatar && (
-                    <Spin 
-                      size="small" 
-                      style={{ 
-                        position: 'absolute', 
-                        top: '50%', 
-                        left: '50%', 
-                        transform: 'translate(-50%, -50%)' 
-                      }} 
+                    <Spin
+                      size="small"
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)'
+                      }}
                     />
                   )}
                 </div>
@@ -414,10 +414,10 @@ const ProfilePage = () => {
                 </Tag>
               </div>
               <div className={styles.profileActions}>
-                <Button 
-                  type="primary" 
-                  size="large" 
-                  block 
+                <Button
+                  type="primary"
+                  size="large"
+                  block
                   icon={<EditOutlined />}
                   onClick={handleEdit}
                 >
@@ -426,7 +426,7 @@ const ProfilePage = () => {
               </div>
             </Card>
 
-            {/* Quick Info Card */}
+            {}
             <Card className={styles.quickInfoCard}>
               <h3 className={styles.sectionTitle}>Quick Info</h3>
               <div className={styles.quickInfoItem}>
@@ -442,7 +442,7 @@ const ProfilePage = () => {
             </Card>
           </Col>
 
-          {/* Main Info Card */}
+          {}
           <Col xs={24} md={16}>
             <Card className={styles.mainCard}>
               <h2 className={styles.sectionTitle}>Personal Information</h2>
@@ -485,7 +485,7 @@ const ProfilePage = () => {
               </Descriptions>
             </Card>
 
-            {/* Account Details Card */}
+            {}
             <Card className={styles.accountCard}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
               <Row gutter={[16, 16]}>
@@ -506,7 +506,7 @@ const ProfilePage = () => {
           </Col>
         </Row>
 
-        {/* Edit Profile Modal */}
+        {}
         <Modal
           title="Edit Profile"
           open={isEditModalVisible}
@@ -553,7 +553,7 @@ const ProfilePage = () => {
                     if (!value || value.trim().length === 0) {
                       return Promise.reject(new Error('Phone number cannot be empty!'));
                     }
-                    // Basic phone validation - at least 10 digits
+
                     const phoneRegex = /^[0-9]{10,}$/;
                     if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
                       return Promise.reject(new Error('Please enter a valid phone number (at least 10 digits)!'));

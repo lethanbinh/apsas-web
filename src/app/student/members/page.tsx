@@ -15,11 +15,11 @@ export default function MemberListPage() {
   if (!classId) {
     return (
       <div>
-        <Alert 
-          message="No class selected" 
-          description="Please select a class from My Classes first." 
-          type="warning" 
-          showIcon 
+        <Alert
+          message="No class selected"
+          description="Please select a class from My Classes first."
+          type="warning"
+          showIcon
         />
       </div>
     );

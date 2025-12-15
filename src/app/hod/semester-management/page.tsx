@@ -21,7 +21,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 const { Title } = Typography;
 
-// Hàm sắp xếp semester theo thứ tự Spring, Summer, Fall trong từng năm
+
 const sortSemesters = (semesters: Semester[]): Semester[] => {
   const seasonOrder: { [key: string]: number } = {
     spring: 1,
@@ -30,12 +30,12 @@ const sortSemesters = (semesters: Semester[]): Semester[] => {
   };
 
   return [...semesters].sort((a, b) => {
-    // Sắp xếp theo academicYear (từ mới đến cũ)
+
     if (b.academicYear !== a.academicYear) {
       return b.academicYear - a.academicYear;
     }
 
-    // Nếu cùng năm, sắp xếp theo season: Spring -> Summer -> Fall
+
     const aSeason = a.semesterCode
       .replace(a.academicYear.toString(), "")
       .toLowerCase();
@@ -58,7 +58,7 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   return format(date, formatStr);
 };
 
-// Kiểm tra xem semester đã bắt đầu chưa
+
 const isSemesterStarted = (startDate: string): boolean => {
   if (!startDate) return false;
   const semesterStartDate = new Date(
@@ -109,7 +109,7 @@ const SemesterManagementPageContent = () => {
   };
 
   const handleOpenEdit = (record: Semester) => {
-    // Kiểm tra xem semester đã bắt đầu chưa
+
     if (isSemesterStarted(record.startDate)) {
       notification.warning({
         message: "Cannot edit semester",
@@ -133,7 +133,7 @@ const SemesterManagementPageContent = () => {
   };
 
   const handleDelete = (record: Semester) => {
-    // Kiểm tra xem semester đã bắt đầu chưa
+
     if (isSemesterStarted(record.startDate)) {
       notification.warning({
         message: "Cannot delete semester",
@@ -159,7 +159,7 @@ const SemesterManagementPageContent = () => {
 
   const handleDeleteConfirmOk = async () => {
     if (!deleteConfirm.record) return;
-    
+
     if (deleteConfirm.confirmValue !== deleteConfirm.record.semesterCode) {
       notification.error({
         message: "Confirmation failed",
@@ -186,7 +186,7 @@ const SemesterManagementPageContent = () => {
     }
   };
 
-  // Sắp xếp semesters trước khi hiển thị
+
   const sortedSemesters = useMemo(() => {
     return sortSemesters(semesters);
   }, [semesters]);

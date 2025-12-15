@@ -41,7 +41,6 @@ export default function HomePage() {
                     unoptimized
                   />
 
-                  {/* Floating badges */}
                   <div className="hero-badge-top-left">
                     <div className="hero-badge-item">
                       <div className="hero-badge-icon-wrapper">📅</div>
@@ -88,7 +87,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Decorative bottom curve */}
           <div className="decorative-bottom-curve">
             <svg
               viewBox="0 0 1440 120"
@@ -101,12 +99,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Section: Our Success */}
       <section className="our-success-section">
         <div className="our-success-container">
           <h2 className="our-success-title">Our Success</h2>
 
-          {/* Statistics Grid */}
           <div className="our-success-stats-grid">
             <div className="our-success-stat-item">
               <div className="our-success-stat-number">15K+</div>
@@ -126,7 +122,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Description Section */}
           <div className="our-success-description-section">
             <h3 className="our-success-description-title">
               Programming Assessment{" "}
@@ -143,14 +138,11 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Section: Three Feature Cards */}
       <section className="feature-cards-section">
         <div className="feature-cards-container">
-          {/* Card 1 */}
           <div className="feature-card">
             <div className="feature-card-icon-wrapper feature-card-icon-wrapper-1">
-              <span className="feature-card-icon feature-card-icon-1">📄</span>{" "}
-              {/* Placeholder icon for document */}
+              <span className="feature-card-icon feature-card-icon-1">📄</span>
             </div>
             <h3 className="feature-card-title">
               Automate the assessment
@@ -163,11 +155,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card 2 */}
           <div className="feature-card">
             <div className="feature-card-icon-wrapper feature-card-icon-wrapper-2">
-              <span className="feature-card-icon feature-card-icon-2">📅</span>{" "}
-              {/* Placeholder icon for calendar */}
+              <span className="feature-card-icon feature-card-icon-2">📅</span>
             </div>
             <h3 className="feature-card-title">
               Provide immediate
@@ -180,11 +170,9 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Card 3 */}
           <div className="feature-card">
             <div className="feature-card-icon-wrapper feature-card-icon-wrapper-3">
-              <span className="feature-card-icon feature-card-icon-3">👥</span>{" "}
-              {/* Placeholder icon for users */}
+              <span className="feature-card-icon feature-card-icon-3">👥</span>
             </div>
             <h3 className="feature-card-title">
               Support student
@@ -199,7 +187,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Section: What is APSAS? */}
       <section className="py-20 bg-white">
         <div className="what-is-apsas-container">
           <h2 className="what-is-apsas-title">
@@ -214,10 +201,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* New Section: Two Image Cards */}
       <section className="image-cards-section">
         <div className="image-cards-container">
-          {/* Image Card 1: For Instructors */}
           <div className="image-card">
             <Image
               src="https://www.hypeinnovation.com/hs-fs/hubfs/thisisengineering-raeng-TXxiFuQLBKQ-unsplash%20(1).jpg?width=837&height=558&name=thisisengineering-raeng-TXxiFuQLBKQ-unsplash%20(1).jpg"
@@ -230,7 +215,6 @@ export default function HomePage() {
             <div className="image-card-overlay-text">FOR INSTRUCTORS</div>
           </div>
 
-          {/* Image Card 2: For Students */}
           <div className="image-card">
             <Image
               src="https://study.com/cimages/multimages/16/group_project4152137855063887692.jpg"
