@@ -30,19 +30,19 @@ export default function LecturerLayout({ children }: LecturerLayoutProps) {
 
   return (
     <SidebarProvider>
-      <AntLayout className="app-layout">
-        <Header />
-        <AntLayout
-          className="sticky-container"
-          style={{
-            overflow: "visible !important",
-          }}
-        >
-          {shouldShowSidebar && <SidebarLecturer />}
-          <Content className="app-content">{children}</Content>
-        </AntLayout>
-        <Footer />
+    <AntLayout className="app-layout">
+      <Header />
+      <AntLayout
+        className="sticky-container"
+        style={{
+          overflow: "visible !important",
+        }}
+      >
+        {shouldShowSidebar && <SidebarLecturer />}
+        <Content className="app-content">{children}</Content>
       </AntLayout>
+      <Footer />
+    </AntLayout>
     </SidebarProvider>
   );
 }

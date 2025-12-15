@@ -94,21 +94,21 @@ export default function SidebarLecturer() {
         width={280} 
         className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
       >
-        <div className={styles.siderContent}>
+      <div className={styles.siderContent}>
           <div className={styles.sidebarHeader}>
             <button className={styles.closeButton} onClick={close} aria-label="Close sidebar">
               <CloseOutlined />
             </button>
           </div>
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            className={styles.menu}
-            items={menuItems}
+        <Menu
+          mode="inline"
+          selectedKeys={[selectedKey]}
+          className={styles.menu}
+          items={menuItems}
             onClick={close}
-          />
-        </div>
-      </Sider>
+        />
+      </div>
+    </Sider>
     </>
   );
 }

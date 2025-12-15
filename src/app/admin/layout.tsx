@@ -15,19 +15,19 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <SidebarProvider>
-      <AntLayout className="app-layout">
-        <Header />
-        <AntLayout
-          className="sticky-container"
-          style={{
-            overflow: "visible !important",
-          }}
-        >
-          <SidebarAdmin />
-          <Content className="app-content">{children}</Content>
-        </AntLayout>
-        <Footer />
+    <AntLayout className="app-layout">
+      <Header />
+      <AntLayout
+        className="sticky-container"
+        style={{
+          overflow: "visible !important",
+        }}
+      >
+        <SidebarAdmin />
+        <Content className="app-content">{children}</Content>
       </AntLayout>
+      <Footer />
+    </AntLayout>
     </SidebarProvider>
   );
 }

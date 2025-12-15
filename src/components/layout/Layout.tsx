@@ -33,11 +33,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (!mounted) {
     return (
       <SidebarProvider>
-        <AntLayout className="app-layout">
-          <Header />
-          <Content className="app-content">{children}</Content>
-          <Footer />
-        </AntLayout>
+      <AntLayout className="app-layout">
+        <Header />
+        <Content className="app-content">{children}</Content>
+        <Footer />
+      </AntLayout>
       </SidebarProvider>
     );
   }
@@ -45,20 +45,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   if (isProfilePage) {
     return (
       <SidebarProvider>
-        <AntLayout className="app-layout">
-          {role === 0 ? (
-            <>
-              <HeaderAdmin />
-              <Content className="app-content">{children}</Content>
-            </>
-          ) : (
-            <>
-              <Header />
-              <Content className="app-content">{children}</Content>
-            </>
-          )}
-          <Footer />
-        </AntLayout>
+      <AntLayout className="app-layout">
+        {role === 0 ? (
+          <>
+            <HeaderAdmin />
+            <Content className="app-content">{children}</Content>
+          </>
+        ) : (
+          <>
+            <Header />
+            <Content className="app-content">{children}</Content>
+          </>
+        )}
+        <Footer />
+      </AntLayout>
       </SidebarProvider>
     );
   }
@@ -68,11 +68,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }
   return (
     <SidebarProvider>
-      <AntLayout className="app-layout">
-        <Header />
-        <Content className="app-content">{children}</Content>
-        <Footer />
-      </AntLayout>
+    <AntLayout className="app-layout">
+      <Header />
+      <Content className="app-content">{children}</Content>
+      <Footer />
+    </AntLayout>
     </SidebarProvider>
   );
 };

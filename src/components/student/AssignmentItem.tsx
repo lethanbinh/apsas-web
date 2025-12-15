@@ -1,54 +1,30 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
-import { App, Typography, Alert, Upload, Modal, List, Tag, Space, Button as AntButton } from "antd";
-import type { UploadFile } from "antd/es/upload/interface";
+import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
+import { Submission } from "@/services/submissionService";
 import {
-  UploadOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
+  DatabaseOutlined,
+  DownloadOutlined,
   EyeOutlined,
   FilePdfOutlined,
   FileTextOutlined,
-  DatabaseOutlined,
-  ClockCircleOutlined,
   HistoryOutlined,
-  DownloadOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
-import { useMutation, useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
+import { Alert, Button as AntButton, App, List, Modal, Space, Tag, Typography, Upload } from "antd";
+import type { UploadFile } from "antd/es/upload/interface";
+import { useState } from "react";
 import { Button } from "../ui/Button";
+import { useAssignmentData } from "./AssignmentItem/hooks/useAssignmentData";
+import { useSubmissionHandlers } from "./AssignmentItem/hooks/useSubmissionHandlers";
+import { toVietnamTime } from "./AssignmentItem/utils";
 import styles from "./AssignmentList.module.css";
 import { AssignmentData } from "./data";
+import { DeadlineDisplay } from "./DeadlineDisplay";
 import { RequirementModal } from "./RequirementModal";
 import { ScoreFeedbackModal } from "./ScoreFeedbackModal";
-import { DeadlineDisplay } from "./DeadlineDisplay";
-import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-import { useStudent } from "@/hooks/useStudent";
-import { useAuth } from "@/hooks/useAuth";
-import { studentManagementService } from "@/services/studentManagementService";
-import { submissionService, Submission } from "@/services/submissionService";
-import { gradingService } from "@/services/gradingService";
-import { submissionFeedbackService } from "@/services/submissionFeedbackService";
-import { gradeItemService } from "@/services/gradeItemService";
-import { assessmentPaperService } from "@/services/assessmentPaperService";
-import { assessmentQuestionService } from "@/services/assessmentQuestionService";
-import { rubricItemService } from "@/services/rubricItemService";
-import { queryKeys } from "@/lib/react-query";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-
-
-const toVietnamTime = (dateString: string) => {
-  return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
-};
-
-
-const getCurrentVietnamTime = () => {
-  return dayjs().tz("Asia/Ho_Chi_Minh");
-};
 
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
@@ -62,545 +38,31 @@ interface AssignmentItemProps {
 
 export function AssignmentItem({ data, isExam = false, isLab = false, isPracticalExam = false }: AssignmentItemProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [isRequirementModalVisible, setIsRequirementModalVisible] =
-    useState(false);
+  const [isRequirementModalVisible, setIsRequirementModalVisible] = useState(false);
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
   const [isPaperModalVisible, setIsPaperModalVisible] = useState(false);
   const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
   const { message } = App.useApp();
-  const { studentId } = useStudent();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: submissions = [] } = useQuery({
-    queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-    queryFn: async () => {
-      if (!studentId) return [];
+  const {
+    lastSubmission,
+    submissionCount,
+    labSubmissionHistory,
+    labSubmissionScores,
+  } = useAssignmentData(data, isLab);
 
-      if (data.classAssessmentId) {
-        return submissionService.getSubmissionList({
-          studentId: studentId,
-          classAssessmentId: data.classAssessmentId,
-        });
-      } else if (data.examSessionId) {
-        return submissionService.getSubmissionList({
-          studentId: studentId,
-          examSessionId: data.examSessionId,
-        });
-      }
-      return [];
-    },
-    enabled: !!studentId && (!!data.classAssessmentId || !!data.examSessionId),
-  });
-
-  const sortedSubmissions = useMemo(() => {
-    return [...submissions].sort((a, b) => {
-      const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.submittedAt ? new Date(a.submittedAt).getTime() : 0);
-      const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.submittedAt ? new Date(b.submittedAt).getTime() : 0);
-      return dateB - dateA;
-    });
-  }, [submissions]);
-
-  const lastSubmission = sortedSubmissions.length > 0 ? sortedSubmissions[0] : null;
-  const submissionCount = submissions.length;
-
-  const labSubmissionHistory = isLab ? sortedSubmissions.slice(0, 3) : [];
-  const isLoadingSubmission = false;
-
-  const labGradingSessionsQueries = useQueries({
-    queries: labSubmissionHistory.map((submission) => ({
-      queryKey: ['gradingSessions', 'bySubmissionId', submission.id],
-      queryFn: async () => {
-        const result = await gradingService.getGradingSessions({
-          submissionId: submission.id,
-          pageNumber: 1,
-          pageSize: 100,
-        });
-        return {
-          ...result,
-          items: result.items.sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          ),
-        };
-      },
-      enabled: isLab && submission.id > 0,
-    })),
-  });
-
-  const labGradeItemsQueries = useQueries({
-    queries: labGradingSessionsQueries.map((sessionsQuery, index) => {
-      const submission = labSubmissionHistory[index];
-      const latestSession = sessionsQuery.data?.items?.[0];
-      return {
-        queryKey: ['gradeItems', 'byGradingSessionId', latestSession?.id],
-        queryFn: async () => {
-          if (!latestSession) return { items: [] };
-
-          if (latestSession.gradeItems && latestSession.gradeItems.length > 0) {
-            return { items: latestSession.gradeItems };
-          }
-
-          return await gradeItemService.getGradeItems({
-            gradingSessionId: latestSession.id,
-            pageNumber: 1,
-            pageSize: 1000,
-          });
-        },
-        enabled: isLab && !!latestSession?.id,
-      };
-    }),
-  });
-
-  const { data: papersData } = useQuery({
-    queryKey: queryKeys.assessmentPapers.byTemplateId(data.assessmentTemplateId!),
-    queryFn: () => assessmentPaperService.getAssessmentPapers({
-      assessmentTemplateId: data.assessmentTemplateId!,
-      pageNumber: 1,
-      pageSize: 100,
-    }),
-    enabled: isLab && !!data.assessmentTemplateId,
-  });
-
-  const questionsQueries = useQueries({
-    queries: (papersData?.items || []).map((paper) => ({
-      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
-      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
-        assessmentPaperId: paper.id,
-        pageNumber: 1,
-        pageSize: 100,
-      }),
-      enabled: isLab && !!data.assessmentTemplateId && (papersData?.items || []).length > 0,
-    })),
-  });
-
-  const allQuestionIds = useMemo(() => {
-    const ids: number[] = [];
-    questionsQueries.forEach((query) => {
-      if (query.data?.items) {
-        query.data.items.forEach((q: any) => ids.push(q.id));
-      }
-    });
-    return ids;
-  }, [questionsQueries]);
-
-  const rubricsQueries = useQueries({
-    queries: allQuestionIds.map((questionId) => ({
-      queryKey: queryKeys.rubricItems.byQuestionId(questionId),
-      queryFn: () => rubricItemService.getRubricsForQuestion({
-        assessmentQuestionId: questionId,
-        pageNumber: 1,
-        pageSize: 100,
-      }),
-      enabled: isLab && !!data.assessmentTemplateId && allQuestionIds.length > 0,
-    })),
-  });
-
-  const questions = useMemo(() => {
-    const questionsList: any[] = [];
-    let questionIndex = 0;
-
-    (papersData?.items || []).forEach((paper, paperIndex) => {
-      const paperQuestionsQuery = questionsQueries[paperIndex];
-      if (!paperQuestionsQuery?.data?.items) return;
-
-      const paperQuestions = [...paperQuestionsQuery.data.items].sort(
-        (a: any, b: any) => (a.questionNumber || 0) - (b.questionNumber || 0)
-      );
-
-      paperQuestions.forEach((question: any) => {
-        const rubricQuery = rubricsQueries[questionIndex];
-        const questionRubrics = rubricQuery?.data?.items || [];
-
-        const questionMaxScore = questionRubrics.reduce((sum: number, r: any) => sum + (r.score || 0), 0);
-
-        questionsList.push({
-          ...question,
-          rubrics: questionRubrics,
-          score: questionMaxScore,
-        });
-
-        questionIndex++;
-      });
-    });
-
-    return questionsList;
-  }, [papersData, questionsQueries, rubricsQueries]);
-
-  const maxScore = useMemo(() => {
-    return questions.reduce((sum, q) => {
-      return sum + (q.rubrics || []).reduce((rubricSum: number, rubric: any) => rubricSum + (rubric.score || 0), 0);
-    }, 0);
-  }, [questions]);
-
-  const labSubmissionScores = useMemo(() => {
-    const scoreMap: Record<number, { total: number; max: number }> = {};
-
-    labSubmissionHistory.forEach((submission, index) => {
-      const gradeItemsQuery = labGradeItemsQueries[index];
-      const sessionsQuery = labGradingSessionsQueries[index];
-
-      if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
-        const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + (item.score || 0), 0);
-        scoreMap[submission.id] = { total: totalScore, max: maxScore };
-      } else if (sessionsQuery?.data?.items?.[0]?.grade !== undefined && sessionsQuery.data.items[0].grade !== null) {
-        scoreMap[submission.id] = { total: sessionsQuery.data.items[0].grade, max: maxScore };
-      }
-    });
-
-    return scoreMap;
-  }, [labSubmissionHistory, labGradeItemsQueries, labGradingSessionsQueries, maxScore]);
-
-  useEffect(() => {
-    return () => {
-      if (autoGradingPollIntervalRef.current) {
-        clearInterval(autoGradingPollIntervalRef.current);
-        autoGradingPollIntervalRef.current = null;
-      }
-    };
-  }, []);
-
-  const hasDeadline = () => {
-    return !!data.date;
-  };
-
-  const hasStartDate = () => {
-    return !!data.startAt;
-  };
-
-  const isDeadlinePassed = () => {
-    if (!data.date) return false;
-    const currentTime = getCurrentVietnamTime();
-    const deadlineTime = toVietnamTime(data.date);
-    return currentTime.isAfter(deadlineTime);
-  };
-
-  const isBeforeStartDate = () => {
-    if (!data.startAt) return false;
-    const currentTime = getCurrentVietnamTime();
-    const startTime = toVietnamTime(data.startAt);
-    return currentTime.isBefore(startTime);
-  };
-
-  const isWithinSubmissionWindow = () => {
-    if (!data.startAt || !data.date) return false;
-    const currentTime = getCurrentVietnamTime();
-    const startTime = toVietnamTime(data.startAt);
-    const endTime = toVietnamTime(data.date);
-    return (currentTime.isAfter(startTime) || currentTime.isSame(startTime, 'minute')) &&
-      (currentTime.isBefore(endTime) || currentTime.isSame(endTime, 'minute'));
-  };
-
-  const canSubmit = () => {
-    if (!hasDeadline()) return false;
-    if (hasStartDate() && isBeforeStartDate()) return false;
-    if (isDeadlinePassed()) return false;
-    return true;
-  };
-
-  const submitMutation = useMutation({
-    mutationFn: async ({ file, studentCode, submissionId }: { file: File; studentCode: string; submissionId?: number }) => {
-      const newFileName = studentCode ? `${studentCode}.zip` : file.name;
-      const renamedFile = new File([file], newFileName, { type: file.type });
-
-      if (isLab) {
-        return submissionService.createSubmission({
-          StudentId: studentId!,
-          ClassAssessmentId: data.classAssessmentId,
-          ExamSessionId: data.examSessionId,
-          file: renamedFile,
-        });
-      } else {
-        if (submissionId) {
-          return submissionService.updateSubmission(submissionId, {
-            file: renamedFile,
-          });
-        } else {
-          return submissionService.createSubmission({
-            StudentId: studentId!,
-            ClassAssessmentId: data.classAssessmentId,
-            ExamSessionId: data.examSessionId,
-            file: renamedFile,
-          });
-        }
-      }
-    },
-    onSuccess: async (newSubmission) => {
-      await queryClient.invalidateQueries({
-        queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-        exact: false
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ['submissions', 'byStudent', studentId],
-        exact: false
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ['submissions', 'byClassAssessments'],
-        exact: false
-      });
-      await queryClient.invalidateQueries({ queryKey: queryKeys.submissions.all });
-
-      await queryClient.refetchQueries({
-        queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-        type: 'active'
-      });
-
-      await queryClient.refetchQueries({
-        queryKey: ['submissions', 'byClassAssessments'],
-        type: 'active'
-      });
-
-      if (isLab && data.assessmentTemplateId) {
-        try {
-          const gradingSession = await gradingService.autoGrading({
-            submissionId: newSubmission.id,
-            assessmentTemplateId: data.assessmentTemplateId,
-          });
-
-          if (gradingSession.status === 0) {
-            message.loading("Auto grading in progress...", 0);
-
-            const pollInterval = setInterval(async () => {
-              try {
-                const sessionsResult = await gradingService.getGradingSessions({
-                  submissionId: newSubmission.id,
-                  pageNumber: 1,
-                  pageSize: 100,
-                });
-
-                if (sessionsResult.items.length > 0) {
-                  const sortedSessions = [...sessionsResult.items].sort((a, b) => {
-                    const dateA = new Date(a.createdAt).getTime();
-                    const dateB = new Date(b.createdAt).getTime();
-                    return dateB - dateA;
-                  });
-
-                  const latestSession = sortedSessions[0];
-
-                  if (latestSession.status !== 0) {
-                    if (autoGradingPollIntervalRef.current) {
-                      clearInterval(autoGradingPollIntervalRef.current);
-                      autoGradingPollIntervalRef.current = null;
-                    }
-                    message.destroy();
-
-                    queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                    queryClient.invalidateQueries({
-                      queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                      exact: false
-                    });
-                    queryClient.invalidateQueries({
-                      queryKey: ['gradeItems'],
-                      exact: false
-                    });
-                    queryClient.refetchQueries({
-                      queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                      type: 'active'
-                    });
-                    queryClient.refetchQueries({
-                      queryKey: ['gradeItems'],
-                      type: 'active'
-                    });
-
-                    if (latestSession.status === 1) {
-                      message.success("Auto grading completed successfully");
-
-                      try {
-                        message.loading("Getting AI feedback...", 0);
-                        await gradingService.getFormattedAiFeedback(newSubmission.id, "OpenAI");
-                        message.destroy();
-                        message.loading("AI feedback in progress...", 0);
-
-                        const feedbackPollInterval = setInterval(async () => {
-                          try {
-                            const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
-                              submissionId: newSubmission.id,
-                            });
-
-                            if (feedbackList && feedbackList.length > 0 && feedbackList[0].feedbackText) {
-                              clearInterval(feedbackPollInterval);
-                              message.destroy();
-                              queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', newSubmission.id] });
-                              await queryClient.invalidateQueries({
-                                queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                                exact: false
-                              });
-                              await queryClient.invalidateQueries({
-                                queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                                exact: false
-                              });
-                              await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                              await queryClient.invalidateQueries({
-                                queryKey: ['gradeItems'],
-                                exact: false
-                              });
-                              await queryClient.refetchQueries({
-                                queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                                type: 'active'
-                              });
-                              await queryClient.refetchQueries({
-                                queryKey: ['gradingSessions', 'bySubmissionId'],
-                                type: 'active'
-                              });
-                              await queryClient.refetchQueries({
-                                queryKey: ['gradeItems'],
-                                type: 'active'
-                              });
-                              message.success("AI feedback generated successfully!");
-                            }
-                          } catch (err: any) {
-                            console.error("Failed to poll AI feedback status:", err);
-                          }
-                        }, 5000);
-
-                        (window as any).aiFeedbackPollInterval = feedbackPollInterval;
-
-                        setTimeout(() => {
-                          if ((window as any).aiFeedbackPollInterval) {
-                            clearInterval((window as any).aiFeedbackPollInterval);
-                            (window as any).aiFeedbackPollInterval = null;
-                          }
-                          message.destroy();
-                        }, 300000);
-                      } catch (feedbackErr: any) {
-                        console.error("Failed to get AI feedback:", feedbackErr);
-                        message.destroy();
-                        message.warning("Auto grading completed, but AI feedback failed to generate.");
-                      }
-                    } else if (latestSession.status === 2) {
-                      message.error("Auto grading failed");
-                    }
-                  }
-                }
-              } catch (err: any) {
-                console.error("Failed to poll grading status:", err);
-                if (autoGradingPollIntervalRef.current) {
-                  clearInterval(autoGradingPollIntervalRef.current);
-                  autoGradingPollIntervalRef.current = null;
-                }
-                message.destroy();
-                message.error(err.message || "Failed to check grading status");
-              }
-            }, 5000);
-
-            autoGradingPollIntervalRef.current = pollInterval;
-
-            setTimeout(() => {
-              if (autoGradingPollIntervalRef.current) {
-                clearInterval(autoGradingPollIntervalRef.current);
-                autoGradingPollIntervalRef.current = null;
-              }
-              message.destroy();
-            }, 300000);
-          } else {
-            if (gradingSession.status === 1) {
-              message.success("Auto grading completed successfully");
-
-              queryClient.invalidateQueries({
-                queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                exact: false
-              });
-              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-              queryClient.invalidateQueries({
-                queryKey: ['gradeItems'],
-                exact: false
-              });
-              queryClient.refetchQueries({
-                queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                type: 'active'
-              });
-              queryClient.refetchQueries({
-                queryKey: ['gradeItems'],
-                type: 'active'
-              });
-
-              try {
-                message.loading("Getting AI feedback...", 0);
-                await gradingService.getFormattedAiFeedback(newSubmission.id, "OpenAI");
-                message.destroy();
-                message.loading("AI feedback in progress...", 0);
-
-                const feedbackPollInterval = setInterval(async () => {
-                  try {
-                    const feedbackList = await submissionFeedbackService.getSubmissionFeedbackList({
-                      submissionId: newSubmission.id,
-                    });
-
-                    if (feedbackList && feedbackList.length > 0 && feedbackList[0].feedbackText) {
-                      clearInterval(feedbackPollInterval);
-                      message.destroy();
-                      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', newSubmission.id] });
-                      await queryClient.invalidateQueries({
-                        queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                        exact: false
-                      });
-                      await queryClient.invalidateQueries({
-                        queryKey: ['gradingSessions', 'bySubmissionId', newSubmission.id],
-                        exact: false
-                      });
-                      await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-                      await queryClient.invalidateQueries({
-                        queryKey: ['gradeItems'],
-                        exact: false
-                      });
-                      await queryClient.refetchQueries({
-                        queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
-                        type: 'active'
-                      });
-                      await queryClient.refetchQueries({
-                        queryKey: ['gradingSessions', 'bySubmissionId'],
-                        type: 'active'
-                      });
-                      await queryClient.refetchQueries({
-                        queryKey: ['gradeItems'],
-                        type: 'active'
-                      });
-                      message.success("AI feedback generated successfully!");
-                    }
-                  } catch (err: any) {
-                    console.error("Failed to poll AI feedback status:", err);
-                  }
-                }, 5000);
-
-                (window as any).aiFeedbackPollInterval = feedbackPollInterval;
-
-                setTimeout(() => {
-                  if ((window as any).aiFeedbackPollInterval) {
-                    clearInterval((window as any).aiFeedbackPollInterval);
-                    (window as any).aiFeedbackPollInterval = null;
-                  }
-                  message.destroy();
-                }, 300000);
-              } catch (feedbackErr: any) {
-                console.error("Failed to get AI feedback:", feedbackErr);
-                message.destroy();
-                message.warning("Auto grading completed, but AI feedback failed to generate.");
-              }
-            } else if (gradingSession.status === 2) {
-              message.error("Auto grading failed");
-            }
-            queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-          }
-        } catch (gradingErr: any) {
-          console.error("Failed to start auto grading:", gradingErr);
-          message.destroy();
-          message.warning("Submission submitted, but auto grading failed to start. Please contact your lecturer.");
-        }
-      } else {
-        message.success("Your assignment has been submitted successfully!");
-      }
-
-      setFileList([]);
-      setIsSubmitModalVisible(false);
-    },
-    onError: (err: any) => {
-      console.error("Failed to submit assignment:", err);
-      message.error(err.message || "Failed to submit assignment. Please try again.");
-    },
-  });
+  const {
+    handleSubmit: handleSubmitFile,
+    canSubmit,
+    hasDeadline,
+    hasStartDate,
+    isDeadlinePassed,
+    isBeforeStartDate,
+    isSubmitting,
+  } = useSubmissionHandlers(data, isLab, lastSubmission, submissionCount);
 
   const handleSubmit = async () => {
-    if (fileList.length === 0 || !studentId) {
+    if (fileList.length === 0) {
       message.warning("Please select a file to submit");
       return;
     }
@@ -611,61 +73,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return;
     }
 
-    const isZip = file.type === "application/zip" ||
-      file.type === "application/x-zip-compressed" ||
-      file.name.toLowerCase().endsWith(".zip");
-    if (!isZip) {
-      message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
-      return;
-    }
-
-    if (isLab && submissionCount >= 3) {
-      message.error("You have reached the maximum submission limit (3 times).");
-      return;
-    }
-
-    if (!hasDeadline()) {
-      message.error("This assignment does not have a deadline yet. Please wait for the lecturer to set the deadline before submitting.");
-      return;
-    }
-
-    if (hasStartDate() && isBeforeStartDate()) {
-      const startTime = toVietnamTime(data.startAt!);
-      message.error(`Submission is not yet open. The submission period starts on ${startTime.format("DD/MM/YYYY HH:mm")}.`);
-      return;
-    }
-
-    if (isDeadlinePassed()) {
-      message.error("The deadline has passed. You can no longer submit.");
-      return;
-    }
-
-    if (!canSubmit()) {
-      message.error("You cannot submit at this time. Please check the submission period.");
-      return;
-    }
-
-    let studentCode = user?.accountCode || "";
-    if (!studentCode) {
-      try {
-        const students = await studentManagementService.getStudentList();
-        const currentUserAccountId = String(user?.id);
-        const matchingStudent = students.find(
-          (stu) => stu.accountId === currentUserAccountId
-        );
-        if (matchingStudent) {
-          studentCode = matchingStudent.accountCode;
-        }
-      } catch (err) {
-        console.error("Failed to fetch student code:", err);
-      }
-    }
-
-    const submissionId = isLab ? undefined : lastSubmission?.id;
-    submitMutation.mutate({ file, studentCode, submissionId });
+    await handleSubmitFile(file);
+    setFileList([]);
+    setIsSubmitModalVisible(false);
   };
-
-  const isSubmitting = submitMutation.isPending;
 
   const uploadProps = {
     fileList,
@@ -777,7 +188,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
               <List
                 size="small"
                 dataSource={labSubmissionHistory}
-                renderItem={(submission, index) => (
+                renderItem={(submission: Submission, index: number) => (
                   <List.Item
                     style={{
                       padding: "8px 12px",
