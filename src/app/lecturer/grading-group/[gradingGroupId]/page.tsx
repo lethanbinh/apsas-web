@@ -30,6 +30,7 @@ import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService } from "@/services/assessmentQuestionService";
 import { rubricItemService } from "@/services/rubricItemService";
 import { gradeItemService } from "@/services/gradeItemService";
+import { handleDownloadAll, handleDownloadSelected } from "./utils/downloadAll";
 
 export default function GradingGroupPage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function GradingGroupPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFileList, setUploadFileList] = useState<any[]>([]);
   const [semesterEnded, setSemesterEnded] = useState(false);
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
   const queryClient = useQueryClient();
 
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
@@ -334,6 +336,20 @@ export default function GradingGroupPage() {
     }
   }, [gradingGroup, message]);
 
+  const handleDownloadAllClick = useCallback(async () => {
+    if (!gradingGroup) return;
+    await handleDownloadAll(submissions, gradingGroup, message);
+  }, [gradingGroup, submissions, message]);
+
+  const handleDownloadSelectedClick = useCallback(async () => {
+    if (!gradingGroup) return;
+    await handleDownloadSelected(selectedSubmissions, gradingGroup, message);
+  }, [gradingGroup, selectedSubmissions, message]);
+
+  const handleSelectionChange = useCallback((selectedRowKeys: React.Key[], selectedRows: Submission[]) => {
+    setSelectedSubmissions(selectedRows);
+  }, []);
+
   const handleBatchGrading = useCallback(async () => {
     if (!gradingGroup || !gradingGroup.assessmentTemplateId) {
       message.error("Cannot find assessment template. Please contact administrator.");
@@ -506,13 +522,35 @@ export default function GradingGroupPage() {
             </Card>
           )}
 
-          <Card>
+          <Card
+            title="Submissions"
+            extra={
+              <Space>
+                <Button
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownloadSelectedClick}
+                  disabled={selectedSubmissions.length === 0}
+                >
+                  Download Selected ({selectedSubmissions.length})
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownloadAllClick}
+                  disabled={submissions.length === 0}
+                >
+                  Download All
+                </Button>
+              </Space>
+            }
+          >
             <SubmissionsTable
               submissions={submissions}
               submissionTotalScores={submissionTotalScores}
               maxScore={maxScore}
               onEdit={handleOpenEditModal}
               isGradeSheetSubmitted={isGradeSheetSubmitted}
+              onSelectionChange={handleSelectionChange}
             />
           </Card>
         </Space>

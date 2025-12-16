@@ -3,7 +3,7 @@
 import React, { useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layout, Menu } from "antd";
+import { Layout, Menu, Tooltip } from "antd";
 import {
   FileTextOutlined,
   BarChartOutlined,
@@ -16,26 +16,37 @@ import { useSidebar } from "@/components/layout/SidebarContext";
 import styles from "../sidebar/StudentSidebar.module.css";
 
 const { Sider } = Layout;
+
+const MenuItemWithTooltip = ({ href, children, title }: { href: string; children: React.ReactNode; title: string }) => {
+  return (
+    <Tooltip title={title} placement="right">
+      <Link href={href} style={{ display: 'block', width: '100%' }}>
+        {children}
+      </Link>
+    </Tooltip>
+  );
+};
+
 const menuItems = [
   {
     key: "/hod/semester-plans",
     icon: <FileTextOutlined />,
-    label: <Link href="/hod/semester-plans">Semester plans</Link>,
+    label: <MenuItemWithTooltip href="/hod/semester-plans" title="Semester plans">Semester plans</MenuItemWithTooltip>,
   },
   {
     key: "/hod/approval",
     icon: <BarChartOutlined />,
-    label: <Link href="/hod/approval">Approval</Link>,
+    label: <MenuItemWithTooltip href="/hod/approval" title="Approval">Approval</MenuItemWithTooltip>,
   },
   {
     key: "/hod/semester-management",
     icon: <CalendarOutlined />,
-    label: <Link href="/hod/semester-management">Semester management</Link>,
+    label: <MenuItemWithTooltip href="/hod/semester-management" title="Semester management">Semester management</MenuItemWithTooltip>,
   },
   {
     key: "/hod/course-management",
     icon: <BookOutlined />,
-    label: <Link href="/hod/course-management">Course management</Link>,
+    label: <MenuItemWithTooltip href="/hod/course-management" title="Course management">Course management</MenuItemWithTooltip>,
   },
 ];
 
@@ -78,7 +89,7 @@ export default function HeadOfDepartmentSidebar() {
     <>
       {isOpen && <div className={styles.overlay} onClick={close} />}
       <Sider 
-        width={280} 
+        width={300} 
         className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
       >
         <div className={styles.siderContent}>

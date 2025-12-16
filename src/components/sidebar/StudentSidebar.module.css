@@ -6,7 +6,7 @@
     top: 60px;
     align-self: flex-start;
     width: 100% !important;
-    max-width: 280px;
+    max-width: 300px;
     min-width: 200px;
 }
 
@@ -37,7 +37,7 @@
 
     .sider {
         position: fixed;
-        left: -280px;
+        left: -300px;
         top: 60px;
         height: calc(100vh - 60px);
         z-index: 100;
@@ -124,6 +124,15 @@
     font-size: 1rem !important;
     font-weight: 500;
     color: #444;
+    overflow: visible !important;
+}
+
+.menu :global(.ant-menu-item .ant-menu-title-content) {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    line-height: 1.5 !important;
+    max-width: 100% !important;
 }
 
 .menu :global(.ant-menu-item-selected) {

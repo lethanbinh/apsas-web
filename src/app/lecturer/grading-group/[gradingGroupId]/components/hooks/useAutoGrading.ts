@@ -62,7 +62,10 @@ export function useAutoGrading({
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
       queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
       queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
 
       if (gradingSession.status === 0) {
         pollingSessionIdRef.current = gradingSession.id;
@@ -98,7 +101,10 @@ export function useAutoGrading({
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
                 queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+                queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
                 queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+                queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
 
                 if (targetSession.status === 1) {
                   message.success({ content: "Auto grading completed successfully", key: loadingMessageKey, duration: 3 });
@@ -145,7 +151,10 @@ export function useAutoGrading({
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
         queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+        queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
         queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
+        queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
 
         if (gradingSession.status === 1) {
           message.success("Auto grading completed successfully");

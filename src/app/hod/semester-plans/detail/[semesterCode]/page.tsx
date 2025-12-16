@@ -23,6 +23,7 @@ import {
   PlusOutlined,
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/react-query";
 import {
   App,
   Button,
@@ -46,6 +47,7 @@ const SemesterDetailPageContent = ({
 }) => {
   const router = useRouter();
   const { modal, notification } = App.useApp();
+  const queryClient = useQueryClient();
   const {
     semesterData,
     loading,
@@ -53,7 +55,6 @@ const SemesterDetailPageContent = ({
     lecturers,
     elementsWithAssessment,
     elementsWithApprovedRequest,
-    refetchDetail,
   } = useSemesterDetailData(params.semesterCode);
 
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
@@ -124,7 +125,7 @@ const SemesterDetailPageContent = ({
         : "The course has been successfully created.",
       placement: "topRight",
     });
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
 
   const handleDeleteSemesterCourse = (semesterCourseId: number) => {
@@ -143,7 +144,7 @@ const SemesterDetailPageContent = ({
             description: "The course has been successfully unlinked from this semester.",
             placement: "topRight",
           });
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
         } catch (err: any) {
           console.error("Failed to delete semester course:", err);
           notification.error({
@@ -191,7 +192,7 @@ const SemesterDetailPageContent = ({
         : "The class has been successfully created.",
       placement: "topRight",
     });
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
 
   const handleDeleteClass = (classId: number) => {
@@ -209,7 +210,7 @@ const SemesterDetailPageContent = ({
             description: "The class has been successfully deleted.",
             placement: "topRight",
           });
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
         } catch (err: any) {
           console.error("Failed to delete class:", err);
           notification.error({
@@ -267,7 +268,7 @@ const SemesterDetailPageContent = ({
         : "The course element has been successfully created.",
       placement: "topRight",
     });
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
 
   const handleDeleteElement = (elementId: number) => {
@@ -285,7 +286,7 @@ const SemesterDetailPageContent = ({
             description: "The course element has been successfully deleted.",
             placement: "topRight",
           });
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
         } catch (err: any) {
           console.error("Failed to delete course element:", err);
           notification.error({
@@ -337,7 +338,8 @@ const SemesterDetailPageContent = ({
         : "The assign request has been successfully created.",
       placement: "topRight",
     });
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.assignRequests.all });
   };
 
   const handleDeleteAssignRequest = (requestId: number) => {
@@ -355,7 +357,8 @@ const SemesterDetailPageContent = ({
             description: "The assign request has been successfully deleted.",
             placement: "topRight",
           });
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
+          queryClient.invalidateQueries({ queryKey: queryKeys.assignRequests.all });
         } catch (err: any) {
           console.error("Failed to delete assign request:", err);
           notification.error({
@@ -398,7 +401,7 @@ const SemesterDetailPageContent = ({
       description: "The student has been successfully added to the class.",
       placement: "topRight",
     });
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
     setStudentCountRefreshTrigger(prev => prev + 1);
   };
 
@@ -417,7 +420,7 @@ const SemesterDetailPageContent = ({
             description: "The student has been successfully removed from the class.",
             placement: "topRight",
           });
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
           setStudentCountRefreshTrigger(prev => prev + 1);
         } catch (err: any) {
           console.error("Failed to remove student:", err);
@@ -449,7 +452,7 @@ const SemesterDetailPageContent = ({
 
   const handleImportClassStudentModalOk = () => {
     setIsImportClassStudentModalOpen(false);
-    refetchDetail();
+    queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
     notification.success({
       message: "Import Successful",
       description: "Class student data has been imported successfully.",
@@ -623,7 +626,7 @@ const SemesterDetailPageContent = ({
           handleDeleteStudentGroup(studentGroupId);
         }}
         onRefresh={() => {
-          refetchDetail();
+          queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
           setStudentCountRefreshTrigger(prev => prev + 1);
         }}
       />

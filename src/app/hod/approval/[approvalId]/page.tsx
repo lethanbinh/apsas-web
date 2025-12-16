@@ -6,6 +6,7 @@ import { ApiApprovalItem, ApiAssessmentTemplate } from "@/types";
 import { Alert, Spin } from "antd";
 import { useParams } from "next/navigation";
 import React, { useState } from "react";
+import { EmptyTemplateState } from "@/components/shared/EmptyState";
 
 export default function ApprovalDetailPage() {
   const params = useParams();
@@ -97,14 +98,7 @@ export default function ApprovalDetailPage() {
 
 
   if (!template) {
-    return (
-      <Alert
-        message="Template Not Created"
-        description="The assessment template for this approval request has not been created yet by the lecturer. Please wait for the lecturer to create the template before reviewing."
-        type="info"
-        showIcon
-      />
-    );
+    return <EmptyTemplateState backPath="/hod/approval" />;
   }
 
   return <ApprovalDetail template={template} approvalItem={approvalItem} />;

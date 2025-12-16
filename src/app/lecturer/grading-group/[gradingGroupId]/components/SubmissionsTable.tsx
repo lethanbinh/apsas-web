@@ -5,6 +5,7 @@ import type { Submission } from "@/services/submissionService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { useState } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -17,6 +18,7 @@ interface SubmissionsTableProps {
   maxScore: number;
   onEdit: (submission: Submission) => void;
   isGradeSheetSubmitted: boolean;
+  onSelectionChange?: (selectedRowKeys: React.Key[], selectedRows: Submission[]) => void;
 }
 
 export function SubmissionsTable({
@@ -25,7 +27,9 @@ export function SubmissionsTable({
   maxScore,
   onEdit,
   isGradeSheetSubmitted,
+  onSelectionChange,
 }: SubmissionsTableProps) {
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const columns: TableProps<Submission>["columns"] = [
     {
       title: "ID",
@@ -119,11 +123,20 @@ export function SubmissionsTable({
     );
   }
 
+  const rowSelection = onSelectionChange ? {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+      onSelectionChange(newSelectedRowKeys, selectedRows);
+    },
+  } : undefined;
+
   return (
     <Table
       columns={columns}
       dataSource={submissions}
       rowKey="id"
+      rowSelection={rowSelection}
       pagination={{
         pageSize: 10,
         showSizeChanger: true,
@@ -131,7 +144,11 @@ export function SubmissionsTable({
       }}
       scroll={{ x: 1000 }}
       onRow={(record) => ({
-        onClick: () => {
+        onClick: (e) => {
+          // Don't trigger edit when clicking on checkbox
+          if ((e.target as HTMLElement).closest('.ant-checkbox-wrapper')) {
+            return;
+          }
           if (!isGradeSheetSubmitted) {
             onEdit(record);
           }

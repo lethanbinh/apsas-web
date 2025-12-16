@@ -60,7 +60,7 @@ export function GradingGroupHeader({
             size="large"
             disabled={semesterEnded || isGradeSheetSubmitted}
           >
-            Batch Grade
+            Grade All
           </Button>
         )}
       </Space>

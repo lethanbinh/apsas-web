@@ -1,30 +1,25 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assignRequestService } from "@/services/assignRequestService";
-import { lecturerService, Lecturer } from "@/services/lecturerService";
+import { lecturerService } from "@/services/lecturerService";
 import {
-  SemesterPlanDetail,
   semesterService,
 } from "@/services/semesterService";
 
 export const useSemesterDetailData = (semesterCode: string) => {
-  const [semesterData, setSemesterData] = useState<SemesterPlanDetail | null>(
-    null
-  );
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [lecturers, setLecturers] = useState<Lecturer[]>([]);
-
-  const fetchDetail = useCallback(async () => {
-    if (!semesterCode) {
-      setError("No semester code provided.");
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
+  // Fetch semester detail using React Query
+  const {
+    data: semesterData,
+    isLoading: semesterLoading,
+    error: semesterError,
+  } = useQuery({
+    queryKey: queryKeys.semesters.detail(semesterCode),
+    queryFn: async () => {
+      if (!semesterCode) {
+        throw new Error("No semester code provided.");
+      }
       const data = await semesterService.getSemesterPlanDetail(semesterCode);
 
       try {
@@ -56,29 +51,16 @@ export const useSemesterDetailData = (semesterCode: string) => {
         console.error("Failed to fetch assign requests status:", err);
       }
 
-      setSemesterData(data);
-      setError(null);
-    } catch (err: any) {
-      console.error("Failed to fetch semester detail:", err);
-      setError(err.message || "Failed to load data.");
-      setSemesterData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [semesterCode]);
+      return data;
+    },
+    enabled: !!semesterCode,
+  });
 
-  useEffect(() => {
-    const fetchLecturers = async () => {
-      try {
-        const data = await lecturerService.getLecturerList();
-        setLecturers(data);
-      } catch (err) {
-        console.error("Failed to fetch lecturers:", err);
-      }
-    };
-    fetchDetail();
-    fetchLecturers();
-  }, [fetchDetail]);
+  // Fetch lecturers using React Query
+  const { data: lecturers = [] } = useQuery({
+    queryKey: queryKeys.lecturers.list(),
+    queryFn: () => lecturerService.getLecturerList(),
+  });
 
   const allCourseElementIds = useMemo(() => {
     if (!semesterData) return new Set<number>();
@@ -134,13 +116,12 @@ export const useSemesterDetailData = (semesterCode: string) => {
   }, [semesterData]);
 
   return {
-    semesterData,
-    loading,
-    error,
+    semesterData: semesterData || null,
+    loading: semesterLoading,
+    error: semesterError ? (semesterError as Error).message || "Failed to load data." : null,
     lecturers,
     elementsWithAssessment,
     elementsWithApprovedRequest,
-    refetchDetail: fetchDetail,
     refetchTemplates,
   };
 };

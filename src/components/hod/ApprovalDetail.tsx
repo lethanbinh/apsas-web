@@ -17,6 +17,7 @@ import { useApprovalData } from "./ApprovalDetail/hooks/useApprovalData";
 import { useApprovalHandlers } from "./ApprovalDetail/hooks/useApprovalHandlers";
 import { calculateTotalScore, getStatusProps } from "./ApprovalDetail/utils";
 import { QuestionCommentModal } from "./QuestionCommentModal";
+import { EmptyPapersState, EmptyQuestionsState, EmptyRubricsState } from "@/components/shared/EmptyState";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -149,14 +150,7 @@ export default function ApprovalDetail({
   }
 
   if (papers.length === 0) {
-    return (
-      <Alert
-        message="Error"
-        description="This template has no papers."
-        type="error"
-        showIcon
-      />
-    );
+    return <EmptyPapersState backPath="/hod/approval" />;
   }
 
   const courseCollapseItems: CollapseProps["items"] = papers.map((paper, paperIndex) => {
@@ -306,7 +300,7 @@ export default function ApprovalDetail({
                     </div>
                   )}
 
-                  {rubrics[question.id] && rubrics[question.id].length > 0 && (
+                  {rubrics[question.id] && rubrics[question.id].length > 0 ? (
                     <div style={{ marginTop: 12 }}>
                       <Text strong>Grading Criteria:</Text>
                       <ul style={{ marginTop: 8 }}>
@@ -326,6 +320,10 @@ export default function ApprovalDetail({
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 12 }}>
+                      <EmptyRubricsState />
                     </div>
                   )}
 
@@ -403,7 +401,7 @@ export default function ApprovalDetail({
               ))}
             </div>
           ) : (
-            <Text type="secondary">No questions found for this paper.</Text>
+            <EmptyQuestionsState />
           )}
         </div>
       ),

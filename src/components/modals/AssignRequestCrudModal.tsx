@@ -71,10 +71,33 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
     value: Number(lec.lecturerId),
   }));
 
-  const elementOptions = courseElements.map((el) => ({
-    label: el.name,
-    value: el.id,
-  }));
+  // Get course element IDs that are already used in existing assign requests
+  const usedCourseElementIds = new Set(
+    existingAssignRequests
+      .filter((req) => {
+        // When editing, exclude the current request's course element from the used list
+        if (isEditMode && initialData && req.id === initialData.id) {
+          return false;
+        }
+        return true;
+      })
+      .map((req) => req.courseElement.id)
+  );
+
+  // Filter out course elements that are already used (except when editing the same request)
+  const elementOptions = courseElements
+    .filter((el) => {
+      // If editing and this is the current request's course element, always include it
+      if (isEditMode && initialData && el.id === initialData.courseElement.id) {
+        return true;
+      }
+      // Otherwise, exclude if it's already used
+      return !usedCourseElementIds.has(el.id);
+    })
+    .map((el) => ({
+      label: el.name,
+      value: el.id,
+    }));
 
   const statusOptions = [
     { label: "Pending", value: 1 },

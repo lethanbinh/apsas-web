@@ -28,7 +28,7 @@ import { Submission, submissionService } from "@/services/submissionService";
 import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
 import { DownloadOutlined, FileExcelOutlined, FolderOutlined, LinkOutlined, RobotOutlined } from "@ant-design/icons";
 import { handleDownloadAll, LabWithData } from "./utils/downloadAll";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   App,
@@ -39,6 +39,7 @@ import {
   List,
   Space,
   Spin,
+  Tag,
   Typography,
 } from "antd";
 import dayjs from "dayjs";
@@ -93,6 +94,114 @@ const LabDetailItem = ({
   });
 
   const assessmentFiles = filesResponse?.items || [];
+
+  // Fetch grading sessions for all submissions
+  const gradingSessionsQueries = useQueries({
+    queries: submissions.map((sub) => ({
+      queryKey: queryKeys.grading.sessions.list({ submissionId: sub.id, pageNumber: 1, pageSize: 1 }),
+      queryFn: () => gradingService.getGradingSessions({
+        submissionId: sub.id,
+        pageNumber: 1,
+        pageSize: 1,
+      }),
+      enabled: submissions.length > 0,
+    })),
+  });
+
+  // Fetch grade items for all submissions
+  const gradeItemsQueries = useQueries({
+    queries: gradingSessionsQueries.map((sessionQuery: any, index: number) => ({
+      queryKey: ['gradeItems', 'byGradingSessionId', sessionQuery.data?.items?.[0]?.id],
+      queryFn: () => {
+        const latestSession = sessionQuery.data?.items?.[0];
+        if (!latestSession?.id) return { items: [] };
+        return gradeItemService.getGradeItems({
+          gradingSessionId: latestSession.id,
+          pageNumber: 1,
+          pageSize: 1000,
+        });
+      },
+      enabled: submissions.length > 0 && !!sessionQuery.data?.items?.[0]?.id,
+    })),
+  });
+
+  // Calculate max score from template
+  const { data: papersResponse } = useQuery({
+    queryKey: queryKeys.assessmentPapers.byTemplateId(template?.id!),
+    queryFn: () => assessmentPaperService.getAssessmentPapers({
+      assessmentTemplateId: template!.id,
+      pageNumber: 1,
+      pageSize: 100,
+    }),
+    enabled: !!template?.id,
+  });
+
+  const questionsQueries = useQueries({
+    queries: (papersResponse?.items || []).map((paper) => ({
+      queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
+      queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+        assessmentPaperId: paper.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: (papersResponse?.items || []).length > 0,
+    })),
+  });
+
+  const allQuestions = useMemo(() => {
+    const questions: any[] = [];
+    questionsQueries.forEach((query: any) => {
+      if (query.data?.items) {
+        questions.push(...query.data.items);
+      }
+    });
+    return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
+  }, [questionsQueries]);
+
+  const rubricsQueries = useQueries({
+    queries: allQuestions.map((question) => ({
+      queryKey: queryKeys.rubricItems.byQuestionId(question.id),
+      queryFn: () => rubricItemService.getRubricsForQuestion({
+        assessmentQuestionId: question.id,
+        pageNumber: 1,
+        pageSize: 100,
+      }),
+      enabled: allQuestions.length > 0,
+    })),
+  });
+
+  const maxScore = useMemo(() => {
+    let total = 0;
+    rubricsQueries.forEach((query: any) => {
+      if (query.data?.items) {
+        query.data.items.forEach((rubric: any) => {
+          total += rubric.score || 0;
+        });
+      }
+    });
+    return total;
+  }, [rubricsQueries]);
+
+  // Calculate submission scores
+  const submissionScores = useMemo(() => {
+    const scoreMap: Record<number, { total: number; max: number }> = {};
+    submissions.forEach((submission, index) => {
+      const sessionsQuery = gradingSessionsQueries[index];
+      const gradeItemsQuery = gradeItemsQueries[index];
+
+      if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
+        const latestSession = sessionsQuery.data.items[0];
+
+        if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
+          const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + item.score, 0);
+          scoreMap[submission.id] = { total: totalScore, max: maxScore };
+        } else if (latestSession.grade !== undefined && latestSession.grade !== null) {
+          scoreMap[submission.id] = { total: latestSession.grade, max: maxScore };
+        }
+      }
+    });
+    return scoreMap;
+  }, [submissions, gradingSessionsQueries, gradeItemsQueries, maxScore]);
 
 
   const batchGradingMutation = useMutation({
@@ -207,6 +316,7 @@ const LabDetailItem = ({
               setBatchGradingLoading(false);
               queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
               queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
               message.success(`Batch grading completed for ${successCount} submission(s)`);
             }
           } catch (err: any) {
@@ -276,7 +386,7 @@ const LabDetailItem = ({
                 loading={batchGradingLoading}
                 disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
               >
-                Batch Grade
+                Grade All
               </Button>
             )
           }
@@ -308,7 +418,18 @@ const LabDetailItem = ({
                 >
                   <List.Item.Meta
                     avatar={<FolderOutlined />}
-                    title={submission.studentName}
+                    title={
+                      <Space>
+                        <Text strong>{submission.studentName}</Text>
+                        {submissionScores[submission.id] && (
+                          <Tag color="green">
+                            {submissionScores[submission.id].max > 0
+                              ? `${submissionScores[submission.id].total.toFixed(2)}/${submissionScores[submission.id].max.toFixed(2)}`
+                              : submissionScores[submission.id].total.toFixed(2)}
+                          </Tag>
+                        )}
+                      </Space>
+                    }
                     description={
                       <div>
                         <div>{submission.submissionFile?.name || "No file"}</div>

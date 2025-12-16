@@ -20,6 +20,7 @@ import { assessmentFileService } from "@/services/assessmentFileService";
 import { QuestionCommentModal } from "../hod/QuestionCommentModal";
 import { useAuth } from "@/hooks/useAuth";
 import { CommentOutlined, EditOutlined } from "@ant-design/icons";
+import { EmptyPapersState, EmptyQuestionsState, EmptyRubricsState } from "@/components/shared/EmptyState";
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -377,14 +378,7 @@ export default function LecturerApprovalDetail({
   }
 
   if (papers.length === 0) {
-    return (
-      <Alert
-        message="Error"
-        description="This template has no papers."
-        type="error"
-        showIcon
-      />
-    );
+    return <EmptyPapersState backPath="/lecturer/approval" />;
   }
 
   const courseCollapseItems: CollapseProps["items"] = papers.map((paper, paperIndex) => {
@@ -534,7 +528,7 @@ export default function LecturerApprovalDetail({
                     </div>
                   )}
 
-                  {rubrics[question.id] && rubrics[question.id].length > 0 && (
+                  {rubrics[question.id] && rubrics[question.id].length > 0 ? (
                     <div style={{ marginTop: 12 }}>
                       <Text strong>Grading Criteria:</Text>
                       <ul style={{ marginTop: 8 }}>
@@ -554,6 +548,10 @@ export default function LecturerApprovalDetail({
                           </li>
                         ))}
                       </ul>
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 12 }}>
+                      <EmptyRubricsState />
                     </div>
                   )}
 
@@ -631,7 +629,7 @@ export default function LecturerApprovalDetail({
               ))}
             </div>
           ) : (
-            <Text type="secondary">No questions found for this paper.</Text>
+            <EmptyQuestionsState />
           )}
 
         </div>
