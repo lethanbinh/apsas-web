@@ -1,11 +1,14 @@
 "use client";
 
-import { LinkOutlined } from "@ant-design/icons";
-import { Alert, App, Collapse, Spin, Typography } from "antd";
+import { DownloadOutlined, LinkOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Collapse, Space, Spin, Typography } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./AssignmentList.module.css";
+import { handleDownloadAll, AssignmentWithSubmissions } from "./utils/downloadAll";
+import { useStudent } from "@/hooks/useStudent";
+import { submissionService } from "@/services/submissionService";
 
 import { AssessmentFile, assessmentFileService } from "@/services/assessmentFileService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
@@ -75,6 +78,8 @@ function mapCourseElementToAssignmentData(
 
 export default function AssignmentList() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const { message } = App.useApp();
+  const { studentId } = useStudent();
 
   useEffect(() => {
     const classId = localStorage.getItem("selectedClassId");
@@ -250,18 +255,74 @@ export default function AssignmentList() {
     );
   }
 
+  const handleDownloadAllClick = async () => {
+    if (!studentId) {
+      message.error("Student ID not found");
+      return;
+    }
+
+    const assignmentsWithData: AssignmentWithSubmissions[] = await Promise.all(
+      assignments.map(async (assignment) => {
+        let submissions: any[] = [];
+        let template = undefined;
+
+        if (assignment.classAssessmentId) {
+          try {
+            submissions = await submissionService.getSubmissionList({
+              studentId: studentId,
+              classAssessmentId: assignment.classAssessmentId,
+            });
+          } catch (err) {
+            console.error(`Failed to fetch submissions for assignment ${assignment.id}:`, err);
+          }
+        }
+
+        if (assignment.assessmentTemplateId) {
+          try {
+            const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            template = templatesRes.items.find(t => t.id === assignment.assessmentTemplateId);
+          } catch (err) {
+            console.error(`Failed to fetch template for assignment ${assignment.id}:`, err);
+          }
+        }
+
+        return {
+          assignment,
+          template,
+          submissions,
+        };
+      })
+    );
+
+    const assignmentsWithSubmissions = assignmentsWithData.filter(item => item.submissions.length > 0);
+    handleDownloadAll(assignmentsWithSubmissions, message, false);
+  };
+
   return (
     <div className={styles.wrapper}>
-      <Title
-        level={2}
-        style={{
-          fontWeight: 700,
-          color: "#2F327D !important",
-          marginBottom: "20px",
-        }}
-      >
-        Assignments
-      </Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <Title
+          level={2}
+          style={{
+            fontWeight: 700,
+            color: "#2F327D !important",
+            margin: 0,
+          }}
+        >
+          Assignments
+        </Title>
+        <Button
+          type="primary"
+          icon={<DownloadOutlined />}
+          onClick={handleDownloadAllClick}
+          size="large"
+        >
+          Download All
+        </Button>
+      </div>
       {assignments.length === 0 ? (
         <Alert message="No assignments found" description="There are no assignments for this class." type="info" />
       ) : (

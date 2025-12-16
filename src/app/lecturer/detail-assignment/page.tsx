@@ -27,6 +27,7 @@ import { rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
 import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
 import { DownloadOutlined, FileExcelOutlined, FolderOutlined, LinkOutlined, PaperClipOutlined, RobotOutlined } from "@ant-design/icons";
+import { handleDownloadAll, AssignmentWithData } from "./utils/downloadAll";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
@@ -854,14 +855,48 @@ const DetailAssignmentPage = () => {
       >
         Assignments
       </Title>
-        <Button
-          type="primary"
-          icon={<FileExcelOutlined />}
-          onClick={handleExportReport}
-          size="large"
-        >
-          Export Grade Report
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            onClick={() => {
+              const assignmentsWithData: AssignmentWithData[] = assignments.map((assignment) => {
+                const classAssessment = classAssessments.get(assignment.id);
+                let matchingTemplate: AssessmentTemplate | undefined;
+                if (classAssessment?.assessmentTemplateId) {
+                  matchingTemplate = templates.find(
+                    (t) => t.id === classAssessment.assessmentTemplateId
+                  );
+                } else {
+                  matchingTemplate = templates.find(
+                    (t) => t.courseElementId === assignment.id
+                  );
+                }
+                const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
+                  ? classAssessment
+                  : undefined;
+                const assignmentSubmissions = approvedClassAssessment ? (submissions.get(assignment.id) || []) : [];
+                return {
+                  assignment,
+                  template: matchingTemplate,
+                  submissions: assignmentSubmissions,
+                };
+              }).filter(item => item.submissions.length > 0);
+              handleDownloadAll(assignmentsWithData, message);
+            }}
+            size="large"
+          >
+            Download All
+          </Button>
+          <Button
+            type="primary"
+            icon={<FileExcelOutlined />}
+            onClick={handleExportReport}
+            size="large"
+          >
+            Export Grade Report
+          </Button>
+        </Space>
       </div>
       {assignments.length === 0 ? (
         <Alert message="No assignments found" description="There are no assignments for this class." type="info" />

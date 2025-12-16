@@ -5,8 +5,8 @@ import { assignRequestService } from "@/services/assignRequestService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
 import { classService } from "@/services/classService";
 import { CourseElement, courseElementService } from "@/services/courseElementService";
-import { LinkOutlined } from "@ant-design/icons";
-import { Alert, Collapse, Spin, Typography } from "antd";
+import { DownloadOutlined, LinkOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Collapse, Space, Spin, Typography } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +14,9 @@ import { AssignmentItem } from "./AssignmentItem";
 import styles from "./AssignmentList.module.css";
 import { AssignmentData } from "./data";
 import { queryKeys } from "@/lib/react-query";
+import { handleDownloadAll, AssignmentWithSubmissions } from "./utils/downloadAll";
+import { useStudent } from "@/hooks/useStudent";
+import { submissionService } from "@/services/submissionService";
 
 const { Title, Text } = Typography;
 
@@ -90,6 +93,8 @@ function mapCourseElementToLabData(
 
 export default function Labs() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const { message } = App.useApp();
+  const { studentId } = useStudent();
 
   useEffect(() => {
       const classId = localStorage.getItem("selectedClassId");
@@ -226,18 +231,74 @@ export default function Labs() {
     );
   }
 
+  const handleDownloadAllClick = async () => {
+    if (!studentId) {
+      message.error("Student ID not found");
+      return;
+    }
+
+    const labsWithData: AssignmentWithSubmissions[] = await Promise.all(
+      labs.map(async (lab) => {
+        let submissions: any[] = [];
+        let template = undefined;
+
+        if (lab.classAssessmentId) {
+          try {
+            submissions = await submissionService.getSubmissionList({
+              studentId: studentId,
+              classAssessmentId: lab.classAssessmentId,
+            });
+          } catch (err) {
+            console.error(`Failed to fetch submissions for lab ${lab.id}:`, err);
+          }
+        }
+
+        if (lab.assessmentTemplateId) {
+          try {
+            const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
+              pageNumber: 1,
+              pageSize: 1000,
+            });
+            template = templatesRes.items.find(t => t.id === lab.assessmentTemplateId);
+          } catch (err) {
+            console.error(`Failed to fetch template for lab ${lab.id}:`, err);
+          }
+        }
+
+        return {
+          assignment: lab,
+          template,
+          submissions,
+        };
+      })
+    );
+
+    const labsWithSubmissions = labsWithData.filter(item => item.submissions.length > 0);
+    handleDownloadAll(labsWithSubmissions, message, true);
+  };
+
   return (
     <div className={styles.wrapper}>
-      <Title
-        level={2}
-        style={{
-          fontWeight: 700,
-          color: "#2F327D",
-          marginBottom: "20px",
-        }}
-      >
-        Labs
-      </Title>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <Title
+          level={2}
+          style={{
+            fontWeight: 700,
+            color: "#2F327D",
+            margin: 0,
+          }}
+        >
+          Labs
+        </Title>
+        <Button
+          type="primary"
+          icon={<DownloadOutlined />}
+          onClick={handleDownloadAllClick}
+          size="large"
+        >
+          Download All
+        </Button>
+      </div>
       {labs.length === 0 ? (
         <Alert message="No labs found" description="There are no labs for this class." type="info" />
       ) : (

@@ -27,7 +27,7 @@ const LayoutAdmin: React.FC<LayoutAdminProps> = ({ children }) => {
           <SidebarAdmin />
           <Content className="app-content">{children}</Content>
         </AntLayout>
-        <Footer />
+      <Footer />
       </AntLayout>
     </SidebarProvider>
   );
