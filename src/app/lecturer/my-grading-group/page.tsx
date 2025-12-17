@@ -267,10 +267,10 @@ const MySubmissionsPageContent = () => {
             level={2}
             style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
           >
-            Grading Groups
+            Teacher Assignment
           </Title>
           <Text type="secondary" style={{ fontSize: 14 }}>
-            Manage your grading groups and submissions
+            Manage your teacher assignments and submissions
           </Text>
         </div>
         <Space>
@@ -306,7 +306,7 @@ const MySubmissionsPageContent = () => {
           <Card
             title={
               <Space>
-                <Text strong style={{ fontSize: 18 }}>Grading Groups</Text>
+                <Text strong style={{ fontSize: 18 }}>Teacher Assignments</Text>
               </Space>
             }
           >

@@ -260,8 +260,23 @@ export default function MyClassesPage() {
     
     const filteredOutFutureSemesters = filtered.filter((cls) => {
       if (!cls.semesterName) return true;
-      const semester = allSemesters.find((sem) => sem.semesterCode === cls.semesterName);
+      
+      // Try exact match first
+      let semester = allSemesters.find((sem) => sem.semesterCode === cls.semesterName);
+      
+      // If no exact match, try partial match
+      if (!semester) {
+        semester = allSemesters.find((sem) =>
+          cls.semesterName.includes(sem.semesterCode) ||
+          sem.semesterCode.includes(cls.semesterName) ||
+          cls.semesterName.toLowerCase().includes(sem.semesterCode.toLowerCase()) ||
+          sem.semesterCode.toLowerCase().includes(cls.semesterName.toLowerCase())
+        );
+      }
+      
+      // If still no match, show the course (might be old semester not in list)
       if (!semester) return true;
+      
       const startDate = new Date(semester.startDate.endsWith("Z") ? semester.startDate : semester.startDate + "Z");
       return startDate <= now;
     });

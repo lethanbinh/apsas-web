@@ -7,6 +7,7 @@ import { DeleteOutlined, DownloadOutlined, UserAddOutlined } from "@ant-design/i
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { useRouter } from "next/navigation";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -34,6 +35,8 @@ interface GradingGroupTableProps {
 }
 
 export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: GradingGroupTableProps) {
+  const router = useRouter();
+  
   const defaultColumns: TableProps<FlatGradingGroup>["columns"] = [
     {
       title: "Course",
@@ -99,7 +102,7 @@ export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: G
           <Button
             type="primary"
             icon={<UserAddOutlined />}
-            onClick={() => onAssign(record.group)}
+            onClick={() => router.push(`/examiner/grading-groups/${record.group.id}`)}
             size="small"
                     >
                       Manage
@@ -147,38 +150,6 @@ export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: G
         showTotal: (total) => `Total ${total} assignments`,
       }}
       scroll={{ x: 1000 }}
-      expandable={{
-        expandedRowRender: (record) => (
-          <div style={{ padding: '16px 0' }}>
-            {record.group.submittedGradeSheetUrl ? (
-              <Space direction="vertical" size="small">
-                <Text strong>Grade Sheet:</Text>
-                <Button
-                  type="link"
-                  icon={<DownloadOutlined />}
-                  href={record.group.submittedGradeSheetUrl}
-                  target="_blank"
-                  style={{ padding: 0 }}
-                >
-                  Download Grade Sheet
-                </Button>
-                {record.group.gradeSheetSubmittedAt && (
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Submitted at: {dayjs.utc(record.group.gradeSheetSubmittedAt).tz("Asia/Ho_Chi_Minh").format("DD/MM/YYYY HH:mm")}
-                  </Text>
-                )}
-              </Space>
-            ) : (
-              <Alert
-                message="No grade sheet submitted yet"
-                type="info"
-                showIcon
-              />
-            )}
-          </div>
-        ),
-        rowExpandable: () => true,
-      }}
     />
   );
 }

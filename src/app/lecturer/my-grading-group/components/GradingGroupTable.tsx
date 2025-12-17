@@ -85,7 +85,7 @@ export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProp
   if (dataSource.length === 0) {
     return (
       <Empty
-        description="No grading groups found"
+        description="No teacher assignments found"
         image={Empty.PRESENTED_IMAGE_SIMPLE}
       />
     );
@@ -99,7 +99,7 @@ export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProp
       pagination={{
         pageSize: 10,
         showSizeChanger: true,
-        showTotal: (total) => `Total ${total} grading groups`,
+        showTotal: (total) => `Total ${total} teacher assignments`,
       }}
       scroll={{ x: 800 }}
     />
