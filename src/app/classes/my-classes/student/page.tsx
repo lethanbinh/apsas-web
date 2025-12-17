@@ -71,6 +71,7 @@ export default function MyClassesPage() {
 
   useEffect(() => {
     if (isInitialLoad && allSemesters.length > 0 && allCourses.length > 0) {
+      const now = new Date();
       const uniqueSemesterNames = [
         ...new Set(allCourses.map((cls) => cls.semesterName).filter(Boolean)),
       ];
@@ -93,10 +94,20 @@ export default function MyClassesPage() {
       });
 
 
+      const filteredSemesterNames = uniqueSemesterNames.filter((name) => {
+        const semester = semesterMap.get(name);
+        if (!semester) return true;
+        const startDate = new Date(semester.startDate.endsWith("Z") ? semester.startDate : semester.startDate + "Z");
+        return startDate <= now;
+      });
+
+      if (filteredSemesterNames.length === 0) {
+        setIsInitialLoad(false);
+        return;
+      }
 
       let activeSemesterCode = currentSemesterCode;
       if (!activeSemesterCode) {
-        const now = new Date();
         const activeSemester = allSemesters.find((sem) => {
           const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
           const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
@@ -112,7 +123,7 @@ export default function MyClassesPage() {
         const exactMatchByCode = allCourses.find(
           (cls) => cls.semesterCode === activeSemesterCode
         );
-        if (exactMatchByCode?.semesterName) {
+        if (exactMatchByCode?.semesterName && filteredSemesterNames.includes(exactMatchByCode.semesterName)) {
           setSelectedSemester(exactMatchByCode.semesterName);
           setIsInitialLoad(false);
           return;
@@ -122,7 +133,7 @@ export default function MyClassesPage() {
         const exactMatchByName = allCourses.find(
           (cls) => cls.semesterName === activeSemesterCode
         );
-        if (exactMatchByName?.semesterName) {
+        if (exactMatchByName?.semesterName && filteredSemesterNames.includes(exactMatchByName.semesterName)) {
           setSelectedSemester(exactMatchByName.semesterName);
           setIsInitialLoad(false);
           return;
@@ -134,7 +145,7 @@ export default function MyClassesPage() {
                    cls.semesterName?.toLowerCase().includes(activeSemesterCode.toLowerCase()) ||
                    cls.semesterCode?.includes(activeSemesterCode)
         );
-        if (partialMatch?.semesterName) {
+        if (partialMatch?.semesterName && filteredSemesterNames.includes(partialMatch.semesterName)) {
           setSelectedSemester(partialMatch.semesterName);
           setIsInitialLoad(false);
           return;
@@ -143,7 +154,7 @@ export default function MyClassesPage() {
 
 
 
-      const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
+      const sortedSemesters = filteredSemesterNames.sort((a, b) => {
         const semA = semesterMap.get(a);
         const semB = semesterMap.get(b);
         if (semA && semB) {
@@ -163,6 +174,7 @@ export default function MyClassesPage() {
   }, [currentSemesterCode, allCourses, allSemesters, isInitialLoad]);
 
   const semesterOptions = useMemo(() => {
+    const now = new Date();
     const uniqueSemesterNames = [
       ...new Set(allCourses.map((cls) => cls.semesterName).filter(Boolean)),
     ];
@@ -202,13 +214,21 @@ export default function MyClassesPage() {
     });
 
 
-    const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
+    const filteredSemesterNames = uniqueSemesterNames.filter((name) => {
+      const semester = semesterMap.get(name);
+      if (!semester) return true;
+      const startDate = new Date(semester.startDate.endsWith("Z") ? semester.startDate : semester.startDate + "Z");
+      return startDate <= now;
+    });
+
+
+    const sortedSemesters = filteredSemesterNames.sort((a, b) => {
       const semA = semesterMap.get(a);
       const semB = semesterMap.get(b);
 
       if (semA && semB) {
-        const dateA = new Date(semA.startDate);
-        const dateB = new Date(semB.startDate);
+        const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
+        const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
         return dateB.getTime() - dateA.getTime();
       }
       if (semA) return -1;
@@ -224,15 +244,35 @@ export default function MyClassesPage() {
     return [{ label: "All Semesters", value: "all" }, ...options];
   }, [allCourses, allSemesters]);
 
+  useEffect(() => {
+    if (!isInitialLoad && selectedSemester !== "all" && semesterOptions.length > 0) {
+      const validSemesterValues = semesterOptions.map(opt => opt.value);
+      if (!validSemesterValues.includes(selectedSemester)) {
+        setSelectedSemester("all");
+      }
+    }
+  }, [semesterOptions, selectedSemester, isInitialLoad]);
+
   const filteredMappedCourses = useMemo(() => {
+    const now = new Date();
+    
     const filtered =
       selectedSemester === "all"
         ? allCourses
         : allCourses.filter(
             (cls) => cls.semesterName === selectedSemester
           );
-    return mapStudentInClassToCardProps(filtered);
-  }, [allCourses, selectedSemester]);
+    
+    const filteredOutFutureSemesters = filtered.filter((cls) => {
+      if (!cls.semesterCode) return true;
+      const semester = allSemesters.find((sem) => sem.semesterCode === cls.semesterCode);
+      if (!semester) return true;
+      const startDate = new Date(semester.startDate.endsWith("Z") ? semester.startDate : semester.startDate + "Z");
+      return startDate <= now;
+    });
+    
+    return mapStudentInClassToCardProps(filteredOutFutureSemesters);
+  }, [allCourses, selectedSemester, allSemesters]);
 
   const handleSemesterChange = (value: string) => {
     setSelectedSemester(value);

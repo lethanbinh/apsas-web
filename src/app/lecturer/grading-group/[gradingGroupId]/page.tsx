@@ -306,10 +306,14 @@ export default function GradingGroupPage() {
 
   const handleUploadGradeSheet = useCallback(() => {
     if (!gradingGroup) return;
+    if (isGradeSheetSubmitted) {
+      message.warning("Grade sheet has already been submitted. You cannot submit again.");
+      return;
+    }
     setUploadFile(null);
     setUploadFileList([]);
     setUploadModalVisible(true);
-  }, [gradingGroup]);
+  }, [gradingGroup, isGradeSheetSubmitted, message]);
 
   const handleUploadSubmit = useCallback(async () => {
     if (!gradingGroup || !uploadFile) {
@@ -317,11 +321,19 @@ export default function GradingGroupPage() {
       return;
     }
 
+    if (isGradeSheetSubmitted) {
+      message.warning("Grade sheet has already been submitted. You cannot submit again.");
+      setUploadModalVisible(false);
+      setUploadFile(null);
+      setUploadFileList([]);
+      return;
+    }
+
     uploadGradeSheetMutation.mutate({
       gradingGroupId: gradingGroup.id,
       file: uploadFile,
     });
-  }, [gradingGroup, uploadFile, uploadGradeSheetMutation, message]);
+  }, [gradingGroup, uploadFile, uploadGradeSheetMutation, message, isGradeSheetSubmitted]);
 
   const handleExportGradeReport = useCallback(async () => {
     if (!gradingGroup) return;
@@ -491,6 +503,16 @@ export default function GradingGroupPage() {
             semesterEnded={semesterEnded}
             isGradeSheetSubmitted={isGradeSheetSubmitted}
           />
+
+          {!isGradeSheetSubmitted && (
+            <Alert
+              message="Important Notice"
+              description="This grade sheet can only be submitted once. After submission, it cannot be edited or resubmitted. Please ensure all information is correct before submitting."
+              type="warning"
+              showIcon
+              closable
+            />
+          )}
 
           {gradingGroup && (
             <Card title="Submitted Grade Sheet">

@@ -46,7 +46,7 @@ export function GradingGroupHeader({
         <Button
           icon={<UploadOutlined />}
           onClick={onUploadGradeSheet}
-          disabled={semesterEnded}
+          disabled={semesterEnded || isGradeSheetSubmitted}
           size="large"
         >
           Submit Grade Sheet

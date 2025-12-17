@@ -300,9 +300,15 @@ export function useGradingGroupData(
   });
 
   const semesters = useMemo(() => {
+    const now = new Date();
     const filtered = semesterDetailsQueries
       .map(q => q.data)
-      .filter((s): s is SemesterPlanDetail => s !== undefined);
+      .filter((s): s is SemesterPlanDetail => s !== undefined)
+      .filter((s) => {
+        if (!s.startDate) return true;
+        const startDate = new Date(s.startDate.endsWith("Z") ? s.startDate : s.startDate + "Z");
+        return startDate <= now;
+      });
 
 
     return [...filtered].sort((a, b) => {

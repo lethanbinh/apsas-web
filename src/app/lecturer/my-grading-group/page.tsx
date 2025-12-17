@@ -56,6 +56,7 @@ const MySubmissionsPageContent = () => {
 
 
   const filteredGradingGroups = useMemo(() => {
+    const now = new Date();
     const groupedMap = new Map<string, GradingGroup>();
 
     gradingGroups.forEach((group) => {
@@ -66,6 +67,16 @@ const MySubmissionsPageContent = () => {
 
       if (!semesterCode || assessmentTemplateId === null || assessmentTemplateId === undefined) {
         return;
+      }
+
+      const semesterDetail = semesters.find((s) => s.semesterCode === semesterCode);
+      if (semesterDetail) {
+        const startDate = semesterDetail.startDate 
+          ? new Date(semesterDetail.startDate.endsWith("Z") ? semesterDetail.startDate : semesterDetail.startDate + "Z")
+          : null;
+        if (startDate && startDate > now) {
+          return;
+        }
       }
 
       const key = `${semesterCode}_${assessmentTemplateId}_${lecturerId}`;
@@ -85,7 +96,7 @@ const MySubmissionsPageContent = () => {
     });
 
     return Array.from(groupedMap.values());
-  }, [gradingGroups, gradingGroupToSemesterMap]);
+  }, [gradingGroups, gradingGroupToSemesterMap, semesters]);
 
 
   const filteredGradingGroupIds = useMemo(() => {
@@ -142,6 +153,7 @@ const MySubmissionsPageContent = () => {
 
 
   const availableCourses = useMemo(() => {
+    const now = new Date();
     const courseMap = new Map<number, { courseId: number; courseName: string }>();
 
     gradingGroups.forEach((group) => {
@@ -149,6 +161,16 @@ const MySubmissionsPageContent = () => {
       const semesterCode = gradingGroupToSemesterMap[group.id];
 
       if (!courseInfo) return;
+
+      const semesterDetail = semesterCode ? semesters.find((s) => s.semesterCode === semesterCode) : undefined;
+      if (semesterDetail) {
+        const startDate = semesterDetail.startDate 
+          ? new Date(semesterDetail.startDate.endsWith("Z") ? semesterDetail.startDate : semesterDetail.startDate + "Z")
+          : null;
+        if (startDate && startDate > now) {
+          return;
+        }
+      }
 
 
       if (selectedSemester !== undefined) {
@@ -169,6 +191,7 @@ const MySubmissionsPageContent = () => {
 
 
   const availableTemplates = useMemo(() => {
+    const now = new Date();
     const templateMap = new Map<number, { id: number; name: string; assessmentTemplateId: number | null }>();
 
     gradingGroups.forEach((group) => {
@@ -177,6 +200,16 @@ const MySubmissionsPageContent = () => {
       const templateId = group.assessmentTemplateId;
 
       if (!templateId) return;
+
+      const semesterDetail = semesterCode ? semesters.find((s) => s.semesterCode === semesterCode) : undefined;
+      if (semesterDetail) {
+        const startDate = semesterDetail.startDate 
+          ? new Date(semesterDetail.startDate.endsWith("Z") ? semesterDetail.startDate : semesterDetail.startDate + "Z")
+          : null;
+        if (startDate && startDate > now) {
+          return;
+        }
+      }
 
 
       if (selectedSemester !== undefined) {

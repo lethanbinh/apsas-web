@@ -191,6 +191,7 @@ export class GradingGroupService {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          timeout: 0,
         }
       );
     } catch (error: any) {

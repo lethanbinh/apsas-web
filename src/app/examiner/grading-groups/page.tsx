@@ -239,8 +239,13 @@ const GradingGroupsPageContent = () => {
 
 
   const availableSemesters = useMemo(() => {
+    const now = new Date();
+    const filtered = allSemesters.filter((sem) => {
+      const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+      return startDate <= now;
+    });
 
-    const sorted = [...allSemesters].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
       const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
       return dateB - dateA;
@@ -252,8 +257,14 @@ const GradingGroupsPageContent = () => {
   useEffect(() => {
     if (allSemesters.length > 0 && selectedSemester === null) {
       const now = new Date();
+      const filteredSemesters = allSemesters.filter((sem) => {
+        const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+        return startDate <= now;
+      });
 
-      const currentSemester = allSemesters.find((sem) => {
+      if (filteredSemesters.length === 0) return;
+
+      const currentSemester = filteredSemesters.find((sem) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
         const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
         return now >= startDate && now <= endDate;
@@ -263,7 +274,7 @@ const GradingGroupsPageContent = () => {
         setSelectedSemester(currentSemester.semesterCode);
       } else {
 
-        const latestSemester = [...allSemesters].sort((a, b) => {
+        const latestSemester = [...filteredSemesters].sort((a, b) => {
           const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
           const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
           return dateB - dateA;
@@ -275,13 +286,30 @@ const GradingGroupsPageContent = () => {
     }
   }, [allSemesters, selectedSemester]);
 
+  useEffect(() => {
+    if (selectedSemester !== null && selectedSemester !== "all" && availableSemesters.length > 0) {
+      if (!availableSemesters.includes(selectedSemester)) {
+        setSelectedSemester(null);
+      }
+    }
+  }, [availableSemesters, selectedSemester]);
+
 
   const availableCourses = useMemo(() => {
+    const now = new Date();
     const courseMap = new Map<number, { id: number; name: string; code: string }>();
     allCourseElements.forEach(ce => {
       if (ce.semesterCourse?.course && ce.semesterCourse?.semester) {
+        const semester = ce.semesterCourse.semester;
+        const semesterData = allSemesters.find((s) => s.semesterCode === semester.semesterCode);
+        if (semesterData) {
+          const startDate = new Date(semesterData.startDate.endsWith("Z") ? semesterData.startDate : semesterData.startDate + "Z");
+          if (startDate > now) {
+            return;
+          }
+        }
 
-        if (selectedSemester !== null && selectedSemester !== "all" && ce.semesterCourse.semester.semesterCode !== selectedSemester) {
+        if (selectedSemester !== null && selectedSemester !== "all" && semester.semesterCode !== selectedSemester) {
           return;
         }
         const course = ce.semesterCourse.course;
@@ -295,7 +323,7 @@ const GradingGroupsPageContent = () => {
       }
     });
     return Array.from(courseMap.values());
-  }, [allCourseElements, selectedSemester]);
+  }, [allCourseElements, selectedSemester, allSemesters]);
 
 
   const availableTemplates = useMemo(() => {
@@ -316,6 +344,7 @@ const GradingGroupsPageContent = () => {
 
 
   const groupedByCourse = useMemo(() => {
+    const now = new Date();
     const courseMap = new Map<number, {
       courseId: number;
       courseName: string;
@@ -350,6 +379,16 @@ const GradingGroupsPageContent = () => {
 
 
       const groupSemester = gradingGroupToSemesterMap.get(Number(group.id));
+
+      if (groupSemester) {
+        const semesterData = allSemesters.find((s) => s.semesterCode === groupSemester);
+        if (semesterData) {
+          const startDate = new Date(semesterData.startDate.endsWith("Z") ? semesterData.startDate : semesterData.startDate + "Z");
+          if (startDate > now) {
+            return;
+          }
+        }
+      }
 
 
       if (selectedSemester !== null && selectedSemester !== "all") {
@@ -457,6 +496,7 @@ const GradingGroupsPageContent = () => {
     gradingGroupToSemesterMap,
     allAssessmentTemplates,
     allCourseElements,
+    allSemesters,
   ]);
 
 
