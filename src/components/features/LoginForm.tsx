@@ -7,6 +7,7 @@ import { DEMO_ACCOUNTS } from "@/lib/constants/demoAccounts";
 import { formatErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/lib/constants/errorMessages";
 import { deleteCookie, setCookie } from "@/lib/utils/cookie";
 import { removeStorageItem, setStorageItem } from "@/lib/utils/storage";
+import { initSessionTimeout } from "@/lib/utils/sessionTimeout";
 import { authService } from "@/services/authService";
 import { fetchUserProfile, logout } from "@/store/slices/authSlice";
 import { AppDispatch } from "@/store/store";
@@ -108,6 +109,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
 
       console.log("Login successful!");
 
+      // Initialize session timeout
+      if (result.token) {
+        initSessionTimeout(result.token, () => {
+          if (typeof window !== 'undefined') {
+            removeStorageItem('auth_token');
+            removeStorageItem('user_data');
+            removeStorageItem('user_id');
+            deleteCookie('auth_token');
+            dispatch(logout());
+            window.location.href = '/login';
+          }
+        });
+      }
+
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/manage-users",
         1: "/classes/my-classes/lecturer",
@@ -156,7 +171,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
-          const userRoleIdentifier = roleIdentifiers[userRole];
           const pathSegments = decodedRedirect.split("/").filter(Boolean);
           const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
             const otherRole = Number(roleNum);
@@ -189,14 +203,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       }
 
       dispatch(logout());
-
-
       let errorMessage: string = DEFAULT_ERROR_MESSAGES.LOGIN_FAILED;
-
-
-
-
-
       if (typeof error === 'string') {
         errorMessage = formatErrorMessage(error);
       }
@@ -225,8 +232,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           } else if (status >= 500) {
             errorMessage = DEFAULT_ERROR_MESSAGES.SERVER_ERROR;
           }
-
-
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = formatErrorMessage(errorData.errorMessages[0]);
@@ -262,8 +267,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setIsLoggingIn(false);
     }
   };
-
-
   const handleLogoClick = () => {
     setIsDemoModalOpen(true);
     setSelectedDemoAccount(null);
@@ -290,7 +293,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       }, 100);
     }
   };
-
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -337,6 +339,20 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setCookie("auth_token", response.result.token);
 
       const token = response.result.token;
+
+      // Initialize session timeout for Google login
+      if (token) {
+        initSessionTimeout(token, () => {
+          if (typeof window !== 'undefined') {
+            removeStorageItem('auth_token');
+            removeStorageItem('user_data');
+            removeStorageItem('user_id');
+            deleteCookie('auth_token');
+            dispatch(logout());
+            window.location.href = '/login';
+          }
+        });
+      }
 
       let decoded;
       try {
@@ -425,7 +441,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
-          const userRoleIdentifier = roleIdentifiers[userRole];
           const pathSegments = decodedRedirect.split("/").filter(Boolean);
           const hasOtherRole = Object.entries(roleIdentifiers).some(([roleNum, identifier]) => {
             const otherRole = Number(roleNum);

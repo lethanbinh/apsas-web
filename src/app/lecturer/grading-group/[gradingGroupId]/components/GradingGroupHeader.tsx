@@ -11,6 +11,7 @@ interface GradingGroupHeaderProps {
   submissionsCount: number;
   semesterEnded: boolean;
   isGradeSheetSubmitted: boolean;
+  selectedCount?: number;
 }
 
 export function GradingGroupHeader({
@@ -23,6 +24,7 @@ export function GradingGroupHeader({
   submissionsCount,
   semesterEnded,
   isGradeSheetSubmitted,
+  selectedCount = 0,
 }: GradingGroupHeaderProps) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -58,9 +60,9 @@ export function GradingGroupHeader({
             loading={batchGradingLoading}
             type="primary"
             size="large"
-            disabled={semesterEnded || isGradeSheetSubmitted}
+            disabled={semesterEnded || isGradeSheetSubmitted || selectedCount === 0}
           >
-            Grade All
+            Grade Selected {selectedCount > 0 ? `(${selectedCount})` : ''}
           </Button>
         )}
       </Space>

@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, App, Button, Card, Space, Spin, Typography } from "antd";
-import { DownloadOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Card, Space, Spin, Typography, Select } from "antd";
+import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -47,6 +47,8 @@ export default function GradingGroupPage() {
   const [uploadFileList, setUploadFileList] = useState<any[]>([]);
   const [semesterEnded, setSemesterEnded] = useState(false);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [scoreFilter, setScoreFilter] = useState<'all' | 'graded' | 'ungraded'>('all');
   const queryClient = useQueryClient();
 
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
@@ -358,9 +360,72 @@ export default function GradingGroupPage() {
     await handleDownloadSelected(selectedSubmissions, gradingGroup, message);
   }, [gradingGroup, selectedSubmissions, message]);
 
-  const handleSelectionChange = useCallback((selectedRowKeys: React.Key[], selectedRows: Submission[]) => {
-    setSelectedSubmissions(selectedRows);
+  const handleSelectionChange = useCallback((newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
+    if (newSelectedRowKeys.length <= 10) {
+      setSelectedRowKeys(newSelectedRowKeys);
+      setSelectedSubmissions(selectedRows);
+    }
   }, []);
+
+  // Filter submissions based on score filter
+  const filteredSubmissions = useMemo(() => {
+    if (scoreFilter === 'all') {
+      return submissions;
+    }
+    return submissions.filter(sub => {
+      const hasScore = submissionTotalScores[sub.id] !== undefined && submissionTotalScores[sub.id] !== null;
+      if (scoreFilter === 'graded') {
+        return hasScore;
+      } else { // ungraded
+        return !hasScore;
+      }
+    });
+  }, [submissions, scoreFilter, submissionTotalScores]);
+
+  // Update selected submissions when filter changes
+  useEffect(() => {
+    const filteredIds = new Set(filteredSubmissions.map(s => s.id));
+    const newSelectedRowKeys = selectedRowKeys.filter(id => filteredIds.has(Number(id)));
+    if (newSelectedRowKeys.length !== selectedRowKeys.length) {
+      setSelectedRowKeys(newSelectedRowKeys);
+      const newSelectedSubmissions = submissions.filter(s => newSelectedRowKeys.includes(s.id));
+      setSelectedSubmissions(newSelectedSubmissions);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scoreFilter, filteredSubmissions.length]);
+
+  // Get submissions without score (prioritized for quick select)
+  const ungradedSubmissions = useMemo(() => {
+    return submissions.filter(sub => {
+      const hasScore = submissionTotalScores[sub.id] !== undefined && submissionTotalScores[sub.id] !== null;
+      return !hasScore;
+    });
+  }, [submissions, submissionTotalScores]);
+
+  // Handle quick select 10 submissions (prioritize ungraded)
+  const handleQuickSelect10 = useCallback(() => {
+    const toSelect: Submission[] = [];
+    
+    // First, add ungraded submissions (up to 10)
+    for (const sub of ungradedSubmissions) {
+      if (toSelect.length >= 10) break;
+      toSelect.push(sub);
+    }
+    
+    // If we need more, add graded submissions
+    if (toSelect.length < 10) {
+      for (const sub of submissions) {
+        if (toSelect.length >= 10) break;
+        if (!toSelect.find(s => s.id === sub.id)) {
+          toSelect.push(sub);
+        }
+      }
+    }
+    
+    const newSelectedRowKeys = toSelect.map(s => s.id);
+    setSelectedRowKeys(newSelectedRowKeys);
+    setSelectedSubmissions(toSelect);
+  }, [submissions, ungradedSubmissions]);
 
   const handleBatchGrading = useCallback(async () => {
     if (!gradingGroup || !gradingGroup.assessmentTemplateId) {
@@ -368,16 +433,19 @@ export default function GradingGroupPage() {
       return;
     }
 
-    if (submissions.length === 0) {
-      message.warning("No submissions to grade");
+    // Only grade selected submissions
+    if (selectedSubmissions.length === 0) {
+      message.warning("Please select at least one submission to grade");
       return;
     }
 
+    const submissionsToGrade = selectedSubmissions;
+
     setBatchGradingLoading(true);
-    message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
+    message.loading(`Starting batch grading for ${submissionsToGrade.length} submission(s)...`, 0);
 
     try {
-      const gradingPromises = submissions.map(async (submission) => {
+      const gradingPromises = submissionsToGrade.map(async (submission) => {
         try {
           await gradingService.autoGrading({
             submissionId: submission.id,
@@ -468,7 +536,7 @@ export default function GradingGroupPage() {
       setBatchGradingLoading(false);
       message.error(err.message || "Failed to start batch grading");
     }
-  }, [gradingGroup, submissions, message, queryClient, gradingGroupId]);
+  }, [gradingGroup, submissions, selectedSubmissions, message, queryClient, gradingGroupId]);
 
   const loading = isLoadingGradingGroups && !gradingGroup;
 
@@ -502,6 +570,7 @@ export default function GradingGroupPage() {
             submissionsCount={submissions.length}
             semesterEnded={semesterEnded}
             isGradeSheetSubmitted={isGradeSheetSubmitted}
+            selectedCount={selectedSubmissions.length}
           />
 
           {!isGradeSheetSubmitted && (
@@ -548,6 +617,22 @@ export default function GradingGroupPage() {
             title="Submissions"
             extra={
               <Space>
+                <Select
+                  value={scoreFilter}
+                  onChange={setScoreFilter}
+                  style={{ width: 150 }}
+                  suffixIcon={<FilterOutlined />}
+                >
+                  <Select.Option value="all">All Submissions</Select.Option>
+                  <Select.Option value="graded">Graded Only</Select.Option>
+                  <Select.Option value="ungraded">Ungraded Only</Select.Option>
+                </Select>
+                <Button
+                  onClick={handleQuickSelect10}
+                  disabled={filteredSubmissions.length === 0 || selectedRowKeys.length >= 10}
+                >
+                  Select 10
+                </Button>
                 <Button
                   icon={<DownloadOutlined />}
                   onClick={handleDownloadSelectedClick}
@@ -566,6 +651,15 @@ export default function GradingGroupPage() {
               </Space>
             }
           >
+            {selectedRowKeys.length >= 10 && (
+              <Alert
+                message={`Maximum 10 submissions selected (${selectedRowKeys.length}/10)`}
+                type="info"
+                showIcon
+                closable
+                style={{ marginBottom: 16 }}
+              />
+            )}
             <SubmissionsTable
               submissions={submissions}
               submissionTotalScores={submissionTotalScores}
@@ -573,6 +667,9 @@ export default function GradingGroupPage() {
               onEdit={handleOpenEditModal}
               isGradeSheetSubmitted={isGradeSheetSubmitted}
               onSelectionChange={handleSelectionChange}
+              selectedRowKeys={selectedRowKeys}
+              maxSelection={10}
+              filteredSubmissions={filteredSubmissions}
             />
           </Card>
         </Space>

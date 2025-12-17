@@ -5,6 +5,7 @@ import { User, LoginCredentials, RegisterData } from '@/types';
 import { authService } from '@/services/authService';
 import { setCookie, deleteCookie } from '@/lib/utils/cookie';
 import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/storage';
+import { clearSessionTimeout } from '@/lib/utils/sessionTimeout';
 
 interface AuthState {
   user: User | null;
@@ -245,6 +246,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.error = null;
       if (typeof window !== 'undefined') {
+        clearSessionTimeout();
         removeStorageItem('auth_token');
         removeStorageItem('user_data');
         removeStorageItem('user_id');

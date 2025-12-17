@@ -5,7 +5,7 @@ import type { Submission } from "@/services/submissionService";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -19,6 +19,9 @@ interface SubmissionsTableProps {
   onEdit: (submission: Submission) => void;
   isGradeSheetSubmitted: boolean;
   onSelectionChange?: (selectedRowKeys: React.Key[], selectedRows: Submission[]) => void;
+  selectedRowKeys?: React.Key[];
+  maxSelection?: number;
+  filteredSubmissions?: Submission[];
 }
 
 export function SubmissionsTable({
@@ -28,8 +31,19 @@ export function SubmissionsTable({
   onEdit,
   isGradeSheetSubmitted,
   onSelectionChange,
+  selectedRowKeys: externalSelectedRowKeys,
+  maxSelection = 10,
+  filteredSubmissions,
 }: SubmissionsTableProps) {
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [internalSelectedRowKeys, setInternalSelectedRowKeys] = useState<React.Key[]>([]);
+  const selectedRowKeys = externalSelectedRowKeys !== undefined ? externalSelectedRowKeys : internalSelectedRowKeys;
+  const displaySubmissions = filteredSubmissions || submissions;
+  
+  useEffect(() => {
+    if (externalSelectedRowKeys !== undefined) {
+      setInternalSelectedRowKeys(externalSelectedRowKeys);
+    }
+  }, [externalSelectedRowKeys]);
   const columns: TableProps<Submission>["columns"] = [
     {
       title: "ID",
@@ -126,15 +140,24 @@ export function SubmissionsTable({
   const rowSelection = onSelectionChange ? {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
-      setSelectedRowKeys(newSelectedRowKeys);
+      // Limit to maxSelection
+      if (newSelectedRowKeys.length > maxSelection) {
+        return;
+      }
+      if (externalSelectedRowKeys === undefined) {
+        setInternalSelectedRowKeys(newSelectedRowKeys);
+      }
       onSelectionChange(newSelectedRowKeys, selectedRows);
     },
+    getCheckboxProps: (record: Submission) => ({
+      disabled: selectedRowKeys.length >= maxSelection && !selectedRowKeys.includes(record.id),
+    }),
   } : undefined;
 
   return (
     <Table
       columns={columns}
-      dataSource={submissions}
+      dataSource={displaySubmissions}
       rowKey="id"
       rowSelection={rowSelection}
       pagination={{
