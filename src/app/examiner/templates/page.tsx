@@ -123,6 +123,7 @@ const TemplatesPageContent = () => {
 
 
   const semesters = useMemo(() => {
+    const now = new Date();
 
     const semesterCodesWithTemplates = new Set<string>();
     allTemplates.forEach(template => {
@@ -133,7 +134,19 @@ const TemplatesPageContent = () => {
     });
 
 
-    return allSemesters.filter((s: Semester) => semesterCodesWithTemplates.has(s.semesterCode));
+    const filtered = allSemesters.filter((s: Semester) => {
+      if (!semesterCodesWithTemplates.has(s.semesterCode)) {
+        return false;
+      }
+      const startDate = new Date(s.startDate.endsWith("Z") ? s.startDate : s.startDate + "Z");
+      return startDate <= now; // Only include past and current semesters
+    });
+    // Sort by startDate descending (newest first)
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
+      const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
+      return dateB - dateA;
+    });
   }, [allSemesters, allTemplates, allCourseElementsMap]);
 
 

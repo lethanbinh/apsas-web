@@ -439,82 +439,82 @@ export default function ApprovalList() {
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Semester
             </Text>
-            <Select
+          <Select
               placeholder="Select semester"
-              allowClear
+            allowClear
               style={{ width: "100%" }}
-              value={selectedSemester}
-              onChange={(value) => {
-                setSelectedSemester(value);
-                setSelectedCourse(undefined);
-              }}
-              options={uniqueSemesters.map(semester => ({
-                label: semester,
-                value: semester,
-              }))}
-            />
+            value={selectedSemester}
+            onChange={(value) => {
+              setSelectedSemester(value);
+              setSelectedCourse(undefined);
+            }}
+            options={uniqueSemesters.map(semester => ({
+              label: semester,
+              value: semester,
+            }))}
+          />
           </div>
 
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Course
             </Text>
-            <Select
+          <Select
               placeholder="Select course"
-              allowClear
-              disabled={!selectedSemester}
+            allowClear
+            disabled={!selectedSemester}
               style={{ width: "100%" }}
-              value={selectedCourse}
-              onChange={(value) => {
-                setSelectedCourse(value);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
-              options={uniqueCourses.map(course => ({
-                label: course,
-                value: course,
-              }))}
-            />
+            value={selectedCourse}
+            onChange={(value) => {
+              setSelectedCourse(value);
+              setPagination(prev => ({ ...prev, current: 1 }));
+            }}
+            options={uniqueCourses.map(course => ({
+              label: course,
+              value: course,
+            }))}
+          />
           </div>
 
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Status
             </Text>
-            <Select
+          <Select
               placeholder="Select status"
-              allowClear
+            allowClear
               style={{ width: "100%" }}
-              value={selectedStatus}
-              onChange={(value) => {
-                setSelectedStatus(value);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
-              options={[
-                { label: "Pending", value: 1 },
-                { label: "Approved", value: 5 },
-                { label: "Rejected", value: 3 },
-              ]}
-            />
+            value={selectedStatus}
+            onChange={(value) => {
+              setSelectedStatus(value);
+              setPagination(prev => ({ ...prev, current: 1 }));
+            }}
+            options={[
+              { label: "Pending", value: 1 },
+              { label: "Approved", value: 5 },
+              { label: "Rejected", value: 3 },
+            ]}
+          />
           </div>
 
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Template
             </Text>
-            <Select
+          <Select
               placeholder="Select template filter"
-              allowClear
+            allowClear
               style={{ width: "100%" }}
-              value={selectedTemplateFilter}
-              onChange={(value) => {
-                setSelectedTemplateFilter(value);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
-              options={[
-                { label: "With Template", value: "with" },
-                { label: "Without Template", value: "without" },
-              ]}
-            />
+            value={selectedTemplateFilter}
+            onChange={(value) => {
+              setSelectedTemplateFilter(value);
+              setPagination(prev => ({ ...prev, current: 1 }));
+            }}
+            options={[
+              { label: "With Template", value: "with" },
+              { label: "Without Template", value: "without" },
+            ]}
+          />
           </div>
 
           <Button

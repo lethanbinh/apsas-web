@@ -1,14 +1,16 @@
 "use client";
 
+import { GradingNotesModal } from "@/components/common/GradingNotesModal";
 import { queryKeys } from "@/lib/react-query";
 import { GradeItem, gradeItemService } from "@/services/gradeItemService";
 import { gradingService } from "@/services/gradingService";
-import { Alert, Button, Collapse, Descriptions, Divider, Modal, Space, Spin, Table, Tag, Typography } from "antd";
+import { WarningOutlined } from "@ant-design/icons";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { Alert, Button, Collapse, Descriptions, Modal, Space, Spin, Table, Tag, Typography } from "antd";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useMemo, useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -27,6 +29,8 @@ interface GradingHistoryModalProps {
 
 export function GradingHistoryModal({ visible, onClose, submissionId }: GradingHistoryModalProps) {
   const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set());
+  const [gradingNotesModalOpen, setGradingNotesModalOpen] = useState(false);
+  const [selectedGradingLogs, setSelectedGradingLogs] = useState<any[]>([]);
 
 
   const { data: gradingSessionsData, isLoading: loadingGradingHistory } = useQuery({
@@ -174,7 +178,7 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                       </Descriptions.Item>
                     </Descriptions>
 
-                    {}
+                    { }
                     {session.gradingLogs && session.gradingLogs.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
                         <Title level={5} style={{ marginBottom: 8 }}>
@@ -183,24 +187,19 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                         <Alert
                           message="Grading Notes"
                           description={
-                            <div>
-                              {session.gradingLogs.map((log, index) => (
-                                <div key={log.id} style={{ marginBottom: index < session.gradingLogs.length - 1 ? 12 : 0 }}>
-                                  <div style={{ marginBottom: 4 }}>
-                                    <Tag color="blue">{log.action}</Tag>
-                                    <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
-                                      {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                                    </Text>
-                                  </div>
-                                  <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
-                                    {log.details}
-                                  </Text>
-                                  {index < session.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
-                                </div>
-                              ))}
-                            </div>
+                            <Button
+                              type="link"
+                              icon={<WarningOutlined />}
+                              onClick={() => {
+                                setSelectedGradingLogs(session.gradingLogs);
+                                setGradingNotesModalOpen(true);
+                              }}
+                              style={{ padding: 0, height: "auto" }}
+                            >
+                              View warning ({session.gradingLogs.length})
+                            </Button>
                           }
-                          type="info"
+                          type="warning"
                           showIcon
                           style={{ marginBottom: 16 }}
                         />
@@ -245,6 +244,14 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
           />
         )}
       </Spin>
+      <GradingNotesModal
+        open={gradingNotesModalOpen}
+        onClose={() => {
+          setGradingNotesModalOpen(false);
+          setSelectedGradingLogs([]);
+        }}
+        gradingLogs={selectedGradingLogs}
+      />
     </Modal>
   );
 }

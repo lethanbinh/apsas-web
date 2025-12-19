@@ -1,7 +1,7 @@
 "use client";
 
-import { Alert, App, Button, Card, Space, Spin, Typography } from "antd";
-import { ArrowLeftOutlined, DownloadOutlined } from "@ant-design/icons";
+import { Alert, App, Button, Card, Popconfirm, Space, Spin, Typography } from "antd";
+import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -9,14 +9,15 @@ import timezone from "dayjs/plugin/timezone";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
 import { gradingGroupService, GradingGroup } from "@/services/gradingGroupService";
 import { Submission, submissionService } from "@/services/submissionService";
 import { SubmissionsTable } from "@/app/lecturer/grading-group/[gradingGroupId]/components/SubmissionsTable";
 import { gradingService } from "@/services/gradingService";
 import { gradeItemService } from "@/services/gradeItemService";
+import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
 
 const { Title, Text } = Typography;
 
@@ -25,6 +26,10 @@ export default function ExaminerGradingGroupPage() {
   const params = useParams();
   const gradingGroupId = params?.gradingGroupId ? Number(params.gradingGroupId) : null;
   const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
 
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.all,
@@ -136,8 +141,63 @@ export default function ExaminerGradingGroupPage() {
     router.back();
   };
 
-  const handleSelectionChange = () => {
-    // Examiner doesn't need selection
+  const handleSelectionChange = (selectedRowKeys: React.Key[], selectedRows: Submission[]) => {
+    setSelectedRowKeys(selectedRowKeys);
+    setSelectedSubmissions(selectedRows);
+  };
+
+  const handleOpenAssignModal = () => {
+    setIsAssignModalOpen(true);
+  };
+
+  const handleCloseAssignModal = () => {
+    setIsAssignModalOpen(false);
+  };
+
+  const handleAssignModalOk = () => {
+    setIsAssignModalOpen(false);
+    // Invalidate queries to refresh submissions
+    queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
+  };
+
+  const handleDeleteSubmission = async (submission: Submission) => {
+    try {
+      await submissionService.deleteSubmission(submission.id);
+      message.success(`Submission deleted successfully!`);
+      // Invalidate queries to refresh submissions
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
+      setSelectedRowKeys([]);
+      setSelectedSubmissions([]);
+    } catch (err: any) {
+      console.error("Failed to delete submission:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submission.";
+      message.error(errorMsg);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedSubmissions.length === 0) {
+      message.warning("Please select at least one submission to delete");
+      return;
+    }
+
+    try {
+      await Promise.all(
+        selectedSubmissions.map(submission => submissionService.deleteSubmission(submission.id))
+      );
+      message.success(`Deleted ${selectedSubmissions.length} submission(s) successfully!`);
+      // Invalidate queries to refresh submissions
+      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
+      setSelectedRowKeys([]);
+      setSelectedSubmissions([]);
+    } catch (err: any) {
+      console.error("Failed to delete submissions:", err);
+      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submissions.";
+      message.error(errorMsg);
+    }
   };
 
   const loading = isLoadingGradingGroups && !gradingGroup;
@@ -171,6 +231,15 @@ export default function ExaminerGradingGroupPage() {
                 {title}
               </Title>
             </Space>
+            {gradingGroup && (
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                onClick={handleOpenAssignModal}
+              >
+                Upload Submissions
+              </Button>
+            )}
           </div>
 
           {gradingGroup && (
@@ -203,18 +272,51 @@ export default function ExaminerGradingGroupPage() {
             </Card>
           )}
 
-          <Card title="Submissions">
+          <Card 
+            title="Submissions"
+            extra={
+              selectedSubmissions.length > 0 && (
+                <Popconfirm
+                  title={`Delete ${selectedSubmissions.length} submission(s)`}
+                  description="Are you sure you want to delete these submissions?"
+                  onConfirm={handleDeleteSelected}
+                  okText="Delete"
+                  cancelText="Cancel"
+                  okType="danger"
+                >
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={selectedSubmissions.length === 0}
+                  >
+                    Delete Selected ({selectedSubmissions.length})
+                  </Button>
+                </Popconfirm>
+              )
+            }
+          >
             <SubmissionsTable
               submissions={submissions}
               submissionTotalScores={submissionTotalScores}
               maxScore={0}
-              onEdit={() => {}}
+              onDelete={handleDeleteSubmission}
               isGradeSheetSubmitted={isGradeSheetSubmitted}
               onSelectionChange={handleSelectionChange}
+              selectedRowKeys={selectedRowKeys}
             />
           </Card>
         </Space>
       </Card>
+
+      {gradingGroup && gradingGroupsData && (
+        <AssignSubmissionsModal
+          open={isAssignModalOpen}
+          onCancel={handleCloseAssignModal}
+          onOk={handleAssignModalOk}
+          group={gradingGroup}
+          allGroups={gradingGroupsData}
+        />
+      )}
     </div>
   );
 }

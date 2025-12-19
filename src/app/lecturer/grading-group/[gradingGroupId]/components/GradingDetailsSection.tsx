@@ -1,5 +1,5 @@
 import { Alert, Button, Col, Divider, Row, Space, Tag } from "antd";
-import { HistoryOutlined, RobotOutlined, SaveOutlined } from "@ant-design/icons";
+import { HistoryOutlined, RobotOutlined, SaveOutlined, WarningOutlined } from "@ant-design/icons";
 import { QuestionsGradingSection } from "./QuestionsGradingSection";
 import type { QuestionWithRubrics } from "./QuestionsGradingSection";
 import dayjs from "dayjs";
@@ -7,7 +7,8 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import type { MessageInstance } from "antd/es/message/interface";
 import { GradingSession } from "@/services/gradingService";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { GradingNotesModal } from "@/components/common/GradingNotesModal";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -62,6 +63,8 @@ export function GradingDetailsSection({
     updateQuestionComment(questionId, comment);
   }, [updateQuestionComment]);
 
+  const [isGradingNotesModalOpen, setIsGradingNotesModalOpen] = useState(false);
+
   return (
     <div>
       {}
@@ -69,28 +72,25 @@ export function GradingDetailsSection({
         <Alert
           message="Grading Notes"
           description={
-            <div>
-              {latestGradingSession.gradingLogs.map((log: any, index: number) => (
-                <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <Tag color="blue">{log.action}</Tag>
-                    <span style={{ fontSize: "12px", marginLeft: 8, color: "rgba(0, 0, 0, 0.45)" }}>
-                      {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                    </span>
-                  </div>
-                  <span style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
-                    {log.details}
-                  </span>
-                  {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
-                </div>
-              ))}
-            </div>
+            <Button
+              type="link"
+              icon={<WarningOutlined />}
+              onClick={() => setIsGradingNotesModalOpen(true)}
+              style={{ padding: 0, height: "auto" }}
+            >
+              View warning ({latestGradingSession.gradingLogs.length})
+            </Button>
           }
-          type="info"
+          type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
       )}
+      <GradingNotesModal
+        open={isGradingNotesModalOpen}
+        onClose={() => setIsGradingNotesModalOpen(false)}
+        gradingLogs={latestGradingSession?.gradingLogs || []}
+      />
       <Row gutter={16}>
         <Col xs={24} md={6} lg={6}>
           <div>

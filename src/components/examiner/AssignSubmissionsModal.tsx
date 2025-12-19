@@ -7,21 +7,15 @@ import {
 } from "@/services/gradingGroupService";
 import { submissionService, Submission } from "@/services/submissionService";
 import { assessmentTemplateService, AssessmentTemplate } from "@/services/assessmentTemplateService";
-import { DeleteOutlined, FileZipOutlined, InboxOutlined, DownloadOutlined } from "@ant-design/icons";
-import type { TableProps, UploadFile, UploadProps } from "antd";
+import { FileZipOutlined, InboxOutlined } from "@ant-design/icons";
+import type { UploadFile, UploadProps } from "antd";
 import {
   Alert,
   App,
   Button,
   Card,
-  Divider,
-  Form,
   Modal,
-  Popconfirm,
   Space,
-  Table,
-  Tabs,
-  Tag,
   Typography,
   Upload
 } from "antd";
@@ -62,73 +56,14 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("list");
-  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const { message: messageApi } = App.useApp();
 
 
-  const { data: updatedGroup, isLoading: loadingSubmissions } = useQuery({
-    queryKey: queryKeys.grading.groups.detail(group.id),
-    queryFn: () => gradingGroupService.getGradingGroupById(group.id),
-    enabled: open && !!group?.id,
-  });
-
-
-  const submissionIds = useMemo(() => {
-    return (updatedGroup?.submissions || []).map(s => s.id);
-  }, [updatedGroup]);
-
-
-  const { data: fullSubmissionsData = [] } = useQuery({
-    queryKey: ['submissions', 'byGradingGroup', group.id],
-    queryFn: () => submissionService.getSubmissionList({
-      gradingGroupId: group.id,
-    }),
-    enabled: open && !!group?.id,
-  });
-
-
-  const submissions = useMemo(() => {
-    if (fullSubmissionsData.length > 0) {
-      return fullSubmissionsData;
-    }
-
-    return (updatedGroup?.submissions || []).map(gSub => ({
-      id: gSub.id,
-      studentId: gSub.studentId,
-      studentName: gSub.studentName,
-      studentCode: gSub.studentCode,
-      gradingGroupId: gSub.gradingGroupId,
-      submittedAt: gSub.submittedAt || "",
-      status: gSub.status,
-      lastGrade: gSub.lastGrade,
-      submissionFile: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as Submission));
-  }, [fullSubmissionsData, updatedGroup]);
-
-
-  const { data: templatesResponse } = useQuery({
-    queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
-    queryFn: () => assessmentTemplateService.getAssessmentTemplates({
-            pageNumber: 1,
-            pageSize: 1000,
-    }),
-    enabled: open && !!updatedGroup?.assessmentTemplateId,
-  });
-
-  const assessmentTemplate = useMemo(() => {
-    if (!updatedGroup?.assessmentTemplateId || !templatesResponse?.items) return null;
-    return templatesResponse.items.find(t => t.id === updatedGroup.assessmentTemplateId) || null;
-  }, [updatedGroup, templatesResponse]);
 
   useEffect(() => {
     if (open) {
       setFileList([]);
       setError(null);
-      setActiveTab("list");
-      setSelectedRowKeys([]);
     }
   }, [open]);
 
@@ -191,6 +126,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       });
     },
     onSuccess: (result, files) => {
+      // Invalidate all related queries to refresh data in detail page
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
@@ -203,13 +139,14 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       setFileList([]);
       onOk();
 
+      // Refetch queries to ensure detail page gets updated data
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
         queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroups'] });
         queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroup', group.id] });
         queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroupId', group.id] });
-      }, 3000);
+      }, 1000);
     },
     onError: (err: any) => {
       console.error("Failed to upload files:", err);
@@ -220,37 +157,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   });
 
 
-  const deleteSubmissionsMutation = useMutation({
-    mutationFn: async (submissionIds: number[]) => {
-      await Promise.all(
-        submissionIds.map((id) => submissionService.deleteSubmission(id))
-      );
-    },
-    onSuccess: (_, submissionIds) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
-      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
-      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroup'] });
-      queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
-      messageApi.success(`Deleted ${submissionIds.length} submission(s) successfully!`);
-      setSelectedRowKeys([]);
-      onOk();
-
-      setTimeout(() => {
-        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
-        queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
-        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroups'] });
-        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroup', group.id] });
-        queryClient.refetchQueries({ queryKey: ['submissions', 'byGradingGroupId', group.id] });
-      }, 3000);
-    },
-    onError: (err: any) => {
-      console.error("Failed to delete submissions:", err);
-      const errorMsg = err.response?.data?.errorMessages?.[0] || err.message || "Failed to delete submissions.";
-      setError(errorMsg);
-      messageApi.error(errorMsg);
-    },
-  });
 
   const handleUploadZip = async () => {
     if (fileList.length === 0) {
@@ -299,79 +205,7 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
     uploadSubmissionsMutation.mutate(files);
   };
 
-  const handleDeleteSubmissions = async (submissionIds: number[]) => {
-    if (submissionIds.length === 0) {
-      messageApi.warning("Please select submissions to delete");
-      return;
-    }
-
-    setError(null);
-    deleteSubmissionsMutation.mutate(submissionIds);
-  };
-
-  const isLoading = uploadSubmissionsMutation.isPending || deleteSubmissionsMutation.isPending;
-
-  const submissionColumns: TableProps<Submission>["columns"] = [
-    {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      width: 80,
-      align: "center",
-    },
-    {
-      title: "Student",
-      dataIndex: "studentName",
-      key: "student",
-      render: (name, record) => (
-        <div>
-          <Text strong style={{ fontSize: 14 }}>{name}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {record.studentCode}
-          </Text>
-        </div>
-      ),
-    },
-    {
-      title: "Action",
-      key: "action",
-      width: 120,
-      align: "center",
-      render: (_, record) => {
-        const handleDownload = () => {
-          if (record.submissionFile?.submissionUrl) {
-            const link = document.createElement("a");
-            link.href = record.submissionFile.submissionUrl;
-            link.download = record.submissionFile.name || "submission.zip";
-            link.target = "_blank";
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        };
-
-        return (
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleDownload}
-            disabled={!record.submissionFile?.submissionUrl}
-            size="small"
-          >
-            Download
-          </Button>
-        );
-      },
-    },
-  ];
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (selectedKeys: React.Key[]) => {
-      setSelectedRowKeys(selectedKeys);
-    },
-  };
+  const isLoading = uploadSubmissionsMutation.isPending;
 
   return (
     <Modal
@@ -399,158 +233,65 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
         />
       )}
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        items={[
-          {
-            key: "list",
-            label: "Submissions List",
-            children: (
-              <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text strong>Total: {submissions.length} submissions</Text>
-                  {selectedRowKeys.length > 0 && (
-                    <Space>
-                      <Button
-                        type="primary"
-                        icon={<DownloadOutlined />}
-                        onClick={() => {
-                          const selectedSubmissions = submissions.filter(s => selectedRowKeys.includes(s.id));
-                          const submissionsWithFiles = selectedSubmissions.filter(s => s.submissionFile?.submissionUrl);
-
-                          if (submissionsWithFiles.length === 0) {
-                            messageApi.warning("No submissions with files selected");
-                            return;
-                          }
-
-
-                          submissionsWithFiles.forEach((sub) => {
-                            if (sub.submissionFile?.submissionUrl) {
-                              const link = document.createElement("a");
-                              link.href = sub.submissionFile.submissionUrl;
-                              link.download = sub.submissionFile.name || `submission_${sub.id}.zip`;
-                              link.target = "_blank";
-                              document.body.appendChild(link);
-                              link.click();
-                              document.body.removeChild(link);
-                            }
-                          });
-
-                          messageApi.success(`Downloading ${submissionsWithFiles.length} file(s)...`);
-                        }}
-                      >
-                        Download Selected ({selectedRowKeys.length})
-                      </Button>
-                      <Popconfirm
-                        title={`Delete ${selectedRowKeys.length} submission(s)`}
-                        description="Are you sure you want to delete these submissions?"
-                        onConfirm={() => handleDeleteSubmissions(selectedRowKeys.map(Number))}
-                        okText="Yes"
-                        cancelText="No"
-                      >
-                        <Button
-                          danger
-                          icon={<DeleteOutlined />}
-                          loading={isLoading}
-                        >
-                          Delete Selected ({selectedRowKeys.length})
-                        </Button>
-                      </Popconfirm>
-                    </Space>
-                  )}
+      <Space direction="vertical" style={{ width: "100%" }} size="large">
+        <Card style={{ backgroundColor: "#f0f9ff" }}>
+          <Space direction="vertical" style={{ width: "100%" }} size="middle">
+            <Text strong>Upload ZIP files containing submissions</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              ZIP files will be extracted and submissions will be created automatically.
+              Only ZIP files are accepted, maximum size 100MB per file.
+              <br />
+              <Text strong style={{ color: "#ff4d4f" }}>
+                File name format: STUXXXXXX.zip (e.g., STU123456.zip) where X is a digit.
+              </Text>
+            </Text>
+          </Space>
+        </Card>
+        <Dragger
+          fileList={fileList}
+          beforeUpload={beforeUpload}
+          onChange={handleFileChange}
+          accept=".zip,application/zip,application/x-zip-compressed"
+          multiple
+        >
+          <p className="ant-upload-drag-icon">
+            <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
+          </p>
+          <p className="ant-upload-text">Click or drag ZIP files here</p>
+          <p className="ant-upload-hint">
+            You can select multiple files. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip).
+            Files will be uploaded when you click "Upload".
+          </p>
+        </Dragger>
+        {fileList.length > 0 && (
+          <Card size="small">
+            <Space direction="vertical" style={{ width: "100%" }} size="small">
+              <Text strong>Selected files ({fileList.length}):</Text>
+              {fileList.map((file, index) => (
+                <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <FileZipOutlined />
+                  <Text>{file.name}</Text>
+                  <Text type="secondary">
+                    ({(file.size! / 1024 / 1024).toFixed(2)} MB)
+                  </Text>
                 </div>
-                <Card>
-                  <Table
-                    rowSelection={rowSelection}
-                    columns={submissionColumns}
-                    dataSource={submissions}
-                    rowKey="id"
-                    loading={loadingSubmissions}
-                    pagination={{
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showTotal: (total) => `Total ${total} submissions`,
-                    }}
-                    scroll={{ y: 400 }}
-                    size="middle"
-                  />
-                </Card>
-              </Space>
-            ),
-          },
-          {
-            key: "upload",
-            label: (
-              <Space>
-                <FileZipOutlined />
-                <span>Upload ZIP File</span>
-              </Space>
-            ),
-            children: (
-              <Space direction="vertical" style={{ width: "100%" }} size="large">
-                <Card style={{ backgroundColor: "#f0f9ff" }}>
-                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
-                    <Text strong>Upload ZIP files containing submissions</Text>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      ZIP files will be extracted and submissions will be created automatically.
-                      Only ZIP files are accepted, maximum size 100MB per file.
-                      <br />
-                      <Text strong style={{ color: "#ff4d4f" }}>
-                        File name format: STUXXXXXX.zip (e.g., STU123456.zip) where X is a digit.
-                      </Text>
-                    </Text>
-                  </Space>
-                </Card>
-                <Dragger
-                  fileList={fileList}
-                  beforeUpload={beforeUpload}
-                  onChange={handleFileChange}
-                  accept=".zip,application/zip,application/x-zip-compressed"
-                  multiple
-                >
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
-                  </p>
-                  <p className="ant-upload-text">Click or drag ZIP files here</p>
-                  <p className="ant-upload-hint">
-                    You can select multiple files. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip).
-                    Files will be uploaded when you click "Upload".
-                  </p>
-                </Dragger>
-                {fileList.length > 0 && (
-                  <Card size="small">
-                    <Space direction="vertical" style={{ width: "100%" }} size="small">
-                      <Text strong>Selected files ({fileList.length}):</Text>
-                      {fileList.map((file, index) => (
-                        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <FileZipOutlined />
-                          <Text>{file.name}</Text>
-                      <Text type="secondary">
-                            ({(file.size! / 1024 / 1024).toFixed(2)} MB)
-                      </Text>
-                        </div>
-                      ))}
-                    </Space>
-                  </Card>
-                )}
+              ))}
+            </Space>
+          </Card>
+        )}
 
-                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                  <Button onClick={onCancel}>Cancel</Button>
-                  <Button
-                    type="primary"
-                    onClick={handleUploadZip}
-                    loading={isLoading}
-                    disabled={fileList.length === 0}
-                  >
-                    Upload
-                  </Button>
-                </div>
-              </Space>
-            ),
-          },
-        ]}
-      />
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <Button onClick={onCancel}>Cancel</Button>
+          <Button
+            type="primary"
+            onClick={handleUploadZip}
+            loading={isLoading}
+            disabled={fileList.length === 0}
+          >
+            Upload
+          </Button>
+        </div>
+      </Space>
     </Modal>
   );
 };

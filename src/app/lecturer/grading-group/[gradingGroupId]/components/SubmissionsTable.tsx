@@ -1,5 +1,5 @@
-import { Button, Empty, Table, Tag, Typography } from "antd";
-import { EditOutlined, FileTextOutlined } from "@ant-design/icons";
+import { Button, Empty, Popconfirm, Table, Tag, Typography } from "antd";
+import { EditOutlined, FileTextOutlined, DeleteOutlined } from "@ant-design/icons";
 import type { TableProps } from "antd";
 import type { Submission } from "@/services/submissionService";
 import dayjs from "dayjs";
@@ -16,7 +16,8 @@ interface SubmissionsTableProps {
   submissions: Submission[];
   submissionTotalScores: Record<number, number>;
   maxScore: number;
-  onEdit: (submission: Submission) => void;
+  onEdit?: (submission: Submission) => void;
+  onDelete?: (submission: Submission) => void;
   isGradeSheetSubmitted: boolean;
   onSelectionChange?: (selectedRowKeys: React.Key[], selectedRows: Submission[]) => void;
   selectedRowKeys?: React.Key[];
@@ -29,6 +30,7 @@ export function SubmissionsTable({
   submissionTotalScores,
   maxScore,
   onEdit,
+  onDelete,
   isGradeSheetSubmitted,
   onSelectionChange,
   selectedRowKeys: externalSelectedRowKeys,
@@ -114,17 +116,42 @@ export function SubmissionsTable({
       width: 120,
       fixed: "right",
       align: "center",
-      render: (_: any, record: Submission) => (
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() => onEdit(record)}
-          size="small"
-          disabled={isGradeSheetSubmitted}
-        >
-          Edit
-        </Button>
-      ),
+      render: (_: any, record: Submission) => {
+        if (onDelete) {
+          return (
+            <Popconfirm
+              title="Delete Submission"
+              description={`Are you sure you want to delete this submission?`}
+              onConfirm={() => onDelete(record)}
+              okText="Delete"
+              cancelText="Cancel"
+              okType="danger"
+            >
+              <Button
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+              >
+                Delete
+              </Button>
+            </Popconfirm>
+          );
+        }
+        if (onEdit) {
+          return (
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              size="small"
+              disabled={isGradeSheetSubmitted}
+            >
+              Edit
+            </Button>
+          );
+        }
+        return null;
+      },
     },
   ];
 
@@ -172,11 +199,12 @@ export function SubmissionsTable({
           if ((e.target as HTMLElement).closest('.ant-checkbox-wrapper')) {
             return;
           }
-          if (!isGradeSheetSubmitted) {
+          // Only allow row click for edit, not for delete
+          if (onEdit && !isGradeSheetSubmitted) {
             onEdit(record);
           }
         },
-        style: { cursor: isGradeSheetSubmitted ? 'not-allowed' : 'pointer' },
+        style: { cursor: (onEdit && !isGradeSheetSubmitted) ? 'pointer' : 'default' },
       })}
     />
   );

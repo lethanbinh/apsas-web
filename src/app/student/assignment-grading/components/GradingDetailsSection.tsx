@@ -1,10 +1,12 @@
 import { Alert, Button, Col, Divider, Row, Space, Tag, Typography } from "antd";
-import { HistoryOutlined } from "@ant-design/icons";
+import { HistoryOutlined, WarningOutlined } from "@ant-design/icons";
 import { QuestionsGradingSection } from "./QuestionsGradingSection";
 import type { QuestionWithRubrics } from "../page";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { GradingNotesModal } from "@/components/common/GradingNotesModal";
+import { useState } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -30,6 +32,8 @@ export function GradingDetailsSection({
   onOpenGradingHistory,
   onOpenFeedbackHistory,
 }: GradingDetailsSectionProps) {
+  const [isGradingNotesModalOpen, setIsGradingNotesModalOpen] = useState(false);
+
   return (
     <div>
       {}
@@ -37,28 +41,25 @@ export function GradingDetailsSection({
         <Alert
           message="Grading Notes"
           description={
-            <div>
-              {latestGradingSession.gradingLogs.map((log: any, index: number) => (
-                <div key={log.id} style={{ marginBottom: index < latestGradingSession.gradingLogs.length - 1 ? 12 : 0 }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <Tag color="blue">{log.action}</Tag>
-                    <Text type="secondary" style={{ fontSize: "12px", marginLeft: 8 }}>
-                      {toVietnamTime(log.timestamp).format("DD/MM/YYYY HH:mm:ss")}
-                    </Text>
-                  </div>
-                  <Text style={{ fontSize: "13px", whiteSpace: "pre-wrap" }}>
-                    {log.details}
-                  </Text>
-                  {index < latestGradingSession.gradingLogs.length - 1 && <Divider style={{ margin: "8px 0" }} />}
-                </div>
-              ))}
-            </div>
+            <Button
+              type="link"
+              icon={<WarningOutlined />}
+              onClick={() => setIsGradingNotesModalOpen(true)}
+              style={{ padding: 0, height: "auto" }}
+            >
+              View warning ({latestGradingSession.gradingLogs.length})
+            </Button>
           }
-          type="info"
+          type="warning"
           showIcon
           style={{ marginBottom: 16 }}
         />
       )}
+      <GradingNotesModal
+        open={isGradingNotesModalOpen}
+        onClose={() => setIsGradingNotesModalOpen(false)}
+        gradingLogs={latestGradingSession?.gradingLogs || []}
+      />
       <Row gutter={16}>
         <Col xs={24} md={6} lg={6}>
           <div>

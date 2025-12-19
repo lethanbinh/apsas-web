@@ -139,10 +139,15 @@ export const CreateGradingGroupModal: React.FC<
 
   const semesters = useMemo(() => {
     const now = new Date();
-    return allSemesters.filter((sem) => {
-      const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
-
-      return endDate >= now;
+    const filtered = allSemesters.filter((sem) => {
+      const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
+      return startDate <= now; // Only include past and current semesters
+    });
+    // Sort by startDate descending (newest first)
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
+      const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
+      return dateB - dateA;
     });
   }, [allSemesters]);
 

@@ -360,13 +360,6 @@ export default function GradingGroupPage() {
     await handleDownloadSelected(selectedSubmissions, gradingGroup, message);
   }, [gradingGroup, selectedSubmissions, message]);
 
-  const handleSelectionChange = useCallback((newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
-    if (newSelectedRowKeys.length <= 10) {
-      setSelectedRowKeys(newSelectedRowKeys);
-      setSelectedSubmissions(selectedRows);
-    }
-  }, []);
-
   // Filter submissions based on score filter
   const filteredSubmissions = useMemo(() => {
     if (scoreFilter === 'all') {
@@ -382,50 +375,68 @@ export default function GradingGroupPage() {
     });
   }, [submissions, scoreFilter, submissionTotalScores]);
 
+  const handleSelectionChange = useCallback((newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
+    if (newSelectedRowKeys.length <= 10) {
+      // Ensure selected rows are from filtered submissions
+      const filteredIds = new Set(filteredSubmissions.map(s => s.id));
+      const validSelectedRowKeys = newSelectedRowKeys.filter(id => filteredIds.has(Number(id)));
+      const validSelectedRows = filteredSubmissions.filter(s => validSelectedRowKeys.includes(s.id));
+      
+      setSelectedRowKeys(validSelectedRowKeys);
+      setSelectedSubmissions(validSelectedRows);
+    }
+  }, [filteredSubmissions]);
+
   // Update selected submissions when filter changes
   useEffect(() => {
     const filteredIds = new Set(filteredSubmissions.map(s => s.id));
     const newSelectedRowKeys = selectedRowKeys.filter(id => filteredIds.has(Number(id)));
     if (newSelectedRowKeys.length !== selectedRowKeys.length) {
       setSelectedRowKeys(newSelectedRowKeys);
-      const newSelectedSubmissions = submissions.filter(s => newSelectedRowKeys.includes(s.id));
+      const newSelectedSubmissions = filteredSubmissions.filter(s => newSelectedRowKeys.includes(s.id));
       setSelectedSubmissions(newSelectedSubmissions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scoreFilter, filteredSubmissions.length]);
 
-  // Get submissions without score (prioritized for quick select)
-  const ungradedSubmissions = useMemo(() => {
-    return submissions.filter(sub => {
+  // Get ungraded submissions from filtered submissions (prioritized for quick select)
+  const ungradedFilteredSubmissions = useMemo(() => {
+    return filteredSubmissions.filter(sub => {
       const hasScore = submissionTotalScores[sub.id] !== undefined && submissionTotalScores[sub.id] !== null;
       return !hasScore;
     });
-  }, [submissions, submissionTotalScores]);
+  }, [filteredSubmissions, submissionTotalScores]);
 
-  // Handle quick select 10 submissions (prioritize ungraded)
+  // Handle quick select 10 submissions (prioritize ungraded from filtered)
   const handleQuickSelect10 = useCallback(() => {
     const toSelect: Submission[] = [];
     
-    // First, add ungraded submissions (up to 10)
-    for (const sub of ungradedSubmissions) {
-      if (toSelect.length >= 10) break;
-      toSelect.push(sub);
-    }
-    
-    // If we need more, add graded submissions
-    if (toSelect.length < 10) {
-      for (const sub of submissions) {
+    // If there are ungraded submissions in filtered, only select those (up to 10)
+    if (ungradedFilteredSubmissions.length > 0) {
+      for (const sub of ungradedFilteredSubmissions) {
         if (toSelect.length >= 10) break;
-        if (!toSelect.find(s => s.id === sub.id)) {
-          toSelect.push(sub);
-        }
+        toSelect.push(sub);
+      }
+    } else {
+      // If all filtered submissions are graded, select any from filtered (up to 10)
+      for (const sub of filteredSubmissions) {
+        if (toSelect.length >= 10) break;
+        toSelect.push(sub);
       }
     }
     
     const newSelectedRowKeys = toSelect.map(s => s.id);
     setSelectedRowKeys(newSelectedRowKeys);
     setSelectedSubmissions(toSelect);
-  }, [submissions, ungradedSubmissions]);
+  }, [filteredSubmissions, ungradedFilteredSubmissions]);
+
+  // Handle select all filtered submissions (up to 10)
+  const handleSelectAll = useCallback(() => {
+    const toSelect = filteredSubmissions.slice(0, 10); // Max 10
+    const newSelectedRowKeys = toSelect.map(s => s.id);
+    setSelectedRowKeys(newSelectedRowKeys);
+    setSelectedSubmissions(toSelect);
+  }, [filteredSubmissions]);
 
   const handleBatchGrading = useCallback(async () => {
     if (!gradingGroup || !gradingGroup.assessmentTemplateId) {
@@ -580,7 +591,7 @@ export default function GradingGroupPage() {
               type="warning"
               showIcon
               closable
-            />
+          />
           )}
 
           {gradingGroup && (
@@ -634,6 +645,12 @@ export default function GradingGroupPage() {
                   Select 10
                 </Button>
                 <Button
+                  onClick={handleSelectAll}
+                  disabled={filteredSubmissions.length === 0 || selectedRowKeys.length >= 10}
+                >
+                  Select All
+                </Button>
+                <Button
                   icon={<DownloadOutlined />}
                   onClick={handleDownloadSelectedClick}
                   disabled={selectedSubmissions.length === 0}
@@ -661,7 +678,7 @@ export default function GradingGroupPage() {
               />
             )}
             <SubmissionsTable
-              submissions={submissions}
+              submissions={filteredSubmissions}
               submissionTotalScores={submissionTotalScores}
               maxScore={maxScore}
               onEdit={handleOpenEditModal}
@@ -669,7 +686,6 @@ export default function GradingGroupPage() {
               onSelectionChange={handleSelectionChange}
               selectedRowKeys={selectedRowKeys}
               maxSelection={10}
-              filteredSubmissions={filteredSubmissions}
             />
           </Card>
         </Space>

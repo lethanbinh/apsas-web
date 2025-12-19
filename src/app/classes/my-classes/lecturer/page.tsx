@@ -169,18 +169,18 @@ export default function MyClassesPage() {
 
 
       const sortedSemesters = filteredSemesterNames.sort((a, b) => {
-        const semA = semesterMap.get(a);
-        const semB = semesterMap.get(b);
-        if (semA && semB) {
+          const semA = semesterMap.get(a);
+          const semB = semesterMap.get(b);
+          if (semA && semB) {
           const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
           const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
-          return dateB.getTime() - dateA.getTime();
-        }
-        return 0;
-      });
+            return dateB.getTime() - dateA.getTime();
+          }
+          return 0;
+        });
 
-      if (sortedSemesters.length > 0) {
-        setSelectedSemester(sortedSemesters[0]);
+        if (sortedSemesters.length > 0) {
+          setSelectedSemester(sortedSemesters[0]);
       }
 
       setIsInitialLoad(false);
