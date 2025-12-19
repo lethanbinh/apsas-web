@@ -25,7 +25,8 @@ import {
   HomeOutlined,
   CalendarOutlined,
   IdcardOutlined,
-  EditOutlined
+  EditOutlined,
+  LockOutlined
 } from '@ant-design/icons';
 import moment from 'moment';
 import { Layout } from '@/components/layout/Layout';
@@ -47,6 +48,30 @@ const ProfilePage = () => {
   const [updating, setUpdating] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [isChangePassVisible, setIsChangePassVisible] = useState(false);
+  const [changePassForm] = Form.useForm();
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    try {
+      const values = await changePassForm.validateFields();
+      setChangingPassword(true);
+      
+      await authService.changePassword({
+        currentPassword: values.currentPassword,
+        newPassword: values.newPassword
+      });
+
+      message.success('Password changed successfully');
+      setIsChangePassVisible(false);
+      changePassForm.resetFields();
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.errorMessages?.[0] || 'Failed to change password';
+      message.error(errorMsg);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -420,8 +445,20 @@ const ProfilePage = () => {
                   block
                   icon={<EditOutlined />}
                   onClick={handleEdit}
+                  className={styles.actionBtn}
                 >
                   Edit Profile
+                </Button>
+
+                <Button
+                  size="large"
+                  block
+                  danger
+                  icon={<LockOutlined />}
+                  onClick={() => setIsChangePassVisible(true)}
+                  className={styles.changePassBtn}
+                >
+                  Change Password
                 </Button>
               </div>
             </Card>
@@ -606,6 +643,60 @@ const ProfilePage = () => {
               rules={[{ required: true, message: 'Please select date of birth!' }]}
             >
               <DatePicker style={{ width: '100%' }} placeholder="Select date of birth" />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* Modal Change Password */}
+        <Modal
+          title="Change Password"
+          open={isChangePassVisible}
+          onOk={handleChangePassword}
+          onCancel={() => {
+            setIsChangePassVisible(false);
+            changePassForm.resetFields();
+          }}
+          confirmLoading={changingPassword}
+          okText="Change Password"
+          okButtonProps={{ danger: true }}
+        >
+          <Form form={changePassForm} layout="vertical">
+            <Form.Item
+              name="currentPassword"
+              label="Current Password"
+              rules={[{ required: true, message: 'Please input current password!' }]}
+            >
+              <Input.Password placeholder="Enter current password" />
+            </Form.Item>
+
+            <Form.Item
+              name="newPassword"
+              label="New Password"
+              rules={[
+                { required: true, message: 'Please input new password!' },
+                { min: 6, message: 'Password must be at least 6 characters!' }
+              ]}
+            >
+              <Input.Password placeholder="Enter new password" />
+            </Form.Item>
+
+            <Form.Item
+              name="confirmPassword"
+              label="Confirm New Password"
+              dependencies={['newPassword']}
+              rules={[
+                { required: true, message: 'Please confirm your password!' },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    if (!value || getFieldValue('newPassword') === value) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('The two passwords do not match!'));
+                  },
+                }),
+              ]}
+            >
+              <Input.Password placeholder="Confirm new password" />
             </Form.Item>
           </Form>
         </Modal>

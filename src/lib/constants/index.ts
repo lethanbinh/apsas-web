@@ -8,6 +8,7 @@ export const API_ENDPOINTS = {
     VERIFY_OTP: "/Auth/verify-otp",
     RESET_PASSWORD: "/Auth/reset-password",
     GOOGLE: "/Auth/google",
+    CHANGE_PASSWORD: "/Auth/change-password",
   },
   USER: {
     PROFILE: "/user/profile",
