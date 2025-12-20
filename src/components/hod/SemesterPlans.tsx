@@ -118,6 +118,8 @@ export default function SemesterPlans() {
   const handleCreatePlan = (values: any) => {
     console.log("Creating new plan with:", values);
     setIsModalOpen(false);
+    // Refresh the semester plans list after successful import
+    fetchSemesters();
   };
 
   const { ongoingSemesters, endedSemesters, upcomingSemesters } =

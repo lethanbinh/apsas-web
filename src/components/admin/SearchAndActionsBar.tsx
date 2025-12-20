@@ -1,13 +1,19 @@
 "use client";
 
 import { DeleteOutlined, DownloadOutlined, FileExcelOutlined, SearchOutlined, UploadOutlined } from "@ant-design/icons";
-import { App, Button, Input, Space, Upload } from "antd";
-import type { UploadProps } from "antd";
+import { App, Button, Dropdown, Input, Select, Space, Typography, Upload } from "antd";
+import type { MenuProps, UploadProps } from "antd";
+import { Role, ROLES } from "@/lib/constants";
+import { mapRoleToString } from "@/utils/userUtils";
 import styles from "../../app/admin/manage-users/ManageUsers.module.css";
+
+const { Text } = Typography;
 
 interface SearchAndActionsBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+  selectedRole?: Role;
+  onRoleChange: (role: Role | undefined) => void;
   selectedUserIdsCount: number;
   onDeleteSelected: () => void;
   onCreateUser: () => void;
@@ -21,6 +27,8 @@ interface SearchAndActionsBarProps {
 export const SearchAndActionsBar = ({
   searchTerm,
   onSearchChange,
+  selectedRole,
+  onRoleChange,
   selectedUserIdsCount,
   onDeleteSelected,
   onCreateUser,
@@ -52,63 +60,109 @@ export const SearchAndActionsBar = ({
     maxCount: 1,
   };
 
+  const handleExportMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'export') {
+      onExportAll();
+    } else if (key === 'template') {
+      onDownloadTemplate();
+    }
+  };
+
+  const exportMenuItems: MenuProps['items'] = [
+    {
+      key: 'export',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileExcelOutlined /> Export All Accounts
+        </span>
+      ),
+      disabled: exportLoading,
+    },
+    {
+      key: 'template',
+      label: (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <DownloadOutlined /> Download Template
+        </span>
+      ),
+    },
+  ];
+
+  const roleOptions = [
+    { label: mapRoleToString(ROLES.ADMIN), value: ROLES.ADMIN },
+    { label: mapRoleToString(ROLES.LECTURER), value: ROLES.LECTURER },
+    { label: mapRoleToString(ROLES.STUDENT), value: ROLES.STUDENT },
+    { label: mapRoleToString(ROLES.HOD), value: ROLES.HOD },
+    { label: mapRoleToString(ROLES.EXAMINER), value: ROLES.EXAMINER },
+  ];
+
   return (
-    <div style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-      <Input
-        placeholder="Search by email, name, account code, username, or phone number..."
-        prefix={<SearchOutlined />}
-        value={searchTerm}
-        onChange={(e) => onSearchChange(e.target.value)}
-        allowClear
-        style={{ maxWidth: "500px", flex: "1", minWidth: "300px" }}
-      />
-      <Space wrap>
-        <Button
-          type="primary"
-          onClick={onCreateUser}
-          style={{
-            backgroundColor: "#4cbfb6",
-            borderColor: "#4cbfb6",
+    <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
+        <Input
+          placeholder="Search by email, name, account code, username, or phone number..."
+          prefix={<SearchOutlined />}
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          allowClear
+          style={{ maxWidth: "500px", flex: "1", minWidth: "300px" }}
+        />
+        <Space wrap>
+          <Button
+            type="primary"
+            onClick={onCreateUser}
+            style={{
+              backgroundColor: "#4cbfb6",
+              borderColor: "#4cbfb6",
+            }}
+            className={styles["rounded-button"]}
+          >
+            Create User
+          </Button>
+          {selectedUserIdsCount > 0 && (
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={onDeleteSelected}
+              className={styles["rounded-button"]}
+            >
+              Delete ({selectedUserIdsCount})
+            </Button>
+          )}
+          <Dropdown menu={{ items: exportMenuItems, onClick: handleExportMenuClick }} trigger={['click']}>
+            <Button
+              icon={<FileExcelOutlined />}
+              loading={exportLoading}
+              className={styles["rounded-button"]}
+            >
+              Export
+            </Button>
+          </Dropdown>
+          <Upload {...uploadProps}>
+            <Button
+              icon={<UploadOutlined />}
+              loading={importLoading}
+              className={styles["rounded-button"]}
+            >
+              Import
+            </Button>
+          </Upload>
+        </Space>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+        <Text strong style={{ minWidth: "80px" }}>Filter by Role:</Text>
+        <Select
+          style={{ width: 200 }}
+          placeholder="All Roles"
+          allowClear
+          value={selectedRole}
+          onChange={(value) => {
+            // When clear button is clicked, value will be null, convert to undefined
+            onRoleChange(value === null ? undefined : value);
           }}
-          className={styles["rounded-button"]}
-        >
-          Create New User
-        </Button>
-        {selectedUserIdsCount > 0 && (
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={onDeleteSelected}
-            className={styles["rounded-button"]}
-          >
-            Delete Selected ({selectedUserIdsCount})
-          </Button>
-        )}
-        <Button
-          icon={<FileExcelOutlined />}
-          onClick={onExportAll}
-          loading={exportLoading}
-          className={styles["rounded-button"]}
-        >
-          Export All Accounts
-        </Button>
-        <Button
-          icon={<DownloadOutlined />}
-          onClick={onDownloadTemplate}
-          className={styles["rounded-button"]}
-        >
-          Download Template
-        </Button>
-        <Upload {...uploadProps}>
-          <Button
-            icon={<UploadOutlined />}
-            loading={importLoading}
-            className={styles["rounded-button"]}
-          >
-            Import Excel
-          </Button>
-        </Upload>
-      </Space>
+          options={roleOptions}
+        />
+      </div>
     </div>
   );
 };

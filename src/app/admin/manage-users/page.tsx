@@ -21,7 +21,7 @@ import { generateSampleTemplate } from "@/utils/excelUtils";
 import { getPaginationItems, mapRoleToString } from "@/utils/userUtils";
 import { App, Alert, Spin } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import styles from "./ManageUsers.module.css";
 
 const ManageUsersPageContent: React.FC = () => {
@@ -40,35 +40,100 @@ const ManageUsersPageContent: React.FC = () => {
     errors: Array<{ row: number; accountCode?: string; email?: string; error: string }>;
   }>({ success: 0, failed: 0, errors: [] });
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedRole, setSelectedRole] = useState<Role | undefined>(undefined);
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
   const [usersToDelete, setUsersToDelete] = useState<User[]>([]);
 
+  // Check if we have any active filters
+  const hasFilter = searchTerm.trim() !== "" || selectedRole !== undefined;
 
+  // Fetch all users when filtering
+  const { data: allUsersResponse, isLoading: allUsersLoading } = useQuery({
+    queryKey: ['users', 'all', 'filter'],
+    queryFn: () => accountService.getAccountList(1, 10000),
+    enabled: hasFilter, // Only fetch when filtering
+  });
+
+  // Regular paginated query when no filters
   const { data: usersResponse, isLoading: loading, error: queryError } = useQuery({
     queryKey: queryKeys.users.list({ page: currentPage, pageSize }),
     queryFn: () => accountService.getAccountList(currentPage, pageSize),
+    enabled: !hasFilter, // Only fetch when not filtering
   });
 
-  const users = usersResponse?.users || [];
-  const totalUsers = usersResponse?.total || 0;
+  // Get the base users list - always use the appropriate source
+  // When not filtering, only use usersResponse if it's available (not loading or has data)
+  const baseUsers = hasFilter 
+    ? (allUsersResponse?.users || []) 
+    : (usersResponse?.users || []);
+  const totalUsers = hasFilter 
+    ? (allUsersResponse?.total || 0) 
+    : (usersResponse?.total || 0);
+  const isLoading = hasFilter ? allUsersLoading : loading;
   const error = queryError ? (queryError as any).message || "Failed to fetch users" : null;
 
-
+  // Filter all users
   const filteredUsers = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return users;
-    }
-    const searchLower = searchTerm.toLowerCase().trim();
-    return users.filter(user =>
-      user.email?.toLowerCase().includes(searchLower) ||
-      user.fullName?.toLowerCase().includes(searchLower) ||
-      user.accountCode?.toLowerCase().includes(searchLower) ||
-      user.username?.toLowerCase().includes(searchLower) ||
-      user.phoneNumber?.toLowerCase().includes(searchLower)
-    );
-  }, [users, searchTerm]);
+    let filtered = baseUsers;
 
+    // Filter by role
+    if (selectedRole !== undefined) {
+      filtered = filtered.filter(user => Number(user.role) === Number(selectedRole));
+    }
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(user =>
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.fullName?.toLowerCase().includes(searchLower) ||
+        user.accountCode?.toLowerCase().includes(searchLower) ||
+        user.username?.toLowerCase().includes(searchLower) ||
+        user.phoneNumber?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    return filtered;
+  }, [baseUsers, searchTerm, selectedRole]);
+
+  // Paginate filtered results
+  const paginatedUsers = useMemo(() => {
+    if (!hasFilter) {
+      return baseUsers; // Use server-paginated results when not filtering
+    }
+    // Client-side pagination when filtering
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, baseUsers, currentPage, pageSize, hasFilter]);
+
+  const filteredTotal = filteredUsers.length;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole]);
+
+  // Invalidate and refetch queries when filter state changes
+  useEffect(() => {
+    // Use a small delay to ensure state is updated before invalidating
+    const timeoutId = setTimeout(() => {
+      if (hasFilter) {
+        // When filtering, ensure all users query is fresh
+        queryClient.invalidateQueries({ 
+          queryKey: ['users', 'all', 'filter']
+        });
+      } else {
+        // When not filtering, ensure paginated query is fresh
+        queryClient.invalidateQueries({ 
+          queryKey: queryKeys.users.list({ page: currentPage, pageSize }) 
+        });
+      }
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [hasFilter, currentPage, pageSize, queryClient]);
 
   const { importAccounts, importLoading } = useAccountImport();
   const { handleExportAllAccounts, exportLoading } = useAccountExport();
@@ -220,7 +285,7 @@ const ManageUsersPageContent: React.FC = () => {
     if (user) {
       setUsersToDelete([user]);
     } else {
-      const selectedUsers = (searchTerm ? filteredUsers : users).filter(u => selectedUserIds.includes(u.id));
+      const selectedUsers = filteredUsers.filter(u => selectedUserIds.includes(u.id));
       setUsersToDelete(selectedUsers);
     }
     setIsDeleteModalVisible(true);
@@ -283,7 +348,7 @@ const ManageUsersPageContent: React.FC = () => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allUserIds = (searchTerm ? filteredUsers : users)
+      const allUserIds = filteredUsers
         .filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN)
         .map(u => u.id);
       setSelectedUserIds(allUserIds);
@@ -335,8 +400,8 @@ const ManageUsersPageContent: React.FC = () => {
   };
 
 
-  const totalPages = Math.ceil(totalUsers / pageSize);
-  const displayUsers = searchTerm ? filteredUsers : users;
+  const totalPages = hasFilter ? Math.ceil(filteredTotal / pageSize) : Math.ceil(totalUsers / pageSize);
+  const displayUsers = paginatedUsers;
   const isIndeterminate = selectedUserIds.length > 0 && selectedUserIds.length < displayUsers.filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN).length;
   const isAllSelected = selectedUserIds.length > 0 && selectedUserIds.length === displayUsers.filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN).length;
 
@@ -347,6 +412,8 @@ const ManageUsersPageContent: React.FC = () => {
       <SearchAndActionsBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        selectedRole={selectedRole}
+        onRoleChange={setSelectedRole}
         selectedUserIdsCount={selectedUserIds.length}
         onDeleteSelected={() => handleDeleteClick()}
         onCreateUser={() => setIsCreateModalVisible(true)}
@@ -357,7 +424,7 @@ const ManageUsersPageContent: React.FC = () => {
         importLoading={importLoading}
       />
 
-      {loading && !users ? (
+      {isLoading && !baseUsers.length ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <Spin size="large" />
       </div>
@@ -369,9 +436,9 @@ const ManageUsersPageContent: React.FC = () => {
           showIcon
           style={{ marginBottom: 16 }}
         />
-      ) : !loading && !error && searchTerm && filteredUsers.length === 0 ? (
-        <p>No users found matching your search.</p>
-      ) : !loading && !error && !searchTerm && (!users || users.length === 0) ? (
+      ) : !isLoading && !error && hasFilter && filteredUsers.length === 0 ? (
+        <p>No users found matching your filters.</p>
+      ) : !isLoading && !error && !hasFilter && (!baseUsers || baseUsers.length === 0) ? (
         <p>No users found.</p>
       ) : (
         <UserTable
@@ -390,7 +457,7 @@ const ManageUsersPageContent: React.FC = () => {
         />
       )}
 
-      {!loading && !error && !searchTerm && users && totalUsers > pageSize && (
+      {!isLoading && !error && ((hasFilter && filteredTotal > pageSize) || (!hasFilter && totalUsers > pageSize)) && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
