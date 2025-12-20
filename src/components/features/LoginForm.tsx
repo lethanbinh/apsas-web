@@ -3,7 +3,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
-import { DEMO_ACCOUNTS } from "@/lib/constants/demoAccounts";
+// import { DEMO_ACCOUNTS } from "@/lib/constants/demoAccounts";
 import { formatErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/lib/constants/errorMessages";
 import { deleteCookie, setCookie } from "@/lib/utils/cookie";
 import { removeStorageItem, setStorageItem } from "@/lib/utils/storage";
@@ -68,8 +68,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  const [selectedDemoAccount, setSelectedDemoAccount] = useState<string | null>(null);
+  // const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+  // const [selectedDemoAccount, setSelectedDemoAccount] = useState<string | null>(null);
 
   let app;
   if (getApps().length === 0) {
@@ -267,32 +267,32 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setIsLoggingIn(false);
     }
   };
-  const handleLogoClick = () => {
-    setIsDemoModalOpen(true);
-    setSelectedDemoAccount(null);
-  };
+  // const handleLogoClick = () => {
+  //   setIsDemoModalOpen(true);
+  //   setSelectedDemoAccount(null);
+  // };
 
-  const handleDemoModalClose = () => {
-    setIsDemoModalOpen(false);
-    setSelectedDemoAccount(null);
-  };
+  // const handleDemoModalClose = () => {
+  //   setIsDemoModalOpen(false);
+  //   setSelectedDemoAccount(null);
+  // };
 
-  const handleDemoAccountSelect = (accountCode: string) => {
-    setSelectedDemoAccount(accountCode);
-    const account = DEMO_ACCOUNTS.find((acc) => acc.accountCode === accountCode);
-    if (account) {
-      form.setFieldsValue({
-        email: account.email,
-        password: account.password,
-      });
-      setIsDemoModalOpen(false);
-      setSelectedDemoAccount(null);
+  // const handleDemoAccountSelect = (accountCode: string) => {
+  //   setSelectedDemoAccount(accountCode);
+  //   const account = DEMO_ACCOUNTS.find((acc) => acc.accountCode === accountCode);
+  //   if (account) {
+  //     form.setFieldsValue({
+  //       email: account.email,
+  //       password: account.password,
+  //     });
+  //     setIsDemoModalOpen(false);
+  //     setSelectedDemoAccount(null);
 
-      setTimeout(() => {
-        form.submit();
-      }, 100);
-    }
-  };
+  //     setTimeout(() => {
+  //       form.submit();
+  //     }, 100);
+  //   }
+  // };
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -548,7 +548,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   return (
     <div className="login-form-container">
       {}
-      <div className="login-logo" onClick={handleLogoClick} style={{ cursor: "pointer" }}>
+      <div className="login-logo" /* onClick={handleLogoClick} */ style={{ /* cursor: "pointer" */ }}>
         <Logo />
       </div>
 
@@ -656,7 +656,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       </div>
 
       {}
-      <Modal
+      {/* Demo Login Modal - Commented out */}
+      {/* <Modal
         title="Select Demo Account"
         open={isDemoModalOpen}
         onCancel={handleDemoModalClose}
@@ -683,7 +684,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         <div style={{ marginTop: 16, fontSize: "12px", color: "#666" }}>
           <p>Select an account from the list to login automatically</p>
         </div>
-      </Modal>
+      </Modal> */}
     </div>
   );
 };
