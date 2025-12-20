@@ -62,13 +62,13 @@ const TemplatesPageContent = () => {
   });
 
 
-  const approvedCourseElementIds = useMemo(() => {
+  const approvedAssignRequestIds = useMemo(() => {
     const ids = new Set<number>();
     if (assignRequestResponse?.items) {
       const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
       approvedAssignRequests.forEach(ar => {
-        if (ar.courseElementId) {
-          ids.add(ar.courseElementId);
+        if (ar.id) {
+          ids.add(ar.id);
         }
       });
     }
@@ -104,14 +104,19 @@ const TemplatesPageContent = () => {
 
   const allTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
-    // Filter only PE (Practical Exam) templates - filter by courseElement.elementType === 2
+    // Filter only PE (Practical Exam) templates with approved assign requests
     const peTemplates = templatesResponse.items.filter(template => {
       const courseElement = allCourseElementsMap.get(template.courseElementId);
       // Only include templates where courseElement.elementType === 2 (PE)
-      return courseElement?.elementType === 2;
+      if (courseElement?.elementType !== 2) return false;
+      // Only include templates with approved assign request (status === 5)
+      if (!template.assignRequestId || !approvedAssignRequestIds.has(template.assignRequestId)) {
+        return false;
+      }
+      return true;
     });
     return peTemplates;
-  }, [templatesResponse, allCourseElementsMap]);
+  }, [templatesResponse, allCourseElementsMap, approvedAssignRequestIds]);
 
 
   const semesters = useMemo(() => {

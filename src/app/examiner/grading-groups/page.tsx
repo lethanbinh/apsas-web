@@ -8,6 +8,7 @@ import { assessmentFileService } from "@/services/assessmentFileService";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { assignRequestService } from "@/services/assignRequestService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
 import { ClassInfo, classService } from "@/services/classService";
 import { CourseElement, courseElementService } from "@/services/courseElementService";
@@ -80,6 +81,28 @@ const GradingGroupsPageContent = () => {
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
   });
+
+
+  const { data: assignRequestResponse } = useQuery({
+    queryKey: queryKeys.assignRequests.lists(),
+    queryFn: () => assignRequestService.getAssignRequests({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+  });
+
+  const approvedAssignRequestIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (assignRequestResponse?.items) {
+      const approvedAssignRequests = assignRequestResponse.items.filter(ar => ar.status === 5);
+      approvedAssignRequests.forEach(ar => {
+        if (ar.id) {
+          ids.add(ar.id);
+        }
+      });
+    }
+    return ids;
+  }, [assignRequestResponse]);
 
 
   const gradingGroupIds = allGroups.map(g => g.id);
@@ -165,13 +188,16 @@ const GradingGroupsPageContent = () => {
         if (allAssessmentTemplateIds.includes(template.id)) {
           // Filter only PE templates - check courseElement.elementType === 2
           const courseElement = allCourseElementsMap.get(template.courseElementId);
-          if (courseElement?.elementType === 2) {
-            map.set(template.id, template);
+          if (courseElement?.elementType !== 2) return;
+          // Only include templates with approved assign request (status === 5)
+          if (!template.assignRequestId || !approvedAssignRequestIds.has(template.assignRequestId)) {
+            return;
           }
+          map.set(template.id, template);
         }
       });
     return map;
-  }, [allAssessmentTemplatesRes, allAssessmentTemplateIds, allCourseElementsMap]);
+  }, [allAssessmentTemplatesRes, allAssessmentTemplateIds, allCourseElementsMap, approvedAssignRequestIds]);
 
 
       const courseElementIds = Array.from(
