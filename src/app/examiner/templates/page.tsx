@@ -1,38 +1,35 @@
 "use client";
 
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
-import { AssessmentFile, assessmentFileService } from "@/services/assessmentFileService";
-import { AssessmentPaper, assessmentPaperService } from "@/services/assessmentPaperService";
+import { queryKeys } from "@/lib/react-query";
+import { assessmentFileService } from "@/services/assessmentFileService";
+import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
+import { assignRequestService } from "@/services/assignRequestService";
 import { CourseElement, courseElementService } from "@/services/courseElementService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
-import { Semester, SemesterCourse, SemesterPlanDetail, semesterService } from "@/services/semesterService";
-import { assignRequestService } from "@/services/assignRequestService";
+import { Semester, semesterService } from "@/services/semesterService";
 import { CloseOutlined, EyeOutlined, ReloadOutlined } from "@ant-design/icons";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TableProps } from "antd";
 import {
   Alert,
   App,
   Button,
   Card,
-  Col,
   Collapse,
   Descriptions,
   Divider,
   Empty,
   Modal,
-  Row,
   Select,
   Space,
   Spin,
   Table,
-  Tag,
-  Typography,
+  Typography
 } from "antd";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/react-query";
+import { useEffect, useMemo, useState } from "react";
 import styles from "./Templates.module.css";
 
 const { Title, Text } = Typography;
@@ -41,7 +38,6 @@ const TemplatesPageContent = () => {
   const queryClient = useQueryClient();
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-  const [selectedCourseElementId, setSelectedCourseElementId] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<AssessmentTemplate | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
@@ -235,14 +231,8 @@ const TemplatesPageContent = () => {
       );
     }
 
-    if (selectedCourseElementId) {
-      filtered = filtered.filter(template =>
-        template.courseElementId === selectedCourseElementId
-      );
-    }
-
     return filtered;
-  }, [allTemplates, selectedSemesterCode, selectedCourseId, selectedCourseElementId, courseElements]);
+  }, [allTemplates, selectedSemesterCode, selectedCourseId, courseElements]);
 
 
   useEffect(() => {
@@ -275,15 +265,8 @@ const TemplatesPageContent = () => {
   useEffect(() => {
     if (!selectedSemesterCode) {
       setSelectedCourseId(null);
-      setSelectedCourseElementId(null);
     }
   }, [selectedSemesterCode]);
-
-  useEffect(() => {
-    if (selectedSemesterCode) {
-      setSelectedCourseElementId(null);
-    }
-  }, [selectedCourseId, selectedSemesterCode]);
 
   const loading = loadingTemplates && !templatesResponse;
   const error = templatesError ? (templatesError as any).message || "Failed to load data." : null;
@@ -300,16 +283,10 @@ const TemplatesPageContent = () => {
   const handleSemesterChange = (value: string | null) => {
     setSelectedSemesterCode(value);
     setSelectedCourseId(null);
-    setSelectedCourseElementId(null);
   };
 
   const handleCourseChange = (value: number | null) => {
     setSelectedCourseId(value);
-    setSelectedCourseElementId(null);
-  };
-
-  const handleCourseElementChange = (value: number | null) => {
-    setSelectedCourseElementId(value);
   };
 
   const handleViewTemplate = (template: AssessmentTemplate) => {
@@ -400,140 +377,112 @@ const TemplatesPageContent = () => {
               level={2}
               style={{ margin: 0, fontWeight: 700, color: "#2F327D" }}
             >
-                Practical Exam Templates
-              </Title>
+              Practical Exam Templates
+            </Title>
             <Text type="secondary" style={{ fontSize: 14 }}>
-                View and filter all practical exam assessment templates
-              </Text>
+              View and filter all practical exam assessment templates
+            </Text>
           </div>
           <Space>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  queryClient.invalidateQueries({ queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }) });
-                }}
-                loading={loading}
-              >
-                Refresh
-              </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }) });
+              }}
+              loading={loading}
+            >
+              Refresh
+            </Button>
           </Space>
         </div>
 
         <Card>
           <Space direction="vertical" size="large" style={{ width: "100%" }}>
 
-          {error && (
-            <Alert
-              message="Error"
-              description={error}
-              type="error"
-              showIcon
-              closable
-            />
-          )}
+            {error && (
+              <Alert
+                message="Error"
+                description={error}
+                type="error"
+                showIcon
+                closable
+              />
+            )}
 
-          <Card size="small">
-            <Row gutter={16}>
-              <Col xs={24} sm={8} md={8}>
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  <Text strong>Semester</Text>
-                  <Select
-                    style={{ width: "100%" }}
-                    placeholder="Select semester"
-                    allowClear
-                    showSearch
-                    value={selectedSemesterCode}
-                    onChange={handleSemesterChange}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={semesters.map((s) => ({
-                      label: `${s.semesterCode} (${s.academicYear})`,
-                      value: s.semesterCode,
-                    }))}
-                  />
-                </Space>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  <Text strong>Course</Text>
-                  <Select
-                    style={{ width: "100%" }}
-                    placeholder="Select course"
-                    allowClear
-                    showSearch
-                    loading={loadingCourses}
-                    disabled={!selectedSemesterCode}
-                    value={selectedCourseId}
-                    onChange={handleCourseChange}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={courses.map((sc) => ({
-                      label: `${sc.course.code} - ${sc.course.name}`,
-                      value: sc.course.id,
-                    }))}
-                  />
-                </Space>
-              </Col>
-              <Col xs={24} sm={8} md={8}>
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  <Text strong>Course Element</Text>
-                  <Select
-                    style={{ width: "100%" }}
-                    placeholder="Select course element"
-                    allowClear
-                    showSearch
-                    loading={loadingCourseElements}
-                    disabled={!selectedSemesterCode}
-                    value={selectedCourseElementId}
-                    onChange={handleCourseElementChange}
-                    filterOption={(input, option) =>
-                      (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-                    }
-                    options={courseElements.map((ce) => ({
-                      label: ce.name,
-                      value: ce.id,
-                    }))}
-                  />
-                </Space>
-              </Col>
-            </Row>
-          </Card>
-
-          <Card>
-            <Spin spinning={loading}>
-              {filteredTemplates.length === 0 ? (
-                <Empty
-                  description="No templates found"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+            <Space size="middle">
+              <Space direction="vertical" size="small">
+                <Text strong>Semester</Text>
+                <Select
+                  style={{ width: 300 }}
+                  placeholder="Select semester"
+                  allowClear
+                  showSearch
+                  value={selectedSemesterCode}
+                  onChange={handleSemesterChange}
+                  filterOption={(input, option) =>
+                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={semesters.map((s) => ({
+                    label: `${s.semesterCode} (${s.academicYear})`,
+                    value: s.semesterCode,
+                  }))}
                 />
-              ) : (
-                <Table
-                  columns={columns}
-                  dataSource={filteredTemplates}
-                  rowKey="id"
-                  pagination={{
-                    pageSize: 10,
-                    showSizeChanger: true,
-                    showTotal: (total) => `Total ${total} templates`,
-                  }}
-                  scroll={{ x: 1200 }}
+              </Space>
+              <Space direction="vertical" size="small">
+                <Text strong>Course</Text>
+                <Select
+                  style={{ width: 300 }}
+                  placeholder="Select course"
+                  allowClear
+                  showSearch
+                  loading={loadingCourses}
+                  disabled={!selectedSemesterCode}
+                  value={selectedCourseId}
+                  onChange={handleCourseChange}
+                  filterOption={(input, option) =>
+                    (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={courses.map((sc) => ({
+                    label: `${sc.course.code} - ${sc.course.name}`,
+                    value: sc.course.id,
+                  }))}
                 />
-              )}
-            </Spin>
-          </Card>
-        </Space>
-      </Card>
+              </Space>
+            </Space>
 
-      {selectedTemplate && (
-        <TemplateDetailModal
-          open={isViewModalOpen}
-          onClose={handleCloseViewModal}
-          template={selectedTemplate}
-        />
-      )}
-    </div>
+            <Card>
+              <Spin spinning={loading}>
+                {filteredTemplates.length === 0 ? (
+                  <Empty
+                    description="No templates found"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                ) : (
+                  <Table
+                    columns={columns}
+                    dataSource={filteredTemplates}
+                    rowKey="id"
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showTotal: (total) => `Total ${total} templates`,
+                    }}
+                    scroll={{ x: 1200 }}
+                  />
+                )}
+              </Spin>
+            </Card>
+          </Space>
+        </Card>
+
+        {selectedTemplate && (
+          <TemplateDetailModal
+            open={isViewModalOpen}
+            onClose={handleCloseViewModal}
+            template={selectedTemplate}
+          />
+        )}
+      </div>
     </>
   );
 };

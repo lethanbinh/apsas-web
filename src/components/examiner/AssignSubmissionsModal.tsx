@@ -233,65 +233,65 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
         />
       )}
 
-      <Space direction="vertical" style={{ width: "100%" }} size="large">
-        <Card style={{ backgroundColor: "#f0f9ff" }}>
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            <Text strong>Upload ZIP files containing submissions</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              ZIP files will be extracted and submissions will be created automatically.
-              Only ZIP files are accepted, maximum size 100MB per file.
-              <br />
-              <Text strong style={{ color: "#ff4d4f" }}>
-                File name format: STUXXXXXX.zip (e.g., STU123456.zip) where X is a digit.
-              </Text>
-            </Text>
-          </Space>
-        </Card>
-        <Dragger
-          fileList={fileList}
-          beforeUpload={beforeUpload}
-          onChange={handleFileChange}
-          accept=".zip,application/zip,application/x-zip-compressed"
-          multiple
-        >
-          <p className="ant-upload-drag-icon">
-            <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
-          </p>
-          <p className="ant-upload-text">Click or drag ZIP files here</p>
-          <p className="ant-upload-hint">
-            You can select multiple files. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip).
-            Files will be uploaded when you click "Upload".
-          </p>
-        </Dragger>
-        {fileList.length > 0 && (
-          <Card size="small">
-            <Space direction="vertical" style={{ width: "100%" }} size="small">
-              <Text strong>Selected files ({fileList.length}):</Text>
-              {fileList.map((file, index) => (
-                <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <FileZipOutlined />
-                  <Text>{file.name}</Text>
-                  <Text type="secondary">
-                    ({(file.size! / 1024 / 1024).toFixed(2)} MB)
-                  </Text>
-                </div>
-              ))}
-            </Space>
-          </Card>
-        )}
+              <Space direction="vertical" style={{ width: "100%" }} size="large">
+                <Card style={{ backgroundColor: "#f0f9ff" }}>
+                  <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                    <Text strong>Upload ZIP files containing submissions</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      ZIP files will be extracted and submissions will be created automatically.
+                      Only ZIP files are accepted, maximum size 100MB per file.
+                      <br />
+                      <Text strong style={{ color: "#ff4d4f" }}>
+                        File name format: STUXXXXXX.zip (e.g., STU123456.zip) where X is a digit.
+                      </Text>
+                    </Text>
+                  </Space>
+                </Card>
+                <Dragger
+                  fileList={fileList}
+                  beforeUpload={beforeUpload}
+                  onChange={handleFileChange}
+                  accept=".zip,application/zip,application/x-zip-compressed"
+                  multiple
+                >
+                  <p className="ant-upload-drag-icon">
+                    <InboxOutlined style={{ fontSize: 48, color: "#1890ff" }} />
+                  </p>
+                  <p className="ant-upload-text">Click or drag ZIP files here</p>
+                  <p className="ant-upload-hint">
+                    You can select multiple files. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip).
+                    Files will be uploaded when you click "Upload".
+                  </p>
+                </Dragger>
+                {fileList.length > 0 && (
+                  <Card size="small">
+                    <Space direction="vertical" style={{ width: "100%" }} size="small">
+                      <Text strong>Selected files ({fileList.length}):</Text>
+                      {fileList.map((file, index) => (
+                        <div key={index} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <FileZipOutlined />
+                          <Text>{file.name}</Text>
+                      <Text type="secondary">
+                            ({(file.size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                        </div>
+                      ))}
+                    </Space>
+                  </Card>
+                )}
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <Button onClick={onCancel}>Cancel</Button>
-          <Button
-            type="primary"
-            onClick={handleUploadZip}
-            loading={isLoading}
-            disabled={fileList.length === 0}
-          >
-            Upload
-          </Button>
-        </div>
-      </Space>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <Button onClick={onCancel}>Cancel</Button>
+                  <Button
+                    type="primary"
+                    onClick={handleUploadZip}
+                    loading={isLoading}
+                    disabled={fileList.length === 0}
+                  >
+                    Upload
+                  </Button>
+                </div>
+              </Space>
     </Modal>
   );
 };

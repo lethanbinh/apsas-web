@@ -139,15 +139,15 @@ export function SubmissionsTable({
         }
         if (onEdit) {
           return (
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => onEdit(record)}
-              size="small"
-              disabled={isGradeSheetSubmitted}
-            >
-              Edit
-            </Button>
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => onEdit(record)}
+          size="small"
+          disabled={isGradeSheetSubmitted}
+        >
+          Edit
+        </Button>
           );
         }
         return null;
