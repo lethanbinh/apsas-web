@@ -25,9 +25,13 @@ const { Text } = Typography;
 
 
 
-function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
-  // PE (Practical Exam) has templateType === 2
-  return template.templateType === 2;
+function isPracticalExamTemplate(
+  template: AssessmentTemplate,
+  courseElementsMap: Map<number, CourseElement>
+): boolean {
+  // PE (Practical Exam) has courseElement.elementType === 2
+  const courseElement = courseElementsMap.get(template.courseElementId);
+  return courseElement?.elementType === 2;
 }
 
 interface CreateGradingGroupModalProps {
@@ -70,6 +74,16 @@ export const CreateGradingGroupModal: React.FC<
   const courses = semesterDetail?.semesterCourses || [];
 
 
+  // Fetch all courseElements for filtering templates (not just by semester)
+  const { data: allCourseElementsRes = [] } = useQuery({
+    queryKey: ['courseElements', 'all'],
+    queryFn: () => courseElementService.getCourseElements({
+      pageNumber: 1,
+      pageSize: 10000,
+    }),
+    enabled: open,
+  });
+
   const { data: courseElementsRes = [] } = useQuery({
     queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
     queryFn: () => courseElementService.getCourseElements({
@@ -79,6 +93,16 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: !!selectedSemesterCode && open,
   });
+
+  // Create a map of all course elements for filtering templates
+  const allCourseElementsMap = useMemo(() => {
+    const map = new Map<number, CourseElement>();
+    // Add courseElements from props (if available)
+    courseElementsMap.forEach((ce, id) => map.set(id, ce));
+    // Add courseElements from all courseElements query (for filtering)
+    allCourseElementsRes.forEach(ce => map.set(ce.id, ce));
+    return map;
+  }, [courseElementsMap, allCourseElementsRes]);
 
 
   const { data: templatesResponse } = useQuery({
@@ -93,7 +117,10 @@ export const CreateGradingGroupModal: React.FC<
 
   const assessmentTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
-    let peTemplates = templatesResponse.items.filter(isPracticalExamTemplate);
+    // Filter by courseElement.elementType === 2 (PE)
+    let peTemplates = templatesResponse.items.filter(template =>
+      isPracticalExamTemplate(template, allCourseElementsMap)
+    );
 
     if (selectedCourseId && selectedSemesterCode) {
       const courseElementIds = courseElementsRes
@@ -105,7 +132,7 @@ export const CreateGradingGroupModal: React.FC<
     }
 
     return peTemplates;
-  }, [templatesResponse, selectedCourseId, selectedSemesterCode, courseElementsRes]);
+  }, [templatesResponse, selectedCourseId, selectedSemesterCode, courseElementsRes, allCourseElementsMap]);
   const { message: messageApi } = App.useApp();
   const { user } = useAuth();
 

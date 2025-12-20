@@ -104,20 +104,14 @@ const TemplatesPageContent = () => {
 
   const allTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
-    // Filter only PE (Practical Exam) templates - templateType === 2
+    // Filter only PE (Practical Exam) templates - filter by courseElement.elementType === 2
     const peTemplates = templatesResponse.items.filter(template => {
-      // Only include templates with templateType === 2 (PE)
-      if (template.templateType !== 2) return false;
-      
       const courseElement = allCourseElementsMap.get(template.courseElementId);
-      if (!courseElement || courseElement.elementType !== 2) return false;
-      if (approvedCourseElementIds.size > 0) {
-        return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
-      }
-      return true;
+      // Only include templates where courseElement.elementType === 2 (PE)
+      return courseElement?.elementType === 2;
     });
     return peTemplates;
-  }, [templatesResponse, approvedCourseElementIds, allCourseElementsMap]);
+  }, [templatesResponse, allCourseElementsMap]);
 
 
   const semesters = useMemo(() => {
@@ -186,22 +180,22 @@ const TemplatesPageContent = () => {
 
 
   const courseElements = useMemo(() => {
-
+    // Get all courseElementIds from templates (already filtered to elementType === 2)
     const courseElementIdsWithTemplates = new Set(
       allTemplates.map(t => t.courseElementId)
     );
 
-
+    // Filter courseElements that have templates (already filtered by elementType === 2)
     let filtered = courseElementsRes.filter(ce =>
-      ce.elementType === 2 && courseElementIdsWithTemplates.has(ce.id)
+      courseElementIdsWithTemplates.has(ce.id)
     );
 
-
+    // Further filter by selected course if any
     if (selectedCourseId) {
       filtered = filtered.filter(ce => ce.semesterCourse?.courseId === selectedCourseId);
     }
 
-
+    // Remove duplicates by name
     const uniqueElements = new Map<string, CourseElement>();
     filtered.forEach(ce => {
       const name = ce.name || '';

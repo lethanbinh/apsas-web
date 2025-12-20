@@ -142,22 +142,6 @@ const GradingGroupsPageContent = () => {
     }),
   });
 
-  const allAssessmentTemplates = useMemo(() => {
-    const map = new Map<number, AssessmentTemplate>();
-    (allAssessmentTemplatesRes?.items || []).forEach(template => {
-        if (allAssessmentTemplateIds.includes(template.id)) {
-        map.set(template.id, template);
-        }
-      });
-    return map;
-  }, [allAssessmentTemplatesRes, allAssessmentTemplateIds]);
-
-
-      const courseElementIds = Array.from(
-    new Set(Array.from(allAssessmentTemplates.values()).map(t => t.courseElementId))
-  );
-
-
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -165,6 +149,34 @@ const GradingGroupsPageContent = () => {
         pageSize: 1000,
     }),
   });
+
+  // Create a map of all course elements for filtering
+  const allCourseElementsMap = useMemo(() => {
+    const map = new Map<number, CourseElement>();
+    allCourseElementsRes.forEach(element => {
+      map.set(element.id, element);
+    });
+    return map;
+  }, [allCourseElementsRes]);
+
+  const allAssessmentTemplates = useMemo(() => {
+    const map = new Map<number, AssessmentTemplate>();
+    (allAssessmentTemplatesRes?.items || []).forEach(template => {
+        if (allAssessmentTemplateIds.includes(template.id)) {
+          // Filter only PE templates - check courseElement.elementType === 2
+          const courseElement = allCourseElementsMap.get(template.courseElementId);
+          if (courseElement?.elementType === 2) {
+            map.set(template.id, template);
+          }
+        }
+      });
+    return map;
+  }, [allAssessmentTemplatesRes, allAssessmentTemplateIds, allCourseElementsMap]);
+
+
+      const courseElementIds = Array.from(
+    new Set(Array.from(allAssessmentTemplates.values()).map(t => t.courseElementId))
+  );
 
   const allCourseElements = useMemo(() => {
     const map = new Map<number, CourseElement>();
