@@ -1,50 +1,33 @@
 "use client";
 
+import { useAuth } from "@/hooks/useAuth";
+import { queryKeys } from "@/lib/react-query";
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { CourseElement, courseElementService } from "@/services/courseElementService";
+import { examinerService } from "@/services/examinerService";
 import { GradingGroup, gradingGroupService } from "@/services/gradingGroupService";
 import { Lecturer } from "@/services/lecturerService";
-import { Semester, SemesterCourse, SemesterPlanDetail, semesterService } from "@/services/semesterService";
-import { submissionService } from "@/services/submissionService";
-import { examinerService } from "@/services/examinerService";
-import { useAuth } from "@/hooks/useAuth";
-import { FileZipOutlined, InboxOutlined } from "@ant-design/icons";
+import { semesterService } from "@/services/semesterService";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UploadFile, UploadProps } from "antd";
 import {
   Alert,
   App,
-  Card,
   Form,
   Modal,
   Select,
-  Space,
   Typography,
   Upload
 } from "antd";
-import Dragger from "antd/es/upload/Dragger";
 import { useEffect, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/react-query";
 
 const { Text } = Typography;
 
 
 
 function isPracticalExamTemplate(template: AssessmentTemplate): boolean {
-  const name = (template.courseElementName || "").toLowerCase();
-  const keywords = [
-    "exam",
-    "pe",
-    "practical exam",
-    "practical",
-    "test",
-    "kiểm tra thực hành",
-    "thi thực hành",
-    "bài thi",
-    "bài kiểm tra",
-    "thực hành",
-  ];
-  return keywords.some((keyword) => name.includes(keyword));
+  // PE (Practical Exam) has templateType === 2
+  return template.templateType === 2;
 }
 
 interface CreateGradingGroupModalProps {

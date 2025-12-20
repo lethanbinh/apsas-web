@@ -104,10 +104,12 @@ const TemplatesPageContent = () => {
 
   const allTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
+    // Filter only PE (Practical Exam) templates - templateType === 2
     const peTemplates = templatesResponse.items.filter(template => {
-
+      // Only include templates with templateType === 2 (PE)
+      if (template.templateType !== 2) return false;
+      
       const courseElement = allCourseElementsMap.get(template.courseElementId);
-
       if (!courseElement || courseElement.elementType !== 2) return false;
       if (approvedCourseElementIds.size > 0) {
         return template.courseElementId && approvedCourseElementIds.has(template.courseElementId);
