@@ -454,64 +454,64 @@ const LabDetailItem = ({
                 const canGrade = canGradeSubmission(submission);
                 const submissionCount = submission.studentId ? (submissionCountByStudent[submission.studentId] || 0) : 0;
                 return (
-                  <List.Item
+                <List.Item
                     style={{ 
                       cursor: canGrade ? "pointer" : "not-allowed",
                       opacity: canGrade ? 1 : 0.6
                     }}
-                    onClick={() => handleSubmissionClick(submission)}
-                    actions={[
-                      submission.submissionFile && (
-                        <Button
-                          type="text"
-                          icon={<DownloadOutlined />}
-                          key="download"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (submission.submissionFile?.submissionUrl) {
-                              window.open(submission.submissionFile.submissionUrl, "_blank");
-                            }
-                          }}
-                        />
-                      ),
-                    ]}
-                  >
-                    <List.Item.Meta
-                      avatar={<FolderOutlined />}
-                      title={
-                        <Space>
-                          <Text strong>{submission.studentName}</Text>
-                          {submissionScores[submission.id] && (
-                            <Tag color="green">
-                              {submissionScores[submission.id].max > 0
-                                ? `${submissionScores[submission.id].total.toFixed(2)}/${submissionScores[submission.id].max.toFixed(2)}`
-                                : submissionScores[submission.id].total.toFixed(2)}
-                            </Tag>
-                          )}
+                  onClick={() => handleSubmissionClick(submission)}
+                  actions={[
+                    submission.submissionFile && (
+                      <Button
+                        type="text"
+                        icon={<DownloadOutlined />}
+                        key="download"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (submission.submissionFile?.submissionUrl) {
+                            window.open(submission.submissionFile.submissionUrl, "_blank");
+                          }
+                        }}
+                      />
+                    ),
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<FolderOutlined />}
+                    title={
+                      <Space>
+                        <Text strong>{submission.studentName}</Text>
+                        {submissionScores[submission.id] && (
+                          <Tag color="green">
+                            {submissionScores[submission.id].max > 0
+                              ? `${submissionScores[submission.id].total.toFixed(2)}/${submissionScores[submission.id].max.toFixed(2)}`
+                              : submissionScores[submission.id].total.toFixed(2)}
+                          </Tag>
+                        )}
                           {!canGrade && (
                             <Tag color="orange">
                               Submissions: {submissionCount}/3
                             </Tag>
                           )}
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <div>{submission.submissionFile?.name || "No file"}</div>
-                          <Text type="secondary" style={{ fontSize: "0.85rem" }}>
-                            Submitted: {dayjs(submission.updatedAt || submission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                      </Space>
+                    }
+                    description={
+                      <div>
+                        <div>{submission.submissionFile?.name || "No file"}</div>
+                        <Text type="secondary" style={{ fontSize: "0.85rem" }}>
+                          Submitted: {dayjs(submission.updatedAt || submission.submittedAt).format("DD MMM YYYY, HH:mm")}
                           </Text>
                           {!canGrade && (
                             <div style={{ marginTop: 4 }}>
                               <Text type="secondary" style={{ fontSize: "0.85rem", fontStyle: "italic" }}>
                                 Cannot grade yet: Deadline must pass or student must submit 3 times
-                              </Text>
+                        </Text>
                             </div>
                           )}
-                        </div>
-                      }
-                    />
-                  </List.Item>
+                      </div>
+                    }
+                  />
+                </List.Item>
                 );
               }}
             />
