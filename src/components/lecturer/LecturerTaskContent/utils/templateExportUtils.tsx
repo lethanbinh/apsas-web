@@ -178,6 +178,13 @@ export async function downloadTemplate({
       ["Description", finalTemplate.description || "", "Template description"],
       ["Template Type", finalTemplate.templateType === 0 ? "DSA (0)" : "WEBAPI (1)", "0: DSA, 1: WEBAPI"],
       ["Startup Project", finalTemplate.startupProject || "", "Startup project (required for WEBAPI, leave empty for DSA)"],
+      [],
+      ["INSTRUCTIONS:"],
+      ["1. Fill in the Name, Description, and Template Type fields above"],
+      ...(finalTemplate.templateType === 1 ? [["2. Fill in the Startup Project field (required for WEBAPI templates)"]] : []),
+      [finalTemplate.templateType === 1 ? "3" : "2", ". Use the Papers sheet to add papers"],
+      [finalTemplate.templateType === 1 ? "4" : "3", ". Use the Questions sheet to add questions (reference papers by name)"],
+      [finalTemplate.templateType === 1 ? "5" : "4", ". Use the Rubrics sheet to add rubrics (reference questions by question number)"],
     ];
     const templateWs = XLSX.utils.aoa_to_sheet(templateData);
     XLSX.utils.book_append_sheet(wb, templateWs, "Assessment Template");
@@ -203,11 +210,23 @@ export async function downloadTemplate({
         const langStr = paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "CSharp";
         papersData.push([paper.name, paper.description || "", langStr]);
       }
+      papersData.push([]);
+      papersData.push(["INSTRUCTIONS:"]);
+      papersData.push(["- Name: Paper name (required)"]);
+      papersData.push(["- Description: Paper description (optional)"]);
+      papersData.push(["- Language: CSharp (0), C (1), or Java (2)"]);
+      papersData.push(["- Reference papers by name in the Questions sheet"]);
     } else {
       papersData = [
         ["PAPERS"],
         ["Name", "Description", "Language"],
         ["Paper 1", "Description for Paper 1", "CSharp"],
+        [],
+        ["INSTRUCTIONS:"],
+        ["- Name: Paper name (required)"],
+        ["- Description: Paper description (optional)"],
+        ["- Language: CSharp (0), C (1), or Java (2)"],
+        ["- Reference papers by name in the Questions sheet"],
       ];
     }
     const papersWs = XLSX.utils.aoa_to_sheet(papersData);
@@ -243,6 +262,15 @@ export async function downloadTemplate({
           question.score || 0,
         ]);
       }
+      questionsData.push([]);
+      questionsData.push(["INSTRUCTIONS:"]);
+      questionsData.push(["- Paper Name: Must match a paper name from the Papers sheet (required)"]);
+      questionsData.push(["- Question Number: Sequential number for questions in the same paper (required)"]);
+      questionsData.push(["- Question Text: The question description (required)"]);
+      questionsData.push(["- Sample Input: Example input for testing (optional)"]);
+      questionsData.push(["- Sample Output: Expected output for the sample input (optional)"]);
+      questionsData.push(["- Score: Maximum score for this question (required)"]);
+      questionsData.push(["- Reference questions by Question Number in the Rubrics sheet"]);
     } else {
       questionsData = [
         ["QUESTIONS"],
@@ -251,6 +279,15 @@ export async function downloadTemplate({
         ["Paper 1", 2, "Write a function to check if a number is prime", "7", "true", 10],
         ["Paper 1", 3, "Write a function to reverse a string", "\"hello\"", "\"olleh\"", 10],
         ["Paper 1", 4, "Write a function to find the maximum in an array", "[1, 5, 3, 9, 2]", "9", 10],
+        [],
+        ["INSTRUCTIONS:"],
+        ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
+        ["- Question Number: Sequential number for questions in the same paper (required)"],
+        ["- Question Text: The question description (required)"],
+        ["- Sample Input: Example input for testing (optional)"],
+        ["- Sample Output: Expected output for the sample input (optional)"],
+        ["- Score: Maximum score for this question (required)"],
+        ["- Reference questions by Question Number in the Rubrics sheet"],
       ];
     }
     const questionsWs = XLSX.utils.aoa_to_sheet(questionsData);
@@ -305,6 +342,14 @@ export async function downloadTemplate({
           rubric.score || 0,
         ]);
       }
+      rubricsData.push([]);
+      rubricsData.push(["INSTRUCTIONS:"]);
+      rubricsData.push(["- Paper Name: Must match a paper name from the Papers sheet (required)"]);
+      rubricsData.push(["- Question Number: Must match a question number from the Questions sheet (required)"]);
+      rubricsData.push(["- Description: Rubric description (required)"]);
+      rubricsData.push(["- Input: Test input for this rubric (optional)"]);
+      rubricsData.push(["- Output: Expected output for this input (optional)"]);
+      rubricsData.push(["- Score: Points for this rubric (required)"]);
     } else {
       rubricsData = [
         ["RUBRICS"],
@@ -313,6 +358,14 @@ export async function downloadTemplate({
         ["Paper 1", 2, "Correct prime number check", "7", "true", 5],
         ["Paper 1", 3, "Correct string reversal", "\"hello\"", "\"olleh\"", 5],
         ["Paper 1", 4, "Correct maximum finding", "[1, 5, 3, 9, 2]", "9", 5],
+        [],
+        ["INSTRUCTIONS:"],
+        ["- Paper Name: Must match a paper name from the Papers sheet (required)"],
+        ["- Question Number: Must match a question number from the Questions sheet (required)"],
+        ["- Description: Rubric description (required)"],
+        ["- Input: Test input for this rubric (optional)"],
+        ["- Output: Expected output for this input (optional)"],
+        ["- Score: Points for this rubric (required)"],
       ];
     }
     const rubricsWs = XLSX.utils.aoa_to_sheet(rubricsData);

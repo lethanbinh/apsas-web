@@ -144,18 +144,25 @@ export async function importTemplate({
     const paperDataMap = new Map<string, { name: string; description: string; language: number }>();
     for (let i = 2; i < papersRows.length; i++) {
       const row = papersRows[i];
-      if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
-        const name = String(row[0]).trim();
-        const description = row[1] ? String(row[1]).trim() : "";
-        let language = 0;
-        if (row[2]) {
-          const langStr = String(row[2]).toLowerCase();
-          if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
-          else if (langStr.includes("java")) language = 2;
-        }
-        const paperKey = `${name}|${description}|${language}`;
-        if (!paperDataMap.has(paperKey)) {
-          paperDataMap.set(paperKey, { name, description, language });
+      if (row && row[0]) {
+        const firstCell = String(row[0]).trim();
+        // Skip Instructions rows and empty rows
+        if (firstCell && 
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+            !firstCell.startsWith("-") &&
+            firstCell.toUpperCase() !== "PAPERS") {
+          const name = firstCell;
+          const description = row[1] ? String(row[1]).trim() : "";
+          let language = 0;
+          if (row[2]) {
+            const langStr = String(row[2]).toLowerCase();
+            if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
+            else if (langStr.includes("java")) language = 2;
+          }
+          const paperKey = `${name}|${description}|${language}`;
+          if (!paperDataMap.has(paperKey)) {
+            paperDataMap.set(paperKey, { name, description, language });
+          }
         }
       }
     }
@@ -178,17 +185,24 @@ export async function importTemplate({
     }>();
     for (let i = 2; i < questionsRows.length; i++) {
       const row = questionsRows[i];
-      if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
-        const paperName = String(row[0]).trim();
-        const questionNumber = row[1] ? Number(row[1]) : 0;
-        const questionText = row[2] ? String(row[2]).trim() : "";
-        const sampleInput = row[3] ? String(row[3]).trim() : "";
-        const sampleOutput = row[4] ? String(row[4]).trim() : "";
-        const score = row[5] ? Number(row[5]) : 0;
-        if (paperName && questionNumber > 0 && questionText) {
-          const questionKey = `${paperName}|${questionNumber}|${questionText}|${sampleInput}|${sampleOutput}|${score}`;
-          if (!questionDataMap.has(questionKey)) {
-            questionDataMap.set(questionKey, { paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
+      if (row && row[0]) {
+        const firstCell = String(row[0]).trim();
+        // Skip Instructions rows and empty rows
+        if (firstCell && 
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+            !firstCell.startsWith("-") &&
+            firstCell.toUpperCase() !== "QUESTIONS") {
+          const paperName = firstCell;
+          const questionNumber = row[1] ? Number(row[1]) : 0;
+          const questionText = row[2] ? String(row[2]).trim() : "";
+          const sampleInput = row[3] ? String(row[3]).trim() : "";
+          const sampleOutput = row[4] ? String(row[4]).trim() : "";
+          const score = row[5] ? Number(row[5]) : 0;
+          if (paperName && questionNumber > 0 && questionText) {
+            const questionKey = `${paperName}|${questionNumber}|${questionText}|${sampleInput}|${sampleOutput}|${score}`;
+            if (!questionDataMap.has(questionKey)) {
+              questionDataMap.set(questionKey, { paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
+            }
           }
         }
       }
@@ -212,47 +226,29 @@ export async function importTemplate({
     }>();
     for (let i = 2; i < rubricsRows.length; i++) {
       const row = rubricsRows[i];
-      if (row && row[0] && String(row[0]).trim() && !String(row[0]).startsWith("INSTRUCTIONS")) {
-        const paperName = String(row[0]).trim();
-        const questionNumber = row[1] ? Number(row[1]) : 0;
-        const description = row[2] ? String(row[2]).trim() : "";
-        const input = row[3] ? String(row[3]).trim() : "";
-        const output = row[4] ? String(row[4]).trim() : "";
-        const score = row[5] ? Number(row[5]) : 0;
-        if (paperName && questionNumber > 0 && description) {
-          const rubricKey = `${paperName}|${questionNumber}|${description}|${input}|${output}|${score}`;
-          if (!rubricDataMap.has(rubricKey)) {
-            rubricDataMap.set(rubricKey, { paperName, questionNumber, description, input, output, score });
+      if (row && row[0]) {
+        const firstCell = String(row[0]).trim();
+        // Skip Instructions rows and empty rows
+        if (firstCell && 
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+            !firstCell.startsWith("-") &&
+            firstCell.toUpperCase() !== "RUBRICS") {
+          const paperName = firstCell;
+          const questionNumber = row[1] ? Number(row[1]) : 0;
+          const description = row[2] ? String(row[2]).trim() : "";
+          const input = row[3] ? String(row[3]).trim() : "";
+          const output = row[4] ? String(row[4]).trim() : "";
+          const score = row[5] ? Number(row[5]) : 0;
+          if (paperName && questionNumber > 0 && description) {
+            const rubricKey = `${paperName}|${questionNumber}|${description}|${input}|${output}|${score}`;
+            if (!rubricDataMap.has(rubricKey)) {
+              rubricDataMap.set(rubricKey, { paperName, questionNumber, description, input, output, score });
+            }
           }
         }
       }
     }
     const rubricData = Array.from(rubricDataMap.values());
-
-    const rubricCountByQuestion = new Map<string, number>();
-    for (const rubric of rubricData) {
-      const questionKey = `${rubric.paperName}-${rubric.questionNumber}`;
-      const currentCount = rubricCountByQuestion.get(questionKey) || 0;
-      rubricCountByQuestion.set(questionKey, currentCount + 1);
-    }
-
-    const invalidQuestions: Array<{ paperName: string; questionNumber: number; count: number }> = [];
-    for (const [questionKey, count] of rubricCountByQuestion.entries()) {
-      if (count > 4) {
-        const [paperName, questionNumberStr] = questionKey.split('-');
-        const questionNumber = parseInt(questionNumberStr, 10);
-        invalidQuestions.push({ paperName, questionNumber, count });
-      }
-    }
-
-    if (invalidQuestions.length > 0) {
-      const errorMessages = invalidQuestions.map(
-        (q) => `Question ${q.questionNumber} in paper "${q.paperName}" has ${q.count} rubrics (maximum is 4)`
-      );
-      throw new Error(
-        `Import failed: Some questions exceed the maximum of 4 rubrics per question.\n${errorMessages.join('\n')}`
-      );
-    }
 
     const createdPapers = new Map<string, AssessmentPaper>();
     for (const paper of paperData) {

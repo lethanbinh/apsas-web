@@ -225,9 +225,8 @@ export const QuestionDetailView = ({
               icon={<PlusOutlined />}
               type="dashed"
               onClick={() => openRubricModal()}
-              disabled={rubrics.length >= 4}
             >
-              Add Rubric {rubrics.length >= 4 ? `(Max 4)` : ``}
+              Add Rubric
             </Button>
           )
         }

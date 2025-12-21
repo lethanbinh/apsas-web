@@ -44,14 +44,6 @@ export const RubricFormModal = ({
       if (isEditing) {
         await rubricItemService.updateRubricItem(initialData!.id, values);
       } else {
-
-        if (currentRubricsCount >= 4) {
-          notification.error({
-            message: "Maximum rubrics reached",
-            description: "Each question can have a maximum of 4 rubrics.",
-          });
-          return;
-        }
         await rubricItemService.createRubricItem({
           ...values,
           assessmentQuestionId: questionId,
@@ -89,15 +81,6 @@ export const RubricFormModal = ({
         ) : null,
       ]}
     >
-      {!isEditing && currentRubricsCount >= 4 && (
-        <Alert
-          message="Maximum rubrics reached"
-          description="Each question can have a maximum of 4 rubrics. Please delete an existing rubric before adding a new one."
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      )}
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="description"
