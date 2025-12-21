@@ -229,6 +229,32 @@ export async function importTemplate({
     }
     const rubricData = Array.from(rubricDataMap.values());
 
+    // Validate: Check if any question has more than 4 rubrics
+    const rubricCountByQuestion = new Map<string, number>();
+    for (const rubric of rubricData) {
+      const questionKey = `${rubric.paperName}-${rubric.questionNumber}`;
+      const currentCount = rubricCountByQuestion.get(questionKey) || 0;
+      rubricCountByQuestion.set(questionKey, currentCount + 1);
+    }
+
+    // Find questions with more than 4 rubrics
+    const invalidQuestions: Array<{ paperName: string; questionNumber: number; count: number }> = [];
+    for (const [questionKey, count] of rubricCountByQuestion.entries()) {
+      if (count > 4) {
+        const [paperName, questionNumberStr] = questionKey.split('-');
+        const questionNumber = parseInt(questionNumberStr, 10);
+        invalidQuestions.push({ paperName, questionNumber, count });
+      }
+    }
+
+    if (invalidQuestions.length > 0) {
+      const errorMessages = invalidQuestions.map(
+        (q) => `Question ${q.questionNumber} in paper "${q.paperName}" has ${q.count} rubrics (maximum is 4)`
+      );
+      throw new Error(
+        `Import failed: Some questions exceed the maximum of 4 rubrics per question.\n${errorMessages.join('\n')}`
+      );
+    }
 
     const createdPapers = new Map<string, AssessmentPaper>();
     for (const paper of paperData) {
