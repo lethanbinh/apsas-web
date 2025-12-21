@@ -21,6 +21,7 @@ interface ImportTemplateParams {
   refetchTemplates: () => Promise<any>;
   fetchAllData: (templateId: number) => Promise<void>;
   resetStatusIfRejected: () => Promise<void>;
+  updateStatusToInProgress?: () => Promise<void>;
 }
 
 export async function importTemplate({
@@ -34,6 +35,7 @@ export async function importTemplate({
   refetchTemplates,
   fetchAllData,
   resetStatusIfRejected,
+  updateStatusToInProgress,
 }: ImportTemplateParams) {
   try {
     const data = await file.arrayBuffer();
@@ -117,21 +119,8 @@ export async function importTemplate({
         assignedToHODId: task.assignedByHODId,
       });
 
-      if (isRejected) {
-        try {
-          await assignRequestService.updateAssignRequest(task.id, {
-            message: task.message || "Template imported and resubmitted after rejection",
-            courseElementId: task.courseElementId,
-            assignedLecturerId: task.assignedLecturerId,
-            assignedByHODId: task.assignedByHODId,
-            assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-            status: 1,
-            assignedAt: task.assignedAt,
-          });
-        } catch (err: any) {
-          console.error("Failed to reset status:", err);
-        }
-      }
+      // When rejected and importing, updateStatusToInProgress will be called after resetStatusIfRejected
+      // So we don't need to manually update status here
     }
 
 
@@ -350,6 +339,11 @@ export async function importTemplate({
     await refetchTemplates();
     await fetchAllData(currentTemplate.id);
     await resetStatusIfRejected();
+    
+    // Update status to IN_PROGRESS after import (unless already rejected and will be reset)
+    if (updateStatusToInProgress && !isRejected) {
+      await updateStatusToInProgress();
+    }
 
     notification.success({
       message: "Import Successful",

@@ -1,6 +1,6 @@
 "use client";
 
-import { App, Card, Collapse, Space, Spin, Typography } from "antd";
+import { Alert, App, Card, Collapse, Space, Spin, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
@@ -50,6 +50,7 @@ export default function AssignmentGradingPage() {
     totalScore,
     feedback,
     loading,
+    isPublished,
   } = useSubmissionData({
     submissionId,
     classIdFromStorage,
@@ -103,55 +104,68 @@ export default function AssignmentGradingPage() {
           onViewExam={() => setViewExamModalVisible(true)}
         />
 
-        <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
-          <Collapse
-            defaultActiveKey={[]}
-            className={`${styles.collapseWrapper} collapse-feedback`}
-            items={[
-              {
-                key: "feedback",
-                label: (
-                  <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-                    Detailed Feedback
-                  </Title>
-                ),
-                children: (
-                  <div>
-                    <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                      <FeedbackFields feedbackData={feedback} />
-                    </Space>
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </Card>
+        {isPublished ? (
+          <>
+            <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
+              <Collapse
+                defaultActiveKey={[]}
+                className={`${styles.collapseWrapper} collapse-feedback`}
+                items={[
+                  {
+                    key: "feedback",
+                    label: (
+                      <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+                        Detailed Feedback
+                      </Title>
+                    ),
+                    children: (
+                      <div>
+                        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                          <FeedbackFields feedbackData={feedback} />
+                        </Space>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
 
-        <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
-          <Collapse
-            defaultActiveKey={["grading-details"]}
-            className={`${styles.collapseWrapper} collapse-grading`}
-            items={[
-              {
-                key: "grading-details",
-                label: (
-                  <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
-                    Grading Details
-                  </Title>
-                ),
-                children: (
-                  <GradingDetailsSection
-                    questions={questionsWithScores}
-                    latestGradingSession={latestGradingSession}
-                    getQuestionColumns={getQuestionColumns}
-                    onOpenGradingHistory={handleOpenGradingHistory}
-                    onOpenFeedbackHistory={handleOpenFeedbackHistory}
-                  />
-                ),
-              },
-            ]}
-          />
-        </Card>
+            <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
+              <Collapse
+                defaultActiveKey={["grading-details"]}
+                className={`${styles.collapseWrapper} collapse-grading`}
+                items={[
+                  {
+                    key: "grading-details",
+                    label: (
+                      <Title level={3} style={{ margin: 0, display: "flex", alignItems: "center" }}>
+                        Grading Details
+                      </Title>
+                    ),
+                    children: (
+                      <GradingDetailsSection
+                        questions={questionsWithScores}
+                        latestGradingSession={latestGradingSession}
+                        getQuestionColumns={getQuestionColumns}
+                        onOpenGradingHistory={handleOpenGradingHistory}
+                        onOpenFeedbackHistory={handleOpenFeedbackHistory}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </Card>
+          </>
+        ) : (
+          <Card style={{ marginTop: 24 }}>
+            <Alert
+              message="Grades Not Published"
+              description="The grades for this assignment have not been published yet. Please check back later."
+              type="info"
+              showIcon
+            />
+          </Card>
+        )}
 
         <ViewExamModal
           visible={viewExamModalVisible}

@@ -26,6 +26,8 @@ interface TaskContentAreaProps {
   onQuestionChange: (paperId: number) => void;
   onRubricChange: (paperId: number) => void;
   onResetStatus: () => Promise<void>;
+  onConfirmTemplateCreation?: () => Promise<void>;
+  updateStatusToInProgress?: () => Promise<void>;
 }
 
 export function TaskContentArea({
@@ -44,6 +46,8 @@ export function TaskContentArea({
   onQuestionChange,
   onRubricChange,
   onResetStatus,
+  onConfirmTemplateCreation,
+  updateStatusToInProgress,
 }: TaskContentAreaProps) {
   if (selectedKey === "template-details") {
     if (!template) {
@@ -62,6 +66,8 @@ export function TaskContentArea({
         assignedToHODId={task.assignedByHODId}
         task={task}
         onResetStatus={onResetStatus}
+        onConfirmTemplateCreation={onConfirmTemplateCreation}
+        updateStatusToInProgress={updateStatusToInProgress}
       />
     );
   }
@@ -76,6 +82,7 @@ export function TaskContentArea({
           isEditable={isEditable}
           onPaperChange={onPaperChange}
           onResetStatus={onResetStatus}
+          updateStatusToInProgress={updateStatusToInProgress}
         />
       );
     }
@@ -104,6 +111,7 @@ export function TaskContentArea({
           onQuestionChange={() => onQuestionChange(paperId!)}
           onResetStatus={onResetStatus}
           task={task}
+          updateStatusToInProgress={updateStatusToInProgress}
         />
       );
     }

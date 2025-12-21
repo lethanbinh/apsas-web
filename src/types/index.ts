@@ -122,6 +122,22 @@ export interface Semester {
   updatedAt: string;
 }
 
+/**
+ * Assign Request Status Enum
+ * 1: PENDING - Initial status when a new assign request is created
+ * 2: ACCEPTED - Status when lecturer confirms template creation
+ * 3: REJECTED - Status when rejected by HOD or assigned lecturer
+ * 4: IN_PROGRESS - Status when lecturer performs CRUD operations on template
+ * 5: COMPLETED - Status when approved (final status, no further edits allowed)
+ */
+export enum AssignRequestStatus {
+  PENDING = 1,
+  ACCEPTED = 2,
+  REJECTED = 3,
+  IN_PROGRESS = 4,
+  COMPLETED = 5,
+}
+
 export interface ApiApprovalItem {
   id: number;
   message: string;

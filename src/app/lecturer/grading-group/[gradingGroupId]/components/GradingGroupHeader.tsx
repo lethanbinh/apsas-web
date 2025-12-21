@@ -1,5 +1,5 @@
 import { Button, Space } from "antd";
-import { ArrowLeftOutlined, FileExcelOutlined, RobotOutlined, UploadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, FileExcelOutlined, RobotOutlined, UploadOutlined, EyeOutlined } from "@ant-design/icons";
 
 interface GradingGroupHeaderProps {
   title: string;
@@ -7,6 +7,7 @@ interface GradingGroupHeaderProps {
   onExportGradeReport: () => void;
   onUploadGradeSheet: () => void;
   onBatchGrading: () => void;
+  onViewExam: () => void;
   batchGradingLoading: boolean;
   submissionsCount: number;
   semesterEnded: boolean;
@@ -20,6 +21,7 @@ export function GradingGroupHeader({
   onExportGradeReport,
   onUploadGradeSheet,
   onBatchGrading,
+  onViewExam,
   batchGradingLoading,
   submissionsCount,
   semesterEnded,
@@ -37,6 +39,13 @@ export function GradingGroupHeader({
         </h3>
       </Space>
       <Space>
+        <Button
+          icon={<EyeOutlined />}
+          onClick={onViewExam}
+          size="large"
+        >
+          View Exam
+        </Button>
         <Button
           icon={<FileExcelOutlined />}
           onClick={onExportGradeReport}

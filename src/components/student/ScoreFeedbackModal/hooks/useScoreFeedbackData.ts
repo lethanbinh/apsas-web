@@ -188,27 +188,30 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
     enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
   });
 
+  const classAssessment = useMemo(() => {
+    if (!classAssessmentsData?.items) return null;
+    if (data.classAssessmentId) {
+      return classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId) || null;
+    }
+    if (data.courseElementId) {
+      return classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId) || null;
+    }
+    return null;
+  }, [classAssessmentsData, data.classAssessmentId, data.courseElementId]);
+
+  const isPublished = classAssessment?.isPublished ?? false;
+
   const assessmentTemplateId = useMemo(() => {
     if (data.assessmentTemplateId) {
       return data.assessmentTemplateId;
     }
 
-    if (data.classAssessmentId && classAssessmentsData?.items) {
-      const classAssessment = classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId);
-      if (classAssessment?.assessmentTemplateId) {
-        return classAssessment.assessmentTemplateId;
-      }
-    }
-
-    if (data.courseElementId && classAssessmentsData?.items) {
-      const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId);
-      if (classAssessment?.assessmentTemplateId) {
-        return classAssessment.assessmentTemplateId;
-      }
+    if (classAssessment?.assessmentTemplateId) {
+      return classAssessment.assessmentTemplateId;
     }
 
     return null;
-  }, [data.assessmentTemplateId, data.classAssessmentId, data.courseElementId, classAssessmentsData]);
+  }, [data.assessmentTemplateId, classAssessment]);
 
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
@@ -363,6 +366,7 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
     loading,
     isLoadingFeedbackFormatting,
     isLoadingFeedback,
+    isPublished,
   };
 };
 

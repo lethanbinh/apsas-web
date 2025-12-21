@@ -488,9 +488,11 @@ const GradingTab: React.FC<GradingTabProps> = ({
               onChange={setSelectedRequestStatus}
               suffixIcon={<FilterOutlined />}
             >
-              <Select.Option value={0}>Pending</Select.Option>
-              <Select.Option value={1}>Approved</Select.Option>
-              <Select.Option value={2}>Rejected</Select.Option>
+              <Select.Option value={1}>Pending</Select.Option>
+              <Select.Option value={2}>Accepted</Select.Option>
+              <Select.Option value={3}>Rejected</Select.Option>
+              <Select.Option value={4}>In Progress</Select.Option>
+              <Select.Option value={5}>Completed</Select.Option>
             </Select>
             <RangePicker
               placeholder={["Start Date", "End Date"]}

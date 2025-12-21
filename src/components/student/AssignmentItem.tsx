@@ -49,6 +49,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     submissionCount,
     labSubmissionHistory,
     labSubmissionScores,
+    isPublished,
   } = useAssignmentData(data, isLab);
 
   const {
@@ -113,22 +114,22 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                 Requirements
               </Title>
               <div className={styles.requirementButtons}>
-                <Button
-                  variant="outline"
+                <AntButton
+                  type="primary"
                   onClick={() => setIsRequirementModalVisible(true)}
                   className={styles.viewRequirementButton}
                   icon={<EyeOutlined />}
                 >
                   View Requirement Details
-                </Button>
-                <Button
-                  variant="outline"
+                </AntButton>
+                <AntButton
+                  type="default"
                   onClick={() => setIsScoreModalVisible(true)}
                   className={styles.viewScoreButton}
                   icon={<EyeOutlined />}
                 >
                   View Score & Feedback
-                </Button>
+                </AntButton>
               </div>
 
               <div className={styles.downloadSection}>
@@ -228,7 +229,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                             {toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm")}
                           </Text>
                           {index === 0 && <Tag color="blue">Latest</Tag>}
-                          {labSubmissionScores[submission.id] !== undefined && (
+                          {isPublished && labSubmissionScores[submission.id] !== undefined && (
                             <Tag color="green">
                               Score: {labSubmissionScores[submission.id].max > 0
                                 ? `${Number(labSubmissionScores[submission.id].total).toFixed(2)}/${Number(labSubmissionScores[submission.id].max).toFixed(2)}`

@@ -105,7 +105,7 @@ export function exportGradingDataToExcel(
       request.courseName || "",
       request.assignedLecturerName || "",
       request.assignedByHODName || "",
-      request.status === 0 ? "Pending" : request.status === 1 ? "Approved" : "Rejected",
+      request.status === 1 ? "Pending" : request.status === 2 ? "Accepted" : request.status === 3 ? "Rejected" : request.status === 4 ? "In Progress" : request.status === 5 ? "Completed" : "Unknown",
       request.createdAt ? dayjs(request.createdAt).format("YYYY-MM-DD") : "",
     ]);
   });

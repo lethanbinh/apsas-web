@@ -1,15 +1,15 @@
 export const getStatusProps = (status: number) => {
   switch (status) {
     case 1:
-      return { color: "warning", text: "Pending" };
+      return { color: "default", text: "Pending" };
     case 2:
       return { color: "processing", text: "Accepted" };
     case 3:
       return { color: "error", text: "Rejected" };
     case 4:
-      return { color: "processing", text: "In Progress" };
+      return { color: "warning", text: "In Progress" };
     case 5:
-      return { color: "success", text: "Approved" };
+      return { color: "success", text: "Completed" };
     default:
       return { color: "default", text: `Unknown (${status})` };
   }

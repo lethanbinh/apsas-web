@@ -5,6 +5,7 @@ import { EditOutlined } from "@ant-design/icons";
 import { Button, Card, Descriptions, Typography } from "antd";
 import { useState } from "react";
 import { PaperFormModal } from "./PaperFormModal";
+import styles from "./TaskContent.module.css";
 
 const { Title } = Typography;
 
@@ -13,6 +14,7 @@ interface PaperDetailViewProps {
   isEditable: boolean;
   onPaperChange: () => void;
   onResetStatus?: () => Promise<void>;
+  updateStatusToInProgress?: () => Promise<void>;
 }
 
 export const PaperDetailView = ({
@@ -20,45 +22,50 @@ export const PaperDetailView = ({
   isEditable,
   onPaperChange,
   onResetStatus,
+  updateStatusToInProgress,
 }: PaperDetailViewProps) => {
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
 
   return (
-    <Card
-      title={<Title level={4}>Paper Details</Title>}
-      extra={
-        isEditable && (
+    <div className={styles.card}>
+      <div className={styles.cardHeader}>
+        <Title level={4} className={styles.cardTitle} style={{ margin: 0 }}>Paper Details</Title>
+        {isEditable && (
           <Button
             icon={<EditOutlined />}
             onClick={() => setIsPaperModalOpen(true)}
+            className={styles.button}
           >
             Edit Paper
           </Button>
-        )
-      }
-    >
-      <Descriptions bordered column={1}>
-        <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
-        <Descriptions.Item label="Description">
-          {paper.description || "N/A"}
-        </Descriptions.Item>
-        <Descriptions.Item label="Language">
-          {paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "N/A"}
-        </Descriptions.Item>
-      </Descriptions>
+        )}
+      </div>
+      <div className={styles.cardBody}>
+        <Descriptions bordered column={1} className={styles.descriptions}>
+          <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
+          <Descriptions.Item label="Description">
+            {paper.description || "N/A"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Language">
+            {paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "N/A"}
+          </Descriptions.Item>
+        </Descriptions>
+      </div>
 
       <PaperFormModal
         open={isPaperModalOpen}
         onCancel={() => setIsPaperModalOpen(false)}
-        onFinish={() => {
+        onFinish={async () => {
           setIsPaperModalOpen(false);
           onPaperChange();
-
+          if (updateStatusToInProgress) {
+            await updateStatusToInProgress();
+          }
         }}
         isEditable={isEditable}
         initialData={paper}
       />
-    </Card>
+    </div>
   );
 };
 

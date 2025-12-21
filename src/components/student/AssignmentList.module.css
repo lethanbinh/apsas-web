@@ -53,15 +53,20 @@
 }
 
 .viewRequirementButton {
-    border-radius: 20px !important;
-    font-weight: 500;
-    border-color: #49BBBD !important;
-    color: #49BBBD !important;
+    border-radius: 10px !important;
+    font-weight: 600;
+    height: 44px;
+    padding: 0 32px;
+    background: linear-gradient(135deg, #49BBBD 0%, #3daaaC 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    transition: all 0.3s ease;
 }
 
 .viewRequirementButton:hover {
-    border-color: #3daaaC !important;
-    color: #3daaaC !important;
+    background: linear-gradient(135deg, #3daaaC 0%, #2d8a8c 100%) !important;
+    transform: translateY(-2px);
+    color: #ffffff !important;
 }
 
 .downloadSection {

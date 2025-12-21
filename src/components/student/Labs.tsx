@@ -88,6 +88,7 @@ function mapCourseElementToLabData(
     assessmentTemplateId: assessmentTemplateId,
     startAt: startAt,
     classAssessmentId: classAssessment?.id,
+    isPublished: classAssessment?.isPublished ?? false,
   };
 }
 

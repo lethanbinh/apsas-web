@@ -1,6 +1,7 @@
 "use client";
 
-import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
+import { RequirementModal } from "@/components/student/RequirementModal";
+import { RequirementContent } from "@/components/student/data";
 import styles from "@/components/student/AssignmentList.module.css";
 import { DeadlinePopover } from "@/components/student/DeadlinePopover";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,7 +27,7 @@ import { gradingService } from "@/services/gradingService";
 import { rubricItemService } from "@/services/rubricItemService";
 import { Submission, submissionService } from "@/services/submissionService";
 import { exportGradeReportToExcel, GradeReportData } from "@/utils/exportGradeReport";
-import { DownloadOutlined, FileExcelOutlined, FolderOutlined, LinkOutlined, PaperClipOutlined, RobotOutlined } from "@ant-design/icons";
+import { DownloadOutlined, FileExcelOutlined, FolderOutlined, LinkOutlined, PaperClipOutlined, RobotOutlined, CheckCircleOutlined } from "@ant-design/icons";
 import { handleDownloadAll, AssignmentWithData } from "./utils/downloadAll";
 import { useMutation, useQuery, useQueries, useQueryClient } from "@tanstack/react-query";
 import {
@@ -37,6 +38,7 @@ import {
   Collapse,
   Descriptions,
   List,
+  Modal,
   Space,
   Spin,
   Tag,
@@ -95,10 +97,11 @@ const AssignmentDetailItem = ({
   semesterEndDate?: string;
 }) => {
   const router = useRouter();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);
+  const [publishGradeLoading, setPublishGradeLoading] = useState(false);
 
   const handleSubmissionClick = (submission: Submission) => {
     localStorage.setItem("selectedSubmissionId", submission.id.toString());
@@ -356,6 +359,41 @@ const AssignmentDetailItem = ({
     },
   });
 
+  const publishGradeMutation = useMutation({
+    mutationFn: async (classAssessmentId: number) => {
+      return classAssessmentService.updateClassAssessment(classAssessmentId, {
+        isPublished: true,
+      });
+    },
+    onSuccess: () => {
+      message.success("Grades have been published successfully!");
+      queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(classAssessment?.classId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.all });
+    },
+    onError: (err: any) => {
+      message.error(err.message || "Failed to publish grades");
+    },
+  });
+
+  const handlePublishGrade = () => {
+    if (!classAssessment) return;
+
+    modal.confirm({
+      title: "Publish Grades",
+      content: "Once you confirm, the grades cannot be changed anymore. Are you sure you want to publish the grades?",
+      okText: "Confirm",
+      cancelText: "Cancel",
+      onOk: async () => {
+        setPublishGradeLoading(true);
+        try {
+          await publishGradeMutation.mutateAsync(classAssessment.id);
+        } finally {
+          setPublishGradeLoading(false);
+        }
+      },
+    });
+  };
+
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
@@ -366,10 +404,6 @@ const AssignmentDetailItem = ({
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Card bordered={false}>
           <Descriptions column={1} layout="vertical" title="Assignment Details">
-            <Descriptions.Item label="Description">
-              <Paragraph>{assignment.description}</Paragraph>
-            </Descriptions.Item>
-
             <Descriptions.Item label="Requirement Files">
               {isFilesLoading ? (
                 <Spin />
@@ -401,8 +435,13 @@ const AssignmentDetailItem = ({
             </Descriptions.Item>
           </Descriptions>
 
-          <Button type="primary" onClick={openModal} style={{ marginTop: 16 }}>
-            View Assignment Paper
+          <Button 
+            type="primary" 
+            onClick={openModal} 
+            style={{ marginTop: 16 }}
+            className={styles.viewRequirementButton}
+          >
+            View Requirement Details
           </Button>
         </Card>
 
@@ -426,17 +465,30 @@ const AssignmentDetailItem = ({
         <Card
           title="Submissions"
           extra={
-            submissions.length > 0 && (
-              <Button
-                type="primary"
-                icon={<RobotOutlined />}
-                onClick={handleBatchGrading}
-                loading={batchGradingLoading}
-                disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
-              >
-                Grade All
-              </Button>
-            )
+            <Space>
+              {classAssessment && (
+                <Button
+                  type="default"
+                  icon={<CheckCircleOutlined />}
+                  onClick={handlePublishGrade}
+                  loading={publishGradeLoading}
+                  disabled={classAssessment.isPublished || (semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false)}
+                >
+                  {classAssessment.isPublished ? "Grades Published" : "Publish Grade"}
+                </Button>
+              )}
+              {submissions.length > 0 && (
+                <Button
+                  type="primary"
+                  icon={<RobotOutlined />}
+                  onClick={handleBatchGrading}
+                  loading={batchGradingLoading}
+                  disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
+                >
+                  Grade All
+                </Button>
+              )}
+            </Space>
           }
         >
           {submissions.length === 0 ? (
@@ -494,12 +546,15 @@ const AssignmentDetailItem = ({
         </Card>
       </Space>
 
-      <PaperAssignmentModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        template={template}
+      <RequirementModal
+        open={isModalOpen}
+        onCancel={closeModal}
+        title={assignment.name}
+        content={assignment.description ? [{ type: "paragraph", content: assignment.description }] as RequirementContent[] : []}
         classAssessmentId={classAssessment?.id}
         classId={Number(localStorage.getItem("selectedClassId"))}
+        assessmentTemplateId={template?.id}
+        courseElementId={assignment.id}
       />
     </>
   );
@@ -929,6 +984,7 @@ const DetailAssignmentPage = () => {
         assessmentTemplateId: classAssessment.assessmentTemplateId,
           startAt: startDate.toISOString(),
           endAt: endDate.toISOString(),
+          isPublished: classAssessment.isPublished ?? false,
         },
       });
     } else {
@@ -943,6 +999,7 @@ const DetailAssignmentPage = () => {
           assessmentTemplateId: matchingTemplate.id,
         startAt: startDate.toISOString(),
         endAt: endDate.toISOString(),
+        isPublished: false,
       });
     }
   };

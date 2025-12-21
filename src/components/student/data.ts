@@ -46,6 +46,7 @@ export interface AssignmentData {
   classId?: number;
   assessmentTemplateId?: number;
   startAt?: string;
+  isPublished?: boolean;
 }
 
 export const initialAssignmentData: AssignmentData[] = [

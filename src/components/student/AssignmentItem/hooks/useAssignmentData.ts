@@ -2,6 +2,7 @@ import { useStudent } from "@/hooks/useStudent";
 import { queryKeys } from "@/lib/react-query";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService } from "@/services/assessmentQuestionService";
+import { classAssessmentService } from "@/services/classAssessmentService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { gradingService } from "@/services/gradingService";
 import { rubricItemService } from "@/services/rubricItemService";
@@ -175,8 +176,29 @@ export const useAssignmentData = (
         }, 0);
     }, [questions]);
 
+    const { data: classAssessmentsData } = useQuery({
+        queryKey: queryKeys.classAssessments.byClassId(data.classId?.toString()!),
+        queryFn: () => classAssessmentService.getClassAssessments({
+            classId: data.classId!,
+            pageNumber: 1,
+            pageSize: 1000,
+        }),
+        enabled: !!data.classId && !!data.classAssessmentId,
+    });
+
+    const classAssessment = useMemo(() => {
+        if (!classAssessmentsData?.items || !data.classAssessmentId) return null;
+        return classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId) || null;
+    }, [classAssessmentsData, data.classAssessmentId]);
+
+    const isPublished = classAssessment?.isPublished ?? data.isPublished ?? false;
+
     const labSubmissionScores = useMemo(() => {
         const scoreMap: Record<number, { total: number; max: number }> = {};
+
+        if (!isPublished) {
+            return scoreMap;
+        }
 
         labSubmissionHistory.forEach((submission, index) => {
             const gradeItemsQuery = labGradeItemsQueries[index];
@@ -191,13 +213,14 @@ export const useAssignmentData = (
         });
 
         return scoreMap;
-    }, [labSubmissionHistory, labGradeItemsQueries, labGradingSessionsQueries, maxScore]);
+    }, [labSubmissionHistory, labGradeItemsQueries, labGradingSessionsQueries, maxScore, isPublished]);
 
     return {
         lastSubmission,
         submissionCount,
         labSubmissionHistory,
         labSubmissionScores,
+        isPublished,
     };
 };
 

@@ -18,7 +18,8 @@ import {
   AssessmentTemplate,
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
-import { AssignRequestItem } from "@/services/assignRequestService";
+import { AssignRequestItem, assignRequestService } from "@/services/assignRequestService";
+import { AssignRequestStatus } from "@/types";
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -76,8 +77,15 @@ export const LecturerTaskContent = ({
   const [databaseUploadFileList, setDatabaseUploadFileList] = useState<UploadFile[]>([]);
   const [postmanUploadFileList, setPostmanUploadFileList] = useState<UploadFile[]>([]);
 
-  const isEditable = [1, 3, 4].includes(Number(task.status));
-  const isRejected = Number(task.status) === 3;
+  // Editable when status is PENDING (1), REJECTED (3), or IN_PROGRESS (4)
+  // Not editable when ACCEPTED (2) or COMPLETED (5)
+  const isEditable = [
+    AssignRequestStatus.PENDING,
+    AssignRequestStatus.REJECTED,
+    AssignRequestStatus.IN_PROGRESS
+  ].includes(Number(task.status));
+  const isRejected = Number(task.status) === AssignRequestStatus.REJECTED;
+  const isCompleted = Number(task.status) === AssignRequestStatus.COMPLETED;
 
   const fetchAllData = async (templateId: number) => {
     try {
@@ -190,6 +198,7 @@ export const LecturerTaskContent = ({
     resetStatusIfRejected,
     handleCreateTemplate,
     handleDeleteTemplate,
+    updateStatusToInProgress,
   } = templateOperations;
 
   const { refreshPapers, refreshQuestions, refreshFiles } = useDataRefresh({
@@ -322,6 +331,7 @@ export const LecturerTaskContent = ({
       refetchTemplates,
       fetchAllData,
       resetStatusIfRejected,
+      updateStatusToInProgress,
     });
   };
 
@@ -345,7 +355,7 @@ export const LecturerTaskContent = ({
     setIsPaperModalOpen(true);
   };
 
-  const handleDeletePaper = (paper: AssessmentPaper) => {
+  const handleDeletePaper = async (paper: AssessmentPaper) => {
     modal.confirm({
       title: `Delete paper: ${paper.name}?`,
       content: "All questions and rubrics inside will also be deleted.",
@@ -356,6 +366,7 @@ export const LecturerTaskContent = ({
           await assessmentPaperService.deleteAssessmentPaper(paper.id);
           notification.success({ message: "Paper deleted" });
           await refreshPapers(true);
+          await updateStatusToInProgress();
           setSelectedKey("template-details");
         } catch (error) {
           notification.error({ message: "Failed to delete paper" });
@@ -375,6 +386,7 @@ export const LecturerTaskContent = ({
           await assessmentQuestionService.deleteAssessmentQuestion(question.id);
           notification.success({ message: "Question deleted" });
           await refreshQuestions(question.assessmentPaperId, true);
+          await updateStatusToInProgress();
           setSelectedKey(`paper-${question.assessmentPaperId}`);
         } catch (error) {
           notification.error({ message: "Failed to delete question" });
@@ -408,7 +420,7 @@ export const LecturerTaskContent = ({
       {isRejected && (
         <Alert
           message="Template Rejected"
-          description="This template has been rejected. You can edit the existing template or create a new one. After making changes, the status will be reset to Pending for HOD review."
+          description="This template has been rejected. You can edit the existing template or create a new one. After making changes, the status will be updated to In Progress."
           type="warning"
           showIcon
           style={{ marginBottom: 16 }}
@@ -507,105 +519,135 @@ export const LecturerTaskContent = ({
         )
       ) : (
         <>
-          <Layout
+          <div
             style={{
-              background: "#f5f5f5",
-              padding: "16px 0",
-              minHeight: "70vh",
+              background: "#ffffff",
+              borderRadius: "16px",
+              border: "1px solid #e8ecf1",
+              overflow: "hidden",
+              display: "flex",
+              flexDirection: "column",
+              minHeight: "calc(100vh - 300px)",
+              maxHeight: "calc(100vh - 200px)",
             }}
           >
-            <Sider
-              width={300}
+            <Layout
               style={{
-                background: "#fff",
-                marginRight: 16,
+                background: "transparent",
+                flex: 1,
                 display: "flex",
-                flexDirection: "column",
-                maxHeight: "70vh",
+                flexDirection: "row",
+                minHeight: 0,
               }}
             >
-              <div
+              <Sider
+                width={380}
                 style={{
-                  padding: "16px",
-                  borderBottom: "1px solid #f0f0f0",
+                  background: "#fafbfc",
+                  borderRight: "2px solid #e8ecf1",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 0,
                   flexShrink: 0,
                 }}
               >
-                {templates.length > 1 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <Text strong style={{ display: "block", marginBottom: 8 }}>
-                      Select Template:
-                    </Text>
-                    <Select
-                      value={template?.id}
-                      onChange={handleTemplateChange}
-                      style={{ width: "100%" }}
-                      placeholder="Select a template"
-                    >
-                      {templates.map((t) => (
-                        <Select.Option key={t.id} value={t.id}>
-                          {t.name} {t.assignRequestId === task.id ? "(Current)" : ""}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </div>
-                )}
-                <Title
-                  level={5}
+                <div
                   style={{
-                    margin: 0,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: '100%'
+                    padding: "28px 24px",
+                    borderBottom: "2px solid #e8ecf1",
+                    flexShrink: 0,
+                    background: "#ffffff",
                   }}
                 >
-                  {template.name}
-                </Title>
-                <Text type="secondary">Exam Structure</Text>
-                {template.assignRequestId === task.id && isEditable && (
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => setIsPaperModalOpen(true)}
-                    style={{ width: "100%", marginTop: 16 }}
+                  {templates.length > 1 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <Text strong style={{ display: "block", marginBottom: 10, fontSize: 14, color: "#2F327D" }}>
+                        Select Template:
+                      </Text>
+                      <Select
+                        value={template?.id}
+                        onChange={handleTemplateChange}
+                        style={{ width: "100%" }}
+                        placeholder="Select a template"
+                      >
+                        {templates.map((t) => (
+                          <Select.Option key={t.id} value={t.id}>
+                            {t.name} {t.assignRequestId === task.id ? "(Current)" : ""}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
+                  <Title
+                    level={4}
+                    style={{
+                      margin: "0 0 8px 0",
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: '100%',
+                      fontSize: 20,
+                      fontWeight: 700,
+                      color: "#2F327D",
+                    }}
                   >
-                    Add New Paper
-                  </Button>
-                )}
-                {template.assignRequestId !== task.id && (
-                  <Alert
-                    message="Viewing template from another assign request"
-                    type="info"
-                    showIcon
-                    style={{ marginTop: 16 }}
+                    {template.name}
+                  </Title>
+                  <Text type="secondary" style={{ fontSize: 13, display: "block", marginBottom: 20 }}>
+                    Exam Structure
+                  </Text>
+                  {template.assignRequestId === task.id && isEditable && (
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => setIsPaperModalOpen(true)}
+                      style={{ 
+                        width: "100%", 
+                        height: 44,
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        fontSize: 15,
+                      }}
+                    >
+                      Add New Paper
+                    </Button>
+                  )}
+                  {template.assignRequestId !== task.id && (
+                    <Alert
+                      message="Viewing template from another assign request"
+                      type="info"
+                      showIcon
+                      style={{ marginTop: 16 }}
+                    />
+                  )}
+                </div>
+
+                <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
+                  <TaskSiderMenu
+                    selectedKey={selectedKey}
+                    papers={papers}
+                    allQuestions={allQuestions}
+                    isEditable={isCurrentTemplateEditable}
+                    onSelect={setSelectedKey}
+                    onAddQuestion={openAddQuestionModal}
+                    onEditPaper={openEditPaperModal}
+                    onDeletePaper={handleDeletePaper}
+                    onDeleteQuestion={handleDeleteQuestion}
                   />
-                )}
-              </div>
+                </div>
+              </Sider>
 
-              <div style={{ flex: 1, overflowY: "auto" }}>
-                <TaskSiderMenu
-                  selectedKey={selectedKey}
-                  papers={papers}
-                  allQuestions={allQuestions}
-                  isEditable={isCurrentTemplateEditable}
-                  onSelect={setSelectedKey}
-                  onAddQuestion={openAddQuestionModal}
-                  onEditPaper={openEditPaperModal}
-                  onDeletePaper={handleDeletePaper}
-                  onDeleteQuestion={handleDeleteQuestion}
-                />
-              </div>
-            </Sider>
-
-            <Content
-              style={{
-                background: "#fff",
-                padding: 24,
-                overflowY: "auto",
-                maxHeight: "70vh",
-              }}
-            >
+              <Content
+                style={{
+                  background: "#ffffff",
+                  padding: "32px 40px",
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  flex: 1,
+                  minHeight: 0,
+                  minWidth: 0,
+                }}
+              >
               <TaskContentArea
                 selectedKey={selectedKey}
                 template={template}
@@ -614,19 +656,70 @@ export const LecturerTaskContent = ({
                 allQuestions={allQuestions}
                 isEditable={isCurrentTemplateEditable}
                 task={task}
-                onFileChange={() => refreshFiles(false)}
+                onFileChange={async () => {
+                  await refreshFiles(false);
+                  await updateStatusToInProgress();
+                }}
                 onExport={handleExport}
                 onTemplateDelete={() => handleDeleteTemplate(template)}
                 onTemplateChange={async () => {
                   await refreshTemplate(false);
+                  await updateStatusToInProgress();
                 }}
-                onPaperChange={() => refreshPapers(false)}
-                onQuestionChange={(paperId) => refreshQuestions(paperId, false)}
-                onRubricChange={(paperId) => refreshQuestions(paperId, false)}
+                onPaperChange={async () => {
+                  await refreshPapers(false);
+                  await updateStatusToInProgress();
+                }}
+                onQuestionChange={async (paperId) => {
+                  await refreshQuestions(paperId, false);
+                  await updateStatusToInProgress();
+                }}
+                onRubricChange={async (paperId) => {
+                  await refreshQuestions(paperId, false);
+                  await updateStatusToInProgress();
+                }}
                 onResetStatus={resetStatusIfRejected}
+                updateStatusToInProgress={updateStatusToInProgress}
+                onConfirmTemplateCreation={async () => {
+                  modal.confirm({
+                    title: "Confirm Template Creation",
+                    content: "Once you confirm template creation, the content cannot be edited. Are you sure you want to proceed?",
+                    okText: "Yes, Confirm",
+                    okType: "primary",
+                    cancelText: "Cancel",
+                    onOk: async () => {
+                      try {
+                        await assignRequestService.updateAssignRequest(task.id, {
+                          message: task.message || "Template creation confirmed",
+                          courseElementId: task.courseElementId,
+                          assignedLecturerId: task.assignedLecturerId,
+                          assignedByHODId: task.assignedByHODId,
+                          assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
+                          status: 2, // ACCEPTED
+                          assignedAt: task.assignedAt,
+                        });
+                        await queryClient.invalidateQueries({
+                          queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
+                          exact: false
+                        });
+                        notification.success({
+                          message: "Template Creation Confirmed",
+                          description: "Template has been confirmed and is now ready for approval.",
+                        });
+                      } catch (err: any) {
+                        console.error("Failed to confirm template creation:", err);
+                        notification.error({
+                          message: "Failed to Confirm",
+                          description: err.message || "Failed to confirm template creation.",
+                        });
+                      }
+                    },
+                  });
+                }}
               />
-            </Content>
-          </Layout>
+              </Content>
+            </Layout>
+          </div>
 
           {}
           <PaperFormModal
@@ -635,10 +728,11 @@ export const LecturerTaskContent = ({
               setIsPaperModalOpen(false);
               setPaperToEdit(null);
             }}
-            onFinish={() => {
+            onFinish={async () => {
               setIsPaperModalOpen(false);
               setPaperToEdit(null);
-              refreshPapers(false);
+              await refreshPapers(false);
+              await updateStatusToInProgress();
             }}
             isEditable={isCurrentTemplateEditable}
             templateId={template.id}
@@ -650,10 +744,11 @@ export const LecturerTaskContent = ({
               setIsQuestionModalOpen(false);
               setPaperForNewQuestion(undefined);
             }}
-            onFinish={() => {
+            onFinish={async () => {
               setIsQuestionModalOpen(false);
-              refreshQuestions(paperForNewQuestion!, false);
+              await refreshQuestions(paperForNewQuestion!, false);
               setPaperForNewQuestion(undefined);
+              await updateStatusToInProgress();
             }}
             isEditable={isCurrentTemplateEditable}
             paperId={paperForNewQuestion}

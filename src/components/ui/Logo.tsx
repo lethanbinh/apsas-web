@@ -4,7 +4,7 @@ import logoWebp from "@/assets/APSAS_logo.webp";
 import Image from "next/image";
 import React, { useState } from "react";
 import styles from "./LogoComponent.module.css";
-import Logo from "@/assets/Logo";
+import Logo from "../../../public/logo/Logo";
 
 interface LogoComponentProps {
   size?: "small" | "medium" | "large";

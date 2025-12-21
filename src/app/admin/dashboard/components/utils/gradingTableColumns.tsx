@@ -133,9 +133,11 @@ export const requestColumns = [
     key: "status",
     render: (status: number) => {
       const statusMap: Record<number, { text: string; color: string }> = {
-        0: { text: "Pending", color: "orange" },
-        1: { text: "Approved", color: "green" },
-        2: { text: "Rejected", color: "red" },
+        1: { text: "Pending", color: "default" },
+        2: { text: "Accepted", color: "processing" },
+        3: { text: "Rejected", color: "error" },
+        4: { text: "In Progress", color: "warning" },
+        5: { text: "Completed", color: "success" },
       };
       const statusInfo = statusMap[status] || { text: "Unknown", color: "default" };
       return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;

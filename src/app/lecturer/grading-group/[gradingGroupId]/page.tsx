@@ -31,6 +31,7 @@ import { assessmentQuestionService } from "@/services/assessmentQuestionService"
 import { rubricItemService } from "@/services/rubricItemService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { handleDownloadAll, handleDownloadSelected } from "./utils/downloadAll";
+import { RequirementModal } from "@/components/student/RequirementModal";
 
 export default function GradingGroupPage() {
   const router = useRouter();
@@ -49,6 +50,7 @@ export default function GradingGroupPage() {
   const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [scoreFilter, setScoreFilter] = useState<'all' | 'graded' | 'ungraded'>('all');
+  const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
@@ -305,6 +307,10 @@ export default function GradingGroupPage() {
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
+
+  const handleViewExam = useCallback(() => {
+    setViewExamModalVisible(true);
+  }, []);
 
   const handleUploadGradeSheet = useCallback(() => {
     if (!gradingGroup) return;
@@ -577,6 +583,7 @@ export default function GradingGroupPage() {
             onExportGradeReport={handleExportGradeReport}
             onUploadGradeSheet={handleUploadGradeSheet}
             onBatchGrading={handleBatchGrading}
+            onViewExam={handleViewExam}
             batchGradingLoading={batchGradingLoading}
             submissionsCount={submissions.length}
             semesterEnded={semesterEnded}
@@ -720,6 +727,16 @@ export default function GradingGroupPage() {
           setUploadFileList(fileList);
         }}
       />
+
+      {gradingGroup?.assessmentTemplateId && (
+        <RequirementModal
+          open={viewExamModalVisible}
+          onCancel={() => setViewExamModalVisible(false)}
+          title={title}
+          content={[]}
+          assessmentTemplateId={gradingGroup.assessmentTemplateId}
+        />
+      )}
     </div>
   );
 }

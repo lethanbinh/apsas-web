@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Input, Table, Tag, Typography, Alert, Select, Space } from "antd";
+import { Card, Input, Table, Tag, Typography, Alert, Select, Space, Button, Drawer, App } from "antd";
 import type { TableProps } from "antd";
-import { SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
 import styles from "./ApprovalList.module.css";
 import { useRouter } from "next/navigation";
 import { adminService } from "@/services/adminService";
@@ -19,15 +19,15 @@ const { Title, Text } = Typography;
 const getStatusProps = (status: number) => {
   switch (status) {
     case 1:
-      return { color: "warning", text: "Pending", displayValue: 1 };
+      return { color: "default", text: "Pending", displayValue: 1 };
     case 2:
-      return { color: "warning", text: "Pending", displayValue: 1 };
+      return { color: "processing", text: "Accepted", displayValue: 2 };
     case 3:
       return { color: "error", text: "Rejected", displayValue: 3 };
     case 4:
-      return { color: "warning", text: "Pending", displayValue: 1 };
+      return { color: "warning", text: "In Progress", displayValue: 4 };
     case 5:
-      return { color: "success", text: "Approved", displayValue: 5 };
+      return { color: "success", text: "Completed", displayValue: 5 };
     default:
       return { color: "default", text: "Pending", displayValue: 1 };
   }
@@ -35,11 +35,13 @@ const getStatusProps = (status: number) => {
 
 
 export default function LecturerApprovalList() {
+  const { message } = App.useApp();
   const [searchText, setSearchText] = useState("");
   const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
   const [selectedCourse, setSelectedCourse] = useState<string | undefined>(undefined);
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
   const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string | undefined>(undefined);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -285,7 +287,6 @@ export default function LecturerApprovalList() {
 
   const filteredData = useMemo(() => {
     return allApprovals.filter((item) => {
-
       const matchesSearch =
         item.courseElementName.toLowerCase().includes(searchText.toLowerCase()) ||
         item.courseName.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -300,19 +301,7 @@ export default function LecturerApprovalList() {
 
       let matchesStatus = true;
       if (selectedStatus !== undefined) {
-        const statusProps = getStatusProps(item.status);
-        if (selectedStatus === 1) {
-
-          matchesStatus = item.status === 1 || item.status === 2 || item.status === 4;
-        } else if (selectedStatus === 3) {
-
-          matchesStatus = item.status === 3;
-        } else if (selectedStatus === 5) {
-
-          matchesStatus = item.status === 5;
-        } else {
-          matchesStatus = statusProps.displayValue === selectedStatus;
-        }
+        matchesStatus = item.status === selectedStatus;
       }
 
 
@@ -340,6 +329,7 @@ export default function LecturerApprovalList() {
   }, [filteredData.length]);
 
   const handleRowClick = (record: ApiApprovalItem) => {
+    // Allow viewing details for all statuses
     router.push(`/lecturer/approval/${record.id}`);
   };
 
@@ -349,6 +339,23 @@ export default function LecturerApprovalList() {
       current: newPagination.current,
       pageSize: newPagination.pageSize,
     }));
+  };
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedSemester) count++;
+    if (selectedCourse) count++;
+    if (selectedStatus !== undefined) count++;
+    if (selectedTemplateFilter) count++;
+    return count;
+  }, [selectedSemester, selectedCourse, selectedStatus, selectedTemplateFilter]);
+
+  const handleClearAllFilters = () => {
+    setSelectedSemester(undefined);
+    setSelectedCourse(undefined);
+    setSelectedStatus(undefined);
+    setSelectedTemplateFilter(undefined);
+    setPagination(prev => ({ ...prev, current: 1 }));
   };
 
   if (!currentLecturerId && !loading) {
@@ -375,65 +382,7 @@ export default function LecturerApprovalList() {
         >
           Approval
         </Title>
-        <Space size="middle" style={{ display: "flex", flexWrap: "wrap" }}>
-          <Select
-            placeholder="Filter by Semester"
-            allowClear
-            style={{ minWidth: 200 }}
-            value={selectedSemester}
-            onChange={(value) => {
-              setSelectedSemester(value);
-              setSelectedCourse(undefined);
-            }}
-            options={uniqueSemesters.map(semester => ({
-              label: semester,
-              value: semester,
-            }))}
-          />
-          <Select
-            placeholder="Filter by Course"
-            allowClear
-            disabled={!selectedSemester}
-            style={{ minWidth: 200 }}
-            value={selectedCourse}
-            onChange={(value) => {
-              setSelectedCourse(value);
-              setPagination(prev => ({ ...prev, current: 1 }));
-            }}
-            options={uniqueCourses.map(course => ({
-              label: course,
-              value: course,
-            }))}
-          />
-          <Select
-            placeholder="Filter by Status"
-            allowClear
-            style={{ minWidth: 150 }}
-            value={selectedStatus}
-            onChange={(value) => {
-              setSelectedStatus(value);
-              setPagination(prev => ({ ...prev, current: 1 }));
-            }}
-            options={[
-              { label: "Pending", value: 1 },
-              { label: "Approved", value: 5 },
-              { label: "Rejected", value: 3 },
-            ]}
-          />
-          <Select
-            placeholder="Filter by Template"
-            allowClear
-            style={{ minWidth: 150 }}
-            value={selectedTemplateFilter}
-            onChange={(value) => {
-              setSelectedTemplateFilter(value);
-              setPagination(prev => ({ ...prev, current: 1 }));
-            }}
-            options={[
-              { label: "With Template", value: "with" },
-              { label: "Without Template", value: "without" },
-            ]}
-          />
+        <div className={styles.filterBar}>
           <Input
             placeholder="Search by name or teacher..."
             onChange={(e) => {
@@ -442,10 +391,174 @@ export default function LecturerApprovalList() {
             }}
             className={styles.searchBar}
             prefix={<SearchOutlined />}
-            style={{ minWidth: 250 }}
+            value={searchText}
           />
-        </Space>
+          <Button
+            type="default"
+            icon={<FilterOutlined />}
+            onClick={() => setFilterDrawerOpen(true)}
+            className={styles.filterButton}
+          >
+            Filters
+            {activeFilterCount > 0 && (
+              <span className={styles.filterBadge}>{activeFilterCount}</span>
+            )}
+          </Button>
+        </div>
       </div>
+
+      {activeFilterCount > 0 && (
+        <div className={styles.activeFilters}>
+          <Space size="small" wrap>
+            {selectedSemester && (
+              <Tag
+                closable
+                onClose={() => {
+                  setSelectedSemester(undefined);
+                  setSelectedCourse(undefined);
+                }}
+                color="blue"
+              >
+                Semester: {selectedSemester}
+              </Tag>
+            )}
+            {selectedCourse && (
+              <Tag
+                closable
+                onClose={() => setSelectedCourse(undefined)}
+                color="blue"
+              >
+                Course: {selectedCourse}
+              </Tag>
+            )}
+            {selectedStatus !== undefined && (
+              <Tag
+                closable
+                onClose={() => setSelectedStatus(undefined)}
+                color="blue"
+              >
+                Status: {selectedStatus === 1 ? "Pending" : selectedStatus === 2 ? "Accepted" : selectedStatus === 3 ? "Rejected" : selectedStatus === 4 ? "In Progress" : selectedStatus === 5 ? "Completed" : "Unknown"}
+              </Tag>
+            )}
+            {selectedTemplateFilter && (
+              <Tag
+                closable
+                onClose={() => setSelectedTemplateFilter(undefined)}
+                color="blue"
+              >
+                Template: {selectedTemplateFilter === "with" ? "With Template" : "Without Template"}
+              </Tag>
+            )}
+            <Button type="link" size="small" onClick={handleClearAllFilters}>
+              Clear all
+            </Button>
+          </Space>
+        </div>
+      )}
+
+      <Drawer
+        title="Filter Options"
+        placement="right"
+        onClose={() => setFilterDrawerOpen(false)}
+        open={filterDrawerOpen}
+        width={400}
+        className={styles.filterDrawer}
+      >
+        <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              Semester
+            </Text>
+            <Select
+              placeholder="Select semester"
+              allowClear
+              style={{ width: "100%" }}
+              value={selectedSemester}
+              onChange={(value) => {
+                setSelectedSemester(value);
+                setSelectedCourse(undefined);
+              }}
+              options={uniqueSemesters.map(semester => ({
+                label: semester,
+                value: semester,
+              }))}
+            />
+          </div>
+
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              Course
+            </Text>
+            <Select
+              placeholder="Select course"
+              allowClear
+              disabled={!selectedSemester}
+              style={{ width: "100%" }}
+              value={selectedCourse}
+              onChange={(value) => {
+                setSelectedCourse(value);
+                setPagination(prev => ({ ...prev, current: 1 }));
+              }}
+              options={uniqueCourses.map(course => ({
+                label: course,
+                value: course,
+              }))}
+            />
+          </div>
+
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              Status
+            </Text>
+            <Select
+              placeholder="Select status"
+              allowClear
+              style={{ width: "100%" }}
+              value={selectedStatus}
+              onChange={(value) => {
+                setSelectedStatus(value);
+                setPagination(prev => ({ ...prev, current: 1 }));
+              }}
+              options={[
+                { label: "Pending", value: 1 },
+                { label: "Accepted", value: 2 },
+                { label: "Rejected", value: 3 },
+                { label: "In Progress", value: 4 },
+                { label: "Completed", value: 5 },
+              ]}
+            />
+          </div>
+
+          <div>
+            <Text strong style={{ display: "block", marginBottom: 8 }}>
+              Template
+            </Text>
+            <Select
+              placeholder="Select template filter"
+              allowClear
+              style={{ width: "100%" }}
+              value={selectedTemplateFilter}
+              onChange={(value) => {
+                setSelectedTemplateFilter(value);
+                setPagination(prev => ({ ...prev, current: 1 }));
+              }}
+              options={[
+                { label: "With Template", value: "with" },
+                { label: "Without Template", value: "without" },
+              ]}
+            />
+          </div>
+
+          <Button
+            type="default"
+            block
+            onClick={handleClearAllFilters}
+            style={{ marginTop: 16 }}
+          >
+            Clear All Filters
+          </Button>
+        </Space>
+      </Drawer>
 
       {error && <Alert message="Error" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
 

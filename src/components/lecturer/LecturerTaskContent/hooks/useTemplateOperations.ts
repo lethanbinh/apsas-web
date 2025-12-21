@@ -1,17 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { queryKeys } from "@/lib/react-query";
-import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assessmentFileService } from "@/services/assessmentFileService";
-import { assignRequestService } from "@/services/assignRequestService";
+import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import type { AssessmentTemplate } from "@/services/assessmentTemplateService";
+import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import type { AssignRequestItem } from "@/services/assignRequestService";
-import type { UploadFile } from "antd/es/upload/interface";
+import { assignRequestService } from "@/services/assignRequestService";
 import type { NotificationInstance } from "antd/es/notification/interface";
-import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
-import { assessmentPaperService } from "@/services/assessmentPaperService";
+import type { UploadFile } from "antd/es/upload/interface";
+import { useState } from "react";
 
 interface UseTemplateOperationsProps {
   task: AssignRequestItem;
@@ -44,6 +43,36 @@ export function useTemplateOperations({
   const [databaseName, setDatabaseName] = useState("");
   const [databaseFileName, setDatabaseFileName] = useState("");
   const [postmanFileName, setPostmanFileName] = useState("");
+
+  // Helper function to update status to IN_PROGRESS (4)
+  const updateStatusToInProgress = async () => {
+    // Only update if current status is PENDING (1), REJECTED (3), or ACCEPTED (2)
+    // Don't update if already COMPLETED (5)
+    // Allow update even if already IN_PROGRESS (4) to ensure status is correct
+    if (task.status === 5) {
+      return;
+    }
+
+    try {
+      await assignRequestService.updateAssignRequest(task.id, {
+        message: task.message || "Template content has been modified",
+        courseElementId: task.courseElementId,
+        assignedLecturerId: task.assignedLecturerId,
+        assignedByHODId: task.assignedByHODId,
+        assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
+        status: 4, // IN_PROGRESS
+        assignedAt: task.assignedAt,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
+        exact: false
+      });
+    } catch (err: any) {
+      console.error("Failed to update status to IN_PROGRESS:", err);
+      // Don't show error to user, just log it
+    }
+  };
 
   const resetStatusIfRejected = async () => {
 
@@ -104,14 +133,14 @@ export function useTemplateOperations({
       }
 
 
-      console.log("✅ All comments resolved! Resetting status to Pending...");
+      console.log("✅ All comments resolved! Resetting status to IN_PROGRESS...");
       await assignRequestService.updateAssignRequest(task.id, {
-        message: task.message || "All questions have been addressed. Status reset to Pending for review.",
+        message: task.message || "All questions have been addressed. Status reset to IN_PROGRESS.",
         courseElementId: task.courseElementId,
         assignedLecturerId: task.assignedLecturerId,
         assignedByHODId: task.assignedByHODId,
         assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-        status: 1,
+        status: 4, // IN_PROGRESS
         assignedAt: task.assignedAt,
       });
 
@@ -132,11 +161,11 @@ export function useTemplateOperations({
         exact: false
       });
 
-      console.log("✅ Status reset to Pending completed!");
+      console.log("✅ Status reset to IN_PROGRESS completed!");
 
       notification.success({
-        message: "Status Reset to Pending",
-        description: "All questions have been addressed. Status reset to Pending for HOD review.",
+        message: "Status Reset to In Progress",
+        description: "All questions have been addressed. Status reset to In Progress.",
       });
     } catch (err: any) {
       console.error("❌ Failed to reset status:", err);
@@ -282,43 +311,17 @@ export function useTemplateOperations({
       setPostmanFileName("");
 
 
-      if (isRejected) {
-        try {
-          await assignRequestService.updateAssignRequest(task.id, {
-            message: task.message || "Template resubmitted after rejection",
-            courseElementId: task.courseElementId,
-            assignedLecturerId: task.assignedLecturerId,
-            assignedByHODId: task.assignedByHODId,
-            assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-            status: 1,
-            assignedAt: task.assignedAt,
-          });
-
-
-          await queryClient.invalidateQueries({
-            queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
-            exact: false
-          });
-
-          notification.success({
-            message: "Template Created and Resubmitted",
-            description: "Template has been created and status reset to Pending for HOD review.",
-          });
-        } catch (err: any) {
-          console.error("Failed to reset status:", err);
-          notification.warning({
-            message: "Template Created",
-            description: "Template created successfully, but failed to reset status. Please contact administrator.",
-          });
-        }
-      } else {
-        notification.success({
-          message: "Template Created",
-          description: "Template has been created successfully.",
-        });
-      }
+      // When rejected and creating template, updateStatusToInProgress will be called
+      // So we don't need to manually update status here
+      notification.success({
+        message: "Template Created",
+        description: "Template has been created successfully.",
+      });
 
       await refetchTemplates();
+      
+      // Update status to IN_PROGRESS after creating template
+      await updateStatusToInProgress();
     } catch (error: any) {
       console.error("Failed to create template:", error);
       notification.error({
@@ -356,6 +359,8 @@ export function useTemplateOperations({
       }
 
       await resetStatusIfRejected();
+      // Update status to IN_PROGRESS after deleting template
+      await updateStatusToInProgress();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
       notification.error({
@@ -387,6 +392,7 @@ export function useTemplateOperations({
     resetStatusIfRejected,
     handleCreateTemplate,
     handleDeleteTemplate,
+    updateStatusToInProgress,
   };
 }
 

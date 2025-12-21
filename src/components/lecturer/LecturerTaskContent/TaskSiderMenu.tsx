@@ -4,7 +4,7 @@ import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { BookOutlined, DeleteOutlined, EditOutlined, FileTextOutlined, InboxOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Menu, Space } from "antd";
-import styles from "../Tasks.module.css";
+import styles from "./TaskContent.module.css";
 
 interface TaskSiderMenuProps {
   selectedKey: string;
@@ -112,7 +112,7 @@ export function TaskSiderMenu({
         },
         ...menuItems,
       ]}
-      style={{ borderRight: 0 }}
+      className={styles.siderMenu}
     />
   );
 }

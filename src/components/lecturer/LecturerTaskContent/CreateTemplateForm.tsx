@@ -4,8 +4,9 @@ import { DatabaseOutlined, DownloadOutlined, ImportOutlined, UploadOutlined } fr
 import { Button, Card, Form, Input, Radio, Space, Typography, Upload } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { UploadFileModal } from "./UploadFileModal";
+import styles from "./TaskContent.module.css";
 
-const { Text } = Typography;
+const { Title, Text } = Typography;
 
 interface CreateTemplateFormProps {
   newTemplateName: string;
@@ -71,26 +72,28 @@ export const CreateTemplateForm = ({
   onImportTemplate,
 }: CreateTemplateFormProps) => {
   return (
-    <Card title="No Template Found. Create one.">
+    <div className={styles.formCard}>
+      <Title level={4} className={styles.formTitle}>No Template Found. Create one.</Title>
       <Form layout="vertical">
-        <Form.Item label="Template Name" required>
+        <Form.Item label="Template Name" required className={styles.formItem}>
           <Input
             value={newTemplateName}
             onChange={(e) => onTemplateNameChange(e.target.value)}
             placeholder="Enter template name"
           />
         </Form.Item>
-        <Form.Item label="Template Description">
+        <Form.Item label="Template Description" className={styles.formItem}>
           <Input
             value={newTemplateDesc}
             onChange={(e) => onTemplateDescChange(e.target.value)}
             placeholder="Enter template description (optional)"
           />
         </Form.Item>
-        <Form.Item label="Template Type" required>
+        <Form.Item label="Template Type" required className={styles.formItem}>
           <Radio.Group
             onChange={(e) => onTemplateTypeChange(e.target.value)}
             value={newTemplateType}
+            className={styles.radioGroup}
           >
             <Radio value={0}>DSA</Radio>
             <Radio value={1}>WEBAPI</Radio>
@@ -102,6 +105,7 @@ export const CreateTemplateForm = ({
             label="Startup Project"
             required
             rules={[{ required: true, message: "Startup Project is required for WEBAPI templates" }]}
+            className={styles.formItem}
           >
             <Input
               value={newTemplateStartupProject}
@@ -117,28 +121,30 @@ export const CreateTemplateForm = ({
               label="Upload Database File (.sql)"
               required
               help="Database file is required for WEBAPI templates"
+              className={styles.formItem}
             >
               <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 <Button
                   type="primary"
                   icon={<DatabaseOutlined />}
                   onClick={onDatabaseUploadModalOpen}
+                  className={styles.uploadButton}
                 >
                   {databaseFileList.length > 0 ? "Edit Database File" : "Upload Database File"}
                 </Button>
                 {databaseFileList.length > 0 && (
-                  <Card size="small">
-                    <Space direction="vertical" style={{ width: "100%" }} size="small">
-                    <Space>
-                      <DatabaseOutlined />
-                        <Text strong>{databaseFileName || databaseFileList[0].name}</Text>
-                      </Space>
-                        <Text type="secondary">Database Name: {databaseName}</Text>
-                        <Text type="secondary">
-                          File: {databaseFileList[0].name} ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                        </Text>
-                    </Space>
-                  </Card>
+                  <div className={styles.fileUploadCard}>
+                    <div className={styles.fileInfo}>
+                      <div className={styles.fileInfoRow}>
+                        <DatabaseOutlined />
+                        <Text className={styles.fileInfoTextStrong}>{databaseFileName || databaseFileList[0].name}</Text>
+                      </div>
+                      <Text className={styles.fileInfoText}>Database Name: {databaseName}</Text>
+                      <Text className={styles.fileInfoText}>
+                        File: {databaseFileList[0].name} ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                    </div>
+                  </div>
                 )}
               </Space>
             </Form.Item>
@@ -147,45 +153,48 @@ export const CreateTemplateForm = ({
               label="Upload Postman Collection File (.postman_collection.json)"
               required
               help="Postman collection file is required for WEBAPI templates"
+              className={styles.formItem}
             >
               <Space direction="vertical" style={{ width: "100%" }} size="middle">
                 <Button
                   type="primary"
                   icon={<UploadOutlined />}
                   onClick={onPostmanUploadModalOpen}
+                  className={styles.uploadButton}
                 >
                   {postmanFileList.length > 0 ? "Edit Postman File" : "Upload Postman File"}
                 </Button>
                 {postmanFileList.length > 0 && (
-                  <Card size="small">
-                    <Space direction="vertical" style={{ width: "100%" }} size="small">
-                    <Space>
-                      <DatabaseOutlined />
-                        <Text strong>{postmanFileName || postmanFileList[0].name}</Text>
-                      </Space>
-                        <Text type="secondary">
-                          File: {postmanFileList[0].name} ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                        </Text>
-                    </Space>
-                  </Card>
+                  <div className={styles.fileUploadCard}>
+                    <div className={styles.fileInfo}>
+                      <div className={styles.fileInfoRow}>
+                        <DatabaseOutlined />
+                        <Text className={styles.fileInfoTextStrong}>{postmanFileName || postmanFileList[0].name}</Text>
+                      </div>
+                      <Text className={styles.fileInfoText}>
+                        File: {postmanFileList[0].name} ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                      </Text>
+                    </div>
+                  </div>
                 )}
               </Space>
             </Form.Item>
           </>
         )}
 
-        <Space>
-        <Button
-          type="primary"
-          onClick={onCreateTemplate}
-          disabled={!newTemplateName.trim()}
-        >
-          Create Template
-        </Button>
+        <div className={styles.actionButtons}>
+          <Button
+            type="primary"
+            onClick={onCreateTemplate}
+            disabled={!newTemplateName.trim()}
+            className={styles.createButton}
+          >
+            Create Template
+          </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={onDownloadTemplate}
-            type="default"
+            className={styles.defaultButton}
           >
             Download Template
           </Button>
@@ -199,14 +208,13 @@ export const CreateTemplateForm = ({
             maxCount={1}
             showUploadList={false}
           >
-            <Button icon={<ImportOutlined />} type="default">
+            <Button icon={<ImportOutlined />} className={styles.defaultButton}>
               Import Template
             </Button>
           </Upload>
-        </Space>
+        </div>
       </Form>
 
-      {}
       <UploadFileModal
         open={isDatabaseUploadModalOpen}
         onCancel={onDatabaseUploadModalClose}
@@ -217,7 +225,6 @@ export const CreateTemplateForm = ({
         onFileListChange={onDatabaseUploadFileListChange}
       />
 
-      {}
       <UploadFileModal
         open={isPostmanUploadModalOpen}
         onCancel={onPostmanUploadModalClose}
@@ -227,7 +234,7 @@ export const CreateTemplateForm = ({
         fileList={postmanUploadFileList}
         onFileListChange={onPostmanUploadFileListChange}
       />
-    </Card>
+    </div>
   );
 };
 

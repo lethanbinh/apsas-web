@@ -75,6 +75,18 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     enabled: !!finalSubmission?.gradingGroupId,
   });
 
+  const classAssessment = useMemo(() => {
+    if (!finalSubmission || !classAssessmentsData?.items) return null;
+    if (finalSubmission.classAssessmentId) {
+      return classAssessmentsData.items.find(
+        (ca) => ca.id === finalSubmission.classAssessmentId
+      ) || null;
+    }
+    return null;
+  }, [finalSubmission, classAssessmentsData]);
+
+  const isPublished = classAssessment?.isPublished ?? false;
+
   const assessmentTemplateId = useMemo(() => {
     if (!finalSubmission) return null;
     if (finalSubmission.gradingGroupId && gradingGroupsData) {
@@ -83,16 +95,11 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
         return gradingGroup.assessmentTemplateId;
       }
     }
-    if (finalSubmission.classAssessmentId && classAssessmentsData?.items) {
-      const classAssessment = classAssessmentsData.items.find(
-        (ca) => ca.id === finalSubmission.classAssessmentId
-      );
-      if (classAssessment?.assessmentTemplateId) {
-        return classAssessment.assessmentTemplateId;
-      }
+    if (classAssessment?.assessmentTemplateId) {
+      return classAssessment.assessmentTemplateId;
     }
     return null;
-  }, [finalSubmission, gradingGroupsData, classAssessmentsData]);
+  }, [finalSubmission, gradingGroupsData, classAssessment]);
 
 
   const { data: papersData } = useQuery({
@@ -296,6 +303,7 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     totalScore,
     feedback,
     loading,
+    isPublished,
   };
 }
 

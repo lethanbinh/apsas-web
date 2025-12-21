@@ -11,6 +11,7 @@ import {
   ApiApprovalItem,
   ApiAssessmentTemplate,
   ApiAssignRequestUpdatePayload,
+  AssignRequestStatus,
 } from "@/types";
 import { useRouter } from "next/navigation";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
@@ -34,15 +35,15 @@ interface ApprovalDetailProps {
 const getStatusProps = (status: number) => {
   switch (status) {
     case 1:
-      return { color: "warning", text: "Pending" };
+      return { color: "default", text: "Pending" };
     case 2:
       return { color: "processing", text: "Accepted" };
     case 3:
       return { color: "error", text: "Rejected" };
     case 4:
-      return { color: "processing", text: "In Progress" };
+      return { color: "warning", text: "In Progress" };
     case 5:
-      return { color: "success", text: "Approved" };
+      return { color: "success", text: "Completed" };
     default:
       return { color: "default", text: `Unknown (${status})` };
   }
@@ -345,9 +346,9 @@ export default function LecturerApprovalDetail({
   };
 
   const isActionDisabled =
-    isSubmitting || currentStatus === 3 || currentStatus === 5;
+    isSubmitting || currentStatus !== AssignRequestStatus.ACCEPTED;
   const statusInfo = getStatusProps(currentStatus);
-  const isRejected = currentStatus === 3;
+  const isRejected = currentStatus === AssignRequestStatus.REJECTED;
 
 
   const canCommentForPaper = (paperKey: string) => {
@@ -389,15 +390,15 @@ export default function LecturerApprovalDetail({
       key: paperKey,
       label: (
         <div className={styles.mainPanelHeader}>
-          <Title level={4} style={{ margin: 0 }}>
+          <Title level={4} style={{ margin: 0, wordBreak: "break-word", whiteSpace: "normal", flex: "1 1 auto", minWidth: 0 }}>
             Paper {paperIndex + 1}: {paper.name}
             {paper.description && (
-              <Text type="secondary" style={{ marginLeft: 8 }}>
+              <Text type="secondary" style={{ marginLeft: 8, wordBreak: "break-word", whiteSpace: "normal", display: "block" }}>
                 - {paper.description}
               </Text>
             )}
           </Title>
-          <Space>
+          <Space style={{ flexShrink: 0 }}>
             <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
             <Tag color="blue">{template.lecturerName}</Tag>
             <Text type="secondary">{paperQuestions.length} Questions</Text>
@@ -405,25 +406,23 @@ export default function LecturerApprovalDetail({
         </div>
       ),
       children: (
-        <div style={{ padding: "0 24px" }}>
-          {}
+        <div className={styles.paperContent}>
           {template.description && (
             <>
-              <Title level={5}>Description</Title>
-              <Text>{template.description}</Text>
-              <Divider />
+              <Title level={5} className={styles.sectionTitle}>Description</Title>
+              <Text className={styles.descriptionText}>{template.description}</Text>
+              <Divider className={styles.divider} />
             </>
           )}
 
-          {}
           {files.length > 0 && (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Title level={5} style={{ margin: 0 }}>Requirement Files</Title>
+            <div className={styles.filesSection}>
+              <div className={styles.filesHeader}>
+                <Title level={5} className={styles.sectionTitle} style={{ margin: 0 }}>Requirement Files</Title>
                 {files.length > 1 && (
                   <Button
                     icon={<DownloadOutlined />}
-                    size="small"
+                    size="large"
                     onClick={async () => {
                       try {
                         antMessage.loading("Downloading files...", 0);
@@ -460,12 +459,14 @@ export default function LecturerApprovalDetail({
                 )}
               </div>
               <List
+                className={styles.filesList}
                 dataSource={files}
                 renderItem={(file) => (
                   <List.Item>
                     <a
                       href={file.fileUrl}
                       download={file.name}
+                      className={styles.fileLink}
                       onClick={async (e) => {
                         e.preventDefault();
                         try {
@@ -488,61 +489,59 @@ export default function LecturerApprovalDetail({
                           antMessage.error(`Failed to download ${file.name}`);
                         }
                       }}
-                      style={{ cursor: "pointer" }}
                     >
-                      <PaperClipOutlined style={{ marginRight: 8 }} />
+                      <PaperClipOutlined />
                       {file.name}
                     </a>
                   </List.Item>
                 )}
               />
-              <Divider />
-            </>
+              <Divider className={styles.divider} />
+            </div>
           )}
 
-          {}
           {paperQuestions.length > 0 ? (
             <div>
               {paperQuestions.map((question, qIndex) => (
-                <div key={question.id} style={{ marginBottom: 24 }}>
-                  <Title level={5}>
+                <div key={question.id} className={styles.questionCard}>
+                  <Title level={5} className={styles.questionTitle}>
                     Question {question.questionNumber || qIndex + 1} (Score: {question.score || 0})
                   </Title>
-                  <Text>{question.questionText}</Text>
+                  <Text className={styles.questionText}>{question.questionText}</Text>
 
                   {question.questionSampleInput && (
-                    <div style={{ marginTop: 12 }}>
-                      <Text strong>Sample Input:</Text>
-                      <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4, marginTop: 4 }}>
+                    <div className={styles.sampleSection}>
+                      <Text strong className={styles.sampleLabel}>Sample Input:</Text>
+                      <pre className={styles.codeBlock}>
                         {question.questionSampleInput}
                       </pre>
                     </div>
                   )}
 
                   {question.questionSampleOutput && (
-                    <div style={{ marginTop: 12 }}>
-                      <Text strong>Sample Output:</Text>
-                      <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4, marginTop: 4 }}>
+                    <div className={styles.sampleSection}>
+                      <Text strong className={styles.sampleLabel}>Sample Output:</Text>
+                      <pre className={styles.codeBlock}>
                         {question.questionSampleOutput}
                       </pre>
                     </div>
                   )}
 
                   {rubrics[question.id] && rubrics[question.id].length > 0 ? (
-                    <div style={{ marginTop: 12 }}>
-                      <Text strong>Grading Criteria:</Text>
-                      <ul style={{ marginTop: 8 }}>
+                    <div className={styles.rubricsSection}>
+                      <Text strong className={styles.rubricsLabel}>Grading Criteria:</Text>
+                      <ul className={styles.rubricsList}>
                         {rubrics[question.id].map((rubric) => (
-                          <li key={rubric.id} style={{ marginBottom: 8 }}>
+                          <li key={rubric.id} className={styles.rubricItem}>
                             {rubric.description} (Max: {rubric.score} points)
                             {rubric.input && rubric.input !== "N/A" && (
-                              <div style={{ marginLeft: 20, fontSize: "12px", color: "#666", marginTop: 4 }}>
-                                Input: <code>{rubric.input}</code>
+                              <div className={styles.rubricInputOutput}>
+                                Input: <code className={styles.rubricCode}>{rubric.input}</code>
                               </div>
                             )}
                             {rubric.output && rubric.output !== "N/A" && (
-                              <div style={{ marginLeft: 20, fontSize: "12px", color: "#666", marginTop: 4 }}>
-                                Output: <code>{rubric.output}</code>
+                              <div className={styles.rubricInputOutput}>
+                                Output: <code className={styles.rubricCode}>{rubric.output}</code>
                               </div>
                             )}
                           </li>
@@ -555,33 +554,20 @@ export default function LecturerApprovalDetail({
                     </div>
                   )}
 
-                  {}
                   {(question.reviewerComment || canCommentForPaper(paperKey)) && (
-                    <div style={{
-                      marginTop: 16,
-                      padding: "16px",
-                      backgroundColor: "#e6f4ff",
-                      borderRadius: "8px",
-                      border: "1px solid #91caff",
-                      boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)"
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                        <Text strong style={{ color: "#0958d9", fontSize: "14px" }}>
+                    <div className={styles.commentSection}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <Text strong style={{ color: "#0958d9", fontSize: "15px" }}>
                           Reviewer Comment:
                         </Text>
                         {canCommentForPaper(paperKey) && (
                           <Button
                             variant="primary"
-                            size="small"
+                            size="large"
                             icon={question.reviewerComment ? <EditOutlined /> : <CommentOutlined />}
                             onClick={() => handleOpenCommentModal(question)}
                             disabled={isActionDisabled && !isRejected}
-                            style={{
-                              backgroundColor: question.reviewerComment ? "#0958d9" : "#1890ff",
-                              borderColor: question.reviewerComment ? "#0958d9" : "#1890ff",
-                              fontWeight: 500,
-                              boxShadow: "0 2px 4px rgba(9, 88, 217, 0.2)",
-                            }}
+                            className={styles.commentButton}
                           >
                             {question.reviewerComment ? "Edit Comment" : "Add Comment"}
                           </Button>
@@ -589,23 +575,16 @@ export default function LecturerApprovalDetail({
                       </div>
                       {question.reviewerComment ? (
                         <div>
-                          <div style={{
-                            padding: "12px",
-                            backgroundColor: "#fff",
-                            borderRadius: "6px",
-                            border: "1px solid #91caff",
-                            boxShadow: "inset 0 1px 2px rgba(0, 0, 0, 0.04)",
-                            marginBottom: "8px"
-                          }}>
-                            <Text style={{ color: "#1d39c4", lineHeight: "1.6" }}>{question.reviewerComment}</Text>
+                          <div className={styles.commentBox}>
+                            <Text className={styles.commentText}>{question.reviewerComment}</Text>
                           </div>
-                          <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "#69b1ff" }}>
+                          <div className={styles.commentMeta}>
                             <Text type="secondary" style={{ fontSize: "12px" }}>
-                              <Text strong style={{ color: "#0958d9" }}>Commented by:</Text> {approvalItem.assignedApproverLecturerName || user?.fullName || "Unknown"}
+                              <Text className={styles.commentMetaLabel}>Commented by:</Text> {approvalItem.assignedApproverLecturerName || user?.fullName || "Unknown"}
                             </Text>
                             {question.updatedAt && (
                               <Text type="secondary" style={{ fontSize: "12px" }}>
-                                <Text strong style={{ color: "#0958d9" }}>Date:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
+                                <Text className={styles.commentMetaLabel}>Date:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
                                   year: "numeric",
                                   month: "short",
                                   day: "numeric",
@@ -623,15 +602,12 @@ export default function LecturerApprovalDetail({
                       ) : null}
                     </div>
                   )}
-
-                  <Divider />
                 </div>
               ))}
             </div>
           ) : (
             <EmptyQuestionsState />
           )}
-
         </div>
       ),
       className: styles.mainPanel,
@@ -640,44 +616,33 @@ export default function LecturerApprovalDetail({
 
   return (
     <div className={styles.wrapper}>
-      <div style={{ marginBottom: "30px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
-          <Title
-            level={2}
-            style={{
-              fontWeight: 700,
-              color: "#2F327D",
-              margin: 0,
-            }}
-          >
+      <div className={styles.headerSection}>
+        <div className={styles.headerContent}>
+          <Title level={2} className={styles.headerTitle}>
             Approval Detail: {template.name}
           </Title>
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div className={styles.headerActions}>
             {totalScore > 0 && (
-              <Tag color="blue" style={{ fontSize: "16px", padding: "4px 12px" }}>
+              <Tag color="blue" className={styles.totalScoreTag}>
                 Total Score: {totalScore} points
               </Tag>
             )}
             <AntButton
               icon={<ArrowLeftOutlined />}
               onClick={() => router.push("/lecturer/approval")}
+              size="large"
             >
               Back
             </AntButton>
           </div>
         </div>
+      </div>
 
-        {}
-        <div style={{
-          padding: "20px 24px",
-          backgroundColor: "#f8f9fa",
-          borderRadius: "12px",
-          border: "1px solid #e9ecef",
-          marginBottom: "24px"
-        }}>
+      <div className={styles.actionCard}>
+        <div className={styles.actionCardContent}>
           {rejectReasonVisibleForItem && (
-            <div style={{ marginBottom: "16px" }}>
-              <Text strong style={{ display: "block", marginBottom: "8px", color: "#2F327D" }}>
+            <div className={styles.rejectReasonSection}>
+              <Text strong className={styles.rejectReasonLabel}>
                 Reject Reason:
               </Text>
               <TextArea
@@ -686,15 +651,12 @@ export default function LecturerApprovalDetail({
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 disabled={isActionDisabled}
-                style={{
-                  borderRadius: "8px",
-                  fontSize: "14px",
-                }}
+                className={styles.rejectReasonTextArea}
               />
             </div>
           )}
 
-          <Space size="large" wrap>
+          <div className={styles.actionButtons}>
             <AntButton
               type="primary"
               size="large"
@@ -702,17 +664,9 @@ export default function LecturerApprovalDetail({
               onClick={handleApprove}
               loading={isSubmitting}
               disabled={isActionDisabled || !!rejectReasonVisibleForItem}
-              style={{
-                height: "48px",
-                paddingLeft: "32px",
-                paddingRight: "32px",
-                fontSize: "16px",
-                fontWeight: 600,
-                borderRadius: "8px",
-                minWidth: "140px",
-              }}
+              className={styles.approveButton}
             >
-              {currentStatus === 5 ? "Approved" : "Approve"}
+              {currentStatus === AssignRequestStatus.COMPLETED ? "Approved" : "Approve"}
             </AntButton>
 
             {rejectReasonVisibleForItem && (
@@ -724,15 +678,7 @@ export default function LecturerApprovalDetail({
                   setRejectReason("");
                 }}
                 disabled={isSubmitting}
-                style={{
-                  height: "48px",
-                  paddingLeft: "32px",
-                  paddingRight: "32px",
-                  fontSize: "16px",
-                  fontWeight: 600,
-                  borderRadius: "8px",
-                  minWidth: "140px",
-                }}
+                className={styles.cancelButton}
               >
                 Cancel
               </AntButton>
@@ -747,7 +693,6 @@ export default function LecturerApprovalDetail({
                 if (rejectReasonVisibleForItem) {
                   handleRejectClick();
                 } else {
-
                   const firstPaperKey = papers.length > 0 ? `paper-${papers[0].id}` : null;
                   if (firstPaperKey) {
                     setRejectReasonVisibleForItem(firstPaperKey);
@@ -756,23 +701,15 @@ export default function LecturerApprovalDetail({
               }}
               loading={isSubmitting}
               disabled={isActionDisabled}
-              style={{
-                height: "48px",
-                paddingLeft: "32px",
-                paddingRight: "32px",
-                fontSize: "16px",
-                fontWeight: 600,
-                borderRadius: "8px",
-                minWidth: "140px",
-              }}
+              className={styles.rejectButton}
             >
-              {currentStatus === 3
+              {currentStatus === AssignRequestStatus.REJECTED
                 ? "Rejected"
                 : rejectReasonVisibleForItem
-                ? "Confirm Reject"
-                : "Reject"}
+                  ? "Confirm Reject"
+                  : "Reject"}
             </AntButton>
-          </Space>
+          </div>
         </div>
       </div>
 
@@ -805,18 +742,7 @@ export default function LecturerApprovalDetail({
           size="large"
           icon={<VerticalAlignTopOutlined />}
           onClick={scrollToTop}
-          style={{
-            position: "fixed",
-            bottom: "32px",
-            right: "32px",
-            width: "50px",
-            height: "50px",
-            zIndex: 1000,
-            boxShadow: "0 4px 12px rgba(24, 144, 255, 0.4)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          className={styles.scrollTopButton}
         />
       )}
     </div>

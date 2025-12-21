@@ -25,13 +25,15 @@ export const AssignRequestsTable = ({
 
     switch (status) {
       case 1:
-      case 2:
-      case 4:
         return { text: "Pending", color: "default" };
-      case 5:
-        return { text: "Approved", color: "success" };
+      case 2:
+        return { text: "Accepted", color: "processing" };
       case 3:
         return { text: "Rejected", color: "error" };
+      case 4:
+        return { text: "In Progress", color: "warning" };
+      case 5:
+        return { text: "Completed", color: "success" };
       default:
         return { text: "Pending", color: "default" };
     }

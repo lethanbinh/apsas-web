@@ -2,9 +2,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Modal, Typography, Image as AntImage, Spin, Collapse, Divider, List } from "antd";
-import { Button } from "../ui/Button";
-import styles from "./AssignmentList.module.css";
+import { Modal, Typography, Image as AntImage, Spin, Collapse, Divider, List, Button as AntButton } from "antd";
 import { RequirementContent } from "./data";
 import { classAssessmentService } from "@/services/classAssessmentService";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
@@ -12,9 +10,10 @@ import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { assessmentQuestionService, AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { assessmentFileService } from "@/services/assessmentFileService";
 import { assignRequestService } from "@/services/assignRequestService";
-import { PaperClipOutlined } from "@ant-design/icons";
+import { PaperClipOutlined, FileTextOutlined, BookOutlined } from "@ant-design/icons";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
+import styles from "./RequirementModal.module.css";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -37,20 +36,24 @@ const renderRequirementContent = (item: RequirementContent, index: number) => {
         <Title
           level={5}
           key={index}
-          style={{ fontWeight: 600, marginTop: "20px" }}
+          className={styles.requirementHeading}
         >
           {item.content}
         </Title>
       );
     case "paragraph":
-      return <Paragraph key={index}>{item.content}</Paragraph>;
+      return (
+        <Paragraph key={index} className={styles.requirementParagraph}>
+          {item.content}
+        </Paragraph>
+      );
     case "image":
       return (
         <AntImage
           key={index}
           src={item.src}
           alt="Requirement content"
-          className={styles.modalImage}
+          className={styles.requirementImage}
         />
       );
     default:
@@ -211,37 +214,47 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   return (
     <Modal
       title={
-        <Title level={4} style={{ margin: 0 }}>
-          {title}
-        </Title>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <FileTextOutlined style={{ fontSize: 24, color: "#49BBBD" }} />
+          <span>{title}</span>
+        </div>
       }
       open={open}
       onCancel={onCancel}
       footer={
-        <Button variant="primary" onClick={onCancel}>
+        <AntButton className={styles.closeButton} onClick={onCancel}>
           Close
-        </Button>
+        </AntButton>
       }
-      width={1000}
-      className={styles.requirementModal}
+      width={1200}
+      className={styles.modalWrapper}
       style={{ top: 20 }}
+      destroyOnClose
     >
       <Spin spinning={loading}>
         <div className={styles.modalBody}>
-          {}
           {templateDescription && (
-            <>
-              <Title level={5}>Description</Title>
-              <Paragraph>{templateDescription}</Paragraph>
-              <Divider />
-            </>
+            <div className={styles.section}>
+              <Title level={5} className={styles.sectionTitle}>
+                <BookOutlined /> Description
+              </Title>
+              <Paragraph className={styles.descriptionText}>
+                {templateDescription}
+              </Paragraph>
+            </div>
           )}
 
-          {}
+          {templateDescription && (files.filter(f => f.fileTemplate !== 1).length > 0 || content.length > 0 || papers.length > 0) && (
+            <Divider className={styles.divider} />
+          )}
+
           {files.filter(f => f.fileTemplate !== 1).length > 0 && (
-            <>
-              <Title level={5}>Requirement Files</Title>
+            <div className={styles.section}>
+              <Title level={5} className={styles.sectionTitle}>
+                <PaperClipOutlined /> Requirement Files
+              </Title>
               <List
+                className={styles.fileList}
                 dataSource={files.filter(f => f.fileTemplate !== 1)}
                 renderItem={(file) => (
                   <List.Item>
@@ -250,78 +263,126 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                       download
                       target="_blank"
                       rel="noopener noreferrer"
+                      className={styles.fileLink}
                     >
-                      <PaperClipOutlined style={{ marginRight: 8 }} />
+                      <PaperClipOutlined className={styles.fileIcon} />
                       {file.name}
                     </a>
                   </List.Item>
                 )}
               />
-              <Divider />
-            </>
+            </div>
           )}
 
-          {}
+          {files.filter(f => f.fileTemplate !== 1).length > 0 && (content.length > 0 || papers.length > 0) && (
+            <Divider className={styles.divider} />
+          )}
+
           {content && content.length > 0 && (
-            <>
-              <Title level={5}>Requirements</Title>
-              {content.map(renderRequirementContent)}
-              <Divider />
-            </>
+            <div className={styles.section}>
+              <Title level={5} className={styles.sectionTitle}>
+                <FileTextOutlined /> Requirements
+              </Title>
+              <div className={styles.requirementContent}>
+                {content.map(renderRequirementContent)}
+              </div>
+            </div>
           )}
 
-          {}
+          {content.length > 0 && papers.length > 0 && (
+            <Divider className={styles.divider} />
+          )}
+
           {papers.length > 0 && (
-            <>
-              <Title level={5}>Exam Papers & Questions</Title>
+            <div className={styles.section}>
+              <Title level={5} className={styles.sectionTitle}>
+                <BookOutlined /> Exam Papers & Questions
+              </Title>
               <Collapse
+                className={styles.paperCollapse}
+                expandIconPosition="end"
                 items={papers.map((paper, paperIndex) => ({
                   key: paper.id.toString(),
                   label: (
-                    <div>
-                      <strong>Paper {paperIndex + 1}: {paper.name}</strong>
-                      {paper.description && (
-                        <Text type="secondary" style={{ marginLeft: 8 }}>
-                          - {paper.description}
-                        </Text>
-                      )}
+                    <div className={styles.paperLabel}>
+                      <span className={styles.paperName}>
+                        Paper {paperIndex + 1}: {paper.name}
+                      </span>
                     </div>
                   ),
                   children: (
                     <div>
+                      {paper.description && (
+                        <div style={{ 
+                          marginBottom: 24,
+                          padding: "20px 24px",
+                          background: "#f8f9fa",
+                          borderRadius: "12px",
+                          borderLeft: "4px solid #49BBBD"
+                        }}>
+                          <Text strong style={{ 
+                            display: "block", 
+                            marginBottom: 12,
+                            color: "#2F327D",
+                            fontSize: 15
+                          }}>
+                            Paper Description:
+                          </Text>
+                          <div style={{
+                            color: "#434343",
+                            lineHeight: 1.8,
+                            fontSize: 15,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word"
+                          }}>
+                            {paper.description}
+                          </div>
+                        </div>
+                      )}
                       {questions[paper.id]?.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, qIndex) => (
-                        <div key={question.id} style={{ marginBottom: 24 }}>
-                          <Title level={5}>
-                            Question {qIndex + 1} (Score: {question.score})
-                          </Title>
-                          <Paragraph>{question.questionText}</Paragraph>
+                        <div key={question.id} className={styles.questionCard}>
+                          <div className={styles.questionHeader}>
+                            <Title level={5} className={styles.questionTitle}>
+                              Question {qIndex + 1}
+                            </Title>
+                            <span className={styles.questionScore}>
+                              Score: {question.score}
+                            </span>
+                          </div>
+                          <div className={styles.questionText}>
+                            {question.questionText}
+                          </div>
 
                           {question.questionSampleInput && (
-                            <div style={{ marginTop: 12 }}>
-                              <Text strong>Sample Input:</Text>
-                              <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                            <div className={styles.sampleSection}>
+                              <span className={styles.sampleLabel}>Sample Input:</span>
+                              <pre className={styles.sampleCode}>
                                 {question.questionSampleInput}
                               </pre>
                             </div>
                           )}
 
                           {question.questionSampleOutput && (
-                            <div style={{ marginTop: 12 }}>
-                              <Text strong>Sample Output:</Text>
-                              <pre style={{ background: "#f5f5f5", padding: 8, borderRadius: 4 }}>
+                            <div className={styles.sampleSection}>
+                              <span className={styles.sampleLabel}>Sample Output:</span>
+                              <pre className={styles.sampleCode}>
                                 {question.questionSampleOutput}
                               </pre>
                             </div>
                           )}
-
-                          <Divider />
                         </div>
                       ))}
                     </div>
                   ),
                 }))}
               />
-            </>
+            </div>
+          )}
+
+          {!templateDescription && files.filter(f => f.fileTemplate !== 1).length === 0 && content.length === 0 && papers.length === 0 && (
+            <div className={styles.emptyState}>
+              <Text className={styles.emptyStateText}>No requirement details available.</Text>
+            </div>
           )}
         </div>
       </Spin>

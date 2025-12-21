@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { QuestionFormModal } from "./QuestionFormModal";
 import { RubricFormModal } from "./RubricFormModal";
 import { AssignRequestItem } from "@/services/assignRequestService";
+import styles from "./TaskContent.module.css";
 
 const { Title, Text } = Typography;
 
@@ -19,6 +20,7 @@ interface QuestionDetailViewProps {
   onQuestionChange: () => void;
   onResetStatus?: () => Promise<void>;
   task?: AssignRequestItem;
+  updateStatusToInProgress?: () => Promise<void>;
 }
 
 export const QuestionDetailView = ({
@@ -28,6 +30,7 @@ export const QuestionDetailView = ({
   onQuestionChange,
   onResetStatus,
   task,
+  updateStatusToInProgress,
 }: QuestionDetailViewProps) => {
   const [rubrics, setRubrics] = useState<RubricItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +77,9 @@ export const QuestionDetailView = ({
     closeRubricModal();
     fetchRubrics();
     onRubricChange();
+    if (updateStatusToInProgress) {
+      await updateStatusToInProgress();
+    }
 
 
     const hadComment = !!(question.reviewerComment && question.reviewerComment.trim());
@@ -145,134 +151,149 @@ export const QuestionDetailView = ({
   };
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Card
-        title={<Title level={4}>Question Details</Title>}
-        extra={
-          isEditable && (
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <Title level={4} className={styles.cardTitle} style={{ margin: 0 }}>Question Details</Title>
+          {isEditable && (
             <Button
               icon={<EditOutlined />}
               onClick={() => setIsQuestionModalOpen(true)}
+              className={styles.button}
             >
               Edit Question
             </Button>
-          )
-        }
-      >
-        <Descriptions bordered column={1}>
-          <Descriptions.Item label="Question Number">
-            <Text strong>{question.questionNumber || "N/A"}</Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Question Text">
-            <Text style={{ whiteSpace: "pre-wrap" }}>
-              {question.questionText}
-            </Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Sample Input">
-            <Text style={{ whiteSpace: "pre-wrap" }}>
-              {question.questionSampleInput}
-            </Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Sample Output">
-            <Text style={{ whiteSpace: "pre-wrap" }}>
-              {question.questionSampleOutput}
-            </Text>
-          </Descriptions.Item>
-          <Descriptions.Item label="Score">
-            <Text strong>{question.score}</Text>
-          </Descriptions.Item>
-          {}
-          {question.reviewerComment && (
-            <Descriptions.Item label="Reviewer Comment">
-              <div style={{
-                padding: "12px",
-                backgroundColor: "#e6f4ff",
-                borderRadius: "6px",
-                border: "1px solid #91caff",
-                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
-                marginBottom: "8px"
-              }}>
-                <Text style={{ color: "#1d39c4", lineHeight: "1.6" }}>{question.reviewerComment}</Text>
-              </div>
-              {question.updatedAt && (
-                <Text type="secondary" style={{ fontSize: "12px", color: "#69b1ff" }}>
-                  <Text strong style={{ color: "#0958d9" }}>Commented on:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
-                </Text>
-              )}
-              {isRejected && (
-                <div style={{ marginTop: "8px" }}>
-                  <Text type="secondary" style={{ fontSize: "12px", fontStyle: "italic", color: "#69b1ff" }}>
-                    Edit the question content above to resolve this comment.
-                  </Text>
-                </div>
-              )}
-            </Descriptions.Item>
           )}
-        </Descriptions>
-      </Card>
+        </div>
+        <div className={styles.cardBody}>
+          <Descriptions bordered column={1} className={styles.descriptions}>
+            <Descriptions.Item label="Question Number">
+              <Text strong>{question.questionNumber || "N/A"}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Question Text">
+              <div className={styles.questionTextContainer}>
+                <div className={styles.questionText}>
+                  {question.questionText}
+                </div>
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Sample Input">
+              <div className={styles.questionTextContainer}>
+                {question.questionSampleInput ? (
+                  <div className={styles.sampleInputOutput}>
+                    {question.questionSampleInput}
+                  </div>
+                ) : (
+                  <Text type="secondary" style={{ fontStyle: "italic" }}>No sample input provided</Text>
+                )}
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Sample Output">
+              <div className={styles.questionTextContainer}>
+                {question.questionSampleOutput ? (
+                  <div className={styles.sampleInputOutput}>
+                    {question.questionSampleOutput}
+                  </div>
+                ) : (
+                  <Text type="secondary" style={{ fontStyle: "italic" }}>No sample output provided</Text>
+                )}
+              </div>
+            </Descriptions.Item>
+            <Descriptions.Item label="Score">
+              <Text strong>{question.score}</Text>
+            </Descriptions.Item>
+            {question.reviewerComment && (
+              <Descriptions.Item label="Reviewer Comment">
+                <div className={styles.commentBox}>
+                  <Text className={styles.commentText}>{question.reviewerComment}</Text>
+                </div>
+                {question.updatedAt && (
+                  <div className={styles.commentMeta}>
+                    <Text>
+                      <Text className={styles.commentMetaLabel}>Commented on:</Text> {new Date(question.updatedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit"
+                      })}
+                    </Text>
+                  </div>
+                )}
+                {isRejected && (
+                  <div style={{ marginTop: "12px" }}>
+                    <Text type="secondary" style={{ fontSize: "12px", fontStyle: "italic", color: "#69b1ff" }}>
+                      Edit the question content above to resolve this comment.
+                    </Text>
+                  </div>
+                )}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        </div>
+      </div>
 
-      <Card
-        title={<Title level={5}>Grading Rubrics</Title>}
-        extra={
-          isEditable && (
+      <div className={styles.rubricCard}>
+        <div className={styles.rubricCardHeader}>
+          <Title level={5} className={styles.rubricCardTitle} style={{ margin: 0 }}>Grading Rubrics</Title>
+          {isEditable && (
             <Button
               icon={<PlusOutlined />}
               type="dashed"
               onClick={() => openRubricModal()}
+              className={styles.button}
             >
               Add Rubric
             </Button>
-          )
-        }
-      >
-        {isLoading ? (
-          <Spin />
-        ) : (
-          <List
-            itemLayout="horizontal"
-            dataSource={rubrics}
-            renderItem={(rubric) => (
-              <List.Item
-                actions={
-                  isEditable
-                    ? [
-                        <Button
-                          type="link"
-                          onClick={() => openRubricModal(rubric)}
-                        >
-                          Edit
-                        </Button>,
-                        <Button
-                          type="link"
-                          danger
-                          onClick={() => handleDeleteRubric(rubric.id)}
-                        >
-                          Delete
-                        </Button>,
+          )}
+        </div>
+        <div className={styles.rubricCardBody}>
+          {isLoading ? (
+            <Spin />
+          ) : (
+            <List
+              itemLayout="horizontal"
+              dataSource={rubrics}
+              className={styles.rubricList}
+              renderItem={(rubric) => (
+                <List.Item
+                  actions={
+                    isEditable
+                      ? [
+                        <div key="actions" className={styles.rubricActions}>
+                          <Button
+                            type="link"
+                            onClick={() => openRubricModal(rubric)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="link"
+                            danger
+                            onClick={() => handleDeleteRubric(rubric.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       ]
-                    : []
-                }
-              >
-                <List.Item.Meta
-                  title={rubric.description}
-                  description={`Input: ${rubric.input || "N/A"} | Output: ${
-                    rubric.output || "N/A"
-                  }`}
-                />
-                <div>
-                  <Text strong>{rubric.score} points</Text>
-                </div>
-              </List.Item>
-            )}
-          />
-        )}
-      </Card>
+                      : []
+                  }
+                >
+                  <div className={styles.rubricMeta}>
+                    <Text className={styles.rubricTitle}>{rubric.description}</Text>
+                    <Text className={styles.rubricDescription}>
+                      Input: {rubric.input || "N/A"} | Output: {rubric.output || "N/A"}
+                    </Text>
+                  </div>
+                  <div>
+                    <Text className={styles.rubricScore}>{rubric.score} points</Text>
+                  </div>
+                </List.Item>
+              )}
+            />
+          )}
+        </div>
+      </div>
 
       <RubricFormModal
         open={isRubricModalOpen}
@@ -292,6 +313,9 @@ export const QuestionDetailView = ({
 
           const hadComment = !!question.reviewerComment;
           onQuestionChange();
+          if (updateStatusToInProgress) {
+            await updateStatusToInProgress();
+          }
 
 
           if (hadComment && task) {
@@ -323,7 +347,7 @@ export const QuestionDetailView = ({
         initialData={question}
         hasComment={!!question.reviewerComment}
       />
-    </Space>
+    </div>
   );
 };
 

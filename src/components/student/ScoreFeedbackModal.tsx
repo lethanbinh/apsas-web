@@ -33,6 +33,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     loading,
     isLoadingFeedbackFormatting,
     isLoadingFeedback,
+    isPublished,
   } = useScoreFeedbackData(open, data);
 
 
@@ -313,13 +314,13 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   </>
                 )}
                 <Descriptions.Item label="Total Score">
-                  {getTotalScoreDisplay() !== null ? (
+                  {isPublished && getTotalScoreDisplay() !== null ? (
                     <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
                       {getTotalScoreDisplay()}
                     </Text>
                   ) : (
                     <Text type="secondary" style={{ fontSize: "14px" }}>
-                      No score available
+                      {isPublished ? "No score available" : "Not published yet"}
                     </Text>
                   )}
                 </Descriptions.Item>
@@ -352,8 +353,17 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Descriptions>
             </Card>
 
-            { }
-            {questions.length > 0 && hasScore() && (
+            {!isPublished && (
+              <Card className={styles.headerCard}>
+                <Alert
+                  message="Grades Not Published"
+                  description="The grades for this assignment have not been published yet. Please check back later."
+                  type="info"
+                  showIcon
+                />
+              </Card>
+            )}
+            {isPublished && questions.length > 0 && hasScore() && (
               <Card className={styles.questionsCard}>
                 <Title level={3}>Grading Details</Title>
                 <Text type="secondary">
@@ -475,150 +485,150 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Card>
             )}
 
-            <Card className={styles.feedbackCard}>
-              <Spin spinning={isLoadingFeedback || isLoadingFeedbackFormatting}>
-                <Title level={3}>Detailed Feedback</Title>
-                <Divider />
+            {isPublished && (
+              <Card className={styles.feedbackCard}>
+                <Spin spinning={isLoadingFeedback || isLoadingFeedbackFormatting}>
+                  <Title level={3}>Detailed Feedback</Title>
+                  <Divider />
 
-                {!hasFeedback() && !isLoadingFeedback ? (
-                  <Alert
-                    message="No feedback available"
-                    description="No feedback has been provided for this submission yet. Please wait for the lecturer to review your work."
-                    type="info"
-                    showIcon
-                    style={{ marginTop: 16 }}
-                  />
-                ) : (
-                  <Space direction="vertical" size="large" style={{ width: "100%" }}>
-                    <div>
-                      <Title level={5}>Overall Feedback</Title>
-                      <TextArea
-                        rows={8}
-                        value={feedback?.overallFeedback || data.overallFeedback || ""}
-                        readOnly
-                        placeholder="No overall feedback provided yet."
-                      />
-                    </div>
+                  {!hasFeedback() && !isLoadingFeedback ? (
+                    <Alert
+                      message="No feedback available"
+                      description="No feedback has been provided for this submission yet. Please wait for the lecturer to review your work."
+                      type="info"
+                      showIcon
+                      style={{ marginTop: 16 }}
+                    />
+                  ) : (
+                    <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                      <div>
+                        <Title level={5}>Overall Feedback</Title>
+                        <TextArea
+                          rows={8}
+                          value={feedback?.overallFeedback || data.overallFeedback || ""}
+                          readOnly
+                          placeholder="No overall feedback provided yet."
+                        />
+                      </div>
 
-                    { }
-                    {(feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality || feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement || feedback?.bestPractices || feedback?.errorHandling) && (
-                      <>
-                        <Row gutter={16}>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Strengths</Title>
-                              <TextArea
-                                rows={7}
-                                value={feedback?.strengths || ""}
-                                readOnly
-                                placeholder="No strengths feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Weaknesses</Title>
-                              <TextArea
-                                rows={7}
-                                value={feedback?.weaknesses || ""}
-                                readOnly
-                                placeholder="No weaknesses feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                        </Row>
+                      { }
+                      {(feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality || feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement || feedback?.bestPractices || feedback?.errorHandling) && (
+                        <>
+                          <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Strengths</Title>
+                                <TextArea
+                                  rows={7}
+                                  value={feedback?.strengths || ""}
+                                  readOnly
+                                  placeholder="No strengths feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Weaknesses</Title>
+                                <TextArea
+                                  rows={7}
+                                  value={feedback?.weaknesses || ""}
+                                  readOnly
+                                  placeholder="No weaknesses feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                          </Row>
 
-                        <Row gutter={16}>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Code Quality</Title>
-                              <TextArea
-                                rows={6}
-                                value={feedback?.codeQuality || ""}
-                                readOnly
-                                placeholder="No code quality feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Algorithm Efficiency</Title>
-                              <TextArea
-                                rows={6}
-                                value={feedback?.algorithmEfficiency || ""}
-                                readOnly
-                                placeholder="No algorithm efficiency feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                        </Row>
+                          <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Code Quality</Title>
+                                <TextArea
+                                  rows={6}
+                                  value={feedback?.codeQuality || ""}
+                                  readOnly
+                                  placeholder="No code quality feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Algorithm Efficiency</Title>
+                                <TextArea
+                                  rows={6}
+                                  value={feedback?.algorithmEfficiency || ""}
+                                  readOnly
+                                  placeholder="No algorithm efficiency feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                          </Row>
 
-                        <div>
-                          <Title level={5}>Suggestions for Improvement</Title>
-                          <TextArea
-                            rows={8}
-                            value={feedback?.suggestionsForImprovement || ""}
-                            readOnly
-                            placeholder="No suggestions provided yet."
-                          />
-                        </div>
-
-                        <Row gutter={16}>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Best Practices</Title>
-                              <TextArea
-                                rows={6}
-                                value={feedback?.bestPractices || ""}
-                                readOnly
-                                placeholder="No best practices feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                          <Col xs={24} md={12}>
-                            <div>
-                              <Title level={5}>Error Handling</Title>
-                              <TextArea
-                                rows={6}
-                                value={feedback?.errorHandling || ""}
-                                readOnly
-                                placeholder="No error handling feedback provided yet."
-                              />
-                            </div>
-                          </Col>
-                        </Row>
-                      </>
-                    )}
-
-                    { }
-                    {!feedback && data.suggestionsAvoid && (
-                      <>
-                        <div>
-                          <Title level={5}>What you should avoid</Title>
-                          <TextArea
-                            rows={6}
-                            value={data.suggestionsAvoid}
-                            readOnly
-                          />
-                        </div>
-                        {data.suggestionsImprove && (
                           <div>
-                            <Title level={5}>What you should improve</Title>
+                            <Title level={5}>Suggestions for Improvement</Title>
+                            <TextArea
+                              rows={8}
+                              value={feedback?.suggestionsForImprovement || ""}
+                              readOnly
+                              placeholder="No suggestions provided yet."
+                            />
+                          </div>
+
+                          <Row gutter={16}>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Best Practices</Title>
+                                <TextArea
+                                  rows={6}
+                                  value={feedback?.bestPractices || ""}
+                                  readOnly
+                                  placeholder="No best practices feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                            <Col xs={24} md={12}>
+                              <div>
+                                <Title level={5}>Error Handling</Title>
+                                <TextArea
+                                  rows={6}
+                                  value={feedback?.errorHandling || ""}
+                                  readOnly
+                                  placeholder="No error handling feedback provided yet."
+                                />
+                              </div>
+                            </Col>
+                          </Row>
+                        </>
+                      )}
+
+                      { }
+                      {!feedback && data.suggestionsAvoid && (
+                        <>
+                          <div>
+                            <Title level={5}>What you should avoid</Title>
                             <TextArea
                               rows={6}
-                              value={data.suggestionsImprove}
+                              value={data.suggestionsAvoid}
                               readOnly
                             />
                           </div>
-                        )}
-                      </>
-                    )}
-                  </Space>
-                )}
-              </Spin>
-            </Card>
-
-            { }
+                          {data.suggestionsImprove && (
+                            <div>
+                              <Title level={5}>What you should improve</Title>
+                              <TextArea
+                                rows={6}
+                                value={data.suggestionsImprove}
+                                readOnly
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </Space>
+                  )}
+                </Spin>
+              </Card>
+            )}
             <div style={{ textAlign: "right", marginTop: 16 }}>
               <Space>
                 <Button type="primary" onClick={onCancel}>

@@ -10,6 +10,7 @@ import type { UploadFile } from "antd/es/upload/interface";
 import { useState } from "react";
 import { TemplateFormModal } from "./TemplateFormModal";
 import { UploadFileModal } from "./UploadFileModal";
+import styles from "./TaskContent.module.css";
 
 const { Title } = Typography;
 
@@ -27,6 +28,8 @@ interface TemplateDetailViewProps {
   onResetStatus?: () => Promise<void>;
   onDownloadTemplate?: () => void;
   onImportTemplate?: (file: File) => void;
+  onConfirmTemplateCreation?: () => Promise<void>;
+  updateStatusToInProgress?: () => Promise<void>;
 }
 
 export const TemplateDetailView = ({
@@ -43,6 +46,8 @@ export const TemplateDetailView = ({
   onResetStatus,
   onDownloadTemplate,
   onImportTemplate,
+  onConfirmTemplateCreation,
+  updateStatusToInProgress,
 }: TemplateDetailViewProps) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
@@ -98,6 +103,9 @@ export const TemplateDetailView = ({
       setIsUploadModalOpen(false);
       setFileList([]);
       onFileChange();
+      if (updateStatusToInProgress) {
+        await updateStatusToInProgress();
+      }
       notification.success({ message: "File uploaded successfully" });
     } catch (error: any) {
       notification.error({
@@ -117,6 +125,9 @@ export const TemplateDetailView = ({
         try {
           await assessmentFileService.deleteAssessmentFile(fileId);
           onFileChange();
+          if (updateStatusToInProgress) {
+            await updateStatusToInProgress();
+          }
           notification.success({ message: "File deleted" });
         } catch (error: any) {
           notification.error({ message: "Failed to delete file" });
@@ -136,56 +147,46 @@ export const TemplateDetailView = ({
   };
 
   return (
-    <Space direction="vertical" style={{ width: "100%" }} size="large">
-      <Card
-        title={
-          <div style={{ overflow: 'hidden', minWidth: 0, flex: 1 }}>
-            <Title
-              level={4}
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                margin: 0,
-                maxWidth: '100%'
-              }}
-            >
-              {template.name}
-            </Title>
-          </div>
-        }
-      >
-        <Descriptions bordered column={1}>
-          <Descriptions.Item label="Description">
-            {template.description}
-          </Descriptions.Item>
-          <Descriptions.Item label="Type">
-            {template.templateType === 0 ? "DSA" : "WEBAPI"}
-          </Descriptions.Item>
-          {template.templateType === 1 && template.startupProject && (
-            <Descriptions.Item label="Startup Project">
-              {template.startupProject}
+    <div className={styles.container}>
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <Title level={4} className={styles.cardTitle} style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>
+            {template.name}
+          </Title>
+        </div>
+        <div className={styles.cardBody}>
+          <Descriptions bordered column={1} className={styles.descriptions}>
+            <Descriptions.Item label="Description">
+              {template.description}
             </Descriptions.Item>
-          )}
-          <Descriptions.Item label="Papers">{papers.length}</Descriptions.Item>
-        </Descriptions>
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #f0f0f0" }}>
-          <Space wrap>
+            <Descriptions.Item label="Type">
+              {template.templateType === 0 ? "DSA" : "WEBAPI"}
+            </Descriptions.Item>
+            {template.templateType === 1 && template.startupProject && (
+              <Descriptions.Item label="Startup Project">
+                {template.startupProject}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Papers">{papers.length}</Descriptions.Item>
+          </Descriptions>
+          <div className={styles.buttonGroup}>
             {isEditable && (
               <>
                 <Button
                   icon={<EditOutlined />}
                   onClick={() => setIsTemplateModalOpen(true)}
+                  className={styles.button}
                 >
                   Edit Template
                 </Button>
-                <Button danger onClick={confirmTemplateDelete}>
+                <Button danger onClick={confirmTemplateDelete} className={styles.button}>
                   Delete Template
                 </Button>
                 {onDownloadTemplate && (
                   <Button
                     icon={<DownloadOutlined />}
                     onClick={onDownloadTemplate}
+                    className={styles.button}
                   >
                     Download Template
                   </Button>
@@ -205,7 +206,7 @@ export const TemplateDetailView = ({
                     maxCount={1}
                     showUploadList={false}
                   >
-                    <Button icon={<ImportOutlined />}>
+                    <Button icon={<ImportOutlined />} className={styles.button}>
                       Import Template
                     </Button>
                   </Upload>
@@ -215,12 +216,22 @@ export const TemplateDetailView = ({
             <Button
               icon={<DownloadOutlined />}
               onClick={onExport}
+              className={styles.button}
             >
               Export to .docx
             </Button>
-          </Space>
+            {onConfirmTemplateCreation && task && task.status === 4 && (
+              <Button
+                type="primary"
+                onClick={onConfirmTemplateCreation}
+                className={`${styles.button} ${styles.primaryButton}`}
+              >
+                Confirm Template Creation
+              </Button>
+            )}
+          </div>
         </div>
-      </Card>
+      </div>
 
       <TemplateFormModal
         open={isTemplateModalOpen}
@@ -235,21 +246,23 @@ export const TemplateDetailView = ({
         task={task}
       />
 
-      <Card title="Attached Files">
-        {}
-        {template.templateType === 1 ? (
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            {}
-            <div>
-              <Typography.Text strong>Database Files:</Typography.Text>
-              <List
-                style={{ marginTop: 8 }}
-                dataSource={files.filter(f => f.fileTemplate === 0)}
-                renderItem={(file) => (
-                  <List.Item
-                    actions={
-                      isEditable
-                        ? [
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <Title level={4} className={styles.cardTitle} style={{ margin: 0 }}>Attached Files</Title>
+        </div>
+        <div className={styles.cardBody}>
+          {template.templateType === 1 ? (
+            <Space direction="vertical" style={{ width: "100%" }} size="large">
+              <div className={styles.fileSection}>
+                <Typography.Text strong className={styles.fileSectionTitle}>Database Files:</Typography.Text>
+                <List
+                  className={styles.fileList}
+                  dataSource={files.filter(f => f.fileTemplate === 0)}
+                  renderItem={(file) => (
+                    <List.Item
+                      actions={
+                        isEditable
+                          ? [
                             <Button
                               type="text"
                               danger
@@ -257,40 +270,41 @@ export const TemplateDetailView = ({
                               onClick={() => handleDeleteFile(file.id)}
                             />,
                           ]
-                        : []
-                    }
-                  >
-                    <List.Item.Meta
-                      title={
-                        <a
-                          href={file.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <DatabaseOutlined /> {file.name}
-                        </a>
+                          : []
                       }
-                    />
-                  </List.Item>
+                    >
+                      <List.Item.Meta
+                        title={
+                          <a
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.fileLink}
+                          >
+                            <DatabaseOutlined /> {file.name}
+                          </a>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+                {files.filter(f => f.fileTemplate === 0).length === 0 && (
+                  <Typography.Text type="secondary" className={styles.emptyFileText}>
+                    No database files
+                  </Typography.Text>
                 )}
-              />
-              {files.filter(f => f.fileTemplate === 0).length === 0 && (
-                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
-                  No database files
-                </Typography.Text>
-              )}
-            </div>
+              </div>
 
-            <div>
-              <Typography.Text strong>Postman Files:</Typography.Text>
-              <List
-                style={{ marginTop: 8 }}
-                dataSource={files.filter(f => f.fileTemplate === 1)}
-                renderItem={(file) => (
-                  <List.Item
-                    actions={
-                      isEditable
-                        ? [
+              <div className={styles.fileSection}>
+                <Typography.Text strong className={styles.fileSectionTitle}>Postman Files:</Typography.Text>
+                <List
+                  className={styles.fileList}
+                  dataSource={files.filter(f => f.fileTemplate === 1)}
+                  renderItem={(file) => (
+                    <List.Item
+                      actions={
+                        isEditable
+                          ? [
                             <Button
                               type="text"
                               danger
@@ -298,41 +312,41 @@ export const TemplateDetailView = ({
                               onClick={() => handleDeleteFile(file.id)}
                             />,
                           ]
-                        : []
-                    }
-                  >
-                    <List.Item.Meta
-                      title={
-                        <a
-                          href={file.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <PaperClipOutlined /> {file.name}
-                        </a>
+                          : []
                       }
-                    />
-                  </List.Item>
+                    >
+                      <List.Item.Meta
+                        title={
+                          <a
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.fileLink}
+                          >
+                            <PaperClipOutlined /> {file.name}
+                          </a>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+                {files.filter(f => f.fileTemplate === 1).length === 0 && (
+                  <Typography.Text type="secondary" className={styles.emptyFileText}>
+                    No postman files
+                  </Typography.Text>
                 )}
-              />
-              {files.filter(f => f.fileTemplate === 1).length === 0 && (
-                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
-                  No postman files
-                </Typography.Text>
-              )}
-            </div>
+              </div>
 
-            {}
-            <div>
-              <Typography.Text strong>Custom Files:</Typography.Text>
-              <List
-                style={{ marginTop: 8 }}
-                dataSource={files.filter(f => f.fileTemplate === 2)}
-                renderItem={(file) => (
-                  <List.Item
-                    actions={
-                      isEditable
-                        ? [
+              <div className={styles.fileSection}>
+                <Typography.Text strong className={styles.fileSectionTitle}>Custom Files:</Typography.Text>
+                <List
+                  className={styles.fileList}
+                  dataSource={files.filter(f => f.fileTemplate === 2)}
+                  renderItem={(file) => (
+                    <List.Item
+                      actions={
+                        isEditable
+                          ? [
                             <Button
                               type="text"
                               danger
@@ -340,105 +354,110 @@ export const TemplateDetailView = ({
                               onClick={() => handleDeleteFile(file.id)}
                             />,
                           ]
-                        : []
-                    }
-                  >
-                    <List.Item.Meta
-                      title={
-                        <a
-                          href={file.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <PaperClipOutlined /> {file.name}
-                        </a>
+                          : []
                       }
-                    />
-                  </List.Item>
+                    >
+                      <List.Item.Meta
+                        title={
+                          <a
+                            href={file.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.fileLink}
+                          >
+                            <PaperClipOutlined /> {file.name}
+                          </a>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+                {files.filter(f => f.fileTemplate === 2).length === 0 && (
+                  <Typography.Text type="secondary" className={styles.emptyFileText}>
+                    No custom files
+                  </Typography.Text>
                 )}
-              />
-              {files.filter(f => f.fileTemplate === 2).length === 0 && (
-                <Typography.Text type="secondary" style={{ display: "block", marginTop: 8 }}>
-                  No custom files
-                </Typography.Text>
+              </div>
+            </Space>
+          ) : (
+            <List
+              className={styles.fileList}
+              dataSource={files}
+              renderItem={(file) => (
+                <List.Item
+                  actions={
+                    isEditable
+                      ? [
+                        <Button
+                          type="text"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteFile(file.id)}
+                        />,
+                      ]
+                      : []
+                  }
+                >
+                  <List.Item.Meta
+                    title={
+                      <a
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={styles.fileLink}
+                      >
+                        <PaperClipOutlined /> {file.name}
+                      </a>
+                    }
+                  />
+                </List.Item>
               )}
-            </div>
-          </Space>
-        ) : (
-        <List
-          dataSource={files}
-          renderItem={(file) => (
-            <List.Item
-              actions={
-                isEditable
-                  ? [
-                      <Button
-                        type="text"
-                        danger
-                        icon={<DeleteOutlined />}
-                        onClick={() => handleDeleteFile(file.id)}
-                      />,
-                    ]
-                  : []
-              }
-            >
-              <List.Item.Meta
-                title={
-                  <a
-                    href={file.fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <PaperClipOutlined /> {file.name}
-                  </a>
-                }
-              />
-            </List.Item>
+            />
           )}
-        />
-        )}
 
-        {isEditable && (
-          <Space direction="vertical" style={{ width: "100%", marginTop: "16px" }} size="small">
-            {template.templateType === 1 ? (
-
-              <Space wrap>
-                <Button
-                  icon={<DatabaseOutlined />}
-                  onClick={() => handleOpenUploadModal(0)}
-                  disabled={databaseFilesCount >= 1}
-            >
-                  Upload Database File {databaseFilesCount >= 1 ? "(Max 1)" : ""}
-                </Button>
-            <Button
-                  icon={<UploadOutlined />}
-                  onClick={() => handleOpenUploadModal(1)}
-                  disabled={postmanFilesCount >= 1}
-            >
-                  Upload Postman File {postmanFilesCount >= 1 ? "(Max 1)" : ""}
-            </Button>
+          {isEditable && (
+            <div className={styles.uploadButtonGroup}>
+              {template.templateType === 1 ? (
+                <>
+                  <Button
+                    icon={<DatabaseOutlined />}
+                    onClick={() => handleOpenUploadModal(0)}
+                    disabled={databaseFilesCount >= 1}
+                    className={styles.uploadButton}
+                  >
+                    Upload Database File {databaseFilesCount >= 1 ? "(Max 1)" : ""}
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => handleOpenUploadModal(1)}
+                    disabled={postmanFilesCount >= 1}
+                    className={styles.uploadButton}
+                  >
+                    Upload Postman File {postmanFilesCount >= 1 ? "(Max 1)" : ""}
+                  </Button>
+                  <Button
+                    icon={<UploadOutlined />}
+                    onClick={() => handleOpenUploadModal(2)}
+                    className={styles.uploadButton}
+                  >
+                    Upload Custom File
+                  </Button>
+                </>
+              ) : (
                 <Button
                   icon={<UploadOutlined />}
                   onClick={() => handleOpenUploadModal(2)}
+                  block
+                  className={styles.uploadButton}
                 >
                   Upload Custom File
                 </Button>
-              </Space>
-            ) : (
+              )}
+            </div>
+          )}
+        </div>
+      </div>
 
-              <Button
-                icon={<UploadOutlined />}
-                onClick={() => handleOpenUploadModal(2)}
-                block
-              >
-                Upload Custom File
-              </Button>
-            )}
-          </Space>
-        )}
-      </Card>
-
-      {}
       <UploadFileModal
         open={isUploadModalOpen}
         onCancel={() => {
@@ -451,7 +470,7 @@ export const TemplateDetailView = ({
         fileList={fileList}
         onFileListChange={setFileList}
       />
-    </Space>
+    </div>
   );
 };
 

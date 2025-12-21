@@ -5,6 +5,7 @@ export interface CreateClassAssessmentPayload {
   assessmentTemplateId: number;
   startAt: string;
   endAt: string;
+  isPublished?: boolean;
 }
 
 export interface ClassAssessment {
@@ -26,6 +27,7 @@ export interface ClassAssessment {
   students: any[];
   submissionCount: string;
   status: number;
+  isPublished?: boolean;
 }
 
 export interface ClassAssessmentApiResponse {
@@ -91,7 +93,7 @@ export class ClassAssessmentService {
 
   async updateClassAssessment(
     classAssessmentId: string | number,
-    payload: CreateClassAssessmentPayload
+    payload: Partial<CreateClassAssessmentPayload>
   ): Promise<ClassAssessment> {
     const response = await apiService.put<ClassAssessmentApiResponse>(
       `/ClassAssessment/${classAssessmentId}`,

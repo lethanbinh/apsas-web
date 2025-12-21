@@ -17,13 +17,15 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 const getStatusTag = (status: number) => {
   switch (status) {
     case 1:
-    case 2:
-    case 4:
       return <span className={styles["status-tag-pending"]}>Pending</span>;
-    case 5:
-      return <span className={styles["status-tag-completed"]}>Approved</span>;
+    case 2:
+      return <span className={styles["status-tag-pending"]}>Accepted</span>;
     case 3:
       return <span className={styles["status-tag-rejected"]}>Rejected</span>;
+    case 4:
+      return <span className={styles["status-tag-pending"]}>In Progress</span>;
+    case 5:
+      return <span className={styles["status-tag-completed"]}>Completed</span>;
     default:
       return <span className={styles["status-tag-pending"]}>Pending</span>;
   }
@@ -233,9 +235,13 @@ const TasksPageContent = () => {
       let matchesStatus = true;
       if (selectedStatus !== undefined) {
         if (selectedStatus === 1) {
-          matchesStatus = task.status === 1 || task.status === 2 || task.status === 4;
+          matchesStatus = task.status === 1;
+        } else if (selectedStatus === 2) {
+          matchesStatus = task.status === 2;
         } else if (selectedStatus === 3) {
           matchesStatus = task.status === 3;
+        } else if (selectedStatus === 4) {
+          matchesStatus = task.status === 4;
         } else if (selectedStatus === 5) {
           matchesStatus = task.status === 5;
         } else {
@@ -293,30 +299,29 @@ const TasksPageContent = () => {
     <div className={styles.container}>
       <h1 className={styles.title}>Tasks</h1>
 
-      <Space size="middle" style={{ display: "flex", flexWrap: "wrap", marginBottom: "20px" }}>
+      <div className={styles.filterBar}>
         <Select
           value={selectedSemester}
           onChange={(value) => setSelectedSemester(value)}
           options={semesterOptions}
-          style={{ width: 240 }}
           placeholder="Filter by Semester"
         />
         <Select
           placeholder="Filter by Status"
           allowClear
-          style={{ minWidth: 150 }}
           value={selectedStatus}
           onChange={(value) => setSelectedStatus(value)}
           options={[
             { label: "Pending", value: 1 },
-            { label: "Approved", value: 5 },
+            { label: "Accepted", value: 2 },
             { label: "Rejected", value: 3 },
+            { label: "In Progress", value: 4 },
+            { label: "Completed", value: 5 },
           ]}
         />
         <Select
           placeholder="Filter by Template"
           allowClear
-          style={{ minWidth: 150 }}
           value={selectedTemplateFilter}
           onChange={(value) => setSelectedTemplateFilter(value)}
           options={[
@@ -324,12 +329,13 @@ const TasksPageContent = () => {
             { label: "Without Template", value: "without" },
           ]}
         />
-      </Space>
+      </div>
 
       {filteredTasks.length === 0 ? (
-        <p style={{ textAlign: "center", marginTop: "20px" }}>
-          No tasks found for the selected semester.
-        </p>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyStateIcon}>📋</div>
+          <p>No tasks found for the selected filters.</p>
+        </div>
       ) : (
         Object.keys(groupedByCourse).map((courseKey) => {
           const tasks = groupedByCourse[courseKey];
