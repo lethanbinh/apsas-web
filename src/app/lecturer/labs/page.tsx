@@ -64,6 +64,7 @@ const LabDetailItem = ({
   template,
   classAssessment,
   submissions,
+  allSubmissions,
   onDeadlineSave,
   semesterStartDate,
   semesterEndDate,
@@ -72,6 +73,7 @@ const LabDetailItem = ({
   template?: AssessmentTemplate;
   classAssessment?: ClassAssessment;
   submissions: Submission[];
+  allSubmissions: Submission[];
   onDeadlineSave?: (courseElementId: number, startDate: dayjs.Dayjs | null, endDate: dayjs.Dayjs | null) => void;
   semesterStartDate?: string;
   semesterEndDate?: string;
@@ -221,7 +223,49 @@ const LabDetailItem = ({
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
+  // Đếm số lần nộp của mỗi student (chỉ đếm các submissions đã thực sự nộp)
+  const submissionCountByStudent = useMemo(() => {
+    const countMap: Record<number, number> = {};
+    allSubmissions.forEach((sub) => {
+      if (sub.studentId && sub.submittedAt) {
+        countMap[sub.studentId] = (countMap[sub.studentId] || 0) + 1;
+      }
+    });
+    return countMap;
+  }, [allSubmissions]);
+
+  // Kiểm tra xem có thể chấm submission này không
+  const canGradeSubmission = (submission: Submission): boolean => {
+    // Kiểm tra deadline đã hết chưa
+    if (classAssessment?.endAt) {
+      const deadline = dayjs.utc(classAssessment.endAt).tz("Asia/Ho_Chi_Minh");
+      const now = dayjs().tz("Asia/Ho_Chi_Minh");
+      if (now.isAfter(deadline)) {
+        return true; // Deadline đã hết, có thể chấm
+      }
+    }
+
+    // Kiểm tra student đã nộp đủ 3 lần chưa
+    if (submission.studentId) {
+      const submissionCount = submissionCountByStudent[submission.studentId] || 0;
+      if (submissionCount >= 3) {
+        return true; // Đã nộp đủ 3 lần, có thể chấm
+      }
+    }
+
+    return false; // Chưa đủ điều kiện
+  };
+
+  // Kiểm tra xem có submission nào có thể chấm được không
+  const hasGradableSubmissions = useMemo(() => {
+    return submissions.some(submission => canGradeSubmission(submission));
+  }, [submissions, submissionCountByStudent, classAssessment]);
+
   const handleSubmissionClick = (submission: Submission) => {
+    if (!canGradeSubmission(submission)) {
+      message.warning("You can only grade labs after the deadline has passed or when the student has submitted 3 times.");
+      return;
+    }
 
     localStorage.setItem("selectedSubmissionId", submission.id.toString());
     router.push("/lecturer/assignment-grading");
@@ -233,6 +277,13 @@ const LabDetailItem = ({
       return;
     }
 
+    // Chỉ lấy các submissions có thể chấm được
+    const gradableSubmissions = submissions.filter(submission => canGradeSubmission(submission));
+    
+    if (gradableSubmissions.length === 0) {
+      message.warning("No submissions are eligible for grading. Deadline must pass or students must submit 3 times.");
+      return;
+    }
 
     if (semesterEndDate) {
       const semesterEnd = dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh");
@@ -251,10 +302,10 @@ const LabDetailItem = ({
     }
 
       setBatchGradingLoading(true);
-      message.loading(`Starting batch grading for ${submissions.length} submission(s)...`, 0);
+      message.loading(`Starting batch grading for ${gradableSubmissions.length} submission(s)...`, 0);
 
 
-      const gradingPromises = submissions.map(async (submission) => {
+      const gradingPromises = gradableSubmissions.map(async (submission) => {
         try {
         await batchGradingMutation.mutateAsync({
             submissionId: submission.id,
@@ -384,7 +435,10 @@ const LabDetailItem = ({
                 icon={<RobotOutlined />}
                 onClick={handleBatchGrading}
                 loading={batchGradingLoading}
-                disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
+                disabled={
+                  !hasGradableSubmissions ||
+                  (semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false)
+                }
               >
                 Grade All
               </Button>
@@ -396,51 +450,70 @@ const LabDetailItem = ({
           ) : (
             <List
               dataSource={submissions}
-              renderItem={(submission) => (
-                <List.Item
-                  style={{ cursor: "pointer" }}
-                  onClick={() => handleSubmissionClick(submission)}
-                  actions={[
-                    submission.submissionFile && (
-                      <Button
-                        type="text"
-                        icon={<DownloadOutlined />}
-                        key="download"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (submission.submissionFile?.submissionUrl) {
-                            window.open(submission.submissionFile.submissionUrl, "_blank");
-                          }
-                        }}
-                      />
-                    ),
-                  ]}
-                >
-                  <List.Item.Meta
-                    avatar={<FolderOutlined />}
-                    title={
-                      <Space>
-                        <Text strong>{submission.studentName}</Text>
-                        {submissionScores[submission.id] && (
-                          <Tag color="green">
-                            {submissionScores[submission.id].max > 0
-                              ? `${submissionScores[submission.id].total.toFixed(2)}/${submissionScores[submission.id].max.toFixed(2)}`
-                              : submissionScores[submission.id].total.toFixed(2)}
-                          </Tag>
-                        )}
-                      </Space>
-                    }
-                    description={
-                      <div>
-                        <div>{submission.submissionFile?.name || "No file"}</div>
-                        <Text type="secondary" style={{ fontSize: "0.85rem" }}>
-                          Submitted: {dayjs(submission.updatedAt || submission.submittedAt).format("DD MMM YYYY, HH:mm")}
-                        </Text>
-                      </div>
-                    }
-                  />
-                </List.Item>
-              )}
+              renderItem={(submission) => {
+                const canGrade = canGradeSubmission(submission);
+                const submissionCount = submission.studentId ? (submissionCountByStudent[submission.studentId] || 0) : 0;
+                return (
+                  <List.Item
+                    style={{ 
+                      cursor: canGrade ? "pointer" : "not-allowed",
+                      opacity: canGrade ? 1 : 0.6
+                    }}
+                    onClick={() => handleSubmissionClick(submission)}
+                    actions={[
+                      submission.submissionFile && (
+                        <Button
+                          type="text"
+                          icon={<DownloadOutlined />}
+                          key="download"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (submission.submissionFile?.submissionUrl) {
+                              window.open(submission.submissionFile.submissionUrl, "_blank");
+                            }
+                          }}
+                        />
+                      ),
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<FolderOutlined />}
+                      title={
+                        <Space>
+                          <Text strong>{submission.studentName}</Text>
+                          {submissionScores[submission.id] && (
+                            <Tag color="green">
+                              {submissionScores[submission.id].max > 0
+                                ? `${submissionScores[submission.id].total.toFixed(2)}/${submissionScores[submission.id].max.toFixed(2)}`
+                                : submissionScores[submission.id].total.toFixed(2)}
+                            </Tag>
+                          )}
+                          {!canGrade && (
+                            <Tag color="orange">
+                              Submissions: {submissionCount}/3
+                            </Tag>
+                          )}
+                        </Space>
+                      }
+                      description={
+                        <div>
+                          <div>{submission.submissionFile?.name || "No file"}</div>
+                          <Text type="secondary" style={{ fontSize: "0.85rem" }}>
+                            Submitted: {dayjs(submission.updatedAt || submission.submittedAt).format("DD MMM YYYY, HH:mm")}
+                          </Text>
+                          {!canGrade && (
+                            <div style={{ marginTop: 4 }}>
+                              <Text type="secondary" style={{ fontSize: "0.85rem", fontStyle: "italic" }}>
+                                Cannot grade yet: Deadline must pass or student must submit 3 times
+                              </Text>
+                            </div>
+                          )}
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                );
+              }}
             />
           )}
         </Card>
@@ -570,7 +643,7 @@ const LabsPage = () => {
   const { data: submissionsData } = useQuery({
     queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
-      if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
+      if (classAssessmentIds.length === 0) return { latest: new Map<number, Submission[]>(), all: new Map<number, Submission[]>() };
 
           const submissionPromises = classAssessmentIds.map(classAssessmentId =>
             submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
@@ -579,6 +652,7 @@ const LabsPage = () => {
           const allSubmissions = submissionArrays.flat();
 
       const submissionsByCourseElement = new Map<number, Submission[]>();
+      const allSubmissionsByCourseElement = new Map<number, Submission[]>();
 
 
           for (const submission of allSubmissions) {
@@ -587,6 +661,11 @@ const LabsPage = () => {
               const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
               existing.push(submission);
               submissionsByCourseElement.set(classAssessment.courseElementId, existing);
+              
+              // Lưu tất cả submissions để đếm số lần nộp
+              const allExisting = allSubmissionsByCourseElement.get(classAssessment.courseElementId) || [];
+              allExisting.push(submission);
+              allSubmissionsByCourseElement.set(classAssessment.courseElementId, allExisting);
             }
           }
 
@@ -636,12 +715,13 @@ const LabsPage = () => {
             submissionsByCourseElement.set(courseElementId, latestSubs);
       }
 
-      return submissionsByCourseElement;
+      return { latest: submissionsByCourseElement, all: allSubmissionsByCourseElement };
     },
     enabled: classAssessmentIds.length > 0,
   });
 
-  const submissions = submissionsData || new Map<number, Submission[]>();
+  const submissions = submissionsData?.latest || new Map<number, Submission[]>();
+  const allSubmissions = submissionsData?.all || new Map<number, Submission[]>();
   const isLoading = isLoadingClass && !classData;
   const error = !selectedClassId ? "No class selected. Please select a class first." : null;
 
@@ -1027,6 +1107,7 @@ const LabsPage = () => {
                   template={matchingTemplate}
                   classAssessment={approvedClassAssessment}
                   submissions={labSubmissions}
+                  allSubmissions={allSubmissions.get(lab.id) || []}
                   onDeadlineSave={handleDeadlineSave}
                   semesterStartDate={semesterInfo?.startDate}
                   semesterEndDate={semesterInfo?.endDate}
