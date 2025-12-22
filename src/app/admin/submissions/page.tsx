@@ -4,10 +4,11 @@ import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { isLabTemplate, isPracticalExamTemplate } from "@/services/adminDashboard/utils";
 import { gradeItemService } from "@/services/gradeItemService";
 import { gradingService } from "@/services/gradingService";
+import { gradingGroupService } from "@/services/gradingGroupService";
 import { submissionService } from "@/services/submissionService";
 import { ArrowLeftOutlined, ReloadOutlined, UploadOutlined } from "@ant-design/icons";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Col, DatePicker, Row, Select, Space, Statistic, Table, Tag, Typography } from "antd";
+import { Button, Card, DatePicker, Row, Select, Space, Table, Tag, Typography } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -38,21 +39,58 @@ const SubmissionsPage = () => {
   const [selectedCourse, setSelectedCourse] = useState<string | undefined>(undefined);
   const [selectedClass, setSelectedClass] = useState<number | undefined>(undefined);
   const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
+  const [selectedType, setSelectedType] = useState<'assignment' | 'lab' | 'practicalExam' | undefined>(undefined);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
+  // Fetch submissions from class assessments (for assignment and lab)
   const { data: submissionsRes, isLoading: submissionsLoading } = useQuery({
     queryKey: ['adminSubmissions'],
     queryFn: () => submissionService.getSubmissionList({}),
   });
 
-  const submissions = submissionsRes || [];
+  // Fetch grading groups for practical exam
+  const { data: gradingGroupsRes, isLoading: gradingGroupsLoading } = useQuery({
+    queryKey: ['adminGradingGroups'],
+    queryFn: () => gradingGroupService.getGradingGroups({}),
+  });
+
+  // Fetch submissions from grading groups (for practical exam)
+  const gradingGroupIds = useMemo(() => {
+    return (gradingGroupsRes || []).map(g => g.id);
+  }, [gradingGroupsRes]);
+
+  const practicalExamSubmissionsQueries = useQueries({
+    queries: gradingGroupIds.map((groupId) => ({
+      queryKey: ['submissions', 'byGradingGroupId', groupId],
+      queryFn: () => submissionService.getSubmissionList({
+        gradingGroupId: groupId,
+      }).catch(() => []),
+      enabled: gradingGroupIds.length > 0,
+    })),
+  });
+
+  // Combine submissions from class assessments and grading groups
+  const allSubmissions = useMemo(() => {
+    const classAssessmentSubmissions = submissionsRes || [];
+    const practicalExamSubmissions = practicalExamSubmissionsQueries
+      .map(query => query.data || [])
+      .flat();
+    
+    return [...classAssessmentSubmissions, ...practicalExamSubmissions];
+  }, [submissionsRes, practicalExamSubmissionsQueries]);
+
+  const submissions = allSubmissions;
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminSubmissions'] });
+    queryClient.invalidateQueries({ queryKey: ['adminGradingGroups'] });
+    queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
     queryClient.invalidateQueries({ queryKey: ['adminClassAssessments'] });
     queryClient.invalidateQueries({ queryKey: ['adminTemplates'] });
     queryClient.invalidateQueries({ queryKey: ['adminClasses'] });
     queryClient.invalidateQueries({ queryKey: ['adminSemesters'] });
+    queryClient.invalidateQueries({ queryKey: ['gradingSessions'] });
+    queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
   };
 
   // Fetch classes and semesters for filters
@@ -105,33 +143,81 @@ const SubmissionsPage = () => {
   const filteredSubmissions = useMemo(() => {
     let filtered = [...submissions];
 
-    if (!classAssessmentsRes?.items) return filtered;
+    if (!templatesRes?.items) return filtered;
 
-    // Create assessment map for quick lookup
-    const assessmentMap = new Map(classAssessmentsRes.items.map(a => [a.id, a]));
+    // Create maps for quick lookup
+    const assessmentMap = classAssessmentsRes?.items 
+      ? new Map(classAssessmentsRes.items.map(a => [a.id, a]))
+      : new Map();
+    const templateMap = new Map(templatesRes.items.map(t => [t.id, t]));
+    const gradingGroupMap = gradingGroupsRes
+      ? new Map(gradingGroupsRes.map(g => [g.id, g]))
+      : new Map();
 
     filtered = filtered.filter((sub) => {
-      if (!sub.classAssessmentId) return false;
-      
-      const assessment = assessmentMap.get(sub.classAssessmentId);
-      if (!assessment) return false;
+      let assessmentType: 'assignment' | 'lab' | 'practicalExam' = 'assignment';
+      let assessment: any = null;
+      let courseName: string | undefined = undefined;
+      let classId: number | undefined = undefined;
 
-      // Filter by course
-      if (selectedCourse && assessment.courseName !== selectedCourse) {
+      // Determine if submission is from class assessment or grading group
+      if (sub.classAssessmentId) {
+        // Submission from class assessment (assignment or lab)
+        assessment = assessmentMap.get(sub.classAssessmentId);
+        if (!assessment) return false;
+
+        if (assessment?.assessmentTemplateId) {
+          const template = templateMap.get(assessment.assessmentTemplateId);
+          if (template) {
+            if (isPracticalExamTemplate(template)) {
+              assessmentType = 'practicalExam';
+            } else if (isLabTemplate(template)) {
+              assessmentType = 'lab';
+            }
+          }
+        }
+
+        courseName = assessment.courseName;
+        classId = assessment.classId;
+
+        // For assignment and practical exam: only show if published
+        // For lab: always show (has auto-grade after submission)
+        if (assessmentType !== 'lab' && !assessment.isPublished) {
+          return false;
+        }
+      } else if (sub.gradingGroupId) {
+        // Submission from grading group (practical exam)
+        assessmentType = 'practicalExam';
+        const gradingGroup = gradingGroupMap.get(sub.gradingGroupId);
+        if (!gradingGroup || !gradingGroup.assessmentTemplateId) return false;
+
+        // Get course info from template (if needed for filtering)
+        const template = templateMap.get(gradingGroup.assessmentTemplateId);
+        if (!template) return false;
+      } else {
+        // No valid source
         return false;
       }
 
-      // Filter by class
-      if (selectedClass && assessment.classId !== selectedClass) {
+      // Filter by type
+      if (selectedType && assessmentType !== selectedType) {
         return false;
       }
 
-      // Filter by semester
-      if (selectedSemester) {
-        // Check if class has matching semester
-        const classData = classes.find(c => c.id === assessment.classId);
+      // Filter by course (only for class assessment submissions)
+      if (selectedCourse && courseName && courseName !== selectedCourse) {
+        return false;
+      }
+
+      // Filter by class (only for class assessment submissions)
+      if (selectedClass && classId && classId !== selectedClass) {
+        return false;
+      }
+
+      // Filter by semester (only for class assessment submissions)
+      if (selectedSemester && classId) {
+        const classData = classes.find(c => Number(c.id) === Number(classId));
         if (classData) {
-          // Check if semesterName matches or contains selectedSemester
           if (classData.semesterName !== selectedSemester && 
               !classData.semesterName?.includes(selectedSemester) &&
               !selectedSemester.includes(classData.semesterName || '')) {
@@ -159,8 +245,44 @@ const SubmissionsPage = () => {
       });
     }
 
-    return filtered;
-  }, [submissions, selectedCourse, selectedClass, selectedSemester, dateRange?.[0]?.valueOf(), dateRange?.[1]?.valueOf(), classAssessmentsRes, classes]);
+    // Only keep latest submission for each student-assessment/gradingGroup pair
+    const latestSubmissionsMap = new Map<string, typeof filtered[0]>();
+    filtered.forEach((sub) => {
+      if (!sub.studentId) return;
+      
+      // Create key based on submission source
+      let key: string;
+      if (sub.classAssessmentId) {
+        key = `${sub.studentId}_classAssessment_${sub.classAssessmentId}`;
+      } else if (sub.gradingGroupId) {
+        key = `${sub.studentId}_gradingGroup_${sub.gradingGroupId}`;
+      } else {
+        return;
+      }
+
+      const existing = latestSubmissionsMap.get(key);
+      
+      if (!existing) {
+        latestSubmissionsMap.set(key, sub);
+      } else {
+        // Keep the latest submission
+        const existingDate = existing.submittedAt || existing.createdAt;
+        const currentDate = sub.submittedAt || sub.createdAt;
+        if (currentDate && existingDate && new Date(currentDate) > new Date(existingDate)) {
+          latestSubmissionsMap.set(key, sub);
+        } else if (currentDate && !existingDate) {
+          latestSubmissionsMap.set(key, sub);
+        } else if (!currentDate && existingDate) {
+          // Keep existing
+        } else if (sub.id && existing.id && sub.id > existing.id) {
+          latestSubmissionsMap.set(key, sub);
+        }
+      }
+    });
+
+    // Return only latest submissions
+    return Array.from(latestSubmissionsMap.values());
+  }, [submissions, selectedCourse, selectedClass, selectedSemester, selectedType, dateRange?.[0]?.valueOf(), dateRange?.[1]?.valueOf(), classAssessmentsRes, templatesRes, gradingGroupsRes, classes]);
 
   // Fetch grading sessions for filtered submissions
   const gradingSessionsQueries = useQueries({
@@ -172,43 +294,72 @@ const SubmissionsPage = () => {
         pageSize: 100,
       }),
       enabled: filteredSubmissions.length > 0 && !!sub.id,
+      staleTime: 30000, // Cache for 30 seconds
+      cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     })),
   });
 
   // Get all unique session IDs that we need to fetch grade items for
   const sessionIdsForGradeItems = useMemo(() => {
     const sessionIds: number[] = [];
-    if (!classAssessmentsRes?.items || !templatesRes?.items) return sessionIds;
+    if (!templatesRes?.items) return sessionIds;
 
-    const assessmentMap = new Map(classAssessmentsRes.items.map(a => [a.id, a]));
+    const assessmentMap = classAssessmentsRes?.items 
+      ? new Map(classAssessmentsRes.items.map(a => [a.id, a]))
+      : new Map();
     const templateMap = new Map(templatesRes.items.map(t => [t.id, t]));
+    const gradingGroupMap = gradingGroupsRes
+      ? new Map(gradingGroupsRes.map(g => [g.id, g]))
+      : new Map();
 
     filteredSubmissions.forEach((sub, index) => {
-      if (!sub.classAssessmentId || !sub.id) return;
+      if (!sub.id) return;
 
-      const assessment = assessmentMap.get(sub.classAssessmentId);
-      if (!assessment) return;
-
-      // Determine assessment type
       let assessmentType: 'assignment' | 'lab' | 'practicalExam' = 'assignment';
-      if (assessment?.assessmentTemplateId) {
-        const template = templateMap.get(assessment.assessmentTemplateId);
-        if (template) {
-          if (isPracticalExamTemplate(template)) {
-            assessmentType = 'practicalExam';
-          } else if (isLabTemplate(template)) {
-            assessmentType = 'lab';
+      let assessment: any = null;
+      let isPublished = false;
+
+      // Determine if submission is from class assessment or grading group
+      if (sub.classAssessmentId) {
+        // Submission from class assessment (assignment or lab)
+        assessment = assessmentMap.get(sub.classAssessmentId);
+        if (!assessment) return;
+
+        if (assessment?.assessmentTemplateId) {
+          const template = templateMap.get(assessment.assessmentTemplateId);
+          if (template) {
+            if (isPracticalExamTemplate(template)) {
+              assessmentType = 'practicalExam';
+            } else if (isLabTemplate(template)) {
+              assessmentType = 'lab';
+            }
           }
         }
-      }
 
-      // For lab: always calculate (auto-graded available after submission)
-      // For assignment/practical exam: only calculate if published
-      if (assessmentType !== 'lab' && !assessment.isPublished) {
+        isPublished = assessment.isPublished || false;
+
+        // For lab: always calculate (auto-graded available after submission)
+        // For assignment/practical exam: only calculate if published
+        if (assessmentType !== 'lab' && !isPublished) {
+          return;
+        }
+      } else if (sub.gradingGroupId) {
+        // Submission from grading group (practical exam)
+        assessmentType = 'practicalExam';
+        const gradingGroup = gradingGroupMap.get(sub.gradingGroupId);
+        if (!gradingGroup || !gradingGroup.assessmentTemplateId) return;
+        // Practical exam from grading groups are always considered "published" for grading
+        isPublished = true;
+      } else {
         return;
       }
 
       const sessionsQuery = gradingSessionsQueries[index];
+      // Skip if query is still loading (wait for data to be available)
+      if (sessionsQuery?.isLoading || sessionsQuery?.isFetching) {
+        return;
+      }
+      // Skip if query has no data or failed
       if (!sessionsQuery?.data?.items || sessionsQuery.data.items.length === 0) {
         return;
       }
@@ -221,7 +372,7 @@ const SubmissionsPage = () => {
       // Select the appropriate session
       let selectedSession = null;
       
-      if (assessmentType === 'lab' && assessment.isPublished) {
+      if (assessmentType === 'lab' && isPublished) {
         const teacherSession = completedSessions.find(
           (s: any) => s.gradingType === 1 || s.gradingType === 2
         );
@@ -239,6 +390,7 @@ const SubmissionsPage = () => {
           (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )[0];
       } else {
+        // For assignment and practical exam: prefer teacher-graded session
         const teacherSession = completedSessions.find(
           (s: any) => s.gradingType === 1 || s.gradingType === 2
         );
@@ -253,7 +405,7 @@ const SubmissionsPage = () => {
     });
 
     return sessionIds;
-  }, [filteredSubmissions, classAssessmentsRes, templatesRes, gradingSessionsQueries]);
+  }, [filteredSubmissions, classAssessmentsRes, templatesRes, gradingGroupsRes, gradingSessionsQueries]);
 
   // Fetch grade items for selected sessions
   const gradeItemsQueries = useQueries({
@@ -266,6 +418,7 @@ const SubmissionsPage = () => {
       }),
       enabled: sessionIdsForGradeItems.length > 0 && !!sessionId,
       staleTime: 30000, // Cache for 30 seconds
+      cacheTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
     })),
   });
 
@@ -281,36 +434,6 @@ const SubmissionsPage = () => {
     return map;
   }, [sessionIdsForGradeItems, gradeItemsQueries]);
 
-  // Group submissions by student and assessment to get latest submission for each student (like overview)
-  const latestSubmissionsMap = useMemo(() => {
-    const map = new Map<string, typeof filteredSubmissions[0]>();
-    
-    filteredSubmissions.forEach((sub) => {
-      if (!sub.classAssessmentId || !sub.studentId) return;
-      const key = `${sub.studentId}_${sub.classAssessmentId}`;
-      const existing = map.get(key);
-      
-      if (!existing) {
-        map.set(key, sub);
-      } else {
-        // Keep the latest submission
-        const existingDate = existing.submittedAt || existing.createdAt;
-        const currentDate = sub.submittedAt || sub.createdAt;
-        if (currentDate && existingDate && new Date(currentDate) > new Date(existingDate)) {
-          map.set(key, sub);
-        } else if (currentDate && !existingDate) {
-          map.set(key, sub);
-        } else if (!currentDate && existingDate) {
-          // Keep existing
-        } else if (sub.id && existing.id && sub.id > existing.id) {
-          map.set(key, sub);
-        }
-      }
-    });
-    
-    return map;
-  }, [filteredSubmissions]);
-
   // Create a map from submission ID to index in filteredSubmissions for query lookup
   const submissionIndexMap = useMemo(() => {
     const map = new Map<number, number>();
@@ -322,49 +445,62 @@ const SubmissionsPage = () => {
     return map;
   }, [filteredSubmissions]);
 
-  // Calculate grades for each submission (only latest for each student-assessment pair)
+  // Calculate grades for each submission (for display in table)
   const submissionGrades = useMemo(() => {
     const gradeMap = new Map<number, number>();
 
-    if (!classAssessmentsRes?.items || !templatesRes?.items) {
+    if (!templatesRes?.items) {
       return gradeMap;
     }
 
-    const assessmentMap = new Map(classAssessmentsRes.items.map(a => [a.id, a]));
+    const assessmentMap = classAssessmentsRes?.items 
+      ? new Map(classAssessmentsRes.items.map(a => [a.id, a]))
+      : new Map();
     const templateMap = new Map(templatesRes.items.map(t => [t.id, t]));
+    const gradingGroupMap = gradingGroupsRes
+      ? new Map(gradingGroupsRes.map(g => [g.id, g]))
+      : new Map();
 
-    // Process all filtered submissions (for display), but only calculate grade for latest ones
+    // Process all filtered submissions to calculate grades for display
     filteredSubmissions.forEach((sub) => {
-      if (!sub.classAssessmentId || !sub.id || !sub.studentId) return;
+      if (!sub.id || !sub.studentId) return;
 
-      const assessment = assessmentMap.get(sub.classAssessmentId);
-      if (!assessment) return;
-
-      // Determine assessment type
       let assessmentType: 'assignment' | 'lab' | 'practicalExam' = 'assignment';
-      if (assessment?.assessmentTemplateId) {
-        const template = templateMap.get(assessment.assessmentTemplateId);
-        if (template) {
-          if (isPracticalExamTemplate(template)) {
-            assessmentType = 'practicalExam';
-          } else if (isLabTemplate(template)) {
-            assessmentType = 'lab';
+      let assessment: any = null;
+      let isPublished = false;
+
+      // Determine if submission is from class assessment or grading group
+      if (sub.classAssessmentId) {
+        // Submission from class assessment (assignment or lab)
+        assessment = assessmentMap.get(sub.classAssessmentId);
+        if (!assessment) return;
+
+        if (assessment?.assessmentTemplateId) {
+          const template = templateMap.get(assessment.assessmentTemplateId);
+          if (template) {
+            if (isPracticalExamTemplate(template)) {
+              assessmentType = 'practicalExam';
+            } else if (isLabTemplate(template)) {
+              assessmentType = 'lab';
+            }
           }
         }
-      }
 
-      // For lab: always calculate (auto-graded available after submission)
-      // For assignment/practical exam: only calculate if published
-      if (assessmentType !== 'lab' && !assessment.isPublished) {
-        return;
-      }
+        isPublished = assessment.isPublished || false;
 
-      // Only calculate grade for latest submissions (like overview)
-      // Check if this is the latest submission for this student-assessment pair
-      const key = `${sub.studentId}_${sub.classAssessmentId}`;
-      const latestSub = latestSubmissionsMap.get(key);
-      if (!latestSub || latestSub.id !== sub.id) {
-        // Not the latest submission, skip grade calculation
+        // For lab: always calculate (auto-graded available after submission)
+        // For assignment/practical exam: only calculate if published
+        if (assessmentType !== 'lab' && !isPublished) {
+          return;
+        }
+      } else if (sub.gradingGroupId) {
+        // Submission from grading group (practical exam)
+        assessmentType = 'practicalExam';
+        const gradingGroup = gradingGroupMap.get(sub.gradingGroupId);
+        if (!gradingGroup || !gradingGroup.assessmentTemplateId) return;
+        // Practical exam from grading groups are always considered "published" for grading
+        isPublished = true;
+      } else {
         return;
       }
 
@@ -372,6 +508,11 @@ const SubmissionsPage = () => {
       if (subIndex === undefined) return;
 
       const sessionsQuery = gradingSessionsQueries[subIndex];
+      // Skip if query is still loading (wait for data to be available)
+      if (sessionsQuery?.isLoading || sessionsQuery?.isFetching) {
+        return;
+      }
+      // Skip if query has no data or failed
       if (!sessionsQuery?.data?.items || sessionsQuery.data.items.length === 0) {
         return;
       }
@@ -384,7 +525,7 @@ const SubmissionsPage = () => {
       // Select the appropriate session
       let selectedSession = null;
       
-      if (assessmentType === 'lab' && assessment.isPublished) {
+      if (assessmentType === 'lab' && isPublished) {
         const teacherSession = completedSessions.find(
           (s: any) => s.gradingType === 1 || s.gradingType === 2
         );
@@ -402,6 +543,7 @@ const SubmissionsPage = () => {
           (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         )[0];
       } else {
+        // For assignment and practical exam: prefer teacher-graded session
         const teacherSession = completedSessions.find(
           (s: any) => s.gradingType === 1 || s.gradingType === 2
         );
@@ -415,6 +557,19 @@ const SubmissionsPage = () => {
       // Calculate grade from grade items
       const gradeItems = gradeItemsBySessionId.get(selectedSession.id);
       let calculatedGrade = 0;
+
+      // If grade items are not yet loaded, try to get from session grade as fallback
+      if (!gradeItems) {
+        // Check if we're still loading grade items for this session
+        const sessionIdIndex = sessionIdsForGradeItems.indexOf(selectedSession.id);
+        if (sessionIdIndex >= 0) {
+          const gradeItemsQuery = gradeItemsQueries[sessionIdIndex];
+          // If still loading, skip calculation for now (will recalculate when data loads)
+          if (gradeItemsQuery?.isLoading || gradeItemsQuery?.isFetching) {
+            return;
+          }
+        }
+      }
 
       if (gradeItems && gradeItems.length > 0) {
         // Calculate grade from grade items (totalScore / maxScore * 10)
@@ -440,24 +595,7 @@ const SubmissionsPage = () => {
     });
 
     return gradeMap;
-  }, [filteredSubmissions, classAssessmentsRes, templatesRes, gradingSessionsQueries, gradeItemsBySessionId, latestSubmissionsMap, submissionIndexMap]);
-
-  // Calculate statistics for submissions (only count latest submissions with grade > 0, like overview)
-  const submissionStats = useMemo(() => {
-    // Only count latest submissions that have been graded (grade > 0)
-    const gradedLatestSubmissions = Array.from(latestSubmissionsMap.values()).filter((sub) => {
-      const grade = submissionGrades.get(sub.id);
-      return grade !== undefined && grade !== null && grade > 0;
-    });
-
-    const gradedCount = gradedLatestSubmissions.length;
-
-    return {
-      total: gradedCount,
-      graded: gradedCount,
-      notGraded: 0,
-    };
-  }, [latestSubmissionsMap, submissionGrades]);
+  }, [filteredSubmissions, classAssessmentsRes, templatesRes, gradingGroupsRes, gradingSessionsQueries, gradeItemsBySessionId, submissionIndexMap, sessionIdsForGradeItems, gradeItemsQueries]);
 
   const submissionsByTypeData = useMemo(() => {
     const data: Record<string, number> = {
@@ -540,8 +678,12 @@ const SubmissionsPage = () => {
         render: (_: any, record: any) => {
           const assessment = assessmentMap.get(record.classAssessmentId);
           if (!assessment) return "N/A";
-          const classData = classes.find(c => c.id === assessment.classId);
-          return classData?.semesterName || "N/A";
+          // Ensure both IDs are numbers for comparison
+          const classData = classes.find(c => Number(c.id) === Number(assessment.classId));
+          if (classData?.semesterName) {
+            return classData.semesterName;
+          }
+          return "N/A";
         },
       },
       {
@@ -611,7 +753,7 @@ const SubmissionsPage = () => {
         ),
       },
     ];
-  }, [classAssessmentsRes, classes, templatesRes]);
+  }, [classAssessmentsRes, classes, templatesRes, semesters, submissionGrades]);
 
   return (
     <>
@@ -697,6 +839,20 @@ const SubmissionsPage = () => {
               </Select>
             </Space>
             <Space>
+              <span style={{ fontWeight: 500 }}>Type:</span>
+              <Select
+                placeholder="All Types"
+                allowClear
+                style={{ width: 200 }}
+                value={selectedType}
+                onChange={setSelectedType}
+              >
+                <Select.Option value="assignment">Assignment</Select.Option>
+                <Select.Option value="lab">Lab</Select.Option>
+                <Select.Option value="practicalExam">Practical Exam</Select.Option>
+              </Select>
+            </Space>
+            <Space>
               <span style={{ fontWeight: 500 }}>Submission Date Range:</span>
               <RangePicker
                 placeholder={["Start Date", "End Date"]}
@@ -709,38 +865,7 @@ const SubmissionsPage = () => {
           </Space>
         </Card>
 
-        {/* Statistics Cards */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Total Submissions"
-                value={submissionStats.total}
-                valueStyle={{ color: COLORS.blue }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Graded"
-                value={submissionStats.graded}
-                valueStyle={{ color: COLORS.green }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={8}>
-            <Card>
-              <Statistic
-                title="Not Graded"
-                value={submissionStats.notGraded}
-                valueStyle={{ color: COLORS.orange }}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <Card title="Submissions by Type" loading={submissionsLoading} style={{ marginBottom: 24 }}>
+         <Card title="Submissions by Type" loading={submissionsLoading} style={{ marginBottom: 24 }}>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -767,10 +892,10 @@ const SubmissionsPage = () => {
           </ResponsiveContainer>
         </Card>
 
-        <Card
-          title={`All Submissions (${filteredSubmissions.length} of ${submissions.length})`}
-          loading={submissionsLoading}
-        >
+         <Card
+           title="All Submissions"
+           loading={submissionsLoading}
+         >
           <Table
             columns={columns}
             dataSource={filteredSubmissions}

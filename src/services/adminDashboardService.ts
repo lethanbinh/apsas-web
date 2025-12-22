@@ -20,6 +20,7 @@ import type {
   AssessmentDistributionData,
   SubmissionStatusData,
   GradingPerformanceData,
+  SubmissionsOverTimeData,
   RecentActivity,
   PendingTask,
 } from './adminDashboard/types';
@@ -38,6 +39,7 @@ export type {
   AssessmentDistributionData,
   SubmissionStatusData,
   GradingPerformanceData,
+  SubmissionsOverTimeData,
   RecentActivity,
   PendingTask,
 } from './adminDashboard/types';
@@ -164,13 +166,14 @@ export class AdminDashboardService {
 
   async getChartData(): Promise<ChartData> {
     try {
-      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance] =
+      const [userGrowth, semesterActivity, assessmentDistribution, submissionStatus, gradingPerformance, submissionsOverTime] =
         await Promise.allSettled([
           userStatsService.getUserGrowthData(),
           chartDataService.getSemesterActivityData(),
           chartDataService.getAssessmentDistributionData(),
           chartDataService.getSubmissionStatusData(),
           chartDataService.getGradingPerformanceData(),
+          chartDataService.getSubmissionsOverTimeData(),
         ]);
 
       return {
@@ -179,6 +182,7 @@ export class AdminDashboardService {
         assessmentDistribution: assessmentDistribution.status === 'fulfilled' ? assessmentDistribution.value : [],
         submissionStatus: submissionStatus.status === 'fulfilled' ? submissionStatus.value : [],
         gradingPerformance: gradingPerformance.status === 'fulfilled' ? gradingPerformance.value : [],
+        submissionsOverTime: submissionsOverTime.status === 'fulfilled' ? submissionsOverTime.value : [],
       };
     } catch (error) {
       console.error('Error fetching chart data:', error);
@@ -188,6 +192,7 @@ export class AdminDashboardService {
         assessmentDistribution: [],
         submissionStatus: [],
         gradingPerformance: [],
+        submissionsOverTime: [],
       };
     }
   }

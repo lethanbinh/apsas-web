@@ -185,6 +185,7 @@ export interface ChartData {
   assessmentDistribution: AssessmentDistributionData[];
   submissionStatus: SubmissionStatusData[];
   gradingPerformance: GradingPerformanceData[];
+  submissionsOverTime: SubmissionsOverTimeData[];
 }
 
 export interface UserGrowthData {
@@ -216,6 +217,14 @@ export interface GradingPerformanceData {
   date: string;
   graded: number;
   pending: number;
+}
+
+export interface SubmissionsOverTimeData {
+  date: string;
+  count: number;
+  assignment: number;
+  lab: number;
+  practicalExam: number;
 }
 
 export interface RecentActivity {

@@ -4,6 +4,8 @@ import { submissionService, Submission } from '../submissionService';
 import { classAssessmentService } from '../classAssessmentService';
 import { classService } from '../classService';
 import { adminService } from '../adminService';
+import { gradingGroupService } from '../gradingGroupService';
+import { courseElementService } from '../courseElementService';
 import { isPracticalExamTemplate, isLabTemplate } from './utils';
 
 export interface GradeStats {
@@ -52,12 +54,94 @@ export class GradeStatsService {
   async getGradeStats(): Promise<GradeStats> {
     try {
       // Fetch all necessary data
-      const [submissions, assessments, classes, templates] = await Promise.all([
+      const [submissionsFromAssessments, assessments, classes, templates, gradingGroups] = await Promise.all([
         submissionService.getSubmissionList({}),
         classAssessmentService.getClassAssessments({ pageNumber: 1, pageSize: 1000 }),
         classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
         adminService.getAssessmentTemplateList(1, 1000),
+        gradingGroupService.getGradingGroups({}),
       ]);
+
+      // Fetch submissions from grading groups (for practical exam)
+      const gradingGroupIds = gradingGroups.map(g => g.id);
+      const submissionsFromGroups = await Promise.all(
+        gradingGroupIds.map(groupId =>
+          submissionService.getSubmissionList({ gradingGroupId: groupId }).catch(() => [])
+        )
+      );
+
+      // Combine submissions from class assessments and grading groups
+      const submissions = [...submissionsFromAssessments, ...submissionsFromGroups.flat()];
+
+      // Fetch course elements to get classId for practical exam from grading groups
+      const assessmentTemplateIds = Array.from(
+        new Set(
+          gradingGroups
+            .filter((g) => g.assessmentTemplateId !== null && g.assessmentTemplateId !== undefined)
+            .map((g) => Number(g.assessmentTemplateId))
+        )
+      );
+
+      const courseElementIds = new Set<number>();
+      templates.items.forEach((template) => {
+        if (assessmentTemplateIds.includes(template.id) && template.courseElementId) {
+          courseElementIds.add(template.courseElementId);
+        }
+      });
+
+      const courseElements = courseElementIds.size > 0
+        ? await courseElementService.getCourseElements({
+            pageNumber: 1,
+            pageSize: 1000,
+          }).catch(() => [])
+        : [];
+
+      // Create map from courseElementId to classes
+      const courseElementToClassesMap = new Map<number, number[]>();
+      courseElements.forEach((element) => {
+        if (element.semesterCourse?.classes) {
+          const classIds = element.semesterCourse.classes.map((c: any) => c.id);
+          courseElementToClassesMap.set(element.id, classIds);
+        }
+      });
+
+      // Create map from templateId to classIds (for practical exam from grading groups)
+      const templateToClassIdsMap = new Map<number, number[]>();
+      templates.items.forEach((template) => {
+        if (template.courseElementId) {
+          const classIds = courseElementToClassesMap.get(template.courseElementId) || [];
+          templateToClassIdsMap.set(template.id, classIds);
+        }
+      });
+
+      // Create map from studentId to classIds for practical exam submissions
+      // This helps us find which class a student belongs to for practical exam
+      const studentToClassIdsMap = new Map<number, number[]>();
+      const allPossibleClassIds = Array.from(new Set(Array.from(templateToClassIdsMap.values()).flat()));
+      
+      // Fetch students for each class to build student -> classId mapping
+      if (allPossibleClassIds.length > 0) {
+        const studentsInClassesPromises = allPossibleClassIds.map(async (cId) => {
+          try {
+            const students = await classService.getStudentsInClass(cId);
+            return { classId: cId, students };
+          } catch (error) {
+            return { classId: cId, students: [] };
+          }
+        });
+        
+        const studentsInClassesResults = await Promise.all(studentsInClassesPromises);
+        studentsInClassesResults.forEach(({ classId, students }) => {
+          students.forEach((student: any) => {
+            if (student.studentId) {
+              if (!studentToClassIdsMap.has(student.studentId)) {
+                studentToClassIdsMap.set(student.studentId, []);
+              }
+              studentToClassIdsMap.get(student.studentId)!.push(classId);
+            }
+          });
+        });
+      }
 
       // Create template map
       const templateMap = new Map<number, any>();
@@ -85,11 +169,27 @@ export class GradeStatsService {
         assessmentType?: 'assignment' | 'lab' | 'practicalExam';
       }> = [];
 
-      // Group submissions by student and assessment to get latest submission for each student
+      // Create grading group map
+      const gradingGroupMap = new Map<number, any>();
+      gradingGroups.forEach((group) => {
+        gradingGroupMap.set(group.id, group);
+      });
+
+      // Group submissions by student and assessment/gradingGroup to get latest submission for each student
       const studentSubmissionMap = new Map<string, Submission>();
       for (const submission of submissions) {
-        if (!submission.classAssessmentId || !submission.studentId) continue;
-        const key = `${submission.studentId}_${submission.classAssessmentId}`;
+        if (!submission.studentId) continue;
+        
+        // Create key based on submission source
+        let key: string;
+        if (submission.classAssessmentId) {
+          key = `${submission.studentId}_classAssessment_${submission.classAssessmentId}`;
+        } else if (submission.gradingGroupId) {
+          key = `${submission.studentId}_gradingGroup_${submission.gradingGroupId}`;
+        } else {
+          continue;
+        }
+
         const existing = studentSubmissionMap.get(key);
         if (!existing) {
           studentSubmissionMap.set(key, submission);
@@ -111,27 +211,64 @@ export class GradeStatsService {
 
       // Process latest submissions and calculate grades from grade items
       for (const submission of studentSubmissionMap.values()) {
-        if (!submission.classAssessmentId) continue;
-        
-        const assessment = assessmentMap.get(submission.classAssessmentId);
-        if (!assessment) continue;
-
-        // Determine assessment type
         let assessmentType: 'assignment' | 'lab' | 'practicalExam' = 'assignment';
-        if (assessment?.assessmentTemplateId) {
-          const template = templateMap.get(assessment.assessmentTemplateId);
-          if (template) {
-            if (isPracticalExamTemplate(template)) {
-              assessmentType = 'practicalExam';
-            } else if (isLabTemplate(template)) {
-              assessmentType = 'lab';
+        let assessment: any = null;
+        let isPublished = false;
+        let classId: number | undefined = undefined;
+
+        // Determine if submission is from class assessment or grading group
+        if (submission.classAssessmentId) {
+          // Submission from class assessment (assignment or lab)
+          assessment = assessmentMap.get(submission.classAssessmentId);
+          if (!assessment) continue;
+
+          if (assessment?.assessmentTemplateId) {
+            const template = templateMap.get(assessment.assessmentTemplateId);
+            if (template) {
+              if (isPracticalExamTemplate(template)) {
+                assessmentType = 'practicalExam';
+              } else if (isLabTemplate(template)) {
+                assessmentType = 'lab';
+              }
             }
           }
-        }
 
-        // For lab: always calculate (auto-graded available after submission)
-        // For assignment/practical exam: only calculate if published
-        if (assessmentType !== 'lab' && !assessment.isPublished) {
+          isPublished = assessment.isPublished || false;
+          classId = assessment.classId;
+
+          // For lab: always calculate (auto-graded available after submission)
+          // For assignment/practical exam: only calculate if published
+          if (assessmentType !== 'lab' && !isPublished) {
+            continue;
+          }
+        } else if (submission.gradingGroupId) {
+          // Submission from grading group (practical exam)
+          assessmentType = 'practicalExam';
+          const gradingGroup = gradingGroupMap.get(submission.gradingGroupId);
+          if (!gradingGroup || !gradingGroup.assessmentTemplateId) continue;
+          // Practical exam from grading groups are always considered "published" for grading
+          isPublished = true;
+          
+          // Try to get classId from template -> courseElement -> classes
+          const templateId = gradingGroup.assessmentTemplateId;
+          const possibleClassIds = templateToClassIdsMap.get(templateId) || [];
+          
+          // Try to find which class the student belongs to
+          if (possibleClassIds.length > 0 && submission.studentId) {
+            // First, try to find the student's class from the studentToClassIdsMap
+            const studentClassIds = studentToClassIdsMap.get(submission.studentId) || [];
+            // Find intersection of possibleClassIds and studentClassIds
+            const matchingClassIds = possibleClassIds.filter(cId => studentClassIds.includes(cId));
+            
+            if (matchingClassIds.length > 0) {
+              // Use the first matching classId
+              classId = matchingClassIds[0];
+            } else if (possibleClassIds.length > 0) {
+              // If no match found, use the first possible classId as fallback
+              classId = possibleClassIds[0];
+            }
+          }
+        } else {
           continue;
         }
 
@@ -162,7 +299,7 @@ export class GradeStatsService {
           // For assignment/practical exam: use teacher-graded (since it's published)
           let selectedSession = null;
           
-          if (assessmentType === 'lab' && assessment.isPublished) {
+          if (assessmentType === 'lab' && isPublished) {
             // Find teacher-graded session (gradingType === 1 or 2)
             const teacherSession = completedSessions.find(
               (s) => s.gradingType === 1 || s.gradingType === 2
@@ -220,9 +357,6 @@ export class GradeStatsService {
 
           // Only include if grade > 0
           if (grade > 0) {
-            // Get class ID from assessment
-            const classId = assessment?.classId;
-
             gradedSubmissions.push({
               submissionId: submission.id,
               grade,

@@ -119,11 +119,8 @@ const AdminDashboardPage = () => {
     { name: 'Practical Exam', value: grades.averageGradeByType.practicalExam },
   ];
 
-  const topClassesData = grades.topClassesByAverage.slice(0, 10).map((cls) => ({
-    name: cls.classCode,
-    value: cls.averageGrade,
-    course: cls.courseName,
-  }));
+  // Submissions over time data
+  const submissionsOverTimeData = chartData?.submissionsOverTime || [];
 
   const gradeDistributionChartData = grades.gradeDistributionChart || [];
 
@@ -355,26 +352,54 @@ const AdminDashboardPage = () => {
           </Col>
           <Col xs={24} lg={12}>
             <Card 
-              title="Top 10 Classes by Average Grade" 
+              title="Submissions Over Time (Last 30 Days)" 
               loading={loading}
-              extra={<Tag color="green">Best Performance</Tag>}
+              extra={<Tag color="blue">Activity Trend</Tag>}
             >
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart 
-                  data={topClassesData}
-                  layout="vertical"
-                >
+                <LineChart data={submissionsOverTimeData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" domain={[0, 10]} />
-                  <YAxis dataKey="name" type="category" width={100} />
-                  <Tooltip 
-                    formatter={(value: number, name: string, props: any) => [
-                      `${value.toFixed(2)} / 10`,
-                      props.payload.course
-                    ]}
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => {
+                      const date = new Date(value);
+                      return `${date.getMonth() + 1}/${date.getDate()}`;
+                    }}
                   />
-                  <Bar dataKey="value" fill={COLORS.green} radius={[0, 8, 8, 0]} />
-                </BarChart>
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => [value, name]}
+                    labelFormatter={(label) => {
+                      const date = new Date(label);
+                      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    }}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="assignment" 
+                    stroke={COLORS.blue} 
+                    strokeWidth={2}
+                    name="Assignment"
+                    dot={{ r: 3 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="lab" 
+                    stroke={COLORS.green} 
+                    strokeWidth={2}
+                    name="Lab"
+                    dot={{ r: 3 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="practicalExam" 
+                    stroke={COLORS.purple} 
+                    strokeWidth={2}
+                    name="Practical Exam"
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </Card>
           </Col>
@@ -484,13 +509,6 @@ const AdminDashboardPage = () => {
                   style={{ height: '40px' }}
                 >
                   View Submissions
-                </Button>
-                <Button 
-                  block 
-                  onClick={() => router.push('/admin/grading')}
-                  style={{ height: '40px' }}
-                >
-                  Grading Management
                 </Button>
               </Space>
             </Card>
