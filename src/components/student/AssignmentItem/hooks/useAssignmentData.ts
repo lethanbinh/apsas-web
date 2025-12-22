@@ -193,6 +193,27 @@ export const useAssignmentData = (
 
     const isPublished = classAssessment?.isPublished ?? data.isPublished ?? false;
 
+    // Auto-graded scores (always calculated, shown when not published or when published but no teacher score)
+    const autoGradedScores = useMemo(() => {
+        const scoreMap: Record<number, { total: number; max: number }> = {};
+
+        labSubmissionHistory.forEach((submission, index) => {
+            const gradeItemsQuery = labGradeItemsQueries[index];
+            const sessionsQuery = labGradingSessionsQueries[index];
+
+            // Get auto-graded score from gradeItems or gradingSession
+            if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
+                const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + (item.score || 0), 0);
+                scoreMap[submission.id] = { total: totalScore, max: maxScore };
+            } else if (sessionsQuery?.data?.items?.[0]?.grade !== undefined && sessionsQuery.data.items[0].grade !== null) {
+                scoreMap[submission.id] = { total: sessionsQuery.data.items[0].grade, max: maxScore };
+            }
+        });
+
+        return scoreMap;
+    }, [labSubmissionHistory, labGradeItemsQueries, labGradingSessionsQueries, maxScore]);
+
+    // Teacher scores (only calculated when published)
     const labSubmissionScores = useMemo(() => {
         const scoreMap: Record<number, { total: number; max: number }> = {};
 
@@ -204,11 +225,22 @@ export const useAssignmentData = (
             const gradeItemsQuery = labGradeItemsQueries[index];
             const sessionsQuery = labGradingSessionsQueries[index];
 
+            // Only include teacher-graded scores (when gradeItems exist, it means teacher has graded)
+            // If gradeItems exist, use them; otherwise check if there's a teacher-updated grade
             if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
                 const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + (item.score || 0), 0);
-                scoreMap[submission.id] = { total: totalScore, max: maxScore };
+                // Check if this is teacher-graded by comparing with auto-graded score
+                // If gradeItems exist and session status is 1 (completed), it's likely teacher-graded
+                const latestSession = sessionsQuery?.data?.items?.[0];
+                if (latestSession && latestSession.status === 1) {
+                    scoreMap[submission.id] = { total: totalScore, max: maxScore };
+                }
             } else if (sessionsQuery?.data?.items?.[0]?.grade !== undefined && sessionsQuery.data.items[0].grade !== null) {
-                scoreMap[submission.id] = { total: sessionsQuery.data.items[0].grade, max: maxScore };
+                const latestSession = sessionsQuery.data.items[0];
+                // Only include if status is 1 (completed) which indicates teacher grading
+                if (latestSession.status === 1) {
+                    scoreMap[submission.id] = { total: latestSession.grade, max: maxScore };
+                }
             }
         });
 
@@ -220,6 +252,7 @@ export const useAssignmentData = (
         submissionCount,
         labSubmissionHistory,
         labSubmissionScores,
+        autoGradedScores,
         isPublished,
     };
 };

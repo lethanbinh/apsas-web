@@ -49,6 +49,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     submissionCount,
     labSubmissionHistory,
     labSubmissionScores,
+    autoGradedScores,
     isPublished,
   } = useAssignmentData(data, isLab);
 
@@ -229,13 +230,29 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                             {toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm")}
                           </Text>
                           {index === 0 && <Tag color="blue">Latest</Tag>}
-                          {isPublished && labSubmissionScores[submission.id] !== undefined && (
-                            <Tag color="green">
-                              Score: {labSubmissionScores[submission.id].max > 0
-                                ? `${Number(labSubmissionScores[submission.id].total).toFixed(2)}/${Number(labSubmissionScores[submission.id].max).toFixed(2)}`
-                                : Number(labSubmissionScores[submission.id].total).toFixed(2)}
-                            </Tag>
-                          )}
+                          {(() => {
+                            // If published and teacher score exists, show teacher score
+                            if (isPublished && labSubmissionScores[submission.id] !== undefined) {
+                              return (
+                                <Tag color="green">
+                                  Score: {labSubmissionScores[submission.id].max > 0
+                                    ? `${Number(labSubmissionScores[submission.id].total).toFixed(2)}/${Number(labSubmissionScores[submission.id].max).toFixed(2)}`
+                                    : Number(labSubmissionScores[submission.id].total).toFixed(2)}
+                                </Tag>
+                              );
+                            }
+                            // Otherwise, show auto-graded score if available
+                            if (autoGradedScores[submission.id] !== undefined) {
+                              return (
+                                <Tag color="blue">
+                                  Score: {autoGradedScores[submission.id].max > 0
+                                    ? `${Number(autoGradedScores[submission.id].total).toFixed(2)}/${Number(autoGradedScores[submission.id].max).toFixed(2)}`
+                                    : Number(autoGradedScores[submission.id].total).toFixed(2)}
+                                </Tag>
+                              );
+                            }
+                            return null;
+                          })()}
                         </Space>
                       }
                       description={
@@ -387,6 +404,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         open={isScoreModalVisible}
         onCancel={() => setIsScoreModalVisible(false)}
         data={data}
+        isLab={isLab}
       />
 
       {isLab && data.assessmentTemplateId && (

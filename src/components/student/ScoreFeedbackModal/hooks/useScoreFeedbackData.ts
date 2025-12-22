@@ -43,32 +43,89 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
     return sorted[0];
   }, [submissionsData]);
 
+  // Get isPublished early (will be refined when classAssessment is available)
+  const effectiveClassId = useMemo(() => {
+    if (data.classId) return data.classId;
+    const stored = localStorage.getItem("selectedClassId");
+    return stored ? Number(stored) : null;
+  }, [data.classId]);
+
+  const { data: classAssessmentsData } = useQuery({
+    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId?.toString()!),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      classId: effectiveClassId!,
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
+  });
+
+  const classAssessment = useMemo(() => {
+    if (!classAssessmentsData?.items) return null;
+    if (data.classAssessmentId) {
+      return classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId) || null;
+    }
+    if (data.courseElementId) {
+      return classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId) || null;
+    }
+    return null;
+  }, [classAssessmentsData, data.classAssessmentId, data.courseElementId]);
+
+  const isPublished = classAssessment?.isPublished ?? data.isPublished ?? false;
+
   const { data: gradingSessionsData, isLoading: isLoadingGradingSessions } = useQuery({
-    queryKey: queryKeys.grading.sessions.list({ submissionId: lastSubmission?.id!, pageNumber: 1, pageSize: 1 }),
+    queryKey: queryKeys.grading.sessions.list({ submissionId: lastSubmission?.id!, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
       submissionId: lastSubmission!.id,
       pageNumber: 1,
-      pageSize: 1,
+      pageSize: 100,
     }),
     enabled: open && !!lastSubmission?.id,
   });
 
-  const latestGradingSession = useMemo(() => {
-    if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
-    return gradingSessionsData.items[0];
+  // Separate auto-graded and teacher-graded sessions
+  const { autoGradedSession, teacherGradedSession, latestGradingSession } = useMemo(() => {
+    if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) {
+      return { autoGradedSession: null, teacherGradedSession: null, latestGradingSession: null };
+    }
+
+    const sortedSessions = [...gradingSessionsData.items].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    // Find teacher-graded session (gradingType === 1 or 2)
+    const teacherSession = sortedSessions.find(s => s.status === 1 && (s.gradingType === 1 || s.gradingType === 2));
+    
+    // Find auto-graded session (gradingType === 0)
+    const autoSession = sortedSessions.find(s => s.status === 1 && s.gradingType === 0);
+
+    return {
+      autoGradedSession: autoSession || null,
+      teacherGradedSession: teacherSession || null,
+      latestGradingSession: sortedSessions[0] || null,
+    };
   }, [gradingSessionsData]);
 
-  const { data: gradeItemsData, isLoading: isLoadingGradeItems } = useQuery({
-    queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
-    queryFn: async () => {
-      if (!latestGradingSession) return { items: [] };
+  // Determine which session to use for gradeItems
+  // For lab: use teacher-graded if published and available, otherwise use auto-graded
+  const sessionForGradeItems = useMemo(() => {
+    if (isPublished && teacherGradedSession) {
+      return teacherGradedSession;
+    }
+    return autoGradedSession || latestGradingSession;
+  }, [isPublished, teacherGradedSession, autoGradedSession, latestGradingSession]);
 
-      if (latestGradingSession.gradeItems && latestGradingSession.gradeItems.length > 0) {
-        return { items: latestGradingSession.gradeItems };
+  const { data: gradeItemsData, isLoading: isLoadingGradeItems } = useQuery({
+    queryKey: ['gradeItems', 'byGradingSessionId', sessionForGradeItems?.id],
+    queryFn: async () => {
+      if (!sessionForGradeItems) return { items: [] };
+
+      if (sessionForGradeItems.gradeItems && sessionForGradeItems.gradeItems.length > 0) {
+        return { items: sessionForGradeItems.gradeItems };
       }
 
       const gradeItemsResult = await gradeItemService.getGradeItems({
-        gradingSessionId: latestGradingSession.id,
+        gradingSessionId: sessionForGradeItems.id,
         pageNumber: 1,
         pageSize: 1000,
       });
@@ -84,7 +141,7 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
         })),
       };
     },
-    enabled: open && !!latestGradingSession?.id,
+    enabled: open && !!sessionForGradeItems?.id,
   });
 
   const latestGradeItems = useMemo(() => {
@@ -103,11 +160,16 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
     if (latestGradeItems.length > 0) {
       return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
     }
+    // Use score from the appropriate session
+    if (sessionForGradeItems?.grade !== undefined && sessionForGradeItems.grade !== null) {
+      return sessionForGradeItems.grade;
+    }
+    // Fallback to latest session
     if (latestGradingSession?.grade !== undefined && latestGradingSession.grade !== null) {
       return latestGradingSession.grade;
     }
     return 0;
-  }, [latestGradeItems, latestGradingSession]);
+  }, [latestGradeItems, sessionForGradeItems, latestGradingSession]);
 
   const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', lastSubmission?.id],
@@ -172,34 +234,6 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
     return parsedFeedback || defaultEmptyFeedback;
   }, [feedbackList, formattedFeedback]);
 
-  const effectiveClassId = useMemo(() => {
-    if (data.classId) return data.classId;
-    const stored = localStorage.getItem("selectedClassId");
-    return stored ? Number(stored) : null;
-  }, [data.classId]);
-
-  const { data: classAssessmentsData } = useQuery({
-    queryKey: queryKeys.classAssessments.byClassId(effectiveClassId?.toString()!),
-    queryFn: () => classAssessmentService.getClassAssessments({
-      classId: effectiveClassId!,
-      pageNumber: 1,
-      pageSize: 1000,
-    }),
-    enabled: open && !!effectiveClassId && (!!data.classAssessmentId || !!data.courseElementId),
-  });
-
-  const classAssessment = useMemo(() => {
-    if (!classAssessmentsData?.items) return null;
-    if (data.classAssessmentId) {
-      return classAssessmentsData.items.find(ca => ca.id === data.classAssessmentId) || null;
-    }
-    if (data.courseElementId) {
-      return classAssessmentsData.items.find(ca => ca.courseElementId === data.courseElementId) || null;
-    }
-    return null;
-  }, [classAssessmentsData, data.classAssessmentId, data.courseElementId]);
-
-  const isPublished = classAssessment?.isPublished ?? false;
 
   const assessmentTemplateId = useMemo(() => {
     if (data.assessmentTemplateId) {

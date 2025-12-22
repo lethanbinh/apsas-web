@@ -16,12 +16,14 @@ interface ScoreFeedbackModalProps {
   open: boolean;
   onCancel: () => void;
   data: AssignmentData;
+  isLab?: boolean;
 }
 
 export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   open,
   onCancel,
   data,
+  isLab = false,
 }) => {
   const {
     lastSubmission,
@@ -314,15 +316,32 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   </>
                 )}
                 <Descriptions.Item label="Total Score">
-                  {isPublished && getTotalScoreDisplay() !== null ? (
-                    <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
-                      {getTotalScoreDisplay()}
-                    </Text>
-                  ) : (
-                    <Text type="secondary" style={{ fontSize: "14px" }}>
-                      {isPublished ? "No score available" : "Not published yet"}
-                    </Text>
-                  )}
+                  {(() => {
+                    // For lab: always show score if available (auto-graded or teacher-graded)
+                    // For assignment: only show score when published
+                    if (isLab) {
+                      return getTotalScoreDisplay() !== null ? (
+                        <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
+                          {getTotalScoreDisplay()}
+                        </Text>
+                      ) : (
+                        <Text type="secondary" style={{ fontSize: "14px" }}>
+                          No score available
+                        </Text>
+                      );
+                    } else {
+                      // Assignment: only show when published
+                      return isPublished && getTotalScoreDisplay() !== null ? (
+                        <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
+                          {getTotalScoreDisplay()}
+                        </Text>
+                      ) : (
+                        <Text type="secondary" style={{ fontSize: "14px" }}>
+                          {isPublished ? "No score available" : "Not published yet"}
+                        </Text>
+                      );
+                    }
+                  })()}
                 </Descriptions.Item>
                 {latestGradingSession && (
                   <>
@@ -353,7 +372,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Descriptions>
             </Card>
 
-            {!isPublished && (
+            {!isPublished && !isLab && (
               <Card className={styles.headerCard}>
                 <Alert
                   message="Grades Not Published"
@@ -363,7 +382,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 />
               </Card>
             )}
-            {isPublished && questions.length > 0 && hasScore() && (
+            {((isLab && hasScore()) || (isPublished && hasScore())) && questions.length > 0 && (
               <Card className={styles.questionsCard}>
                 <Title level={3}>Grading Details</Title>
                 <Text type="secondary">
@@ -485,7 +504,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
               </Card>
             )}
 
-            {isPublished && (
+            {((isLab && hasFeedback()) || isPublished) && (
               <Card className={styles.feedbackCard}>
                 <Spin spinning={isLoadingFeedback || isLoadingFeedbackFormatting}>
                   <Title level={3}>Detailed Feedback</Title>
