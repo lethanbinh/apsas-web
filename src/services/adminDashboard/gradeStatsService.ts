@@ -99,8 +99,9 @@ export class GradeStatsService {
       // Create map from courseElementId to classes
       const courseElementToClassesMap = new Map<number, number[]>();
       courseElements.forEach((element) => {
-        if (element.semesterCourse?.classes) {
-          const classIds = element.semesterCourse.classes.map((c: any) => c.id);
+        const semesterCourse = element.semesterCourse as any;
+        if (semesterCourse?.classes && Array.isArray(semesterCourse.classes)) {
+          const classIds = semesterCourse.classes.map((c: any) => c.id);
           courseElementToClassesMap.set(element.id, classIds);
         }
       });
