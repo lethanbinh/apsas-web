@@ -28,6 +28,7 @@ import { GradingDetailsSection } from "./GradingDetailsSection";
 import { useAutoGrading } from "./hooks/useAutoGrading";
 import { useFeedbackOperations } from "./hooks/useFeedbackOperations";
 import { useSubmissionData } from "./hooks/useSubmissionData";
+import { classAssessmentService } from "@/services/classAssessmentService";
 import { semesterService } from "@/services/semesterService";
 import { isSemesterPassed } from "../utils/dateUtils";
 
@@ -165,6 +166,23 @@ export function EditSubmissionModal({
     }
   }, [semesterDetail?.endDate]);
 
+  // Get classAssessment to check isPublished
+  const { data: classAssessmentData } = useQuery({
+    queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
+    queryFn: () => classAssessmentService.getClassAssessments({
+      pageNumber: 1,
+      pageSize: 1000,
+    }),
+    enabled: visible && !!submission?.classAssessmentId,
+  });
+
+  const classAssessment = useMemo(() => {
+    if (!classAssessmentData?.items || !submission?.classAssessmentId) return null;
+    return classAssessmentData.items.find(ca => ca.id === submission.classAssessmentId) || null;
+  }, [classAssessmentData, submission]);
+
+  const isPublished = classAssessment?.isPublished ?? false;
+
   const updateRubricScore = useCallback((questionId: number, rubricId: number, score: number) => {
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
@@ -189,6 +207,11 @@ export function EditSubmissionModal({
   const handleSave = async () => {
     if (!submission || !user?.id) {
       message.error("Submission or User ID not found");
+      return;
+    }
+
+    if (isPublished) {
+      message.warning("Cannot edit grades after they have been published.");
       return;
     }
 
@@ -324,6 +347,14 @@ export function EditSubmissionModal({
       style={{ top: 20 }}
     >
       <Space direction="vertical" size="large" style={{ width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
+        {isPublished && (
+          <Alert
+            message="Grades Published"
+            description="Grades have been published and cannot be edited."
+            type="info"
+            showIcon
+          />
+        )}
         {semesterEnded && (
           <Alert
             message="Semester has ended. Grading modifications are disabled."
@@ -351,6 +382,7 @@ export function EditSubmissionModal({
           maxScore={maxScore}
           semesterEnded={semesterEnded}
           isGradeSheetSubmitted={isGradeSheetSubmitted}
+          isPublished={isPublished}
           autoGradingLoading={autoGradingLoading}
           saving={saving}
           onAutoGrading={handleAutoGrading}
@@ -368,6 +400,7 @@ export function EditSubmissionModal({
           onFeedbackChange={handleFeedbackChange}
           onSaveFeedback={handleSaveFeedback}
           onGetAiFeedback={handleGetAiFeedback}
+          isPublished={isPublished}
         />
       </Space>
 

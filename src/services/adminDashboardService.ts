@@ -13,6 +13,7 @@ import type {
   AssessmentStats,
   SubmissionStats,
   GradingStats,
+  GradeStats,
   ChartData,
   UserGrowthData,
   SemesterActivityData,
@@ -30,6 +31,7 @@ export type {
   AssessmentStats,
   SubmissionStats,
   GradingStats,
+  GradeStats,
   ChartData,
   UserGrowthData,
   SemesterActivityData,
@@ -45,6 +47,7 @@ import { academicStatsService } from './adminDashboard/academicStatsService';
 import { assessmentStatsService } from './adminDashboard/assessmentStatsService';
 import { submissionStatsService } from './adminDashboard/submissionStatsService';
 import { gradingStatsService } from './adminDashboard/gradingStatsService';
+import { gradeStatsService } from './adminDashboard/gradeStatsService';
 import { chartDataService } from './adminDashboard/chartDataService';
 import { activityService } from './adminDashboard/activityService';
 import { isPracticalExamTemplate, isLabTemplate } from './adminDashboard/utils';
@@ -64,6 +67,7 @@ export class AdminDashboardService {
         gradingGroupsData,
         gradingSessionsData,
         assignRequestsData,
+        gradesData,
       ] = await Promise.allSettled([
         userStatsService.getUserStats(),
         academicStatsService.getSemesterStats(),
@@ -73,6 +77,7 @@ export class AdminDashboardService {
         gradingStatsService.getGradingGroupStats(),
         gradingStatsService.getGradingSessionStats(),
         gradingStatsService.getAssignRequestStats(),
+        gradeStatsService.getGradeStats(),
       ]);
 
       const users = usersData.status === 'fulfilled' ? usersData.value : getDefaultUserStats();
@@ -127,12 +132,26 @@ export class AdminDashboardService {
         gradingGroupsByStatus: gradingDetailed.gradingGroupsByStatus || { active: 0, completed: 0 },
       };
 
+      const grades: GradeStats = gradesData.status === 'fulfilled' ? gradesData.value : {
+        totalGraded: 0,
+        averageGrade: 0,
+        medianGrade: 0,
+        gradeDistribution: { excellent: 0, good: 0, average: 0, belowAverage: 0 },
+        averageGradeByType: { assignment: 0, lab: 0, practicalExam: 0 },
+        averageGradeByClass: [],
+        gradeDistributionChart: [],
+        gradingCompletionRate: 0,
+        topClassesByAverage: [],
+        bottomClassesByAverage: [],
+      };
+
       return {
         users,
         academic,
         assessments,
         submissions,
         grading,
+        grades,
       };
     } catch (error) {
       console.error('Error fetching dashboard overview:', error);

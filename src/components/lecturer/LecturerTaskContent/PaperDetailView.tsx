@@ -42,14 +42,14 @@ export const PaperDetailView = ({
       </div>
       <div className={styles.cardBody}>
         <Descriptions bordered column={1} className={styles.descriptions}>
-          <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
-          <Descriptions.Item label="Description">
-            {paper.description || "N/A"}
-          </Descriptions.Item>
-          <Descriptions.Item label="Language">
-            {paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "N/A"}
-          </Descriptions.Item>
-        </Descriptions>
+        <Descriptions.Item label="Paper Name">{paper.name}</Descriptions.Item>
+        <Descriptions.Item label="Description">
+          {paper.description || "N/A"}
+        </Descriptions.Item>
+        <Descriptions.Item label="Language">
+          {paper.language === 0 ? "CSharp" : paper.language === 1 ? "C" : paper.language === 2 ? "Java" : "N/A"}
+        </Descriptions.Item>
+      </Descriptions>
       </div>
 
       <PaperFormModal

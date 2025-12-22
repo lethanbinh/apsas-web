@@ -14,6 +14,7 @@ interface FeedbackSectionProps {
   onFeedbackChange: (field: keyof FeedbackData, value: string) => void;
   onSaveFeedback: () => void;
   onGetAiFeedback?: () => void;
+  isPublished?: boolean;
 }
 
 export function FeedbackSection({
@@ -23,6 +24,7 @@ export function FeedbackSection({
   onFeedbackChange,
   onSaveFeedback,
   onGetAiFeedback,
+  isPublished = false,
 }: FeedbackSectionProps) {
   return (
     <Card className="feedbackCard" style={{ marginTop: 24 }}>
@@ -50,7 +52,7 @@ export function FeedbackSection({
                           type="default"
                           icon={<RobotOutlined />}
                           onClick={onGetAiFeedback}
-                          disabled={loading || loadingAiFeedback}
+                          disabled={loading || loadingAiFeedback || isPublished}
                           loading={loadingAiFeedback}
                         >
                           Get AI Feedback
@@ -60,7 +62,7 @@ export function FeedbackSection({
                         type="primary"
                         icon={<SaveOutlined />}
                         onClick={onSaveFeedback}
-                        disabled={loading || loadingAiFeedback}
+                        disabled={loading || loadingAiFeedback || isPublished}
                       >
                         Save Feedback
                       </Button>

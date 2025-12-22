@@ -244,7 +244,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </div>
           )}
 
-          {templateDescription && (files.filter(f => f.fileTemplate !== 1).length > 0 || content.length > 0 || papers.length > 0) && (
+          {templateDescription && (files.filter(f => f.fileTemplate !== 1).length > 0 || papers.length > 0) && (
             <Divider className={styles.divider} />
           )}
 
@@ -274,22 +274,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </div>
           )}
 
-          {files.filter(f => f.fileTemplate !== 1).length > 0 && (content.length > 0 || papers.length > 0) && (
-            <Divider className={styles.divider} />
-          )}
-
-          {content && content.length > 0 && (
-            <div className={styles.section}>
-              <Title level={5} className={styles.sectionTitle}>
-                <FileTextOutlined /> Requirements
-              </Title>
-              <div className={styles.requirementContent}>
-                {content.map(renderRequirementContent)}
-              </div>
-            </div>
-          )}
-
-          {content.length > 0 && papers.length > 0 && (
+          {files.filter(f => f.fileTemplate !== 1).length > 0 && papers.length > 0 && (
             <Divider className={styles.divider} />
           )}
 
@@ -344,7 +329,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                           <div className={styles.questionHeader}>
                             <Title level={5} className={styles.questionTitle}>
                               Question {qIndex + 1}
-                            </Title>
+                          </Title>
                             <span className={styles.questionScore}>
                               Score: {question.score}
                             </span>
@@ -379,7 +364,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
             </div>
           )}
 
-          {!templateDescription && files.filter(f => f.fileTemplate !== 1).length === 0 && content.length === 0 && papers.length === 0 && (
+          {!templateDescription && files.filter(f => f.fileTemplate !== 1).length === 0 && papers.length === 0 && (
             <div className={styles.emptyState}>
               <Text className={styles.emptyStateText}>No requirement details available.</Text>
             </div>

@@ -24,6 +24,7 @@ interface SubmissionHeaderCardProps {
   onGetAiFeedback: () => void;
   loadingAiFeedback: boolean;
   isSemesterPassed: boolean;
+  isPublished: boolean;
 }
 
 export function SubmissionHeaderCard({
@@ -34,6 +35,7 @@ export function SubmissionHeaderCard({
   onGetAiFeedback,
   loadingAiFeedback,
   isSemesterPassed,
+  isPublished,
 }: SubmissionHeaderCardProps) {
   const router = useRouter();
 
@@ -57,7 +59,7 @@ export function SubmissionHeaderCard({
             icon={<RobotOutlined />}
             onClick={onGetAiFeedback}
             loading={loadingAiFeedback}
-            disabled={isSemesterPassed}
+            disabled={isSemesterPassed || isPublished}
           >
             Get AI Feedback
           </Button>

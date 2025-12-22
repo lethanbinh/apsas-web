@@ -34,6 +34,7 @@ export interface UseSubmissionGradingDataResult {
   questions: QuestionWithRubrics[];
   assessmentTemplateId: number | null;
   isSemesterPassed: boolean;
+  isPublished: boolean;
   semesterInfo: { startDate: string; endDate: string } | null;
   userEdits: { rubricScores: Record<string, number>; rubricComments: Record<number, string> };
   setUserEdits: React.Dispatch<React.SetStateAction<{ rubricScores: Record<string, number>; rubricComments: Record<number, string> }>>;
@@ -396,6 +397,27 @@ export function useSubmissionGradingData(
     }
   }, [semesterInfoFromQuery]);
 
+  // Get isPublished from classAssessment
+  const isPublished = useMemo(() => {
+    if (!submission?.classAssessmentId) return false;
+    
+    if (classAssessmentsData?.items) {
+      const classAssessment = classAssessmentsData.items.find(
+        (ca) => ca.id === submission.classAssessmentId
+      );
+      return classAssessment?.isPublished ?? false;
+    }
+    
+    if (allClassAssessmentsData?.items) {
+      const classAssessment = allClassAssessmentsData.items.find(
+        (ca) => ca.id === submission.classAssessmentId
+      );
+      return classAssessment?.isPublished ?? false;
+    }
+    
+    return false;
+  }, [submission, classAssessmentsData, allClassAssessmentsData]);
+
   return {
     submission,
     isLoadingSubmissions,
@@ -404,6 +426,7 @@ export function useSubmissionGradingData(
     questions,
     assessmentTemplateId,
     isSemesterPassed,
+    isPublished,
     semesterInfo,
     userEdits,
     setUserEdits,

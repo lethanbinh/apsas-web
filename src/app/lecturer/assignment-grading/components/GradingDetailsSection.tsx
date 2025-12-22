@@ -33,6 +33,7 @@ interface GradingDetailsSectionProps {
     comment: string
   ) => void;
   isSemesterPassed: boolean;
+  isPublished: boolean;
   message: MessageInstance;
   autoGradingLoading: boolean;
   saveGradeLoading: boolean;
@@ -48,6 +49,7 @@ export function GradingDetailsSection({
   handleRubricScoreChange,
   handleRubricCommentChange,
   isSemesterPassed,
+  isPublished,
   message,
   autoGradingLoading,
   saveGradeLoading,
@@ -101,7 +103,7 @@ export function GradingDetailsSection({
                 icon={<RobotOutlined />}
                 onClick={onAutoGrading}
                 loading={autoGradingLoading}
-                disabled={isSemesterPassed}
+                disabled={isSemesterPassed || isPublished}
                 block
               >
                 Auto Grading
@@ -111,7 +113,7 @@ export function GradingDetailsSection({
                 icon={<SaveOutlined />}
                 onClick={onSaveGrade}
                 loading={saveGradeLoading}
-                disabled={isSemesterPassed}
+                disabled={isSemesterPassed || isPublished}
                 block
               >
                 Save Grade
@@ -141,6 +143,7 @@ export function GradingDetailsSection({
             handleRubricScoreChange={handleRubricScoreChange}
             handleRubricCommentChange={handleRubricCommentChange}
             isSemesterPassed={isSemesterPassed}
+            isPublished={isPublished}
             message={message}
           />
         </Col>

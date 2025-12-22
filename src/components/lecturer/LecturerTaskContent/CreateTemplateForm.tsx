@@ -136,13 +136,13 @@ export const CreateTemplateForm = ({
                   <div className={styles.fileUploadCard}>
                     <div className={styles.fileInfo}>
                       <div className={styles.fileInfoRow}>
-                        <DatabaseOutlined />
+                      <DatabaseOutlined />
                         <Text className={styles.fileInfoTextStrong}>{databaseFileName || databaseFileList[0].name}</Text>
                       </div>
                       <Text className={styles.fileInfoText}>Database Name: {databaseName}</Text>
                       <Text className={styles.fileInfoText}>
-                        File: {databaseFileList[0].name} ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                      </Text>
+                          File: {databaseFileList[0].name} ({(databaseFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                        </Text>
                     </div>
                   </div>
                 )}
@@ -168,12 +168,12 @@ export const CreateTemplateForm = ({
                   <div className={styles.fileUploadCard}>
                     <div className={styles.fileInfo}>
                       <div className={styles.fileInfoRow}>
-                        <DatabaseOutlined />
+                      <DatabaseOutlined />
                         <Text className={styles.fileInfoTextStrong}>{postmanFileName || postmanFileList[0].name}</Text>
                       </div>
                       <Text className={styles.fileInfoText}>
-                        File: {postmanFileList[0].name} ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
-                      </Text>
+                          File: {postmanFileList[0].name} ({(postmanFileList[0].size! / 1024 / 1024).toFixed(2)} MB)
+                        </Text>
                     </div>
                   </div>
                 )}
@@ -183,14 +183,14 @@ export const CreateTemplateForm = ({
         )}
 
         <div className={styles.actionButtons}>
-          <Button
-            type="primary"
-            onClick={onCreateTemplate}
-            disabled={!newTemplateName.trim()}
+        <Button
+          type="primary"
+          onClick={onCreateTemplate}
+          disabled={!newTemplateName.trim()}
             className={styles.createButton}
-          >
-            Create Template
-          </Button>
+        >
+          Create Template
+        </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={onDownloadTemplate}

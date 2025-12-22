@@ -4,6 +4,7 @@ export interface DashboardOverview {
   assessments: AssessmentStats;
   submissions: SubmissionStats;
   grading: GradingStats;
+  grades: GradeStats;
 }
 
 export interface UserStats {
@@ -233,5 +234,47 @@ export interface PendingTask {
   description: string;
   priority: 'high' | 'medium' | 'low';
   timestamp: string;
+}
+
+export interface GradeStats {
+  totalGraded: number;
+  averageGrade: number;
+  medianGrade: number;
+  gradeDistribution: {
+    excellent: number; // >= 8.5
+    good: number; // 7.0 - 8.4
+    average: number; // 5.5 - 6.9
+    belowAverage: number; // < 5.5
+  };
+  averageGradeByType: {
+    assignment: number;
+    lab: number;
+    practicalExam: number;
+  };
+  averageGradeByClass: Array<{
+    classId: number;
+    classCode: string;
+    courseName: string;
+    averageGrade: number;
+    studentCount: number;
+    gradedCount: number;
+  }>;
+  gradeDistributionChart: Array<{
+    range: string;
+    count: number;
+  }>;
+  gradingCompletionRate: number;
+  topClassesByAverage: Array<{
+    classId: number;
+    classCode: string;
+    courseName: string;
+    averageGrade: number;
+  }>;
+  bottomClassesByAverage: Array<{
+    classId: number;
+    classCode: string;
+    courseName: string;
+    averageGrade: number;
+  }>;
 }
 

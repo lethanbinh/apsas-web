@@ -17,6 +17,7 @@ export function getQuestionColumns(
   onScoreChange: (questionId: number, rubricId: number, score: number | null, maxScore: number) => void,
   isSemesterPassed: boolean,
   isGradeSheetSubmitted: boolean,
+  isPublished: boolean,
   message: any
 ): ColumnsType<RubricItem> {
   return [
@@ -80,7 +81,7 @@ export function getQuestionColumns(
             style={{ width: "100%" }}
             step={0.01}
             precision={2}
-            disabled={isSemesterPassed || isGradeSheetSubmitted}
+            disabled={isSemesterPassed || isGradeSheetSubmitted || isPublished}
           />
         );
       },

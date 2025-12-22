@@ -19,6 +19,7 @@ import {
   assessmentTemplateService,
 } from "@/services/assessmentTemplateService";
 import { AssignRequestItem, assignRequestService } from "@/services/assignRequestService";
+import { rubricItemService } from "@/services/rubricItemService";
 import { AssignRequestStatus } from "@/types";
 import { PlusOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
@@ -681,40 +682,111 @@ export const LecturerTaskContent = ({
                 onResetStatus={resetStatusIfRejected}
                 updateStatusToInProgress={updateStatusToInProgress}
                 onConfirmTemplateCreation={async () => {
-                  modal.confirm({
-                    title: "Confirm Template Creation",
-                    content: "Once you confirm template creation, the content cannot be edited. Are you sure you want to proceed?",
-                    okText: "Yes, Confirm",
-                    okType: "primary",
-                    cancelText: "Cancel",
-                    onOk: async () => {
+                  // Validation: Check total score of all questions and rubrics
+                  try {
+                    // Get all questions from all papers
+                    const allQuestionsFlat: AssessmentQuestion[] = [];
+                    Object.values(allQuestions).forEach(questions => {
+                      allQuestionsFlat.push(...questions);
+                    });
+
+                    if (allQuestionsFlat.length === 0) {
+                      notification.error({
+                        message: "Validation Failed",
+                        description: "Template must have at least one question.",
+                      });
+                      return;
+                    }
+
+                    // Calculate total score of all questions
+                    const totalQuestionScore = allQuestionsFlat.reduce((sum, q) => sum + (q.score || 0), 0);
+                    
+                    if (Math.abs(totalQuestionScore - 10) > 0.01) {
+                      notification.error({
+                        message: "Validation Failed",
+                        description: `Total score of all questions must equal 10. Current total: ${totalQuestionScore.toFixed(2)}`,
+                      });
+                      return;
+                    }
+
+                    // Validate each question: sum of rubrics must equal question score
+                    const validationErrors: string[] = [];
+                    
+                    for (const question of allQuestionsFlat) {
                       try {
-                        await assignRequestService.updateAssignRequest(task.id, {
-                          message: task.message || "Template creation confirmed",
-                          courseElementId: task.courseElementId,
-                          assignedLecturerId: task.assignedLecturerId,
-                          assignedByHODId: task.assignedByHODId,
-                          assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-                          status: 2, // ACCEPTED
-                          assignedAt: task.assignedAt,
+                        const rubricsResponse = await rubricItemService.getRubricsForQuestion({
+                          assessmentQuestionId: question.id,
+                          pageNumber: 1,
+                          pageSize: 100,
                         });
-                        await queryClient.invalidateQueries({
-                          queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
-                          exact: false
-                        });
-                        notification.success({
-                          message: "Template Creation Confirmed",
-                          description: "Template has been confirmed and is now ready for approval.",
-                        });
-                      } catch (err: any) {
-                        console.error("Failed to confirm template creation:", err);
-                        notification.error({
-                          message: "Failed to Confirm",
-                          description: err.message || "Failed to confirm template creation.",
-                        });
+                        
+                        const totalRubricScore = rubricsResponse.items.reduce((sum, r) => sum + (r.score || 0), 0);
+                        const questionScore = question.score || 0;
+                        
+                        if (Math.abs(totalRubricScore - questionScore) > 0.01) {
+                          validationErrors.push(
+                            `Question ${question.questionNumber || question.id}: Total rubric score (${totalRubricScore.toFixed(2)}) does not equal question score (${questionScore.toFixed(2)})`
+                          );
+                        }
+                      } catch (err) {
+                        console.error(`Failed to fetch rubrics for question ${question.id}:`, err);
+                        validationErrors.push(
+                          `Question ${question.questionNumber || question.id}: Failed to validate rubrics`
+                        );
                       }
-                    },
-                  });
+                    }
+
+                    if (validationErrors.length > 0) {
+                      notification.error({
+                        message: "Validation Failed",
+                        description: `The following validation errors were found:\n${validationErrors.map((error, index) => `${index + 1}. ${error}`).join('\n')}`,
+                        duration: 10,
+                      });
+                      return;
+                    }
+
+                    // All validations passed, show confirmation modal
+                    modal.confirm({
+                      title: "Confirm Template Creation",
+                      content: "Once you confirm template creation, the content cannot be edited. Are you sure you want to proceed?",
+                      okText: "Yes, Confirm",
+                      okType: "primary",
+                      cancelText: "Cancel",
+                      onOk: async () => {
+                        try {
+                          await assignRequestService.updateAssignRequest(task.id, {
+                            message: task.message || "Template creation confirmed",
+                            courseElementId: task.courseElementId,
+                            assignedLecturerId: task.assignedLecturerId,
+                            assignedByHODId: task.assignedByHODId,
+                            assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
+                            status: 2, // ACCEPTED
+                            assignedAt: task.assignedAt,
+                          });
+                          await queryClient.invalidateQueries({
+                            queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
+                            exact: false
+                          });
+                          notification.success({
+                            message: "Template Creation Confirmed",
+                            description: "Template has been confirmed and is now ready for approval.",
+                          });
+                        } catch (err: any) {
+                          console.error("Failed to confirm template creation:", err);
+                          notification.error({
+                            message: "Failed to Confirm",
+                            description: err.message || "Failed to confirm template creation.",
+                          });
+                        }
+                      },
+                    });
+                  } catch (err: any) {
+                    console.error("Validation error:", err);
+                    notification.error({
+                      message: "Validation Error",
+                      description: err.message || "An error occurred during validation.",
+                    });
+                  }
                 }}
               />
               </Content>

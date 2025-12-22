@@ -41,6 +41,7 @@ export default function AssignmentGradingPage() {
     questions,
     assessmentTemplateId,
     isSemesterPassed,
+    isPublished,
     userEdits,
     setUserEdits,
     totalScore,
@@ -285,6 +286,10 @@ export default function AssignmentGradingPage() {
       return;
     }
 
+    if (isPublished) {
+      message.warning("Cannot edit grades after they have been published.");
+      return;
+    }
 
     if (isSemesterPassed) {
       message.warning("Cannot edit grades when the semester has ended.");
@@ -325,6 +330,15 @@ export default function AssignmentGradingPage() {
   return (
     <App>
       <div className={styles.container}>
+        {isPublished && (
+          <Alert
+            message="Grades Published"
+            description="Grades have been published and cannot be edited."
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         {isSemesterPassed && (
           <Alert
             message="Semester Ended"
@@ -345,6 +359,7 @@ export default function AssignmentGradingPage() {
             onGetAiFeedback={handleGetAiFeedback}
             loadingAiFeedback={loadingAiFeedback}
             isSemesterPassed={isSemesterPassed}
+            isPublished={isPublished}
           />
         </Card>
 
@@ -373,7 +388,7 @@ export default function AssignmentGradingPage() {
                               type="primary"
                               icon={<SaveOutlined />}
                               onClick={handleSaveFeedback}
-                              disabled={loadingFeedback || loadingAiFeedback}
+                              disabled={loadingFeedback || loadingAiFeedback || isPublished}
                             >
                               Save Feedback
                             </Button>
@@ -410,6 +425,7 @@ export default function AssignmentGradingPage() {
                     handleRubricScoreChange={handleRubricScoreChange}
                     handleRubricCommentChange={handleRubricCommentChange}
                     isSemesterPassed={isSemesterPassed}
+                    isPublished={isPublished}
                     message={message}
                     autoGradingLoading={autoGradingLoading}
                     saveGradeLoading={saveGradeMutation.isPending}

@@ -172,6 +172,17 @@ const TemplatesPageContent = () => {
     );
   }, [semesterDetail, allTemplates, allCourseElementsMap]);
 
+  // Create a map of courseId -> course for quick lookup
+  const courseMap = useMemo(() => {
+    const map = new Map<number, { id: number; code: string; name: string }>();
+    if (semesterDetail?.semesterCourses) {
+      semesterDetail.semesterCourses.forEach(sc => {
+        map.set(sc.course.id, sc.course);
+      });
+    }
+    return map;
+  }, [semesterDetail]);
+
 
   const { data: courseElementsRes = [], isLoading: loadingCourseElements } = useQuery({
     queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
@@ -217,23 +228,23 @@ const TemplatesPageContent = () => {
     let filtered = [...allTemplates];
 
     if (selectedSemesterCode) {
-      const semesterCourseElementIds = courseElements.map(ce => ce.id);
-      filtered = filtered.filter(template =>
-        semesterCourseElementIds.includes(template.courseElementId)
-      );
+      // Filter by semester: check semester of course element directly
+      filtered = filtered.filter(template => {
+        const courseElement = allCourseElementsMap.get(template.courseElementId);
+        return courseElement?.semesterCourse?.semester?.semesterCode === selectedSemesterCode;
+      });
     }
 
     if (selectedCourseId) {
-      const courseElementIds = courseElements
-        .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
-        .map(ce => ce.id);
-      filtered = filtered.filter(template =>
-        courseElementIds.includes(template.courseElementId)
-      );
+      // Filter by course: check courseId of course element
+      filtered = filtered.filter(template => {
+        const courseElement = allCourseElementsMap.get(template.courseElementId);
+        return courseElement?.semesterCourse?.courseId === selectedCourseId;
+      });
     }
 
     return filtered;
-  }, [allTemplates, selectedSemesterCode, selectedCourseId, courseElements]);
+  }, [allTemplates, selectedSemesterCode, selectedCourseId, allCourseElementsMap]);
 
 
   useEffect(() => {
@@ -315,11 +326,29 @@ const TemplatesPageContent = () => {
       render: (text: string) => <Text strong>{text}</Text>,
     },
     {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
-      width: 250,
-      ellipsis: true,
+      title: "Course",
+      key: "course",
+      width: 300,
+      render: (_, record) => {
+        const courseElement = allCourseElementsMap.get(record.courseElementId);
+        const courseId = courseElement?.semesterCourse?.courseId;
+        
+        // Try to get course from courseMap first (from semesterDetail)
+        if (courseId) {
+          const course = courseMap.get(courseId);
+          if (course) {
+            return <Text>{course.code} - {course.name}</Text>;
+          }
+        }
+        
+        // Fallback to courseElement.semesterCourse.course if available
+        const course = (courseElement?.semesterCourse as any)?.course;
+        if (course) {
+          return <Text>{course.code} - {course.name}</Text>;
+        }
+        
+        return <Text type="secondary">N/A</Text>;
+      },
     },
     {
       title: "Course Element",
@@ -334,22 +363,6 @@ const TemplatesPageContent = () => {
       render: (_, record) => (
         <Text>{record.lecturerName} ({record.lecturerCode})</Text>
       ),
-    },
-    {
-      title: "Created At",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 180,
-      render: (date: string) => {
-        const d = new Date(date);
-        return d.toLocaleString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-      },
     },
     {
       title: "Action",

@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, App, Button, Card, Popconfirm, Space, Spin, Typography } from "antd";
-import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -18,6 +18,7 @@ import { SubmissionsTable } from "@/app/lecturer/grading-group/[gradingGroupId]/
 import { gradingService } from "@/services/gradingService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
+import { RequirementModal } from "@/components/student/RequirementModal";
 
 const { Title, Text } = Typography;
 
@@ -30,6 +31,7 @@ export default function ExaminerGradingGroupPage() {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
+  const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
 
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.all,
@@ -154,6 +156,10 @@ export default function ExaminerGradingGroupPage() {
     setIsAssignModalOpen(false);
   };
 
+  const handleViewExam = () => {
+    setViewExamModalVisible(true);
+  };
+
   const handleAssignModalOk = () => {
     setIsAssignModalOpen(false);
     // Invalidate queries to refresh submissions
@@ -231,15 +237,25 @@ export default function ExaminerGradingGroupPage() {
                 {title}
               </Title>
             </Space>
-            {gradingGroup && (
-              <Button
-                type="primary"
-                icon={<UploadOutlined />}
-                onClick={handleOpenAssignModal}
-              >
-                Upload Submissions
-              </Button>
-            )}
+            <Space>
+              {gradingGroup?.assessmentTemplateId && (
+                <Button
+                  icon={<EyeOutlined />}
+                  onClick={handleViewExam}
+                >
+                  View Exam
+                </Button>
+              )}
+              {gradingGroup && (
+                <Button
+                  type="primary"
+                  icon={<UploadOutlined />}
+                  onClick={handleOpenAssignModal}
+                >
+                  Upload Submissions
+                </Button>
+              )}
+            </Space>
           </div>
 
           {gradingGroup && (
@@ -315,6 +331,16 @@ export default function ExaminerGradingGroupPage() {
           onOk={handleAssignModalOk}
           group={gradingGroup}
           allGroups={gradingGroupsData}
+        />
+      )}
+
+      {gradingGroup?.assessmentTemplateId && (
+        <RequirementModal
+          open={viewExamModalVisible}
+          onCancel={() => setViewExamModalVisible(false)}
+          title={title}
+          content={[]}
+          assessmentTemplateId={gradingGroup.assessmentTemplateId}
         />
       )}
     </div>

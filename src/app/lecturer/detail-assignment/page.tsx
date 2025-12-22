@@ -483,7 +483,10 @@ const AssignmentDetailItem = ({
                   icon={<RobotOutlined />}
                   onClick={handleBatchGrading}
                   loading={batchGradingLoading}
-                  disabled={semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false}
+                  disabled={
+                    classAssessment?.isPublished ||
+                    (semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false)
+                  }
                 >
                   Grade All
                 </Button>

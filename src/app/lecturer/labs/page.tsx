@@ -481,18 +481,18 @@ const LabDetailItem = ({
                 </Button>
               )}
               {submissions.length > 0 && (
-                <Button
-                  type="primary"
-                  icon={<RobotOutlined />}
-                  onClick={handleBatchGrading}
-                  loading={batchGradingLoading}
+              <Button
+                type="primary"
+                icon={<RobotOutlined />}
+                onClick={handleBatchGrading}
+                loading={batchGradingLoading}
                   disabled={
                     !hasGradableSubmissions ||
                     (semesterEndDate ? dayjs().tz("Asia/Ho_Chi_Minh").isAfter(dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh"), 'day') : false)
                   }
-                >
-                  Grade All
-                </Button>
+              >
+                Grade All
+              </Button>
               )}
             </Space>
           }
@@ -543,8 +543,8 @@ const LabDetailItem = ({
                           {!canGrade && (
                             <Tag color="orange">
                               Submissions: {submissionCount}/3
-                            </Tag>
-                          )}
+                          </Tag>
+                        )}
                       </Space>
                     }
                     description={

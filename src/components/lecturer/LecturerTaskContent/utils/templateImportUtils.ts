@@ -141,16 +141,16 @@ export async function importTemplate({
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "PAPERS") {
           const name = firstCell;
-          const description = row[1] ? String(row[1]).trim() : "";
-          let language = 0;
-          if (row[2]) {
-            const langStr = String(row[2]).toLowerCase();
-            if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
-            else if (langStr.includes("java")) language = 2;
-          }
-          const paperKey = `${name}|${description}|${language}`;
-          if (!paperDataMap.has(paperKey)) {
-            paperDataMap.set(paperKey, { name, description, language });
+        const description = row[1] ? String(row[1]).trim() : "";
+        let language = 0;
+        if (row[2]) {
+          const langStr = String(row[2]).toLowerCase();
+          if (langStr.includes("c") && !langStr.includes("sharp")) language = 1;
+          else if (langStr.includes("java")) language = 2;
+        }
+        const paperKey = `${name}|${description}|${language}`;
+        if (!paperDataMap.has(paperKey)) {
+          paperDataMap.set(paperKey, { name, description, language });
           }
         }
       }
@@ -182,15 +182,15 @@ export async function importTemplate({
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "QUESTIONS") {
           const paperName = firstCell;
-          const questionNumber = row[1] ? Number(row[1]) : 0;
-          const questionText = row[2] ? String(row[2]).trim() : "";
-          const sampleInput = row[3] ? String(row[3]).trim() : "";
-          const sampleOutput = row[4] ? String(row[4]).trim() : "";
-          const score = row[5] ? Number(row[5]) : 0;
-          if (paperName && questionNumber > 0 && questionText) {
-            const questionKey = `${paperName}|${questionNumber}|${questionText}|${sampleInput}|${sampleOutput}|${score}`;
-            if (!questionDataMap.has(questionKey)) {
-              questionDataMap.set(questionKey, { paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
+        const questionNumber = row[1] ? Number(row[1]) : 0;
+        const questionText = row[2] ? String(row[2]).trim() : "";
+        const sampleInput = row[3] ? String(row[3]).trim() : "";
+        const sampleOutput = row[4] ? String(row[4]).trim() : "";
+        const score = row[5] ? Number(row[5]) : 0;
+        if (paperName && questionNumber > 0 && questionText) {
+          const questionKey = `${paperName}|${questionNumber}|${questionText}|${sampleInput}|${sampleOutput}|${score}`;
+          if (!questionDataMap.has(questionKey)) {
+            questionDataMap.set(questionKey, { paperName, questionNumber, questionText, sampleInput, sampleOutput, score });
             }
           }
         }
@@ -223,15 +223,15 @@ export async function importTemplate({
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "RUBRICS") {
           const paperName = firstCell;
-          const questionNumber = row[1] ? Number(row[1]) : 0;
-          const description = row[2] ? String(row[2]).trim() : "";
-          const input = row[3] ? String(row[3]).trim() : "";
-          const output = row[4] ? String(row[4]).trim() : "";
-          const score = row[5] ? Number(row[5]) : 0;
-          if (paperName && questionNumber > 0 && description) {
-            const rubricKey = `${paperName}|${questionNumber}|${description}|${input}|${output}|${score}`;
-            if (!rubricDataMap.has(rubricKey)) {
-              rubricDataMap.set(rubricKey, { paperName, questionNumber, description, input, output, score });
+        const questionNumber = row[1] ? Number(row[1]) : 0;
+        const description = row[2] ? String(row[2]).trim() : "";
+        const input = row[3] ? String(row[3]).trim() : "";
+        const output = row[4] ? String(row[4]).trim() : "";
+        const score = row[5] ? Number(row[5]) : 0;
+        if (paperName && questionNumber > 0 && description) {
+          const rubricKey = `${paperName}|${questionNumber}|${description}|${input}|${output}|${score}`;
+          if (!rubricDataMap.has(rubricKey)) {
+            rubricDataMap.set(rubricKey, { paperName, questionNumber, description, input, output, score });
             }
           }
         }

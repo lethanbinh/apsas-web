@@ -635,8 +635,8 @@ export default function LecturerApprovalDetail({
               Back
             </AntButton>
           </div>
+          </div>
         </div>
-      </div>
 
       <div className={styles.actionCard}>
         <div className={styles.actionCardContent}>
@@ -706,8 +706,8 @@ export default function LecturerApprovalDetail({
               {currentStatus === AssignRequestStatus.REJECTED
                 ? "Rejected"
                 : rejectReasonVisibleForItem
-                  ? "Confirm Reject"
-                  : "Reject"}
+                ? "Confirm Reject"
+                : "Reject"}
             </AntButton>
           </div>
         </div>

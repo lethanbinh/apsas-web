@@ -3,238 +3,61 @@
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { queryKeys } from "@/lib/react-query";
 import { adminDashboardService } from "@/services/adminDashboardService";
-import { classService } from "@/services/classService";
-import { courseElementService } from "@/services/courseElementService";
-import { semesterService } from "@/services/semesterService";
-import {
-  BookOutlined,
-  CheckCircleOutlined,
-  DashboardOutlined,
-  FileTextOutlined,
-  ReloadOutlined,
-  TrophyOutlined,
-  UploadOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { ReloadOutlined, TrophyOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Alert, Button, Card, DatePicker, Select, Space, Spin, Tabs } from "antd";
-import { Dayjs } from "dayjs";
-import { useMemo, useState } from "react";
-import AcademicPerformanceTab from "./components/AcademicPerformanceTab";
-import AcademicTab from "./components/AcademicTab";
-import AssessmentsTab from "./components/AssessmentsTab";
-import GradingTab from "./components/GradingTab";
-import OverviewTab from "./components/OverviewTab";
-import SubmissionsTab from "./components/SubmissionsTab";
-import UsersTab from "./components/UsersTab";
+import { Button, Card, Col, Row, Space, Spin, Statistic, Typography, Progress, Tag } from "antd";
+import { useRouter } from "next/navigation";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import styles from "./DashboardAdmin.module.css";
 
+const { Title, Text } = Typography;
+
+const COLORS = {
+  blue: "#2563EB",
+  green: "#10B981",
+  purple: "#6D28D9",
+  orange: "#F59E0B",
+  red: "#EF4444",
+  cyan: "#06B6D4",
+  pink: "#EC4899",
+  indigo: "#6366F1",
+};
+
 const AdminDashboardPage = () => {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("overview");
-
-
-  const [selectedClassId, setSelectedClassId] = useState<number | undefined>(undefined);
-  const [selectedCourseId, setSelectedCourseId] = useState<number | undefined>(undefined);
-  const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | undefined>(undefined);
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
-  const { RangePicker } = DatePicker;
-
-
-  const { data: classesRes } = useQuery({
-    queryKey: queryKeys.classes.list({ pageNumber: 1, pageSize: 1000 }),
-    queryFn: () => classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
-  });
-
-  const { data: semestersRes = [] } = useQuery({
-    queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
-    queryFn: () => semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
-  });
-
-  const { data: courseElementsRes = [] } = useQuery({
-    queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
-    queryFn: () => courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
-  });
-
-
-  const classes = classesRes?.classes || [];
-  const semesters = semestersRes || [];
-  const courses = useMemo(() => {
-    const uniqueCourses = new Map<number, any>();
-    courseElementsRes.forEach((ce) => {
-      if (ce.semesterCourse?.course) {
-        const course = ce.semesterCourse.course;
-        if (!uniqueCourses.has(course.id)) {
-          uniqueCourses.set(course.id, course);
-        }
-      }
-    });
-    return Array.from(uniqueCourses.values());
-  }, [courseElementsRes]);
-
-  const filtersLoading = false;
-
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
-    queryKey: ['adminDashboard', 'overview', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
+    queryKey: ['adminDashboard', 'overview'],
     queryFn: () => adminDashboardService.getDashboardOverview(),
     refetchInterval: 5 * 60 * 1000,
   });
 
   const { data: chartData, isLoading: chartLoading } = useQuery({
-    queryKey: ['adminDashboard', 'chartData', selectedClassId, selectedCourseId, selectedSemesterCode, dateRange],
+    queryKey: ['adminDashboard', 'chartData'],
     queryFn: () => adminDashboardService.getChartData(),
     refetchInterval: 5 * 60 * 1000,
   });
 
   const loading = overviewLoading || chartLoading;
-  const error = null;
-
-
-  const filterProps = {
-    classId: selectedClassId,
-    courseId: selectedCourseId,
-    semesterCode: selectedSemesterCode,
-    dateRange: dateRange,
-  };
 
   const handleRefresh = () => {
-
     queryClient.invalidateQueries({ queryKey: ['adminDashboard'] });
   };
-
-  const tabItems = [
-    {
-      key: "overview",
-      label: (
-        <Space size={8}>
-          <DashboardOutlined />
-          <span>Overview</span>
-        </Space>
-      ),
-      children: (
-        <OverviewTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-          onDateRangeChange={setDateRange}
-        />
-      ),
-    },
-    {
-      key: "users",
-      label: (
-        <Space size={8}>
-          <UserOutlined />
-          <span>Users</span>
-        </Space>
-      ),
-      children: (
-        <UsersTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-        />
-      ),
-    },
-    {
-      key: "academic",
-      label: (
-        <Space size={8}>
-          <BookOutlined />
-          <span>Academic</span>
-        </Space>
-      ),
-      children: (
-        <AcademicTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-        />
-      ),
-    },
-    {
-      key: "academic-performance",
-      label: (
-        <Space size={8}>
-          <TrophyOutlined />
-          <span>Academic Performance</span>
-        </Space>
-      ),
-      children: (
-        <AcademicPerformanceTab
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={{
-            classId: selectedClassId,
-            courseId: selectedCourseId,
-            semesterCode: selectedSemesterCode,
-          }}
-        />
-      ),
-    },
-    {
-      key: "assessments",
-      label: (
-        <Space size={8}>
-          <FileTextOutlined />
-          <span>Assessments</span>
-        </Space>
-      ),
-      children: (
-        <AssessmentsTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-        />
-      ),
-    },
-    {
-      key: "submissions",
-      label: (
-        <Space size={8}>
-          <UploadOutlined />
-          <span>Submissions</span>
-        </Space>
-      ),
-      children: (
-        <SubmissionsTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-        />
-      ),
-    },
-    {
-      key: "grading",
-      label: (
-        <Space size={8}>
-          <CheckCircleOutlined />
-          <span>Grading</span>
-        </Space>
-      ),
-      children: (
-        <GradingTab
-          overview={overview ?? null}
-          chartData={chartData ?? null}
-          loading={loading}
-          onRefresh={handleRefresh}
-          filters={filterProps}
-        />
-      ),
-    },
-  ];
 
   if (loading && !overview) {
     return (
@@ -256,6 +79,54 @@ const AdminDashboardPage = () => {
     );
   }
 
+  if (!overview || !chartData) {
+    return (
+      <>
+        <QueryParamsHandler />
+        <div className={styles.container}>
+          <Card>
+            <Typography.Text type="secondary">No data available</Typography.Text>
+          </Card>
+        </div>
+      </>
+    );
+  }
+
+  const grades = overview.grades || {
+    totalGraded: 0,
+    averageGrade: 0,
+    medianGrade: 0,
+    gradeDistribution: { excellent: 0, good: 0, average: 0, belowAverage: 0 },
+    averageGradeByType: { assignment: 0, lab: 0, practicalExam: 0 },
+    averageGradeByClass: [],
+    gradeDistributionChart: [],
+    gradingCompletionRate: 0,
+    topClassesByAverage: [],
+    bottomClassesByAverage: [],
+  };
+
+  // Prepare chart data
+  const gradeDistributionData = [
+    { name: 'Excellent (≥8.5)', value: grades.gradeDistribution.excellent, color: COLORS.green },
+    { name: 'Good (7.0-8.4)', value: grades.gradeDistribution.good, color: COLORS.blue },
+    { name: 'Average (5.5-6.9)', value: grades.gradeDistribution.average, color: COLORS.orange },
+    { name: 'Below Average (<5.5)', value: grades.gradeDistribution.belowAverage, color: COLORS.red },
+  ];
+
+  const averageGradeByTypeData = [
+    { name: 'Assignment', value: grades.averageGradeByType.assignment },
+    { name: 'Lab', value: grades.averageGradeByType.lab },
+    { name: 'Practical Exam', value: grades.averageGradeByType.practicalExam },
+  ];
+
+  const topClassesData = grades.topClassesByAverage.slice(0, 10).map((cls) => ({
+    name: cls.classCode,
+    value: cls.averageGrade,
+    course: cls.courseName,
+  }));
+
+  const gradeDistributionChartData = grades.gradeDistributionChart || [];
+
   return (
     <>
       <QueryParamsHandler />
@@ -268,97 +139,363 @@ const AdminDashboardPage = () => {
             marginBottom: "2rem",
           }}
         >
-          <h1 className={styles.title}>Admin Dashboard</h1>
-          <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleRefresh}
-              loading={loading}
-            >
-              Refresh
-            </Button>
-          </Space>
+          <Title level={2} style={{ margin: 0 }}>Dashboard Overview</Title>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={handleRefresh}
+            loading={loading}
+          >
+            Refresh
+          </Button>
         </div>
 
-        {}
-        <Card style={{ marginBottom: "1.5rem" }}>
-          <Space size="large" wrap>
-            <div>
-              <span style={{ marginRight: 8 }}>Class:</span>
-              <Select
-                style={{ width: 200 }}
-                placeholder="All Classes"
-                allowClear
-                value={selectedClassId}
-                onChange={setSelectedClassId}
-                loading={filtersLoading}
-                options={classes.map((c) => ({
-                  label: c.classCode,
-                  value: c.id,
-                }))}
+        {/* Key Statistics - Focus on Grades */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{ borderTop: `4px solid ${COLORS.green}` }}
+            >
+              <Statistic
+                title="Total Graded"
+                value={grades.totalGraded}
+                prefix={<CheckCircleOutlined />}
+                valueStyle={{ color: COLORS.green, fontSize: '28px', fontWeight: 600 }}
               />
-            </div>
-            <div>
-              <span style={{ marginRight: 8 }}>Course:</span>
-              <Select
-                style={{ width: 200 }}
-                placeholder="All Courses"
-                allowClear
-                value={selectedCourseId}
-                onChange={setSelectedCourseId}
-                loading={filtersLoading}
-                options={courses.map((c) => ({
-                  label: c.name,
-                  value: c.id,
-                }))}
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {overview.submissions.total > 0 
+                  ? `${Math.round((grades.totalGraded / overview.submissions.total) * 100)}% completion rate`
+                  : 'No submissions'}
+              </Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{ borderTop: `4px solid ${COLORS.blue}` }}
+            >
+              <Statistic
+                title="Average Grade"
+                value={grades.averageGrade}
+                precision={2}
+                suffix="/ 10"
+                prefix={<TrophyOutlined />}
+                valueStyle={{ color: COLORS.blue, fontSize: '28px', fontWeight: 600 }}
               />
-            </div>
-            <div>
-              <span style={{ marginRight: 8 }}>Semester:</span>
-              <Select
-                style={{ width: 200 }}
-                placeholder="All Semesters"
-                allowClear
-                value={selectedSemesterCode}
-                onChange={setSelectedSemesterCode}
-                loading={filtersLoading}
-                options={semesters.map((s) => ({
-                  label: s.semesterCode,
-                  value: s.semesterCode,
-                }))}
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                Median: {grades.medianGrade.toFixed(2)}
+              </Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{ borderTop: `4px solid ${COLORS.purple}` }}
+            >
+              <Statistic
+                title="Total Users"
+                value={overview.users.total}
+                prefix={<UserOutlined />}
+                valueStyle={{ color: COLORS.purple, fontSize: '28px', fontWeight: 600 }}
               />
-            </div>
-            <div>
-              <span style={{ marginRight: 8 }}>Date Range:</span>
-              <RangePicker
-                style={{ width: 250 }}
-                placeholder={["Start Date", "End Date"]}
-                value={dateRange}
-                onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null] | null)}
-                allowClear
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {overview.users.byRole.student} students, {overview.users.byRole.lecturer} lecturers
+              </Text>
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card
+              style={{ borderTop: `4px solid ${COLORS.orange}` }}
+            >
+              <Statistic
+                title="Total Classes"
+                value={overview.academic.totalClasses}
+                valueStyle={{ color: COLORS.orange, fontSize: '28px', fontWeight: 600 }}
               />
-            </div>
-          </Space>
-        </Card>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {overview.academic.totalStudents} students enrolled
+              </Text>
+            </Card>
+          </Col>
+        </Row>
 
-        {error && (
-          <Alert
-            message="Warning"
-            description={error}
-            type="warning"
-            showIcon
-            closable
-            style={{ marginBottom: "1.5rem" }}
-          />
-        )}
+        {/* Grade Distribution Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Excellent (≥8.5)"
+                value={grades.gradeDistribution.excellent}
+                valueStyle={{ color: COLORS.green }}
+              />
+              <Progress
+                percent={grades.totalGraded > 0 ? (grades.gradeDistribution.excellent / grades.totalGraded) * 100 : 0}
+                strokeColor={COLORS.green}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Good (7.0-8.4)"
+                value={grades.gradeDistribution.good}
+                valueStyle={{ color: COLORS.blue }}
+              />
+              <Progress
+                percent={grades.totalGraded > 0 ? (grades.gradeDistribution.good / grades.totalGraded) * 100 : 0}
+                strokeColor={COLORS.blue}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Average (5.5-6.9)"
+                value={grades.gradeDistribution.average}
+                valueStyle={{ color: COLORS.orange }}
+              />
+              <Progress
+                percent={grades.totalGraded > 0 ? (grades.gradeDistribution.average / grades.totalGraded) * 100 : 0}
+                strokeColor={COLORS.orange}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card>
+              <Statistic
+                title="Below Average (<5.5)"
+                value={grades.gradeDistribution.belowAverage}
+                valueStyle={{ color: COLORS.red }}
+              />
+              <Progress
+                percent={grades.totalGraded > 0 ? (grades.gradeDistribution.belowAverage / grades.totalGraded) * 100 : 0}
+                strokeColor={COLORS.red}
+                showInfo={false}
+                style={{ marginTop: 8 }}
+              />
+            </Card>
+          </Col>
+        </Row>
 
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          items={tabItems}
-          size="large"
-          type="line"
-        />
+        {/* Charts Row 1 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} lg={12}>
+            <Card 
+              title="Grade Distribution" 
+              loading={loading}
+              extra={<Tag color="blue">{grades.totalGraded} graded</Tag>}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={gradeDistributionChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill={COLORS.blue} radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card title="Grade Distribution by Category" loading={loading}>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={gradeDistributionData.filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={(props: any) => {
+                      const { name, percent, value } = props;
+                      return value > 0 ? `${name}: ${value} (${((percent as number) * 100).toFixed(1)}%)` : '';
+                    }}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {gradeDistributionData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Charts Row 2 */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          <Col xs={24} lg={12}>
+            <Card title="Average Grade by Assessment Type" loading={loading}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={averageGradeByTypeData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis domain={[0, 10]} />
+                  <Tooltip formatter={(value: number) => `${value.toFixed(2)} / 10`} />
+                  <Bar dataKey="value" fill={COLORS.purple} radius={[8, 8, 0, 0]}>
+                    {averageGradeByTypeData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={
+                          entry.value >= 8 ? COLORS.green :
+                          entry.value >= 7 ? COLORS.blue :
+                          entry.value >= 5.5 ? COLORS.orange : COLORS.red
+                        } 
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card 
+              title="Top 10 Classes by Average Grade" 
+              loading={loading}
+              extra={<Tag color="green">Best Performance</Tag>}
+            >
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart 
+                  data={topClassesData}
+                  layout="vertical"
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" domain={[0, 10]} />
+                  <YAxis dataKey="name" type="category" width={100} />
+                  <Tooltip 
+                    formatter={(value: number, name: string, props: any) => [
+                      `${value.toFixed(2)} / 10`,
+                      props.payload.course
+                    ]}
+                  />
+                  <Bar dataKey="value" fill={COLORS.green} radius={[0, 8, 8, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Additional Stats */}
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={8}>
+            <Card title="Grading Completion" loading={loading}>
+              <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <Text strong>Completion Rate</Text>
+                    <Text strong>{grades.gradingCompletionRate.toFixed(1)}%</Text>
+                  </div>
+                  <Progress 
+                    percent={grades.gradingCompletionRate} 
+                    strokeColor={grades.gradingCompletionRate >= 80 ? COLORS.green : grades.gradingCompletionRate >= 50 ? COLORS.orange : COLORS.red}
+                    status={grades.gradingCompletionRate === 100 ? 'success' : 'active'}
+                  />
+                </div>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="Graded"
+                      value={grades.totalGraded}
+                      valueStyle={{ color: COLORS.green }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="Pending"
+                      value={overview.submissions.pending}
+                      valueStyle={{ color: COLORS.orange }}
+                    />
+                  </Col>
+                </Row>
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} lg={8}>
+            <Card title="Assessment Statistics" loading={loading}>
+              <Space direction="vertical" size="large" style={{ width: "100%" }}>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="Total Assessments"
+                      value={overview.assessments.totalClassAssessments}
+                      valueStyle={{ color: COLORS.blue }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="Active"
+                      value={overview.assessments.assessmentsByStatus.active}
+                      valueStyle={{ color: COLORS.green }}
+                    />
+                  </Col>
+                </Row>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Statistic
+                      title="Completed"
+                      value={overview.assessments.assessmentsByStatus.completed}
+                      valueStyle={{ color: COLORS.purple }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <Statistic
+                      title="Pending"
+                      value={overview.assessments.assessmentsByStatus.pending}
+                      valueStyle={{ color: COLORS.orange }}
+                    />
+                  </Col>
+                </Row>
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} lg={8}>
+            <Card title="Quick Actions" loading={loading}>
+              <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                <Button 
+                  type="primary" 
+                  block 
+                  onClick={() => router.push('/admin/users')}
+                  style={{ height: '40px' }}
+                >
+                  Manage Users
+                </Button>
+                <Button 
+                  block 
+                  onClick={() => router.push('/admin/academic')}
+                  style={{ height: '40px' }}
+                >
+                  View Academic Data
+                </Button>
+                <Button 
+                  block 
+                  onClick={() => router.push('/admin/assessments')}
+                  style={{ height: '40px' }}
+                >
+                  Manage Assessments
+                </Button>
+                <Button 
+                  block 
+                  onClick={() => router.push('/admin/submissions')}
+                  style={{ height: '40px' }}
+                >
+                  View Submissions
+                </Button>
+                <Button 
+                  block 
+                  onClick={() => router.push('/admin/grading')}
+                  style={{ height: '40px' }}
+                >
+                  Grading Management
+                </Button>
+              </Space>
+            </Card>
+          </Col>
+        </Row>
       </div>
     </>
   );
