@@ -42,6 +42,11 @@ export class AuthService {
     return response;
   }
 
+  async changePassword(data: { currentPassword: string; newPassword: string }): Promise<any> {
+    const response = await apiService.post<any>(API_ENDPOINTS.AUTH.CHANGE_PASSWORD, data);
+    return response;
+  }
+
   async refreshToken(): Promise<{ token: string }> {
 
 
