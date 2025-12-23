@@ -15,14 +15,12 @@ export interface ClassInfo {
   semesterName: string;
   studentCount: string;
 }
-
 export interface ClassApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: ClassInfo;
 }
-
 export interface CreateClassPayload {
   classCode: string;
   totalStudent: number;
@@ -30,7 +28,6 @@ export interface CreateClassPayload {
   lecturerId: number;
   semesterCourseId: number;
 }
-
 export interface UpdateClassPayload {
   classCode: string;
   totalStudent: number;
@@ -38,7 +35,6 @@ export interface UpdateClassPayload {
   lecturerId: number;
   semesterCourseId: number;
 }
-
 export class ClassManagementService {
   async createClass(payload: CreateClassPayload): Promise<ClassInfo> {
     const response = await apiService.post<ClassApiResponse>(
@@ -47,7 +43,6 @@ export class ClassManagementService {
     );
     return response.result;
   }
-
   async updateClass(
     classId: string | number,
     payload: UpdateClassPayload
@@ -58,10 +53,8 @@ export class ClassManagementService {
     );
     return response.result;
   }
-
   async deleteClass(classId: string | number): Promise<void> {
     await apiService.delete(`/Class/${classId}`);
   }
 }
-
 export const classManagementService = new ClassManagementService();

@@ -1,5 +1,4 @@
 "use client";
-
 import {
   GradingGroup,
   GradingGroupSubmission,
@@ -26,18 +25,13 @@ import { queryKeys } from "@/lib/react-query";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-
 const toVietnamTime = (dateString: string | null) => {
   if (!dateString) return null;
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 const { Title, Text } = Typography;
-
 interface AssignSubmissionsModalProps {
   open: boolean;
   onCancel: () => void;
@@ -45,7 +39,6 @@ interface AssignSubmissionsModalProps {
   group: GradingGroup;
   allGroups: GradingGroup[];
 }
-
 export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   open,
   onCancel,
@@ -57,68 +50,46 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const { message: messageApi } = App.useApp();
-
-
-
   useEffect(() => {
     if (open) {
       setFileList([]);
       setError(null);
     }
   }, [open]);
-
-
   const validateFileName = (fileName: string): boolean => {
-
     const pattern = /^STU\d{6}\.zip$/i;
     return pattern.test(fileName);
   };
-
-
   const beforeUpload: UploadProps["beforeUpload"] = (file) => {
-
     const fileName = file.name;
     const isZipExtension = fileName.toLowerCase().endsWith(".zip");
-
     if (!isZipExtension) {
       messageApi.error("Only ZIP files are accepted! Please select a file with .zip extension");
       return Upload.LIST_IGNORE;
     }
-
-
     if (!validateFileName(fileName)) {
       messageApi.error(`Invalid file name format! File name must be in format STUXXXXXX.zip (e.g., STU123456.zip). Current: ${fileName}`);
       return Upload.LIST_IGNORE;
     }
-
-
     const isLt100M = file.size / 1024 / 1024 < 100;
     if (!isLt100M) {
       messageApi.error("File must be smaller than 100MB!");
       return Upload.LIST_IGNORE;
     }
-
     return false;
   };
-
   const handleFileChange: UploadProps["onChange"] = (info) => {
-
     const validFiles = info.fileList.filter(file => {
       if (file.status === 'error') return false;
       if (!file.name.toLowerCase().endsWith('.zip')) return false;
       return validateFileName(file.name);
     });
-
     setFileList(validFiles);
   };
-
-
   const extractStudentCode = (fileName: string): string | null => {
     const match = fileName.match(/^STU(\d{6})\.zip$/i);
     return match ? match[1] : null;
   };
-
-
   const uploadSubmissionsMutation = useMutation({
     mutationFn: async (files: File[]) => {
       return gradingGroupService.addSubmissionsByFile(group.id, {
@@ -126,7 +97,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       });
     },
     onSuccess: (result, files) => {
-      // Invalidate all related queries to refresh data in detail page
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
@@ -138,8 +108,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       );
       setFileList([]);
       onOk();
-
-      // Refetch queries to ensure detail page gets updated data
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
@@ -155,58 +123,43 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
       messageApi.error(errorMsg);
     },
   });
-
-
-
   const handleUploadZip = async () => {
     if (fileList.length === 0) {
       messageApi.error("Please select at least one ZIP file!");
       return;
     }
-
-
     const files: File[] = [];
     const invalidFiles: string[] = [];
-
     for (const fileItem of fileList) {
       const file = fileItem.originFileObj;
     if (!file) {
         invalidFiles.push(fileItem.name || "Unknown file");
         continue;
       }
-
-
       if (!file.name.toLowerCase().endsWith('.zip')) {
         invalidFiles.push(file.name);
         continue;
       }
-
       if (!validateFileName(file.name)) {
         invalidFiles.push(file.name);
         continue;
       }
-
       files.push(file);
     }
-
     if (invalidFiles.length > 0) {
       messageApi.error(
         `Invalid file(s): ${invalidFiles.join(', ')}. File names must be in format STUXXXXXX.zip (e.g., STU123456.zip)`
       );
       return;
     }
-
     if (files.length === 0) {
       messageApi.error("No valid files to upload!");
       return;
     }
-
     setError(null);
     uploadSubmissionsMutation.mutate(files);
   };
-
   const isLoading = uploadSubmissionsMutation.isPending;
-
   return (
     <Modal
       title={
@@ -232,7 +185,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
           onClose={() => setError(null)}
         />
       )}
-
               <Space direction="vertical" style={{ width: "100%" }} size="large">
                 <Card style={{ backgroundColor: "#f0f9ff" }}>
                   <Space direction="vertical" style={{ width: "100%" }} size="middle">
@@ -279,7 +231,6 @@ export const AssignSubmissionsModal: React.FC<AssignSubmissionsModalProps> = ({
                     </Space>
                   </Card>
                 )}
-
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                   <Button onClick={onCancel}>Cancel</Button>
                   <Button

@@ -6,7 +6,6 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 import { GradingGroup } from "@/services/gradingGroupService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission } from "@/services/submissionService";
-
 export const handleDownloadAll = async (
   submissions: Submission[],
   gradingGroup: GradingGroup,
@@ -16,25 +15,19 @@ export const handleDownloadAll = async (
     message.warning("No submissions to download");
     return;
   }
-
   try {
     message.loading("Preparing download...", 0);
-
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
-
-    // Download requirement files if template exists
     if (gradingGroup.assessmentTemplateId) {
       try {
         const requirementFolder = zip.folder("Requirements");
         if (requirementFolder) {
-          // Generate requirement document
           const templateRes = await assessmentTemplateService.getAssessmentTemplates({
             pageNumber: 1,
             pageSize: 1000,
           });
           const template = templateRes.items.find(t => t.id === gradingGroup.assessmentTemplateId);
-
           if (template) {
             const papersRes = await assessmentPaperService.getAssessmentPapers({
               assessmentTemplateId: gradingGroup.assessmentTemplateId,
@@ -42,10 +35,8 @@ export const handleDownloadAll = async (
               pageSize: 100,
             });
             const papers = papersRes.items;
-
             const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
             const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-
             for (const paper of papers) {
               const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
                 assessmentPaperId: paper.id,
@@ -56,7 +47,6 @@ export const handleDownloadAll = async (
                 (a.questionNumber || 0) - (b.questionNumber || 0)
               );
               questionsMap[paper.id] = sortedQuestions;
-
               for (const question of sortedQuestions) {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
                   assessmentQuestionId: question.id,
@@ -66,10 +56,8 @@ export const handleDownloadAll = async (
                 rubricsMap[question.id] = rubricsRes.items;
               }
             }
-
             const docxModule = await import("docx");
             const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
-
             const docSections = [];
             docSections.push(
               new Paragraph({
@@ -84,7 +72,6 @@ export const handleDownloadAll = async (
               );
             }
             docSections.push(new Paragraph({ text: " " }));
-
             for (const paper of papers) {
               docSections.push(
                 new Paragraph({
@@ -96,7 +83,6 @@ export const handleDownloadAll = async (
                 docSections.push(new Paragraph({ text: paper.description }));
               }
               docSections.push(new Paragraph({ text: " " }));
-
               const questions = questionsMap[paper.id] || [];
               for (const [index, question] of questions.entries()) {
                 docSections.push(
@@ -133,7 +119,6 @@ export const handleDownloadAll = async (
                   );
                   docSections.push(new Paragraph({ text: question.questionSampleOutput }));
                 }
-
                 const rubrics = rubricsMap[question.id] || [];
                 if (rubrics.length > 0) {
                   docSections.push(new Paragraph({ text: " " }));
@@ -185,23 +170,18 @@ export const handleDownloadAll = async (
                 docSections.push(new Paragraph({ text: " " }));
               }
             }
-
             const doc = new Document({
               sections: [{ properties: {}, children: docSections }],
             });
-
             const wordBlob = await Packer.toBlob(doc);
             const templateName = gradingGroup.assessmentTemplateName || `Template_${gradingGroup.assessmentTemplateId}`;
             requirementFolder.file(`${templateName.replace(/[^a-zA-Z0-9]/g, "_")}_Requirement.docx`, wordBlob);
-
-            // Download assessment files
             try {
               const filesRes = await assessmentFileService.getFilesForTemplate({
                 assessmentTemplateId: gradingGroup.assessmentTemplateId,
                 pageNumber: 1,
                 pageSize: 1000,
               });
-
               if (filesRes.items.length > 0) {
                 for (const file of filesRes.items) {
                   try {
@@ -225,13 +205,10 @@ export const handleDownloadAll = async (
         console.error(`Failed to generate requirement for grading group ${gradingGroup.id}:`, err);
       }
     }
-
-    // Download submissions
     const submissionsFolder = zip.folder("Submissions");
     if (submissionsFolder) {
       for (const sub of submissions) {
         if (!sub || !sub.id) continue;
-
         if (sub.submissionFile?.submissionUrl) {
           try {
             const proxyUrl = `/api/file-proxy?url=${encodeURIComponent(sub.submissionFile.submissionUrl)}`;
@@ -252,16 +229,14 @@ export const handleDownloadAll = async (
         }
       }
     }
-
     if (zip.files && Object.keys(zip.files).length === 0) {
       message.destroy();
       message.warning("No files found to download");
       return;
     }
-
     const blob = await zip.generateAsync({ type: "blob" });
     const saveAs = (await import("file-saver")).default;
-    const fileName = gradingGroup.assessmentTemplateName 
+    const fileName = gradingGroup.assessmentTemplateName
       ? `${gradingGroup.assessmentTemplateName.replace(/[^a-zA-Z0-9]/g, "_")}_All.zip`
       : `GradingGroup_${gradingGroup.id}_All.zip`;
     saveAs(blob, fileName);
@@ -273,7 +248,6 @@ export const handleDownloadAll = async (
     message.error(err.message || "Failed to download all submissions");
   }
 };
-
 export const handleDownloadSelected = async (
   selectedSubmissions: Submission[],
   gradingGroup: GradingGroup,
@@ -283,7 +257,5 @@ export const handleDownloadSelected = async (
     message.warning("Please select at least one submission to download");
     return;
   }
-
   await handleDownloadAll(selectedSubmissions, gradingGroup, message);
 };
-

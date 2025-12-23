@@ -1,5 +1,4 @@
 "use client";
-
 import {
   InfoCircleOutlined,
   BarChartOutlined,
@@ -14,22 +13,17 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useSidebar } from "./SidebarContext";
 import styles from "./SidebarLecturer.module.css";
-
 const { Sider } = Layout;
-
 type MenuItem = Required<MenuProps>["items"][number];
-
 export default function SidebarLecturer() {
   const [selectedClassId, setSelectedClassId] = useState("");
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
-
   useEffect(() => {
     if (typeof window !== "undefined") {
       setSelectedClassId(localStorage.getItem("selectedClassId") || "");
     }
   }, []);
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -37,20 +31,17 @@ export default function SidebarLecturer() {
         close();
       }
     };
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = '';
     };
   }, [isOpen, close]);
-
   const menuItems: MenuItem[] = useMemo(() => {
     const id = selectedClassId;
     return [
@@ -76,12 +67,10 @@ export default function SidebarLecturer() {
       },
     ];
   }, [selectedClassId]);
-
   const allKeys = useMemo(
     () => menuItems.map((item) => String(item?.key)),
     [menuItems]
   );
-
   const selectedKey = useMemo(() => {
     const sortedKeys = [...allKeys].sort((a, b) => b.length - a.length);
     const matched = sortedKeys.find((key) => pathname.startsWith(key));
@@ -90,8 +79,8 @@ export default function SidebarLecturer() {
   return (
     <>
       {isOpen && <div className={styles.overlay} onClick={close} />}
-      <Sider 
-        width={280} 
+      <Sider
+        width={280}
         className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
       >
       <div className={styles.siderContent}>

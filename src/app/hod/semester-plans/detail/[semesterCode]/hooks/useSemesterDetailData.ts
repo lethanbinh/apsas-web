@@ -7,9 +7,7 @@ import { lecturerService } from "@/services/lecturerService";
 import {
   semesterService,
 } from "@/services/semesterService";
-
 export const useSemesterDetailData = (semesterCode: string) => {
-  // Fetch semester detail using React Query
   const {
     data: semesterData,
     isLoading: semesterLoading,
@@ -21,20 +19,17 @@ export const useSemesterDetailData = (semesterCode: string) => {
         throw new Error("No semester code provided.");
       }
       const data = await semesterService.getSemesterPlanDetail(semesterCode);
-
       try {
         const assignRequestsResponse = await assignRequestService.getAssignRequests({
           pageNumber: 1,
           pageSize: 1000,
         });
-
         const statusMap = new Map<number, number>();
         const approverMap = new Map<number, number | undefined>();
         assignRequestsResponse.items.forEach(ar => {
           statusMap.set(ar.id, ar.status);
           approverMap.set(ar.id, ar.assignedApproverLecturerId);
         });
-
         data.semesterCourses.forEach(semesterCourse => {
           semesterCourse.assignRequests.forEach(ar => {
             const status = statusMap.get(ar.id);
@@ -50,18 +45,14 @@ export const useSemesterDetailData = (semesterCode: string) => {
       } catch (err) {
         console.error("Failed to fetch assign requests status:", err);
       }
-
       return data;
     },
     enabled: !!semesterCode,
   });
-
-  // Fetch lecturers using React Query
   const { data: lecturers = [] } = useQuery({
     queryKey: queryKeys.lecturers.list(),
     queryFn: () => lecturerService.getLecturerList(),
   });
-
   const allCourseElementIds = useMemo(() => {
     if (!semesterData) return new Set<number>();
     const ids = new Set<number>();
@@ -72,7 +63,6 @@ export const useSemesterDetailData = (semesterCode: string) => {
     });
     return ids;
   }, [semesterData]);
-
   const { data: templatesResponse, refetch: refetchTemplates } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -83,25 +73,20 @@ export const useSemesterDetailData = (semesterCode: string) => {
     refetchInterval: 3000,
     refetchIntervalInBackground: false,
   });
-
   const elementsWithAssessment = useMemo(() => {
     if (!templatesResponse?.items || allCourseElementIds.size === 0) {
       return new Set<number>();
     }
-
     const elementsWithAssessmentSet = new Set<number>();
     templatesResponse.items.forEach(template => {
       if (allCourseElementIds.has(template.courseElementId)) {
         elementsWithAssessmentSet.add(template.courseElementId);
       }
     });
-
     return elementsWithAssessmentSet;
   }, [templatesResponse, allCourseElementIds]);
-
   const elementsWithApprovedRequest = useMemo(() => {
     if (!semesterData) return new Set<number>();
-
     const elementsWithApprovedSet = new Set<number>();
     semesterData.semesterCourses.forEach(semesterCourse => {
       semesterCourse.assignRequests.forEach(assignRequest => {
@@ -111,10 +96,8 @@ export const useSemesterDetailData = (semesterCode: string) => {
         }
       });
     });
-
     return elementsWithApprovedSet;
   }, [semesterData]);
-
   return {
     semesterData: semesterData || null,
     loading: semesterLoading,
@@ -125,4 +108,3 @@ export const useSemesterDetailData = (semesterCode: string) => {
     refetchTemplates,
   };
 };
-

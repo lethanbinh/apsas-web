@@ -14,7 +14,6 @@ export const getStatusProps = (status: number) => {
       return { color: "default", text: `Unknown (${status})` };
   }
 };
-
 export const calculateTotalScore = (
   questions: { [paperId: number]: any[] },
   rubrics: { [questionId: number]: any[] }
@@ -29,4 +28,3 @@ export const calculateTotalScore = (
   });
   return total;
 };
-

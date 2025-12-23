@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect } from 'react';
 import {
   Card,
@@ -34,9 +33,7 @@ import styles from './Profile.module.css';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
 import type { User } from '@/types';
-
 const { Option } = Select;
-
 const ProfilePage = () => {
   const { user } = useAuth();
   const { message } = App.useApp();
@@ -51,17 +48,14 @@ const ProfilePage = () => {
   const [isChangePassVisible, setIsChangePassVisible] = useState(false);
   const [changePassForm] = Form.useForm();
   const [changingPassword, setChangingPassword] = useState(false);
-
   const handleChangePassword = async () => {
     try {
       const values = await changePassForm.validateFields();
       setChangingPassword(true);
-      
       await authService.changePassword({
         currentPassword: values.currentPassword,
         newPassword: values.newPassword
       });
-
       message.success('Password changed successfully');
       setIsChangePassVisible(false);
       changePassForm.resetFields();
@@ -72,28 +66,20 @@ const ProfilePage = () => {
       setChangingPassword(false);
     }
   };
-
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-
-
         const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
-
         if (!userId) {
           console.error('No user ID found');
           setError('User ID not found. Please login again.');
           setLoading(false);
           return;
         }
-
         console.log('Fetching profile for user ID:', userId);
-
-
         const userProfile = await authService.getProfile();
         console.log('Profile fetched:', userProfile);
-
         setProfile(userProfile);
       } catch (err: any) {
         console.error('Error fetching profile:', err);
@@ -102,10 +88,8 @@ const ProfilePage = () => {
         setLoading(false);
       }
     };
-
     fetchProfile();
   }, []);
-
   const getRoleInfo = (role: number) => {
     const roles = [
       { name: 'Admin', color: 'volcano' },
@@ -115,11 +99,9 @@ const ProfilePage = () => {
     ];
     return roles[role] || { name: 'Unknown', color: 'default' };
   };
-
   const getGenderText = (gender: number) => {
     return gender === 1 ? 'Female' : gender === 0 ? 'Male' : 'Other';
   };
-
   const handleEdit = () => {
     if (profile) {
       form.setFieldsValue({
@@ -133,18 +115,14 @@ const ProfilePage = () => {
       setIsEditModalVisible(true);
     }
   };
-
   const handleEditOk = async () => {
     try {
       const values = await form.validateFields();
-
       if (!profile?.id) {
         message.error('Profile ID not found');
         return;
       }
-
       setUpdating(true);
-
       const updateData = {
         phoneNumber: values.phoneNumber,
         fullName: values.fullName,
@@ -153,31 +131,23 @@ const ProfilePage = () => {
         gender: values.gender,
         dateOfBirth: values.dateOfBirth ? values.dateOfBirth.toISOString() : profile.dateOfBirth,
       };
-
       const updatedProfile = await authService.updateProfile(profile.id, updateData);
-
       setProfile(updatedProfile);
       setIsEditModalVisible(false);
       message.success('Profile updated successfully');
-
-
       const userId = typeof window !== 'undefined' ? sessionStorage.getItem('user_id') : null;
       if (userId) {
         const freshProfile = await authService.getProfile();
         setProfile(freshProfile);
       }
     } catch (err: any) {
-
       console.error('Error updating profile:', err);
       console.error('Error type:', typeof err);
       console.error('Error constructor:', err?.constructor?.name);
-
-
       try {
         console.error('Error stringified:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
       } catch (stringifyError) {
         console.error('Could not stringify error:', stringifyError);
-
         const errorProps: any = {};
         if (err) {
           Object.getOwnPropertyNames(err).forEach(key => {
@@ -190,7 +160,6 @@ const ProfilePage = () => {
         }
         console.error('Error properties:', errorProps);
       }
-
       console.error('Error details:', {
         message: err?.message,
         name: err?.name,
@@ -202,36 +171,25 @@ const ProfilePage = () => {
         stack: err?.stack,
         code: err?.code,
       });
-
-
       let errorMessage = 'Failed to update profile';
-
-
       if (typeof err === 'string') {
         errorMessage = err;
       }
-
       else if (err?.response) {
         const errorData = err.response.data;
         const status = err.response.status;
-
-
         if (errorData?.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
           errorMessage = errorData.errorMessages.join(', ');
         }
-
         else if (errorData?.message) {
           errorMessage = errorData.message;
         }
-
         else if (errorData?.error) {
           errorMessage = errorData.error;
         }
-
         else if (typeof errorData === 'string' && errorData.trim().length > 0) {
           errorMessage = errorData;
         }
-
         else if (status === 400) {
           errorMessage = 'Invalid data. Please check your input.';
         } else if (status === 401) {
@@ -246,67 +204,50 @@ const ProfilePage = () => {
           errorMessage = `Request failed with status ${status}.`;
         }
       }
-
       else if (err?.message) {
         errorMessage = err.message;
       }
-
       else if (err?.toString && typeof err.toString === 'function') {
         const errorString = err.toString();
         if (errorString !== '[object Object]' && errorString !== '{}') {
           errorMessage = errorString;
         }
       }
-
       else if (err?.name) {
         errorMessage = `${err.name}: Failed to update profile`;
       }
-
       message.error(errorMessage);
     } finally {
       setUpdating(false);
     }
   };
-
   const handleEditCancel = () => {
     setIsEditModalVisible(false);
     form.resetFields();
   };
-
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
   };
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
     if (!validTypes.includes(file.type)) {
       message.error('Please upload a valid image file (JPG, PNG, or GIF)');
       return;
     }
-
-
     const maxSize = 5 * 1024 * 1024;
     if (file.size > maxSize) {
       message.error('File size must be less than 5MB');
       return;
     }
-
     try {
       setUploadingAvatar(true);
-
-
       const fileUrl = await authService.uploadAvatar(file);
-
-
       if (!profile?.id) {
         message.error('Profile ID not found');
         return;
       }
-
       const updateData = {
         phoneNumber: profile.phoneNumber,
         fullName: profile.fullName,
@@ -315,12 +256,9 @@ const ProfilePage = () => {
         gender: profile.gender,
         dateOfBirth: profile.dateOfBirth,
       };
-
       const updatedProfile = await authService.updateProfile(profile.id, updateData);
       setProfile(updatedProfile);
       message.success('Avatar updated successfully');
-
-
       const freshProfile = await authService.getProfile();
       setProfile(freshProfile);
     } catch (err: any) {
@@ -331,40 +269,30 @@ const ProfilePage = () => {
         responseData: err?.response?.data,
         errorMessages: err?.response?.data?.errorMessages,
       });
-
-
       let errorMessage = 'Failed to upload avatar';
-
       if (err?.response?.data) {
         const errorData = err.response.data;
-
         if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
           errorMessage = errorData.errorMessages.join(', ');
         }
-
         else if (errorData.message) {
           errorMessage = errorData.message;
         }
-
         else if (errorData.error) {
           errorMessage = errorData.error;
         }
       }
-
       else if (err?.message) {
         errorMessage = err.message;
       }
-
       message.error(errorMessage);
     } finally {
       setUploadingAvatar(false);
-
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
   };
-
   if (loading) {
     return (
       <Layout>
@@ -375,7 +303,6 @@ const ProfilePage = () => {
       </Layout>
     );
   }
-
   if (error || !profile) {
     return (
       <Layout>
@@ -385,7 +312,6 @@ const ProfilePage = () => {
       </Layout>
     );
   }
-
   const roleInfo = getRoleInfo(profile.role);
   const avatarSrc =
     profile.avatar && profile.avatar.trim().length > 0
@@ -393,7 +319,6 @@ const ProfilePage = () => {
       : profile.fullName
       ? `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.fullName)}`
       : undefined;
-
   return (
     <Layout>
       <div className={styles.profileContainer}>
@@ -449,7 +374,6 @@ const ProfilePage = () => {
                 >
                   Edit Profile
                 </Button>
-
                 <Button
                   size="large"
                   block
@@ -462,7 +386,6 @@ const ProfilePage = () => {
                 </Button>
               </div>
             </Card>
-
             {}
             <Card className={styles.quickInfoCard}>
               <h3 className={styles.sectionTitle}>Quick Info</h3>
@@ -478,7 +401,6 @@ const ProfilePage = () => {
               </div>
             </Card>
           </Col>
-
           {}
           <Col xs={24} md={16}>
             <Card className={styles.mainCard}>
@@ -521,7 +443,6 @@ const ProfilePage = () => {
                 </Descriptions.Item>
               </Descriptions>
             </Card>
-
             {}
             <Card className={styles.accountCard}>
               <h3 className={styles.sectionTitle}>Account Details</h3>
@@ -542,7 +463,6 @@ const ProfilePage = () => {
             </Card>
           </Col>
         </Row>
-
         {}
         <Modal
           title="Edit Profile"
@@ -579,7 +499,6 @@ const ProfilePage = () => {
             >
               <Input placeholder="Enter full name" />
             </Form.Item>
-
             <Form.Item
               name="phoneNumber"
               label="Phone Number"
@@ -590,7 +509,6 @@ const ProfilePage = () => {
                     if (!value || value.trim().length === 0) {
                       return Promise.reject(new Error('Phone number cannot be empty!'));
                     }
-
                     const phoneRegex = /^[0-9]{10,}$/;
                     if (!phoneRegex.test(value.replace(/[\s\-\(\)]/g, ''))) {
                       return Promise.reject(new Error('Please enter a valid phone number (at least 10 digits)!'));
@@ -602,7 +520,6 @@ const ProfilePage = () => {
             >
               <Input placeholder="Enter phone number" />
             </Form.Item>
-
             <Form.Item
               name="address"
               label="Address"
@@ -623,8 +540,6 @@ const ProfilePage = () => {
             >
               <Input.TextArea rows={3} placeholder="Enter address" />
             </Form.Item>
-
-
             <Form.Item
               name="gender"
               label="Gender"
@@ -636,7 +551,6 @@ const ProfilePage = () => {
                 <Option value={2}>Other</Option>
               </Select>
             </Form.Item>
-
             <Form.Item
               name="dateOfBirth"
               label="Date of Birth"
@@ -646,8 +560,7 @@ const ProfilePage = () => {
             </Form.Item>
           </Form>
         </Modal>
-
-        {/* Modal Change Password */}
+        {}
         <Modal
           title="Change Password"
           open={isChangePassVisible}
@@ -668,7 +581,6 @@ const ProfilePage = () => {
             >
               <Input.Password placeholder="Enter current password" />
             </Form.Item>
-
             <Form.Item
               name="newPassword"
               label="New Password"
@@ -679,7 +591,6 @@ const ProfilePage = () => {
             >
               <Input.Password placeholder="Enter new password" />
             </Form.Item>
-
             <Form.Item
               name="confirmPassword"
               label="Confirm New Password"
@@ -704,5 +615,4 @@ const ProfilePage = () => {
     </Layout>
   );
 };
-
 export default ProfilePage;

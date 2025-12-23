@@ -1,11 +1,9 @@
 "use client";
-
 import { ROLES } from "@/lib/constants";
 import { User } from "@/types";
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
 import { Button, Checkbox, Space } from "antd";
 import styles from "../../app/admin/manage-users/ManageUsers.module.css";
-
 interface UserTableProps {
   users: User[];
   currentPage: number;
@@ -20,7 +18,6 @@ interface UserTableProps {
   onDelete: (user: User) => void;
   mapRoleToString: (role: number) => string;
 }
-
 export const UserTable = ({
   users,
   currentPage,
@@ -76,7 +73,6 @@ export const UserTable = ({
           const isOtherAdmin = user.role === ROLES.ADMIN && user.id !== currentUserId;
           const canDelete = !isCurrentUser && !isOtherAdmin;
           const isSelected = selectedUserIds.includes(user.id);
-
           return (
             <tr
               key={user.id}
@@ -128,5 +124,3 @@ export const UserTable = ({
     </table>
   );
 };
-
-

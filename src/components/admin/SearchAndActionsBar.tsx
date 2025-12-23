@@ -1,14 +1,11 @@
 "use client";
-
 import { DeleteOutlined, DownloadOutlined, FileExcelOutlined, SearchOutlined, UploadOutlined } from "@ant-design/icons";
 import { App, Button, Dropdown, Input, Select, Space, Typography, Upload } from "antd";
 import type { MenuProps, UploadProps } from "antd";
 import { Role, ROLES } from "@/lib/constants";
 import { mapRoleToString } from "@/utils/userUtils";
 import styles from "../../app/admin/manage-users/ManageUsers.module.css";
-
 const { Text } = Typography;
-
 interface SearchAndActionsBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -23,7 +20,6 @@ interface SearchAndActionsBarProps {
   onImportFile: (file: File) => void;
   importLoading: boolean;
 }
-
 export const SearchAndActionsBar = ({
   searchTerm,
   onSearchChange,
@@ -39,7 +35,6 @@ export const SearchAndActionsBar = ({
   importLoading,
 }: SearchAndActionsBarProps) => {
   const { notification } = App.useApp();
-
   const uploadProps: UploadProps = {
     beforeUpload: (file) => {
       const isExcel = file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
@@ -59,7 +54,6 @@ export const SearchAndActionsBar = ({
     showUploadList: false,
     maxCount: 1,
   };
-
   const handleExportMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'export') {
       onExportAll();
@@ -67,7 +61,6 @@ export const SearchAndActionsBar = ({
       onDownloadTemplate();
     }
   };
-
   const exportMenuItems: MenuProps['items'] = [
     {
       key: 'export',
@@ -87,7 +80,6 @@ export const SearchAndActionsBar = ({
       ),
     },
   ];
-
   const roleOptions = [
     { label: mapRoleToString(ROLES.ADMIN), value: ROLES.ADMIN },
     { label: mapRoleToString(ROLES.LECTURER), value: ROLES.LECTURER },
@@ -95,7 +87,6 @@ export const SearchAndActionsBar = ({
     { label: mapRoleToString(ROLES.HOD), value: ROLES.HOD },
     { label: mapRoleToString(ROLES.EXAMINER), value: ROLES.EXAMINER },
   ];
-
   return (
     <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "column", gap: "1rem" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
@@ -157,7 +148,6 @@ export const SearchAndActionsBar = ({
           allowClear
           value={selectedRole}
           onChange={(value) => {
-            // When clear button is clicked, value will be null, convert to undefined
             onRoleChange(value === null ? undefined : value);
           }}
           options={roleOptions}
@@ -166,4 +156,3 @@ export const SearchAndActionsBar = ({
     </div>
   );
 };
-

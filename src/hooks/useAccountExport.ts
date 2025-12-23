@@ -1,27 +1,22 @@
 "use client";
-
 import { accountService } from "@/services/accountService";
 import { App } from "antd";
 import { useState } from "react";
 import { exportUsersToExcel } from "@/utils/excelUtils";
 import { User } from "@/types";
-
 export const useAccountExport = () => {
   const [exportLoading, setExportLoading] = useState<boolean>(false);
   const { notification } = App.useApp();
-
   const fetchAllAccounts = async (): Promise<User[]> => {
     const allUsers: User[] = [];
     let currentPage = 1;
     const pageSize = 100;
     let hasMore = true;
-
     while (hasMore) {
       try {
         const response = await accountService.getAccountList(currentPage, pageSize);
         if (response.users && response.users.length > 0) {
           allUsers.push(...response.users);
-
           if (allUsers.length >= response.total) {
             hasMore = false;
           } else {
@@ -35,15 +30,12 @@ export const useAccountExport = () => {
         throw error;
       }
     }
-
     return allUsers;
   };
-
   const handleExportAllAccounts = async () => {
     try {
       setExportLoading(true);
       const allUsers = await fetchAllAccounts();
-
       if (!allUsers || allUsers.length === 0) {
         notification.warning({
           message: "No Data",
@@ -51,7 +43,6 @@ export const useAccountExport = () => {
         });
         return;
       }
-
       exportUsersToExcel(allUsers);
       notification.success({
         message: "Export Successful",
@@ -67,11 +58,8 @@ export const useAccountExport = () => {
       setExportLoading(false);
     }
   };
-
   return {
     handleExportAllAccounts,
     exportLoading,
   };
 };
-
-

@@ -1,13 +1,10 @@
 "use client";
-
 import { GradingGroup } from "@/services/gradingGroupService";
 import { Button, Empty, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useRouter } from "next/navigation";
 import { useMemo } from "react";
-
 const { Text } = Typography;
-
 export interface FlatGradingGroup {
   key: string;
   id: number;
@@ -20,15 +17,12 @@ export interface FlatGradingGroup {
   gradingGroup: GradingGroup;
   isSemesterPassed: boolean;
 }
-
 interface GradingGroupTableProps {
   dataSource: FlatGradingGroup[];
   columns?: ColumnsType<FlatGradingGroup>;
 }
-
 export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProps) {
   const router = useRouter();
-
   const defaultColumns: ColumnsType<FlatGradingGroup> = useMemo(() => [
     {
       title: "Course",
@@ -79,9 +73,7 @@ export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProp
       ),
     },
   ], [router]);
-
   const tableColumns = columns || defaultColumns;
-
   if (dataSource.length === 0) {
     return (
       <Empty
@@ -90,7 +82,6 @@ export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProp
       />
     );
   }
-
   return (
     <Table
       columns={tableColumns}
@@ -105,4 +96,3 @@ export function GradingGroupTable({ dataSource, columns }: GradingGroupTableProp
     />
   );
 }
-

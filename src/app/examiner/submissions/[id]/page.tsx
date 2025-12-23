@@ -1,5 +1,4 @@
 "use client";
-
 import { Submission, submissionService } from "@/services/submissionService";
 import {
   ArrowLeftOutlined,
@@ -21,14 +20,10 @@ import { useRouter, useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./Submissions.module.css";
-
 const { Title } = Typography;
-
-
 const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
   const [searchText, setSearchText] = useState("");
   const router = useRouter();
-
   const { data: submissions = [], isLoading: loading, error: queryError } = useQuery({
     queryKey: ['submissions', 'byExamSessionId', shiftId],
     queryFn: () => submissionService.getSubmissionList({
@@ -36,13 +31,10 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
     }),
     enabled: !!shiftId,
   });
-
   const error = queryError ? (queryError as any).message || "Failed to load data." : null;
-
   const handleBack = () => {
     router.back();
   };
-
   const filteredData = useMemo(() => {
     return submissions.filter(
       (sub) =>
@@ -53,7 +45,6 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
           .includes(searchText.toLowerCase())
     );
   }, [submissions, searchText]);
-
   const columns: TableProps<Submission>["columns"] = [
     {
       title: "ID",
@@ -96,7 +87,6 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
       ),
     },
   ];
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -119,7 +109,6 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
           onChange={(e) => setSearchText(e.target.value)}
         />
       </div>
-
       {loading && submissions.length === 0 ? (
         <div className={styles.spinner}>
           <Spin size="large" />
@@ -144,11 +133,9 @@ const SubmissionsPageContent = ({ shiftId }: { shiftId: string }) => {
     </div>
   );
 };
-
 export default function SubmissionsPage() {
   const params = useParams();
   const shiftId = params.id as string;
-
   return (
     <App>
       <SubmissionsPageContent shiftId={shiftId} />

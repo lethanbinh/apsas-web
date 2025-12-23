@@ -6,12 +6,9 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useState, useEffect } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Text } = Typography;
-
 interface SubmissionsTableProps {
   submissions: Submission[];
   submissionTotalScores: Record<number, number>;
@@ -24,7 +21,6 @@ interface SubmissionsTableProps {
   maxSelection?: number;
   filteredSubmissions?: Submission[];
 }
-
 export function SubmissionsTable({
   submissions,
   submissionTotalScores,
@@ -40,7 +36,6 @@ export function SubmissionsTable({
   const [internalSelectedRowKeys, setInternalSelectedRowKeys] = useState<React.Key[]>([]);
   const selectedRowKeys = externalSelectedRowKeys !== undefined ? externalSelectedRowKeys : internalSelectedRowKeys;
   const displaySubmissions = filteredSubmissions || submissions;
-  
   useEffect(() => {
     if (externalSelectedRowKeys !== undefined) {
       setInternalSelectedRowKeys(externalSelectedRowKeys);
@@ -154,7 +149,6 @@ export function SubmissionsTable({
       },
     },
   ];
-
   if (submissions.length === 0) {
     return (
       <Empty
@@ -163,11 +157,9 @@ export function SubmissionsTable({
       />
     );
   }
-
   const rowSelection = onSelectionChange ? {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[], selectedRows: Submission[]) => {
-      // Limit to maxSelection
       if (newSelectedRowKeys.length > maxSelection) {
         return;
       }
@@ -180,7 +172,6 @@ export function SubmissionsTable({
       disabled: selectedRowKeys.length >= maxSelection && !selectedRowKeys.includes(record.id),
     }),
   } : undefined;
-
   return (
     <Table
       columns={columns}
@@ -195,11 +186,9 @@ export function SubmissionsTable({
       scroll={{ x: 1000 }}
       onRow={(record) => ({
         onClick: (e) => {
-          // Don't trigger edit when clicking on checkbox
           if ((e.target as HTMLElement).closest('.ant-checkbox-wrapper')) {
             return;
           }
-          // Only allow row click for edit, not for delete
           if (onEdit && !isGradeSheetSubmitted) {
             onEdit(record);
           }
@@ -209,4 +198,3 @@ export function SubmissionsTable({
     />
   );
 }
-

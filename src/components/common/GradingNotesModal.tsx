@@ -1,33 +1,26 @@
 "use client";
-
 import { Modal, Timeline, Tag, Typography, Space, Divider } from "antd";
 import { WarningOutlined, CloseOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Title, Text } = Typography;
-
 interface GradingLog {
   id: number;
   action: string;
   timestamp: string;
   details: string;
 }
-
 interface GradingNotesModalProps {
   open: boolean;
   onClose: () => void;
   gradingLogs: GradingLog[];
 }
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 export function GradingNotesModal({
   open,
   onClose,
@@ -36,7 +29,6 @@ export function GradingNotesModal({
   if (!gradingLogs || gradingLogs.length === 0) {
     return null;
   }
-
   const getActionColor = (action: string): string => {
     const actionLower = action.toLowerCase();
     if (actionLower.includes("error") || actionLower.includes("fail")) {
@@ -53,7 +45,6 @@ export function GradingNotesModal({
     }
     return "blue";
   };
-
   return (
     <Modal
       open={open}
@@ -147,4 +138,3 @@ export function GradingNotesModal({
     </Modal>
   );
 }
-

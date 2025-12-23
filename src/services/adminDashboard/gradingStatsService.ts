@@ -2,7 +2,6 @@ import { gradingGroupService } from '../gradingGroupService';
 import { gradingService } from '../gradingService';
 import { adminService } from '../adminService';
 import type { GradingStats } from './types';
-
 export class GradingStatsService {
   async getGradingGroupStats(): Promise<{ total: number }> {
     try {
@@ -13,16 +12,13 @@ export class GradingStatsService {
       return { total: 0 };
     }
   }
-
   async getGradingSessionStats(): Promise<{ total: number; completed: number }> {
     try {
       const sessions = await gradingService.getGradingSessions({
         pageNumber: 1,
         pageSize: 1000,
       });
-
       const completed = sessions.items.filter((s) => s.status === 1).length;
-
       return {
         total: sessions.totalCount,
         completed,
@@ -32,7 +28,6 @@ export class GradingStatsService {
       return { total: 0, completed: 0 };
     }
   }
-
   async getAssignRequestStats(): Promise<{ pending: number }> {
     try {
       const requests = await adminService.getApprovalList(1, 1000);
@@ -43,7 +38,6 @@ export class GradingStatsService {
       return { pending: 0 };
     }
   }
-
   async getDetailedGradingStats(): Promise<GradingStats> {
     try {
       const [groups, sessions, requests] = await Promise.all([
@@ -51,34 +45,25 @@ export class GradingStatsService {
         gradingService.getGradingSessions({ pageNumber: 1, pageSize: 1000 }),
         adminService.getApprovalList(1, 1000),
       ]);
-
       const completedSessions = sessions.items.filter((s) => s.status === 1).length;
       const pendingRequests = requests.items.filter((r) => r.status === 0).length;
-
-
       const gradingSessionsByStatus = {
         processing: sessions.items.filter((s) => s.status === 0).length,
         completed: completedSessions,
         failed: sessions.items.filter((s) => s.status === 2).length,
       };
-
-
       const gradingSessionsByType = {
         ai: sessions.items.filter((s) => s.gradingType === 0).length,
         lecturer: sessions.items.filter((s) => s.gradingType === 1).length,
         both: sessions.items.filter((s) => s.gradingType === 2).length,
       };
-
-
       const lecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
         sessionCount: number;
         completedCount: number;
       }>();
-
       sessions.items.forEach((session) => {
-
         const lecturerId = 0;
         if (!lecturerMap.has(lecturerId)) {
           lecturerMap.set(lecturerId, {
@@ -92,16 +77,12 @@ export class GradingStatsService {
         lecturer.sessionCount++;
         if (session.status === 1) lecturer.completedCount++;
       });
-
       const gradingByLecturer = Array.from(lecturerMap.values());
-
-
       const requestLecturerMap = new Map<number, {
         lecturerId: number;
         lecturerName: string;
         requestCount: number;
       }>();
-
       requests.items
         .filter((r) => r.status === 0)
         .forEach((request) => {
@@ -115,15 +96,11 @@ export class GradingStatsService {
           }
           requestLecturerMap.get(lecturerId)!.requestCount++;
         });
-
       const pendingAssignRequestsByLecturer = Array.from(requestLecturerMap.values());
-
-
       const gradingGroupsByStatus = {
         active: groups.filter((g) => g.submissionCount > 0).length,
         completed: 0,
       };
-
       return {
         totalGradingGroups: groups.length,
         totalGradingSessions: sessions.totalCount,
@@ -151,6 +128,4 @@ export class GradingStatsService {
     }
   }
 }
-
 export const gradingStatsService = new GradingStatsService();
-

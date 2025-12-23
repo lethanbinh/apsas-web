@@ -1,12 +1,10 @@
 import { apiService } from "./api";
-
 export interface Course {
   id: number;
   name: string;
   code: string;
   description: string;
 }
-
 export interface Semester {
   id: number;
   semesterCode: string;
@@ -14,7 +12,6 @@ export interface Semester {
   startDate: string;
   endDate: string;
 }
-
 export interface SemesterCourse {
   id: number;
   semesterId: number;
@@ -23,7 +20,6 @@ export interface SemesterCourse {
   course: Course;
   semester: Semester;
 }
-
 export interface CourseElement {
   id: number;
   name: string;
@@ -35,20 +31,17 @@ export interface CourseElement {
   updatedAt: string;
   semesterCourse: SemesterCourse;
 }
-
 export interface CourseElementListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: CourseElement[];
 }
-
 export interface GetCourseElementsParams {
   pageNumber: number;
   pageSize: number;
   semesterCode?: string;
 }
-
 export class CourseElementService {
   async getCourseElements(
     params: GetCourseElementsParams

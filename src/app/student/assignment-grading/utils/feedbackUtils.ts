@@ -1,11 +1,8 @@
 import type { FeedbackData } from "@/services/geminiService";
-
-
 export function deserializeFeedback(feedbackText: string): FeedbackData | null {
   if (!feedbackText || feedbackText.trim() === "") {
     return null;
   }
-
   try {
     const parsed = JSON.parse(feedbackText);
     if (typeof parsed === "object" && parsed !== null) {
@@ -25,8 +22,6 @@ export function deserializeFeedback(feedbackText: string): FeedbackData | null {
     return null;
   }
 }
-
-
 export function getDefaultFeedback(): FeedbackData {
   return {
     overallFeedback: "",
@@ -39,4 +34,3 @@ export function getDefaultFeedback(): FeedbackData {
     errorHandling: "",
   };
 }
-

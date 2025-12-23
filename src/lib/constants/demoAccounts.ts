@@ -4,7 +4,6 @@ export interface DemoAccount {
   password: string;
   role: string;
 }
-
 export const DEMO_ACCOUNTS: DemoAccount[] = [
   { accountCode: "STU000001", email: "namle2385@gmail.com", password: "Lenam235", role: "Student" },
   { accountCode: "LEC000001", email: "lethanhbinh6122003@gmail.com", password: "123456", role: "Lecturer" },

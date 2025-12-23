@@ -1,6 +1,5 @@
 import Labs from "@/components/student/Labs";
 import React from "react";
-
 export default function LabsPage() {
   return (
     <div>
@@ -8,4 +7,3 @@ export default function LabsPage() {
     </div>
   );
 }
-

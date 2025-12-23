@@ -1,17 +1,14 @@
 'use client';
-
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { Spin } from 'antd';
 import { NoSSR } from '@/components/NoSSR';
 import { getStorageItem } from '@/lib/utils/storage';
-
 interface AuthGuardProps {
   children: React.ReactNode;
   requireAuth?: boolean;
 }
-
 export const AuthGuard: React.FC<AuthGuardProps> = ({
   children,
   requireAuth = true
@@ -33,32 +30,25 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     </NoSSR>
   );
 };
-
 const AuthGuardContent: React.FC<AuthGuardProps> = ({
   children,
   requireAuth = true
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
-
   useEffect(() => {
-    // Check token in storage directly to prevent back button access after logout
     const token = getStorageItem('auth_token');
-    
     if (!isLoading) {
       if (requireAuth) {
-        // If no token in storage, redirect immediately
         if (!token) {
           router.replace('/login');
           return;
         }
-        // If Redux says not authenticated but token exists, might be stale - still redirect
         if (!isAuthenticated) {
           router.replace('/login');
           return;
         }
       } else if (!requireAuth && isAuthenticated) {
-
         const roleRedirects: { [key: number]: string } = {
           0: "/admin/manage-users",
           1: "/classes/my-classes/lecturer",
@@ -72,7 +62,6 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       }
     }
   }, [isAuthenticated, isLoading, requireAuth, router, user?.role]);
-
   if (isLoading) {
     return (
       <div style={{
@@ -85,14 +74,11 @@ const AuthGuardContent: React.FC<AuthGuardProps> = ({
       </div>
     );
   }
-
   if (requireAuth && !isAuthenticated) {
     return null;
   }
-
   if (!requireAuth && isAuthenticated) {
     return null;
   }
-
   return <>{children}</>;
 };

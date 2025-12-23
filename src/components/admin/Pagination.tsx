@@ -1,7 +1,5 @@
 "use client";
-
 import styles from "../../app/admin/manage-users/ManageUsers.module.css";
-
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
@@ -10,7 +8,6 @@ interface PaginationProps {
   onNextPage: () => void;
   getPaginationItems: () => (number | string)[];
 }
-
 export const Pagination = ({
   currentPage,
   totalPages,
@@ -48,5 +45,3 @@ export const Pagination = ({
     </div>
   );
 };
-
-

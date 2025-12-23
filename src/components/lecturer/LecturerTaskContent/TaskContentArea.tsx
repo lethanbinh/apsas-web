@@ -1,5 +1,4 @@
 "use client";
-
 import { AssessmentFile } from "@/services/assessmentFileService";
 import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
@@ -9,7 +8,6 @@ import { Alert } from "antd";
 import { PaperDetailView } from "./PaperDetailView";
 import { QuestionDetailView } from "./QuestionDetailView";
 import { TemplateDetailView } from "./TemplateDetailView";
-
 interface TaskContentAreaProps {
   selectedKey: string;
   template: AssessmentTemplate | null;
@@ -29,7 +27,6 @@ interface TaskContentAreaProps {
   onConfirmTemplateCreation?: () => Promise<void>;
   updateStatusToInProgress?: () => Promise<void>;
 }
-
 export function TaskContentArea({
   selectedKey,
   template,
@@ -71,7 +68,6 @@ export function TaskContentArea({
       />
     );
   }
-
   if (selectedKey.startsWith("paper-")) {
     const paperId = Number(selectedKey.split("-")[1]);
     const paper = papers.find((p) => p.id === paperId);
@@ -87,12 +83,10 @@ export function TaskContentArea({
       );
     }
   }
-
   if (selectedKey.startsWith("question-")) {
     const questionId = Number(selectedKey.split("-")[1]);
     let question: AssessmentQuestion | undefined;
     let paperId: number | undefined;
-
     for (const pId in allQuestions) {
       const found = allQuestions[pId].find((q) => q.id === questionId);
       if (found) {
@@ -101,7 +95,6 @@ export function TaskContentArea({
         break;
       }
     }
-
     if (question && paperId) {
       return (
         <QuestionDetailView
@@ -116,6 +109,5 @@ export function TaskContentArea({
       );
     }
   }
-
   return <Alert message="Please select an item from the menu." />;
 }

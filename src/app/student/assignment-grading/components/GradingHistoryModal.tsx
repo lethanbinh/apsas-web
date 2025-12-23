@@ -1,5 +1,4 @@
 "use client";
-
 import { GradingNotesModal } from "@/components/common/GradingNotesModal";
 import { queryKeys } from "@/lib/react-query";
 import { GradeItem, gradeItemService } from "@/services/gradeItemService";
@@ -11,28 +10,21 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useMemo, useState } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 const { Title, Text } = Typography;
-
 interface GradingHistoryModalProps {
   visible: boolean;
   onClose: () => void;
   submissionId: number | null;
 }
-
 export function GradingHistoryModal({ visible, onClose, submissionId }: GradingHistoryModalProps) {
   const [expandedSessions, setExpandedSessions] = useState<Set<number>>(new Set());
   const [gradingNotesModalOpen, setGradingNotesModalOpen] = useState(false);
   const [selectedGradingLogs, setSelectedGradingLogs] = useState<any[]>([]);
-
-
   const { data: gradingSessionsData, isLoading: loadingGradingHistory } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -42,7 +34,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     }),
     enabled: !!submissionId && visible,
   });
-
   const gradingHistory = useMemo(() => {
     if (!gradingSessionsData?.items) return [];
     return [...gradingSessionsData.items].sort((a, b) => {
@@ -51,8 +42,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
       return dateB - dateA;
     });
   }, [gradingSessionsData]);
-
-
   const allSessionIds = gradingHistory.map(session => session.id);
   const gradeItemsQueries = useQueries({
     queries: allSessionIds.map((sessionId) => ({
@@ -65,7 +54,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
       enabled: visible && allSessionIds.length > 0,
     })),
   });
-
   const sessionGradeItems = useMemo(() => {
     const map: { [sessionId: number]: GradeItem[] } = {};
     allSessionIds.forEach((sessionId, index) => {
@@ -75,7 +63,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     });
     return map;
   }, [allSessionIds, gradeItemsQueries]);
-
   const getGradingTypeLabel = (type: number) => {
     switch (type) {
       case 0: return "AI";
@@ -84,7 +71,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
       default: return "UNKNOWN";
     }
   };
-
   const getStatusLabel = (status: number) => {
     switch (status) {
       case 0: return <Tag color="processing">PROCESSING</Tag>;
@@ -93,11 +79,9 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
       default: return <Tag>UNKNOWN</Tag>;
     }
   };
-
   const handleExpandSession = (sessionId: number) => {
     const newExpanded = new Set(expandedSessions);
     const isCurrentlyExpanded = newExpanded.has(sessionId);
-
     if (isCurrentlyExpanded) {
       newExpanded.delete(sessionId);
     } else {
@@ -105,7 +89,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     }
     setExpandedSessions(newExpanded);
   };
-
   return (
     <Modal
       title="Grading History"
@@ -128,21 +111,15 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
             items={gradingHistory.map((session) => {
               const isExpanded = expandedSessions.has(session.id);
               const gradeItems = sessionGradeItems[session.id] || [];
-
-
               const totalScore = gradeItems.length > 0
                 ? gradeItems.reduce((sum, item) => sum + item.score, 0)
                 : (session.grade || 0);
               const maxScore = gradeItems.length > 0
                 ? gradeItems.reduce((sum, item) => sum + (item.rubricItemMaxScore || 0), 0)
                 : 0;
-
-
-
               const gradeDisplay = gradeItems.length > 0 && maxScore > 0
                 ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}`
                 : totalScore.toFixed(2);
-
               return {
                 key: session.id.toString(),
                 label: (
@@ -177,7 +154,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                         {toVietnamTime(session.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
                       </Descriptions.Item>
                     </Descriptions>
-
                     { }
                     {session.gradingLogs && session.gradingLogs.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
@@ -205,7 +181,6 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
                         />
                       </div>
                     )}
-
                     {!isExpanded ? (
                       <Button
                         type="link"
@@ -255,4 +230,3 @@ export function GradingHistoryModal({ visible, onClose, submissionId }: GradingH
     </Modal>
   );
 }
-

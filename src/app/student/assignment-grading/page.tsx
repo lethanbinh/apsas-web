@@ -1,5 +1,4 @@
 "use client";
-
 import { Alert, App, Card, Collapse, Space, Spin, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,15 +13,12 @@ import { getQuestionColumns } from "./utils/tableUtils";
 import { useSubmissionData } from "./hooks/useSubmissionData";
 import type { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import type { RubricItem } from "@/services/rubricItemService";
-
 const { Title } = Typography;
-
 export interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
   rubricComments: { [rubricId: number]: string };
 }
-
 export default function AssignmentGradingPage() {
   const router = useRouter();
   const { message } = App.useApp();
@@ -30,9 +26,7 @@ export default function AssignmentGradingPage() {
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
   const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
-
   useEffect(() => {
-
     const savedSubmissionId = localStorage.getItem("selectedSubmissionId");
     if (savedSubmissionId) {
       setSubmissionId(Number(savedSubmissionId));
@@ -41,7 +35,6 @@ export default function AssignmentGradingPage() {
       router.back();
     }
   }, [message, router]);
-
   const classIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const {
     finalSubmission,
@@ -55,7 +48,6 @@ export default function AssignmentGradingPage() {
     submissionId,
     classIdFromStorage,
   });
-
   const handleOpenGradingHistory = () => {
     if (!submissionId) {
       message.error("No submission selected");
@@ -63,7 +55,6 @@ export default function AssignmentGradingPage() {
     }
     setGradingHistoryModalVisible(true);
   };
-
   const handleOpenFeedbackHistory = () => {
     if (!submissionId) {
       message.error("No submission selected");
@@ -71,16 +62,12 @@ export default function AssignmentGradingPage() {
     }
     setFeedbackHistoryModalVisible(true);
   };
-
-
   useEffect(() => {
     if (!loading && !finalSubmission && submissionId) {
       message.error("Submission not found");
       router.back();
     }
   }, [loading, finalSubmission, submissionId, message, router]);
-
-
   if (loading && !finalSubmission) {
     return (
       <div className={styles.loadingContainer}>
@@ -88,11 +75,9 @@ export default function AssignmentGradingPage() {
       </div>
     );
   }
-
   if (!finalSubmission) {
     return null;
   }
-
   return (
     <App>
       <div className={styles.container}>
@@ -103,7 +88,6 @@ export default function AssignmentGradingPage() {
           onBack={() => router.back()}
           onViewExam={() => setViewExamModalVisible(true)}
         />
-
         {isPublished ? (
           <>
             <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
@@ -129,7 +113,6 @@ export default function AssignmentGradingPage() {
                 ]}
               />
             </Card>
-
             <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
               <Collapse
                 defaultActiveKey={["grading-details"]}
@@ -166,19 +149,16 @@ export default function AssignmentGradingPage() {
             />
           </Card>
         )}
-
         <ViewExamModal
           visible={viewExamModalVisible}
           onClose={() => setViewExamModalVisible(false)}
           submission={finalSubmission}
         />
-
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
           onClose={() => setGradingHistoryModalVisible(false)}
           submissionId={submissionId}
         />
-
         <FeedbackHistoryModal
           visible={feedbackHistoryModalVisible}
           onClose={() => setFeedbackHistoryModalVisible(false)}

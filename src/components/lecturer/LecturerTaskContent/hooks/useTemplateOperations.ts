@@ -1,5 +1,4 @@
 "use client";
-
 import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { queryKeys } from "@/lib/react-query";
 import { assessmentFileService } from "@/services/assessmentFileService";
@@ -11,7 +10,6 @@ import { assignRequestService } from "@/services/assignRequestService";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import type { UploadFile } from "antd/es/upload/interface";
 import { useState } from "react";
-
 interface UseTemplateOperationsProps {
   task: AssignRequestItem;
   lecturerId: number;
@@ -22,7 +20,6 @@ interface UseTemplateOperationsProps {
   allQuestions?: { [paperId: number]: AssessmentQuestion[] };
   templateId?: number | null;
 }
-
 export function useTemplateOperations({
   task,
   lecturerId,
@@ -43,16 +40,10 @@ export function useTemplateOperations({
   const [databaseName, setDatabaseName] = useState("");
   const [databaseFileName, setDatabaseFileName] = useState("");
   const [postmanFileName, setPostmanFileName] = useState("");
-
-  // Helper function to update status to IN_PROGRESS (4)
   const updateStatusToInProgress = async () => {
-    // Only update if current status is PENDING (1), REJECTED (3), or ACCEPTED (2)
-    // Don't update if already COMPLETED (5)
-    // Allow update even if already IN_PROGRESS (4) to ensure status is correct
     if (task.status === 5) {
       return;
     }
-
     try {
       await assignRequestService.updateAssignRequest(task.id, {
         message: task.message || "Template content has been modified",
@@ -60,44 +51,33 @@ export function useTemplateOperations({
         assignedLecturerId: task.assignedLecturerId,
         assignedByHODId: task.assignedByHODId,
         assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-        status: 4, // IN_PROGRESS
+        status: 4,
         assignedAt: task.assignedAt,
       });
-
       await queryClient.invalidateQueries({
         queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
         exact: false
       });
     } catch (err: any) {
       console.error("Failed to update status to IN_PROGRESS:", err);
-      // Don't show error to user, just log it
     }
   };
-
   const resetStatusIfRejected = async () => {
-
-
     console.log("resetStatusIfRejected called:", { isRejected, taskId: task.id, taskStatus: task.status });
-
     if (!isRejected) {
       console.log("Task is not rejected, skipping status reset check");
       return;
     }
-
     try {
-
       const initialKey = `task-${task.id}-initial-commented-questions`;
       const resolvedKey = `task-${task.id}-resolved-questions`;
-
       let initialQuestionIds: number[] = [];
       let resolvedQuestionIds: number[] = [];
-
       try {
         const initialStored = localStorage.getItem(initialKey);
         if (initialStored) {
           initialQuestionIds = JSON.parse(initialStored);
         }
-
         const resolvedStored = localStorage.getItem(resolvedKey);
         if (resolvedStored) {
           resolvedQuestionIds = JSON.parse(resolvedStored);
@@ -106,33 +86,25 @@ export function useTemplateOperations({
         console.error("Failed to read from localStorage:", err);
         return;
       }
-
       console.log("Status reset check from localStorage:", {
         initialCommentedQuestions: initialQuestionIds.length,
         resolvedQuestions: resolvedQuestionIds.length,
         initialQuestionIds,
         resolvedQuestionIds
       });
-
-
       if (initialQuestionIds.length === 0) {
         console.log("No initial commented questions stored, skipping status reset");
         return;
       }
-
-
       const allResolved = initialQuestionIds.every(questionId =>
         resolvedQuestionIds.includes(questionId)
       );
-
       if (!allResolved) {
         console.log("Not all comments resolved yet:", {
           missing: initialQuestionIds.filter(id => !resolvedQuestionIds.includes(id))
         });
         return;
       }
-
-
       console.log("✅ All comments resolved! Resetting status to IN_PROGRESS...");
       await assignRequestService.updateAssignRequest(task.id, {
         message: task.message || "All questions have been addressed. Status reset to IN_PROGRESS.",
@@ -140,11 +112,9 @@ export function useTemplateOperations({
         assignedLecturerId: task.assignedLecturerId,
         assignedByHODId: task.assignedByHODId,
         assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-        status: 4, // IN_PROGRESS
+        status: 4,
         assignedAt: task.assignedAt,
       });
-
-
       try {
         localStorage.removeItem(initialKey);
         localStorage.removeItem(resolvedKey);
@@ -152,17 +122,12 @@ export function useTemplateOperations({
       } catch (err) {
         console.error("Failed to clear localStorage:", err);
       }
-
       console.log("Status updated successfully, invalidating queries...");
-
-
       await queryClient.invalidateQueries({
         queryKey: queryKeys.assignRequests.byLecturerId(task.assignedLecturerId),
         exact: false
       });
-
       console.log("✅ Status reset to IN_PROGRESS completed!");
-
       notification.success({
         message: "Status Reset to In Progress",
         description: "All questions have been addressed. Status reset to In Progress.",
@@ -175,10 +140,8 @@ export function useTemplateOperations({
       });
     }
   };
-
   const handleCreateTemplate = async () => {
     try {
-
       const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
       if (taskTemplate && !isRejected) {
         notification.error({
@@ -187,8 +150,6 @@ export function useTemplateOperations({
         });
         return;
       }
-
-
       if (!newTemplateName.trim()) {
         notification.error({
           message: "Template Name Required",
@@ -196,8 +157,6 @@ export function useTemplateOperations({
         });
         return;
       }
-
-
       if (newTemplateType === 1) {
         if (!newTemplateStartupProject.trim()) {
           notification.error({
@@ -242,8 +201,6 @@ export function useTemplateOperations({
           return;
         }
       }
-
-
       const createdTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: newTemplateName,
         description: newTemplateDesc,
@@ -253,10 +210,7 @@ export function useTemplateOperations({
         createdByLecturerId: lecturerId,
         assignedToHODId: task.assignedByHODId,
       });
-
-
       if (newTemplateType === 1 && createdTemplate.id) {
-
         if (databaseFileList.length > 0) {
           const databaseFile = databaseFileList[0].originFileObj;
           if (databaseFile) {
@@ -277,8 +231,6 @@ export function useTemplateOperations({
             }
           }
         }
-
-
         if (postmanFileList.length > 0) {
           const postmanFile = postmanFileList[0].originFileObj;
           if (postmanFile) {
@@ -299,7 +251,6 @@ export function useTemplateOperations({
           }
         }
       }
-
       setNewTemplateName("");
       setNewTemplateDesc("");
       setNewTemplateType(0);
@@ -309,18 +260,11 @@ export function useTemplateOperations({
       setDatabaseName("");
       setDatabaseFileName("");
       setPostmanFileName("");
-
-
-      // When rejected and creating template, updateStatusToInProgress will be called
-      // So we don't need to manually update status here
       notification.success({
         message: "Template Created",
         description: "Template has been created successfully.",
       });
-
       await refetchTemplates();
-      
-      // Update status to IN_PROGRESS after creating template
       await updateStatusToInProgress();
     } catch (error: any) {
       console.error("Failed to create template:", error);
@@ -330,36 +274,25 @@ export function useTemplateOperations({
       });
     }
   };
-
   const handleDeleteTemplate = async (template: AssessmentTemplate | null) => {
     if (!template) return;
     try {
       await assessmentTemplateService.deleteAssessmentTemplate(template.id);
-
-
       await queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.all,
         exact: false
       });
-
-
       await queryClient.refetchQueries({
         queryKey: queryKeys.assessmentTemplates.all,
         type: 'active',
       });
-
-
       await refetchTemplates();
-
-
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged', {
           detail: { templateId: template.id, action: 'deleted' }
         }));
       }
-
       await resetStatusIfRejected();
-      // Update status to IN_PROGRESS after deleting template
       await updateStatusToInProgress();
       notification.success({ message: "Template deleted" });
     } catch (error: any) {
@@ -369,7 +302,6 @@ export function useTemplateOperations({
       });
     }
   };
-
   return {
     newTemplateName,
     setNewTemplateName,
@@ -395,4 +327,3 @@ export function useTemplateOperations({
     updateStatusToInProgress,
   };
 }
-

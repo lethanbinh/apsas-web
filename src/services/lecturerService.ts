@@ -17,14 +17,12 @@ export interface Lecturer {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface LecturerListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: Lecturer[];
 }
-
 export interface CreateLecturerPayload {
   username: string;
   password: string;
@@ -38,16 +36,13 @@ export interface CreateLecturerPayload {
   department: string;
   specialization: string;
 }
-
 export class LecturerService {
   async getLecturerList(): Promise<Lecturer[]> {
     const response = await apiService.get<LecturerListApiResponse>(
       "/Lecturer/list"
     );
-
     return response.result;
   }
-
   async createLecturer(payload: CreateLecturerPayload): Promise<Lecturer> {
     const response = await apiService.post<LecturerListApiResponse>(
       "/Lecturer/create",

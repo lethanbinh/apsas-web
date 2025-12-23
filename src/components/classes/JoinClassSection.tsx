@@ -1,14 +1,9 @@
 "use client";
-
 import { Col, Row, Typography } from "antd";
 import Image from "next/image";
 import { Button } from "../ui/Button";
-
-
 import styles from "./JoinClassSection.module.css";
-
 const { Title, Paragraph, Text } = Typography;
-
 export default function JoinClassSection() {
   return (
     <div className={styles.sectionWrapper}>
@@ -16,7 +11,6 @@ export default function JoinClassSection() {
         <Col xs={24} lg={12}>
           <Title
             level={2}
-
             style={{
               fontWeight: 700,
               marginBottom: "20px",
@@ -26,9 +20,7 @@ export default function JoinClassSection() {
           >
             Start your coding journey here
           </Title>
-
           <Paragraph
-
             style={{
               fontSize: "1.1rem",
               marginBottom: "30px",
@@ -41,10 +33,8 @@ export default function JoinClassSection() {
             </Text>
           </Paragraph>
         </Col>
-
         <Col xs={24} lg={10}>
           <div
-
             className={styles.imageWrapper}
           >
             <Image
@@ -52,7 +42,6 @@ export default function JoinClassSection() {
               alt="Laptop showing an online class"
               height={523}
               width={578}
-
               className={styles.image}
             />
           </div>

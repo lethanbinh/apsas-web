@@ -1,5 +1,4 @@
 import { apiService } from "./api";
-
 export interface SubmissionFeedback {
   id: number;
   feedbackText: string;
@@ -7,36 +6,29 @@ export interface SubmissionFeedback {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface SubmissionFeedbackListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: SubmissionFeedback[];
 }
-
 export interface SubmissionFeedbackApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: SubmissionFeedback;
 }
-
 export interface CreateSubmissionFeedbackPayload {
   submissionId: number;
   feedbackText: string;
 }
-
 export interface UpdateSubmissionFeedbackPayload {
   feedbackText: string;
 }
-
 export interface GetSubmissionFeedbackListParams {
   submissionId: number;
 }
-
 export class SubmissionFeedbackService {
-
   async getSubmissionFeedbackList(
     params: GetSubmissionFeedbackListParams
   ): Promise<SubmissionFeedback[]> {
@@ -46,8 +38,6 @@ export class SubmissionFeedbackService {
     );
     return response.result;
   }
-
-
   async createSubmissionFeedback(
     payload: CreateSubmissionFeedbackPayload
   ): Promise<SubmissionFeedback> {
@@ -60,8 +50,6 @@ export class SubmissionFeedbackService {
     );
     return response.result;
   }
-
-
   async updateSubmissionFeedback(
     submissionFeedbackId: number,
     payload: UpdateSubmissionFeedbackPayload
@@ -74,15 +62,12 @@ export class SubmissionFeedbackService {
     );
     return response.result;
   }
-
-
   async deleteSubmissionFeedback(
     submissionFeedbackId: number
   ): Promise<void> {
     const response = await apiService.delete<SubmissionFeedbackApiResponse>(
       `/SubmissionFeedback/${submissionFeedbackId}`
     );
-
     if (!response.isSuccess) {
       throw new Error(
         response.errorMessages?.join(", ") ||
@@ -91,6 +76,4 @@ export class SubmissionFeedbackService {
     }
   }
 }
-
 export const submissionFeedbackService = new SubmissionFeedbackService();
-

@@ -1,5 +1,4 @@
 "use client";
-
 import type { TableProps, TabsProps } from "antd";
 import { Button, Space, Table, Tag, Tabs } from "antd";
 import {
@@ -22,7 +21,6 @@ import { ClassesTable } from "./ClassesTable";
 import { CourseElementsTable } from "./CourseElementsTable";
 import { AssignRequestsTable } from "./AssignRequestsTable";
 import { formatUtcDate } from "../utils";
-
 interface SemesterCoursesTableProps {
   courses: SemesterCourse[];
   onEditCourse: (course: Course) => void;
@@ -48,7 +46,6 @@ interface SemesterCoursesTableProps {
   elementsWithAssessment?: Set<number>;
   elementsWithApprovedRequest?: Set<number>;
 }
-
 export const SemesterCoursesTable = ({
   courses,
   onEditCourse,
@@ -150,7 +147,6 @@ export const SemesterCoursesTable = ({
       ),
     },
   ];
-
   const expandedRowRender = (record: SemesterCourse) => {
     const tabItems: TabsProps["items"] = [
       {
@@ -236,7 +232,6 @@ export const SemesterCoursesTable = ({
     ];
     return <Tabs defaultActiveKey="1" items={tabItems} />;
   };
-
   return (
     <Table
       columns={columns}
@@ -247,4 +242,3 @@ export const SemesterCoursesTable = ({
     />
   );
 };
-

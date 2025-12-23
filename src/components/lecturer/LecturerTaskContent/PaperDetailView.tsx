@@ -1,14 +1,11 @@
 "use client";
-
 import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { EditOutlined } from "@ant-design/icons";
 import { Button, Card, Descriptions, Typography } from "antd";
 import { useState } from "react";
 import { PaperFormModal } from "./PaperFormModal";
 import styles from "./TaskContent.module.css";
-
 const { Title } = Typography;
-
 interface PaperDetailViewProps {
   paper: AssessmentPaper;
   isEditable: boolean;
@@ -16,7 +13,6 @@ interface PaperDetailViewProps {
   onResetStatus?: () => Promise<void>;
   updateStatusToInProgress?: () => Promise<void>;
 }
-
 export const PaperDetailView = ({
   paper,
   isEditable,
@@ -25,7 +21,6 @@ export const PaperDetailView = ({
   updateStatusToInProgress,
 }: PaperDetailViewProps) => {
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
-
   return (
     <div className={styles.card}>
       <div className={styles.cardHeader}>
@@ -51,7 +46,6 @@ export const PaperDetailView = ({
         </Descriptions.Item>
       </Descriptions>
       </div>
-
       <PaperFormModal
         open={isPaperModalOpen}
         onCancel={() => setIsPaperModalOpen(false)}
@@ -68,4 +62,3 @@ export const PaperDetailView = ({
     </div>
   );
 };
-

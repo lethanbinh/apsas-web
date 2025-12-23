@@ -1,12 +1,10 @@
 "use client";
-
 import { assignRequestService } from "@/services/assignRequestService";
 import { Lecturer } from "@/services/lecturerService";
 import { AssignRequest, CourseElement } from "@/services/semesterService";
 import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
 import moment from "moment";
 import { useEffect, useState } from "react";
-
 const parseUtcDate = (dateString?: string) => {
   if (!dateString) return null;
   const date = new Date(
@@ -14,7 +12,6 @@ const parseUtcDate = (dateString?: string) => {
   );
   return moment(date);
 };
-
 interface AssignRequestCrudModalProps {
   open: boolean;
   initialData: AssignRequest | null;
@@ -24,7 +21,6 @@ interface AssignRequestCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
   open,
   initialData,
@@ -38,14 +34,10 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
-
   const isEditMode = !!initialData;
-
   useEffect(() => {
     if (open) {
       if (isEditMode) {
-
-
         form.setFieldsValue({
           ...initialData,
           assignedLecturerId: Number(initialData.lecturer.id),
@@ -54,7 +46,6 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
           status: 1,
         });
       } else {
-
         const currentDate = moment();
         const formattedDate = currentDate.format("DD/MM/YYYY HH:mm:ss");
         form.resetFields();
@@ -65,17 +56,13 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const lecturerOptions = lecturers.map((lec) => ({
     label: `${lec.fullName} (${lec.accountCode})`,
     value: Number(lec.lecturerId),
   }));
-
-  // Get course element IDs that are already used in existing assign requests
   const usedCourseElementIds = new Set(
     existingAssignRequests
       .filter((req) => {
-        // When editing, exclude the current request's course element from the used list
         if (isEditMode && initialData && req.id === initialData.id) {
           return false;
         }
@@ -83,22 +70,17 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
       })
       .map((req) => req.courseElement.id)
   );
-
-  // Filter out course elements that are already used (except when editing the same request)
   const elementOptions = courseElements
     .filter((el) => {
-      // If editing and this is the current request's course element, always include it
       if (isEditMode && initialData && el.id === initialData.courseElement.id) {
         return true;
       }
-      // Otherwise, exclude if it's already used
       return !usedCourseElementIds.has(el.id);
     })
     .map((el) => ({
       label: el.name,
       value: el.id,
     }));
-
   const statusOptions = [
     { label: "Pending", value: 1 },
     { label: "Accepted", value: 2 },
@@ -106,22 +88,18 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
     { label: "In Progress", value: 4 },
     { label: "Completed", value: 5 },
   ];
-
   const handleFinish = async (values: any) => {
     setIsLoading(true);
     setError(null);
     try {
       let assignedAtValue: string;
       if (isEditMode) {
-
         assignedAtValue = initialData?.assignedAt
           ? (initialData.assignedAt.endsWith("Z") ? initialData.assignedAt : initialData.assignedAt + "Z")
           : moment().toISOString();
       } else {
-
         assignedAtValue = moment().toISOString();
       }
-
       const payload = {
         ...values,
         assignedAt: assignedAtValue,
@@ -129,7 +107,6 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
         assignedApproverLecturerId: values.assignedApproverLecturerId || undefined,
         status: values.status || 1,
       };
-
       if (isEditMode) {
         await assignRequestService.updateAssignRequest(
           initialData!.id,
@@ -154,7 +131,6 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Assign Request" : "Create Assign Request"}
@@ -183,8 +159,6 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                 if (!value) return Promise.resolve();
                 const lecturerId = form.getFieldValue("assignedLecturerId");
                 if (!lecturerId) return Promise.resolve();
-
-
                 if (existingAssignRequests) {
                   const duplicate = existingAssignRequests.find(
                     (req) =>
@@ -195,7 +169,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                   if (duplicate) {
                     return Promise.reject(
                       new Error(
-                        "Đã tồn tại assign request với cùng course element và lecturer trong môn học này!"
+                        "An assign request with the same course element and lecturer already exists in this course!"
                       )
                     );
                   }
@@ -225,16 +199,12 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                 if (!value) return Promise.resolve();
                 const courseElementId = form.getFieldValue("courseElementId");
                 if (!courseElementId) return Promise.resolve();
-
-
                 const approverLecturerId = form.getFieldValue("assignedApproverLecturerId");
                 if (approverLecturerId && Number(value) === Number(approverLecturerId)) {
                   return Promise.reject(
                     new Error("Assign to Lecturer and Assign Approver Lecturer cannot be the same person!")
                   );
                 }
-
-
                 if (existingAssignRequests) {
                   const duplicate = existingAssignRequests.find(
                     (req) =>
@@ -245,7 +215,7 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
                   if (duplicate) {
                     return Promise.reject(
                       new Error(
-                        "Đã tồn tại assign request với cùng course element và lecturer trong môn học này!"
+                        "An assign request with the same course element and lecturer already exists in this course!"
                       )
                     );
                   }
@@ -271,17 +241,13 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
           rules={[
             {
               validator: (_, value) => {
-
                 if (!value) return Promise.resolve();
-
-
                 const assignedLecturerId = form.getFieldValue("assignedLecturerId");
                 if (assignedLecturerId && Number(value) === Number(assignedLecturerId)) {
                   return Promise.reject(
                     new Error("Assign Approver Lecturer cannot be the same as Assign to Lecturer!")
                   );
                 }
-
                 return Promise.resolve();
               },
             },
@@ -334,7 +300,6 @@ const AssignRequestCrudModalContent: React.FC<AssignRequestCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const AssignRequestCrudModal: React.FC<AssignRequestCrudModalProps> = (
   props
 ) => (

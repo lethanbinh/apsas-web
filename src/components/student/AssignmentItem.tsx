@@ -1,5 +1,4 @@
 "use client";
-
 import PaperAssignmentModal from "@/components/features/PaperAssignmentModal";
 import { Submission } from "@/services/submissionService";
 import {
@@ -25,17 +24,14 @@ import { AssignmentData } from "./data";
 import { DeadlineDisplay } from "./DeadlineDisplay";
 import { RequirementModal } from "./RequirementModal";
 import { ScoreFeedbackModal } from "./ScoreFeedbackModal";
-
 const { Title, Paragraph, Text } = Typography;
 const { Dragger } = Upload;
-
 interface AssignmentItemProps {
   data: AssignmentData;
   isExam?: boolean;
   isLab?: boolean;
   isPracticalExam?: boolean;
 }
-
 export function AssignmentItem({ data, isExam = false, isLab = false, isPracticalExam = false }: AssignmentItemProps) {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isRequirementModalVisible, setIsRequirementModalVisible] = useState(false);
@@ -43,7 +39,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
   const [isPaperModalVisible, setIsPaperModalVisible] = useState(false);
   const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
   const { message } = App.useApp();
-
   const {
     lastSubmission,
     submissionCount,
@@ -52,7 +47,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     autoGradedScores,
     isPublished,
   } = useAssignmentData(data, isLab);
-
   const {
     handleSubmit: handleSubmitFile,
     canSubmit,
@@ -62,24 +56,20 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     isBeforeStartDate,
     isSubmitting,
   } = useSubmissionHandlers(data, isLab, lastSubmission, submissionCount);
-
   const handleSubmit = async () => {
     if (fileList.length === 0) {
       message.warning("Please select a file to submit");
       return;
     }
-
     const file = fileList[0].originFileObj as File;
     if (!file) {
       message.warning("Please select a valid file");
       return;
     }
-
     await handleSubmitFile(file);
     setFileList([]);
     setIsSubmitModalVisible(false);
   };
-
   const uploadProps = {
     fileList,
     onRemove: (file: UploadFile) => {
@@ -90,10 +80,9 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         file.type === "application/x-zip-compressed" ||
         file.name.toLowerCase().endsWith(".zip");
       if (!isZip) {
-        message.error("Chỉ chấp nhận file ZIP. Vui lòng chọn file ZIP để nộp.");
+        message.error("Only Accept zip's file. Please choose zip's file to submit");
         return false;
       }
-
       const uploadFile: UploadFile = {
         uid: `${Date.now()}-${file.name}`,
         name: file.name,
@@ -104,7 +93,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return false;
     },
   };
-
   return (
     <div className={styles.itemContent}>
       {(!isExam || isPracticalExam) && (
@@ -132,7 +120,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                   View Score & Feedback
                 </AntButton>
               </div>
-
               <div className={styles.downloadSection}>
                 {data.requirementFile && (
                   <Alert
@@ -173,14 +160,12 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
               </div>
             </div>
           )}
-
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
               {data.startAt ? "Submission Period" : "Deadline"}
             </Title>
             <DeadlineDisplay date={data.date} startDate={data.startAt} />
           </div>
-
           {isLab && labSubmissionHistory.length > 0 && (
             <div className={styles.contentSection} style={{ marginTop: "24px" }}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
@@ -231,7 +216,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                           </Text>
                           {index === 0 && <Tag color="blue">Latest</Tag>}
                           {(() => {
-                            // If published and teacher score exists, show teacher score
                             if (isPublished && labSubmissionScores[submission.id] !== undefined) {
                               return (
                                 <Tag color="green">
@@ -241,7 +225,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                                 </Tag>
                               );
                             }
-                            // Otherwise, show auto-graded score if available
                             if (autoGradedScores[submission.id] !== undefined) {
                               return (
                                 <Tag color="blue">
@@ -273,13 +256,11 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
               />
             </div>
           )}
-
           {!isLab && (
             <div className={styles.submissionSection}>
               <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
                 Your Submission
               </Title>
-
               {lastSubmission && (
                 <Alert
                   message="Last Submission"
@@ -308,7 +289,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                   style={{ marginBottom: "16px" }}
                 />
               )}
-
               {!hasDeadline() ? (
                 <Alert
                   message="No Deadline Set"
@@ -339,7 +319,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
               )}
             </div>
           )}
-
           {isLab && (
             <div style={{ marginTop: "16px" }}>
               <Button
@@ -360,7 +339,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           )}
         </>
       )}
-
       {isExam && !isPracticalExam && (
         <>
           <div className={styles.contentSection} style={{ marginTop: "24px" }}>
@@ -369,7 +347,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </Title>
             <DeadlineDisplay date={data.date} startDate={data.startAt} />
           </div>
-
           <div className={styles.contentSection} style={{ marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #e6f7ff" }}>
             <Title level={5} style={{ fontWeight: 600, marginBottom: "12px" }}>
               Results
@@ -385,7 +362,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           </div>
         </>
       )}
-
       {(!isExam || isPracticalExam) && (
         <RequirementModal
           open={isRequirementModalVisible}
@@ -399,14 +375,12 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           examSessionId={data.examSessionId}
         />
       )}
-
       <ScoreFeedbackModal
         open={isScoreModalVisible}
         onCancel={() => setIsScoreModalVisible(false)}
         data={data}
         isLab={isLab}
       />
-
       {isLab && data.assessmentTemplateId && (
         <PaperAssignmentModal
           isOpen={isPaperModalVisible}
@@ -415,7 +389,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
           classId={data.classId}
         />
       )}
-
       <Modal
         title={isLab
           ? (lastSubmission ? `Resubmit Lab (${submissionCount}/3)` : `Submit Lab (${submissionCount}/3)`)
@@ -456,7 +429,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             Drag & drop your ZIP file here, or click to browse
           </p>
           <p className="ant-upload-hint" style={{ color: "#999", fontSize: "12px" }}>
-            Chỉ chấp nhận file ZIP
+            Only ZIP files are accepted
           </p>
         </Dragger>
         <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>

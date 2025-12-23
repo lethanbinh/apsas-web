@@ -5,16 +5,13 @@ import { Input } from "antd";
 import { getQuestionColumns } from "../utils/tableUtils";
 import type { MessageInstance } from "antd/es/message/interface";
 import styles from "../page.module.css";
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
   rubricComments: { [rubricId: number]: string };
 }
-
 interface QuestionsGradingSectionProps {
   questions: QuestionWithRubrics[];
   handleRubricScoreChange: (
@@ -32,7 +29,6 @@ interface QuestionsGradingSectionProps {
   isPublished: boolean;
   message: MessageInstance;
 }
-
 export function QuestionsGradingSection({
   questions,
   handleRubricScoreChange,
@@ -42,7 +38,6 @@ export function QuestionsGradingSection({
   message,
 }: QuestionsGradingSectionProps) {
   const sortedQuestions = [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
-
   const renderQuestionCollapse = (question: QuestionWithRubrics, index: number) => {
     const questionTotalScore = Object.values(question.rubricScores).reduce(
       (sum, score) => sum + (score || 0),
@@ -52,7 +47,6 @@ export function QuestionsGradingSection({
       (sum, r) => sum + r.score,
       0
     );
-
     return {
       key: `question-${index}`,
       label: (
@@ -84,9 +78,7 @@ export function QuestionsGradingSection({
               </pre>
             </div>
           )}
-
           <Divider />
-
           <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
           <Table
             columns={getQuestionColumns(question, handleRubricScoreChange, isSemesterPassed, isPublished, message)}
@@ -96,9 +88,7 @@ export function QuestionsGradingSection({
             size="small"
             scroll={{ x: "max-content" }}
           />
-
           <Divider />
-
           <div style={{ marginTop: 16 }}>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Comments
@@ -118,7 +108,6 @@ export function QuestionsGradingSection({
       ),
     };
   };
-
   return (
     <Collapse
       items={sortedQuestions.map((question, index) =>
@@ -127,4 +116,3 @@ export function QuestionsGradingSection({
     />
   );
 }
-

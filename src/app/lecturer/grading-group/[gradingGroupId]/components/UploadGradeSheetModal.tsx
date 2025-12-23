@@ -2,9 +2,7 @@ import { Button, Modal, Space, Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
-
 const { Text } = Typography;
-
 interface UploadGradeSheetModalProps {
   visible: boolean;
   onCancel: () => void;
@@ -14,7 +12,6 @@ interface UploadGradeSheetModalProps {
   uploadFileList: UploadFile[];
   onFileChange: (file: File | null, fileList: UploadFile[]) => void;
 }
-
 export function UploadGradeSheetModal({
   visible,
   onCancel,
@@ -60,4 +57,3 @@ export function UploadGradeSheetModal({
     </Modal>
   );
 }
-

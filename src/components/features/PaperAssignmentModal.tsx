@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useMemo } from "react";
 import { Modal, Typography, Spin, Collapse, Table, Tag, Space, Divider, List } from "antd";
 import { Button } from "../ui/Button";
@@ -17,9 +16,7 @@ import {
 } from "@/services/assessmentTemplateService";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
-
 const { Title, Paragraph, Text } = Typography;
-
 interface PaperAssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,7 +24,6 @@ interface PaperAssignmentModalProps {
   classAssessmentId?: number;
   classId?: number;
 }
-
 export default function PaperAssignmentModal({
   isOpen,
   onClose,
@@ -35,10 +31,7 @@ export default function PaperAssignmentModal({
   classAssessmentId,
   classId,
 }: PaperAssignmentModalProps) {
-
   const effectiveClassId = classId || (typeof window !== 'undefined' ? Number(localStorage.getItem("selectedClassId")) : undefined);
-
-
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -48,24 +41,18 @@ export default function PaperAssignmentModal({
     }),
     enabled: isOpen && !!classAssessmentId && !!effectiveClassId && !template?.id,
   });
-
-
   const assessmentTemplateId = useMemo(() => {
     if (template?.id) {
       return template.id;
     }
-
     if (classAssessmentId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
       if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
-
     return null;
   }, [template?.id, classAssessmentId, classAssessmentsData]);
-
-
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -74,7 +61,6 @@ export default function PaperAssignmentModal({
     }),
     enabled: isOpen && !!assessmentTemplateId,
   });
-
   const templateData = useMemo(() => {
     if (template) return template;
     if (templatesData?.items && assessmentTemplateId) {
@@ -82,10 +68,7 @@ export default function PaperAssignmentModal({
     }
     return null;
   }, [template, templatesData, assessmentTemplateId]);
-
   const templateDescription = templateData?.description || "";
-
-
   const { data: filesData } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -95,10 +78,7 @@ export default function PaperAssignmentModal({
     }),
     enabled: isOpen && !!assessmentTemplateId,
   });
-
   const files = filesData?.items || [];
-
-
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -108,10 +88,7 @@ export default function PaperAssignmentModal({
     }),
     enabled: isOpen && !!assessmentTemplateId,
   });
-
   const papers = papersData?.items || [];
-
-
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -123,8 +100,6 @@ export default function PaperAssignmentModal({
       enabled: isOpen && papers.length > 0,
     })),
   });
-
-
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
@@ -138,13 +113,9 @@ export default function PaperAssignmentModal({
     });
     return questionsMap;
   }, [papers, questionsQueries]);
-
-
   const allQuestionIds = useMemo(() => {
     return Object.values(questions).flat().map(q => q.id);
   }, [questions]);
-
-
   const rubricsQueries = useQueries({
     queries: allQuestionIds.map((questionId) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(questionId),
@@ -156,8 +127,6 @@ export default function PaperAssignmentModal({
       enabled: isOpen && allQuestionIds.length > 0,
     })),
   });
-
-
   const rubrics = useMemo(() => {
     const rubricsMap: { [questionId: number]: RubricItem[] } = {};
     allQuestionIds.forEach((questionId, index) => {
@@ -168,8 +137,6 @@ export default function PaperAssignmentModal({
     });
     return rubricsMap;
   }, [allQuestionIds, rubricsQueries]);
-
-
   const loading = (
     (!!classAssessmentId && !!effectiveClassId && !template?.id && !classAssessmentsData) ||
     (!!assessmentTemplateId && !templatesData) ||
@@ -178,7 +145,6 @@ export default function PaperAssignmentModal({
     questionsQueries.some(q => q.isLoading) ||
     rubricsQueries.some(q => q.isLoading)
   );
-
   const getQuestionColumns = (question: AssessmentQuestion): ColumnsType<RubricItem> => [
     {
       title: "Criteria",
@@ -217,7 +183,6 @@ export default function PaperAssignmentModal({
       render: (score: number) => <Tag color="blue">{score}</Tag>,
     },
   ];
-
   return (
     <Modal
       title={
@@ -246,7 +211,6 @@ export default function PaperAssignmentModal({
               <Divider />
             </>
           )}
-
           {}
           {files.length > 0 && (
             <>
@@ -270,7 +234,6 @@ export default function PaperAssignmentModal({
               <Divider />
             </>
           )}
-
           {}
           {papers.length > 0 && (
             <>
@@ -296,7 +259,6 @@ export default function PaperAssignmentModal({
                             Question {qIndex + 1} (Score: {question.score})
                           </Title>
                           <Paragraph>{question.questionText}</Paragraph>
-
                           {question.questionSampleInput && (
                             <div style={{ marginTop: 12 }}>
                               <Text strong>Sample Input:</Text>
@@ -305,7 +267,6 @@ export default function PaperAssignmentModal({
                               </pre>
                             </div>
                           )}
-
                           {question.questionSampleOutput && (
                             <div style={{ marginTop: 12 }}>
                               <Text strong>Sample Output:</Text>
@@ -314,7 +275,6 @@ export default function PaperAssignmentModal({
                               </pre>
                             </div>
                           )}
-
                           {}
                           {rubrics[question.id] && rubrics[question.id].length > 0 && (
                             <div style={{ marginTop: 12 }}>
@@ -329,7 +289,6 @@ export default function PaperAssignmentModal({
                               />
                             </div>
                           )}
-
                           <Divider />
                         </div>
                       ))}

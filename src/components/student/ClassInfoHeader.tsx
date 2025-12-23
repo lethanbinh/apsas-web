@@ -1,5 +1,4 @@
 "use client";
-
 import { Typography } from "antd";
 import {
   ReadOutlined,
@@ -8,14 +7,11 @@ import {
   InfoCircleOutlined,
 } from "@ant-design/icons";
 import { ClassInfo as ClassInfoType } from "@/services/classService";
-
 const { Title } = Typography;
-
 interface ClassInfoHeaderProps {
   classData: ClassInfoType;
   showTotalStudents?: boolean;
 }
-
 export const ClassInfoHeader = ({ classData, showTotalStudents = true }: ClassInfoHeaderProps) => {
   return (
     <>
@@ -30,7 +26,6 @@ export const ClassInfoHeader = ({ classData, showTotalStudents = true }: ClassIn
       >
         {classData.courseName} ({classData.classCode})
       </Title>
-
       <div
         style={{
           display: "grid",
@@ -101,4 +96,3 @@ export const ClassInfoHeader = ({ classData, showTotalStudents = true }: ClassIn
     </>
   );
 };
-

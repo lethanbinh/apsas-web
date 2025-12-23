@@ -1,11 +1,8 @@
 import { ROLES } from "@/lib/constants";
 import { User } from "@/types";
 import * as XLSX from "xlsx";
-
 export const validateAccountData = (row: any, rowIndex: number): string | null => {
   const rowNum = rowIndex + 2;
-
-
   if (!row["Username"] || !row["Username"].toString().trim()) {
     return `Row ${rowNum}: Username is required`;
   }
@@ -60,7 +57,6 @@ export const validateAccountData = (row: any, rowIndex: number): string | null =
   if (isNaN(role) || role < 0 || role > 4) {
     return `Row ${rowNum}: Role must be 0-4 (0=Admin, 1=Lecturer, 2=Student, 3=HOD, 4=Examiner)`;
   }
-
   if (role === ROLES.LECTURER) {
     if (!row["Department"] || !row["Department"].toString().trim()) {
       return `Row ${rowNum}: Department is required for Lecturer role`;
@@ -75,10 +71,8 @@ export const validateAccountData = (row: any, rowIndex: number): string | null =
   if (row["Password"].toString().trim().length < 6) {
     return `Row ${rowNum}: Password must be at least 6 characters`;
   }
-
   return null;
 };
-
 export const parseExcelFile = (file: File): Promise<any[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -100,7 +94,6 @@ export const parseExcelFile = (file: File): Promise<any[]> => {
     reader.readAsArrayBuffer(file);
   });
 };
-
 export const exportUsersToExcel = (users: User[]): void => {
   const roleMap: Record<number, string> = {
     [ROLES.ADMIN]: "Admin",
@@ -109,13 +102,11 @@ export const exportUsersToExcel = (users: User[]): void => {
     [ROLES.HOD]: "HOD",
     [ROLES.EXAMINER]: "Examiner",
   };
-
   const genderMap: Record<number, string> = {
     0: "Male",
     1: "Female",
     2: "Other",
   };
-
   const excelData = users.map((user, index) => ({
     "No": index + 1,
     "Account Code": user.accountCode || "",
@@ -128,11 +119,9 @@ export const exportUsersToExcel = (users: User[]): void => {
     "Date of Birth": user.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
     "Role": roleMap[user.role] || user.role.toString(),
   }));
-
   const ws = XLSX.utils.json_to_sheet(excelData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "All Accounts");
-
   ws["!cols"] = [
     { wch: 8 },
     { wch: 15 },
@@ -145,12 +134,10 @@ export const exportUsersToExcel = (users: User[]): void => {
     { wch: 15 },
     { wch: 12 },
   ];
-
   const timestamp = new Date().toISOString().split("T")[0].replace(/-/g, "");
   const filename = `All_Accounts_${timestamp}.xlsx`;
   XLSX.writeFile(wb, filename);
 };
-
 export const generateSampleTemplate = (): void => {
   const sampleAccounts = [];
   const roles = [
@@ -178,7 +165,6 @@ export const generateSampleTemplate = (): void => {
     "369 Nguyen Dinh Chieu Street, District 3, Ho Chi Minh City",
     "741 Cach Mang Thang Tam Street, District 10, Ho Chi Minh City"
   ];
-
   for (let i = 1; i <= 50; i++) {
     const roleIndex = Math.floor((i - 1) / 10);
     const role = roles[roleIndex % roles.length];
@@ -192,15 +178,11 @@ export const generateSampleTemplate = (): void => {
     const email = `user${String(i).padStart(3, "0")}@example.com`;
     const phoneNumber = `0${Math.floor(Math.random() * 9) + 1}${Math.floor(Math.random() * 10000000).toString().padStart(8, "0")}`;
     const address = addresses[Math.floor(Math.random() * addresses.length)];
-
-
     const year = 1990 + Math.floor(Math.random() * 16);
     const month = Math.floor(Math.random() * 12) + 1;
     const day = Math.floor(Math.random() * 28) + 1;
     const dateOfBirth = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
     const password = `Pass${i}@123`;
-
     const accountData: any = {
       "Username": username,
       "Email": email,
@@ -212,20 +194,15 @@ export const generateSampleTemplate = (): void => {
       "Role": role.value,
       "Password": password
     };
-
-
     if (role.value === "1") {
       accountData["Department"] = departments[Math.floor(Math.random() * departments.length)];
       accountData["Specialization"] = specializations[Math.floor(Math.random() * specializations.length)];
     }
-
     sampleAccounts.push(accountData);
   }
-
   const ws = XLSX.utils.json_to_sheet(sampleAccounts);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Accounts");
-
   ws["!cols"] = [
     { wch: 15 },
     { wch: 25 },
@@ -239,8 +216,5 @@ export const generateSampleTemplate = (): void => {
     { wch: 20 },
     { wch: 20 },
   ];
-
   XLSX.writeFile(wb, "Account_Import_Template.xlsx");
 };
-
-

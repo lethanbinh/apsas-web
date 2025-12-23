@@ -1,19 +1,15 @@
 "use client";
-
 import type { TableProps } from "antd";
 import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
 import { AssignRequest } from "@/services/semesterService";
 import { formatUtcDate } from "../utils";
-
 const { Text } = Typography;
-
 interface AssignRequestsTableProps {
   requests: AssignRequest[];
   onEdit: (request: AssignRequest) => void;
   onDelete: (requestId: number) => void;
   isSemesterEnded?: boolean;
 }
-
 export const AssignRequestsTable = ({
   requests,
   onEdit,
@@ -22,7 +18,6 @@ export const AssignRequestsTable = ({
 }: AssignRequestsTableProps) => {
   const getStatusDisplay = (status: number | undefined) => {
     if (status === undefined || status === null) return { text: "Pending", color: "default" };
-
     switch (status) {
       case 1:
         return { text: "Pending", color: "default" };
@@ -38,11 +33,9 @@ export const AssignRequestsTable = ({
         return { text: "Pending", color: "default" };
     }
   };
-
   const isApproved = (status: number | undefined) => {
     return status === 5;
   };
-
   const columns: TableProps<AssignRequest>["columns"] = [
     {
       title: "Course Element",
@@ -101,19 +94,16 @@ export const AssignRequestsTable = ({
         const approved = isApproved(status);
         const isEditDisabled = isSemesterEnded || approved;
         const isDeleteDisabled = isSemesterEnded || approved;
-
         const editTooltipTitle = isEditDisabled
           ? approved
             ? "This assign request has been approved. Editing is not allowed."
             : "The semester has ended. Editing is not allowed."
           : "";
-
         const deleteTooltipTitle = isDeleteDisabled
           ? approved
             ? "This assign request has been approved. Deletion is not allowed."
             : "The semester has ended. Deletion is not allowed."
           : "";
-
         const editButton = (
           <Button
             type="link"
@@ -123,7 +113,6 @@ export const AssignRequestsTable = ({
             Edit
           </Button>
         );
-
         const deleteButton = (
           <Button
             type="link"
@@ -134,7 +123,6 @@ export const AssignRequestsTable = ({
             Delete
           </Button>
         );
-
         return (
           <Space>
             {isEditDisabled ? (
@@ -156,7 +144,6 @@ export const AssignRequestsTable = ({
       },
     },
   ];
-
   return (
     <Table
       columns={columns}
@@ -167,4 +154,3 @@ export const AssignRequestsTable = ({
     />
   );
 };
-

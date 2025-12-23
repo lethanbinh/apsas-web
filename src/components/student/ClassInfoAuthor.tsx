@@ -1,15 +1,11 @@
 "use client";
-
 import { Avatar, Typography } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import styles from "./ClassInfo.module.css";
-
 const { Text } = Typography;
-
 interface ClassInfoAuthorProps {
   lecturerName: string;
 }
-
 export const ClassInfoAuthor = ({ lecturerName }: ClassInfoAuthorProps) => {
   return (
     <div className={styles.authorBox}>
@@ -37,4 +33,3 @@ export const ClassInfoAuthor = ({ lecturerName }: ClassInfoAuthorProps) => {
     </div>
   );
 };
-

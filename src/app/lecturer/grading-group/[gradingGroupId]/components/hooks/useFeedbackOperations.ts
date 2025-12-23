@@ -6,7 +6,6 @@ import { geminiService, FeedbackData } from "@/services/geminiService";
 import { Submission } from "@/services/submissionService";
 import type { MessageInstance } from "antd/es/message/interface";
 import { App } from "antd";
-
 function deserializeFeedback(feedbackText: string): FeedbackData | null {
   if (!feedbackText || feedbackText.trim() === "") {
     return {
@@ -20,7 +19,6 @@ function deserializeFeedback(feedbackText: string): FeedbackData | null {
       errorHandling: "",
     };
   }
-
   try {
     const parsed = JSON.parse(feedbackText);
     if (typeof parsed === "object" && parsed !== null) {
@@ -40,17 +38,14 @@ function deserializeFeedback(feedbackText: string): FeedbackData | null {
     return null;
   }
 }
-
 function serializeFeedback(feedbackData: FeedbackData): string {
   return JSON.stringify(feedbackData);
 }
-
 interface UseFeedbackOperationsProps {
   visible: boolean;
   submission: Submission;
   setSubmissionFeedbackId: (id: number | null) => void;
 }
-
 export function useFeedbackOperations({
   visible,
   submission,
@@ -70,12 +65,8 @@ export function useFeedbackOperations({
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [loadingAiFeedback, setLoadingAiFeedback] = useState(false);
   const [submissionFeedbackId, setSubmissionFeedbackIdLocal] = useState<number | null>(null);
-
-
   const processedFeedbackRef = useRef<string | null>(null);
   const isProcessingRef = useRef(false);
-
-
   const { data: feedbackList = [], isLoading: isLoadingFeedback } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', submission.id],
     queryFn: async () => {
@@ -86,28 +77,20 @@ export function useFeedbackOperations({
     },
     enabled: visible && !!submission.id,
   });
-
-
   useEffect(() => {
     if (feedbackList.length > 0) {
       const existingFeedback = feedbackList[0];
       setSubmissionFeedbackIdLocal(existingFeedback.id);
       setSubmissionFeedbackId(existingFeedback.id);
-
-
       if (processedFeedbackRef.current === existingFeedback.feedbackText) {
         return;
       }
-
       let parsedFeedback: FeedbackData | null = deserializeFeedback(existingFeedback.feedbackText);
-
       if (parsedFeedback === null) {
-
         if (!isProcessingRef.current && processedFeedbackRef.current !== existingFeedback.feedbackText) {
           isProcessingRef.current = true;
           processedFeedbackRef.current = existingFeedback.feedbackText;
           setLoadingFeedback(true);
-
           geminiService.formatFeedback(existingFeedback.feedbackText)
             .then((formatted) => {
               setFeedback(formatted);
@@ -131,12 +114,10 @@ export function useFeedbackOperations({
             });
         }
       } else {
-
         processedFeedbackRef.current = existingFeedback.feedbackText;
         setFeedback(parsedFeedback);
       }
     } else {
-
       processedFeedbackRef.current = null;
       isProcessingRef.current = false;
       setSubmissionFeedbackIdLocal(null);
@@ -152,12 +133,9 @@ export function useFeedbackOperations({
         errorHandling: "",
       });
     }
-
   }, [feedbackList, submission.id]);
-
   const saveFeedback = async (feedbackData: FeedbackData) => {
     const feedbackText = serializeFeedback(feedbackData);
-
     if (submissionFeedbackId) {
       await submissionFeedbackService.updateSubmissionFeedback(submissionFeedbackId, {
         feedbackText: feedbackText,
@@ -171,13 +149,11 @@ export function useFeedbackOperations({
       setSubmissionFeedbackId(newFeedback.id);
     }
   };
-
   const handleGetAiFeedback = async () => {
     if (!submission) {
       message.error("No submission selected");
       return;
     }
-
     try {
       setLoadingAiFeedback(true);
       const formattedFeedback = await gradingService.getFormattedAiFeedback(submission.id, "OpenAI");
@@ -197,13 +173,11 @@ export function useFeedbackOperations({
       setLoadingAiFeedback(false);
     }
   };
-
   const handleSaveFeedback = async () => {
     if (!submission) {
       message.error("No submission selected");
       return;
     }
-
     try {
       await saveFeedback(feedback);
       message.success("Feedback saved successfully");
@@ -212,7 +186,6 @@ export function useFeedbackOperations({
       message.error(error?.message || "Failed to save feedback");
     }
   };
-
   return {
     feedback,
     loadingFeedback: loadingFeedback || isLoadingFeedback,
@@ -223,4 +196,3 @@ export function useFeedbackOperations({
     handleSaveFeedback,
   };
 }
-

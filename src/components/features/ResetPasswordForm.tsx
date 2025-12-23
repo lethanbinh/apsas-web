@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { Form, Input, Button, App } from "antd";
 import { useRouter } from "next/navigation";
@@ -12,9 +11,7 @@ import {
   ResetPasswordRequest,
 } from "@/types";
 import Logo from "../../../public/logo/Logo";
-
 type ResetPasswordStep = "email" | "otp" | "newPassword";
-
 const ResetPasswordFormContent: React.FC = () => {
   const [form] = Form.useForm();
   const router = useRouter();
@@ -24,12 +21,10 @@ const ResetPasswordFormContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState<string>("");
   const [otp, setOtp] = useState<string>("");
-
   const handleForgotPassword = async (values: ForgotPasswordRequest) => {
     try {
       setIsLoading(true);
       setErrors({});
-
       const emailExists = await accountService.checkEmailExists(values.email);
       if (!emailExists) {
         const errorMessage = "Email does not exist in the system. Please check your email address.";
@@ -41,7 +36,6 @@ const ResetPasswordFormContent: React.FC = () => {
         setIsLoading(false);
         return;
       }
-
       setEmail(values.email);
       await authService.forgotPassword(values);
       message.success("OTP sent to your email!");
@@ -54,7 +48,6 @@ const ResetPasswordFormContent: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const handleVerifyOtp = async (values: VerifyOtpRequest) => {
     try {
       setIsLoading(true);
@@ -71,12 +64,10 @@ const ResetPasswordFormContent: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const handleResetPassword = async (values: ResetPasswordRequest) => {
     try {
       setIsLoading(true);
       setErrors({});
-
       await authService.resetPassword({
         email,
         otp,
@@ -92,7 +83,6 @@ const ResetPasswordFormContent: React.FC = () => {
       setIsLoading(false);
     }
   };
-
   const renderEmailStep = () => (
     <Form
       form={form}
@@ -131,7 +121,6 @@ const ResetPasswordFormContent: React.FC = () => {
       </Form.Item>
     </Form>
   );
-
   const renderOtpStep = () => (
     <Form
       form={form}
@@ -171,7 +160,6 @@ const ResetPasswordFormContent: React.FC = () => {
       </Form.Item>
     </Form>
   );
-
   const renderNewPasswordStep = () => (
     <Form
       form={form}
@@ -193,7 +181,6 @@ const ResetPasswordFormContent: React.FC = () => {
           className="reset-password-input"
         />
       </Form.Item>
-
       <Form.Item
         name="confirmPassword"
         label="Retype Password"
@@ -215,13 +202,11 @@ const ResetPasswordFormContent: React.FC = () => {
           className="login-input"
         />
       </Form.Item>
-
       {errors.general && (
         <div className="error-message">
           <p className="error-text">{errors.general}</p>
         </div>
       )}
-
       <Form.Item>
         <Button
           type="primary"
@@ -234,12 +219,9 @@ const ResetPasswordFormContent: React.FC = () => {
       </Form.Item>
     </Form>
   );
-
   const handleGoogleLogin = () => {
-
     console.log("Google login clicked");
   };
-
   const getTitle = () => {
     switch (currentStep) {
       case "email":
@@ -252,13 +234,11 @@ const ResetPasswordFormContent: React.FC = () => {
         return "Reset password";
     }
   };
-
   return (
     <div className="login-form-container">
       <div className="login-logo">
         <Logo />
       </div>
-
       <div className="reset-password-form-header">
         <h1 className="reset-password-title">{getTitle()}</h1>
         {currentStep === "email" && (
@@ -271,18 +251,14 @@ const ResetPasswordFormContent: React.FC = () => {
           <p className="login-subtitle">Please enter your new password.</p>
         )}
       </div>
-
       {currentStep === "email" && renderEmailStep()}
       {currentStep === "otp" && renderOtpStep()}
       {currentStep === "newPassword" && renderNewPasswordStep()}
-
       <div className="login-footer">
         <p><Link href="/login" className="register-link">Back to Sign in</Link></p>
       </div>
     </div>
   );
 };
-
 const ResetPasswordForm: React.FC = () => <ResetPasswordFormContent />;
-
 export default ResetPasswordForm;

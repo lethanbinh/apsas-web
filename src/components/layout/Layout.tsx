@@ -1,7 +1,4 @@
-
-
 "use client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { Layout as AntLayout } from "antd";
 import { usePathname } from "next/navigation";
@@ -11,25 +8,19 @@ import { Header } from "./Header";
 import { HeaderAdmin } from "./HeaderAdmin";
 import LayoutAdmin from "./LayoutAdmin";
 import { SidebarProvider } from "./SidebarContext";
-
 const { Content } = AntLayout;
-
 interface LayoutProps {
   children: React.ReactNode;
 }
-
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user } = useAuth();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
     setMounted(true);
   }, []);
-
   const role = user?.role;
   const isProfilePage = pathname === "/profile";
-
   if (!mounted) {
     return (
       <SidebarProvider>
@@ -41,7 +32,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </SidebarProvider>
     );
   }
-
   if (isProfilePage) {
     return (
       <SidebarProvider>
@@ -62,7 +52,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       </SidebarProvider>
     );
   }
-
   if (role === 0) {
     return <LayoutAdmin>{children}</LayoutAdmin>;
   }

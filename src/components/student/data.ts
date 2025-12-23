@@ -1,27 +1,21 @@
-
-
 import dayjs from "dayjs";
-
 export interface RequirementContent {
   type: "heading" | "paragraph" | "image";
   content?: string;
   src?: string;
 }
-
 export interface GradeCriterion {
   id: string;
   name: string;
   score: string;
   reason: string;
 }
-
 export interface SubmissionItem {
   id: string;
   fileName: string;
   thumbnailUrl: string;
   submissionTime: string;
 }
-
 export interface AssignmentData {
   id: string;
   status: string;
@@ -39,7 +33,6 @@ export interface AssignmentData {
   suggestionsAvoid: string;
   suggestionsImprove: string;
   submissions: SubmissionItem[];
-
   classAssessmentId?: number;
   examSessionId?: number;
   courseElementId?: number;
@@ -48,7 +41,6 @@ export interface AssignmentData {
   startAt?: string;
   isPublished?: boolean;
 }
-
 export const initialAssignmentData: AssignmentData[] = [
   {
     id: "1",

@@ -1,9 +1,7 @@
 "use client";
-
 import type { TableProps } from "antd";
 import { Button, Space, Table, Tag, Tooltip } from "antd";
 import { CourseElement } from "@/services/semesterService";
-
 interface CourseElementsTableProps {
   elements: CourseElement[];
   onEdit: (element: CourseElement) => void;
@@ -12,7 +10,6 @@ interface CourseElementsTableProps {
   elementsWithAssessment?: Set<number>;
   elementsWithApprovedRequest?: Set<number>;
 }
-
 export const CourseElementsTable = ({
   elements,
   onEdit,
@@ -33,7 +30,6 @@ export const CourseElementsTable = ({
         return "Unknown";
     }
   };
-
   const getElementTypeColor = (elementType: number) => {
     switch (elementType) {
       case 0:
@@ -46,7 +42,6 @@ export const CourseElementsTable = ({
         return "default";
     }
   };
-
   const columns: TableProps<CourseElement>["columns"] = [
     {
       title: "Name",
@@ -77,7 +72,6 @@ export const CourseElementsTable = ({
         const hasApprovedRequest = elementsWithApprovedRequest.has(record.id);
         const isEditDisabled = isSemesterEnded || hasAssessment || hasApprovedRequest;
         const isDeleteDisabled = isSemesterEnded || hasApprovedRequest;
-
         let editTooltipTitle = "";
         if (isEditDisabled) {
           if (hasApprovedRequest) {
@@ -88,7 +82,6 @@ export const CourseElementsTable = ({
             editTooltipTitle = "The semester has ended. Editing is not allowed.";
           }
         }
-
         let deleteTooltipTitle = "";
         if (isDeleteDisabled) {
           if (hasApprovedRequest) {
@@ -97,7 +90,6 @@ export const CourseElementsTable = ({
             deleteTooltipTitle = "The semester has ended. Deletion is not allowed.";
           }
         }
-
         const editButton = (
           <Button
             type="link"
@@ -107,7 +99,6 @@ export const CourseElementsTable = ({
             Edit
           </Button>
         );
-
         const deleteButton = (
           <Button
             type="link"
@@ -118,7 +109,6 @@ export const CourseElementsTable = ({
             Delete
           </Button>
         );
-
         return (
           <Space>
             {isEditDisabled ? (
@@ -140,7 +130,6 @@ export const CourseElementsTable = ({
       },
     },
   ];
-
   return (
     <Table
       columns={columns}
@@ -151,4 +140,3 @@ export const CourseElementsTable = ({
     />
   );
 };
-

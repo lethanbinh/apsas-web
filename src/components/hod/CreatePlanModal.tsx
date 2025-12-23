@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { Modal, Space, Typography, Upload, App, Spin, Alert, Steps } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -15,20 +14,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { adminService } from "@/services/adminService";
 import { PreviewData, PreviewPlanModal } from "./PreviewPlanModal";
 import * as XLSX from "xlsx";
-
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
-
 interface CreatePlanModalProps {
   open: boolean;
   onCancel: () => void;
   onCreate: (values: any) => void;
 }
-
 export const CreatePlanModal: React.FC<CreatePlanModalProps> = (props) => {
   return <ModalContent {...props} />;
 };
-
 const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -37,20 +32,17 @@ const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
     reader.readAsArrayBuffer(file);
   });
 };
-
 const getNativeFile = (fileLike: any): File => {
   return fileLike && fileLike.originFileObj
     ? (fileLike.originFileObj as File)
     : (fileLike as File);
 };
-
 const parseExcelSheet = (sheet: XLSX.WorkSheet): any[] => {
   return XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     defval: "",
   });
 };
-
 function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
   const [fileListExcel, setFileListExcel] = useState<UploadFile[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -60,10 +52,8 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
   );
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-
   const { user } = useAuth();
   const { notification } = App.useApp();
-
   const handleDownloadTemplate = async () => {
     try {
       const blob = await adminService.downloadExcelTemplate();
@@ -79,16 +69,11 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       console.error("Download template error:", error);
     }
   };
-
-
-
   const handleCreate = async () => {
     const semesterCodePlaceholder = `NEW_SEMESTER_${Date.now()}`;
-
     if (fileListExcel.length === 0) {
       return;
     }
-
     setIsCreating(true);
     try {
       const semesterFormData = new FormData();
@@ -99,24 +84,20 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         setIsCreating(false);
         return;
       }
-
       const semesterResponse = await adminService.uploadSemesterCourseData(
         semesterCodePlaceholder,
         semesterFormData
       );
-
       if (semesterResponse.warnings && semesterResponse.warnings.length > 0) {
         semesterResponse.warnings.forEach((warning: string) => {
           console.warn(warning);
         });
       }
-
       notification.success({
         message: "Semester Plan Created",
         description: "Semester course data has been imported successfully. You can now import class student data from the detail page.",
         placement: "topRight",
       });
-
       handleClose();
       onCreate({});
     } catch (error: any) {
@@ -130,7 +111,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       setIsCreating(false);
     }
   };
-
   const handleClose = () => {
     onCancel();
     setTimeout(() => {
@@ -138,9 +118,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       setLivePreviewData(null);
     }, 300);
   };
-
-
-
   const mapToKeys = (
     data: any[],
     keys: string[]
@@ -148,14 +125,12 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     const headers = (data[0] || []).map((h: string) =>
       (h || "").toString().trim()
     );
-
     const normalize = (s: string) =>
       (s || "")
         .toString()
         .toLowerCase()
         .replace(/\s+/g, "")
         .replace(/[_-]/g, "");
-
     const normalizedHeaderToIndex: Record<string, number> = {};
     headers.forEach((h: string, idx: number) => {
       const n = normalize(h);
@@ -163,7 +138,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         normalizedHeaderToIndex[n] = idx;
       }
     });
-
     const missing: string[] = [];
     const keyToIndex: Record<string, number> = {};
     keys.forEach((k) => {
@@ -175,7 +149,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         keyToIndex[k] = idx;
       }
     });
-
     if (missing.length > 0) {
       throw new Error(
         `File headers do not match template. Missing: ${missing.join(
@@ -183,7 +156,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         )}. Found: ${headers.join(", ")}`
       );
     }
-
     return data.slice(1).map((row, rowIndex) => {
       const rowObject: { [key: string]: any } = {
         key: rowIndex.toString(),
@@ -195,33 +167,26 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       return rowObject;
     });
   };
-
   const handlePreviewSemesterCourse = async () => {
     if (fileListExcel.length === 0) {
       return;
     }
-
     setIsPreviewLoading(true);
     setIsPreviewModalOpen(true);
     setLivePreviewData(null);
     setPreviewError(null);
-
     try {
       const filePlan = getNativeFile(fileListExcel[0]);
       const planBuffer = await readFileAsArrayBuffer(filePlan);
       const planWb = XLSX.read(planBuffer);
       const planSheet = planWb.Sheets[planWb.SheetNames[0]];
-
       if (!planSheet) {
         throw new Error("The Excel file is empty or invalid.");
       }
-
       const planJson = parseExcelSheet(planSheet);
-
       if (!planJson || planJson.length === 0) {
         throw new Error("The Excel file is empty or has no data.");
       }
-
       const semesterPlanKeys = [
         "SemesterCode",
         "AcademicYear",
@@ -237,9 +202,7 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
         "CourseElementWeight",
         "AssignedLecturerAccountCode",
       ];
-
       const semesterPlanData = mapToKeys(planJson, semesterPlanKeys);
-
       setLivePreviewData({
         semesterPlan: semesterPlanData as any,
         classRoster: [],
@@ -261,9 +224,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       setIsPreviewLoading(false);
     }
   };
-
-
-
   const uploadPropsExcel = {
     fileList: fileListExcel,
     maxCount: 1,
@@ -275,9 +235,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       return false;
     },
   };
-
-
-
   const fileNameStyle: React.CSSProperties = {
     fontSize: "16px",
     color: "#333",
@@ -291,8 +248,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
     boxSizing: "border-box",
     textAlign: "center",
   };
-
-
   const stepContent = (
     <div className={styles.stepContent}>
       <div style={{ marginBottom: "24px" }}>
@@ -313,7 +268,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
           </Button>
         </Space>
       </div>
-
       <div>
         <Title level={5}>Upload Semester Course File</Title>
         <Dragger {...uploadPropsExcel} className={styles.dragger}>
@@ -340,7 +294,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       </div>
     </div>
   );
-
   const renderFooter = () => (
     <Space>
       <Button onClick={handleClose}>Cancel</Button>
@@ -354,7 +307,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       </Button>
     </Space>
   );
-
   return (
     <>
       <Modal
@@ -370,7 +322,6 @@ function ModalContent({ open, onCancel, onCreate }: CreatePlanModalProps) {
       >
         <div>{stepContent}</div>
       </Modal>
-
       <PreviewPlanModal
         open={isPreviewModalOpen}
         onCancel={() => {

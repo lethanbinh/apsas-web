@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import styles from "./Tasks.module.css";
@@ -13,7 +12,6 @@ import { Spin, Select, App, Space } from "antd";
 import { LecturerTaskContent } from "@/components/lecturer/LecturerTaskContent";
 import { queryKeys } from "@/lib/react-query";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
-
 const getStatusTag = (status: number) => {
   switch (status) {
     case 1:
@@ -30,7 +28,6 @@ const getStatusTag = (status: number) => {
       return <span className={styles["status-tag-pending"]}>Pending</span>;
   }
 };
-
 const TasksPageContent = () => {
   const [openCourses, setOpenCourses] = useState<Record<string, boolean>>({});
   const [openAssignments, setOpenAssignments] = useState<
@@ -43,7 +40,6 @@ const TasksPageContent = () => {
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined);
   const [selectedTemplateFilter, setSelectedTemplateFilter] = useState<string | undefined>(undefined);
   const [templatesWithRequestIds, setTemplatesWithRequestIds] = useState<Set<number>>(new Set());
-
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list(),
     queryFn: async () => {
@@ -51,7 +47,6 @@ const TasksPageContent = () => {
         pageNumber: 1,
         pageSize: 1000,
       });
-
       const now = new Date();
       const activeSemester = semesters.find((sem) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
@@ -63,11 +58,9 @@ const TasksPageContent = () => {
       } else {
         setCurrentSemesterCode(null);
       }
-
       return semesters;
     },
   });
-
   const { data: tasksResponse, isLoading, error: queryError } = useQuery({
     queryKey: queryKeys.assignRequests.byLecturerId(Number(lecturerId!)),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -77,7 +70,6 @@ const TasksPageContent = () => {
     }),
     enabled: !!lecturerId && !isLecturerLoading,
   });
-
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 10000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -86,7 +78,6 @@ const TasksPageContent = () => {
     }),
     enabled: !!lecturerId && !isLecturerLoading,
   });
-
   useEffect(() => {
     if (templatesResponse?.items) {
       const templateRequestIds = new Set(
@@ -97,16 +88,13 @@ const TasksPageContent = () => {
       setTemplatesWithRequestIds(templateRequestIds);
     }
   }, [templatesResponse]);
-
   const allTasks = tasksResponse?.items || [];
   const error = queryError ? "Failed to load tasks." : null;
   const isLoadingData = isLoading && !tasksResponse;
-
   const semesterOptions = useMemo(() => {
     const uniqueSemesters = [
       ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
     ];
-
     const semesterMap = new Map<string, Semester>();
     uniqueSemesters.forEach((name) => {
       const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
@@ -124,7 +112,6 @@ const TasksPageContent = () => {
         }
       }
     });
-
     const sortedSemesters = uniqueSemesters.sort((a, b) => {
       const semA = semesterMap.get(a);
       const semB = semesterMap.get(b);
@@ -137,14 +124,12 @@ const TasksPageContent = () => {
       if (semB) return 1;
       return 0;
     });
-
     const options = sortedSemesters.map((semester) => ({
       label: semester,
       value: semester,
     }));
     return [{ label: "All Semesters", value: "all" }, ...options];
   }, [allTasks, allSemesters]);
-
   useEffect(() => {
     if (isInitialLoad && allSemesters.length > 0 && allTasks.length > 0) {
       let activeSemesterCode = currentSemesterCode;
@@ -159,12 +144,10 @@ const TasksPageContent = () => {
           activeSemesterCode = activeSemester.semesterCode;
         }
       }
-
       if (activeSemesterCode) {
         const uniqueSemesterNames = [
           ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
         ];
-
         const exactMatch = uniqueSemesterNames.find(
           (name) => name === activeSemesterCode
         );
@@ -173,7 +156,6 @@ const TasksPageContent = () => {
           setIsInitialLoad(false);
           return;
         }
-
         const partialMatch = uniqueSemesterNames.find(
           (name) => name?.includes(activeSemesterCode!) ||
             name?.toLowerCase().includes(activeSemesterCode!.toLowerCase())
@@ -184,11 +166,9 @@ const TasksPageContent = () => {
           return;
         }
       }
-
       const uniqueSemesterNames = [
         ...new Set(allTasks.map((task) => task.semesterName).filter(Boolean)),
       ];
-
       if (uniqueSemesterNames.length > 0) {
         const semesterMap = new Map<string, Semester>();
         uniqueSemesterNames.forEach((name) => {
@@ -207,7 +187,6 @@ const TasksPageContent = () => {
             }
           }
         });
-
         const sortedSemesters = uniqueSemesterNames.sort((a, b) => {
           const semA = semesterMap.get(a);
           const semB = semesterMap.get(b);
@@ -218,20 +197,16 @@ const TasksPageContent = () => {
           }
           return 0;
         });
-
         if (sortedSemesters.length > 0) {
           setSelectedSemester(sortedSemesters[0]);
         }
       }
-
       setIsInitialLoad(false);
     }
   }, [currentSemesterCode, allTasks, allSemesters, isInitialLoad]);
-
   const filteredTasks = useMemo(() => {
     return allTasks.filter((task) => {
       const matchesSemester = selectedSemester === "all" || task.semesterName === selectedSemester;
-
       let matchesStatus = true;
       if (selectedStatus !== undefined) {
         if (selectedStatus === 1) {
@@ -248,15 +223,12 @@ const TasksPageContent = () => {
           matchesStatus = task.status === selectedStatus;
         }
       }
-
       const matchesTemplate = !selectedTemplateFilter ||
         (selectedTemplateFilter === "with" && templatesWithRequestIds.has(task.id)) ||
         (selectedTemplateFilter === "without" && !templatesWithRequestIds.has(task.id));
-
       return matchesSemester && matchesStatus && matchesTemplate;
     });
   }, [allTasks, selectedSemester, selectedStatus, selectedTemplateFilter, templatesWithRequestIds]);
-
   const groupedByCourse = useMemo(() => {
     return filteredTasks.reduce((acc, task) => {
       const courseKey = `${task.courseName || "Uncategorized"}|||${task.semesterName || "Unknown"}`;
@@ -267,15 +239,12 @@ const TasksPageContent = () => {
       return acc;
     }, {} as Record<string, AssignRequestItem[]>);
   }, [filteredTasks]);
-
   const toggleCourse = (courseName: string) => {
     setOpenCourses((prev) => ({ ...prev, [courseName]: !prev[courseName] }));
   };
-
   const toggleAssignment = (taskId: string) => {
     setOpenAssignments((prev) => ({ ...prev, [taskId]: !prev[taskId] }));
   };
-
   if ((isLoading && !tasksResponse) || isLecturerLoading) {
     return (
       <div className={styles.container}>
@@ -285,7 +254,6 @@ const TasksPageContent = () => {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className={styles.container}>
@@ -294,11 +262,9 @@ const TasksPageContent = () => {
       </div>
     );
   }
-
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Tasks</h1>
-
       <div className={styles.filterBar}>
         <Select
           value={selectedSemester}
@@ -330,7 +296,6 @@ const TasksPageContent = () => {
           ]}
         />
       </div>
-
       {filteredTasks.length === 0 ? (
         <div className={styles.emptyState}>
           <div className={styles.emptyStateIcon}>📋</div>
@@ -345,7 +310,6 @@ const TasksPageContent = () => {
           const displayTitle = semesterName && semesterName !== "Unknown"
             ? `${courseName} (${semesterName})`
             : courseName;
-
           return (
             <div className={styles["task-section"]} key={courseKey}>
               <div
@@ -453,7 +417,6 @@ const TasksPageContent = () => {
     </div>
   );
 };
-
 export default function TasksPage() {
   return (
     <App>
@@ -461,4 +424,3 @@ export default function TasksPage() {
     </App>
   );
 }
-

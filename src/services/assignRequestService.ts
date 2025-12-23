@@ -18,7 +18,6 @@ export interface AssignRequestItem {
   assignedLecturerDepartment: string;
   assignedByHODName: string;
 }
-
 export interface AssignRequestListResult {
   currentPage: number;
   pageSize: number;
@@ -26,14 +25,12 @@ export interface AssignRequestListResult {
   totalPages: number;
   items: AssignRequestItem[];
 }
-
 export interface AssignRequestListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssignRequestListResult;
 }
-
 export interface GetAssignRequestParams {
   lecturerId?: number;
   assignedByHODId?: number;
@@ -46,14 +43,12 @@ export interface GetAssignRequestResponse {
   items: AssignRequestItem[];
   total: number;
 }
-
 export interface AssignRequestApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssignRequestItem;
 }
-
 export interface CreateAssignRequestPayload {
   message: string;
   courseElementId: number;
@@ -62,7 +57,6 @@ export interface CreateAssignRequestPayload {
   status: number;
   assignedAt: string;
 }
-
 export interface UpdateAssignRequestPayload {
   message: string;
   courseElementId: number;
@@ -72,7 +66,6 @@ export interface UpdateAssignRequestPayload {
   status: number;
   assignedAt: string;
 }
-
 export class AssignRequestService {
   async getAssignRequests(
     params: GetAssignRequestParams
@@ -86,7 +79,6 @@ export class AssignRequestService {
       total: response.result.totalCount,
     };
   }
-
   async createAssignRequest(
     payload: CreateAssignRequestPayload
   ): Promise<AssignRequestItem> {
@@ -96,7 +88,6 @@ export class AssignRequestService {
     );
     return response.result;
   }
-
   async updateAssignRequest(
     assignRequestId: string | number,
     payload: UpdateAssignRequestPayload
@@ -107,10 +98,8 @@ export class AssignRequestService {
     );
     return response.result;
   }
-
   async deleteAssignRequest(assignRequestId: string | number): Promise<void> {
     await apiService.delete(`/AssignRequest/${assignRequestId}`);
   }
 }
-
 export const assignRequestService = new AssignRequestService();

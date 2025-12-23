@@ -2,7 +2,6 @@ import { classService } from '../classService';
 import { adminService } from '../adminService';
 import { courseElementService } from '../courseElementService';
 import type { AcademicStats } from './types';
-
 export class AcademicStatsService {
   async getSemesterStats(): Promise<{ total: number; active: number }> {
     try {
@@ -19,7 +18,6 @@ export class AcademicStatsService {
       return { total: 0, active: 0 };
     }
   }
-
   async getClassStats(): Promise<{ total: number }> {
     try {
       const { total } = await classService.getClassList({
@@ -32,7 +30,6 @@ export class AcademicStatsService {
       return { total: 0 };
     }
   }
-
   async getDetailedAcademicStats(): Promise<Partial<AcademicStats>> {
     try {
       const { classes } = await classService.getClassList({
@@ -40,32 +37,22 @@ export class AcademicStatsService {
         pageSize: 1000,
       });
       const semesters = await adminService.getPaginatedSemesters(1, 100);
-
-
       const courseElements = await courseElementService.getCourseElements({
         pageNumber: 1,
         pageSize: 1000,
       });
-
-
       const totalStudents = classes.reduce(
         (sum, cls) => sum + (parseInt(cls.studentCount) || 0),
         0
       );
       const averageStudentsPerClass =
         classes.length > 0 ? totalStudents / classes.length : 0;
-
-
       const classesWithoutStudents = classes.filter(
         (cls) => !parseInt(cls.studentCount) || parseInt(cls.studentCount) === 0
       ).length;
-
-
       const classesOverloaded = classes.filter(
         (cls) => parseInt(cls.studentCount) > 50
       ).length;
-
-
       const topClassesByStudents = classes
         .map((cls) => ({
           id: cls.id,
@@ -76,8 +63,6 @@ export class AcademicStatsService {
         }))
         .sort((a, b) => b.studentCount - a.studentCount)
         .slice(0, 10);
-
-
       const semesterMap = new Map<string, {
         semesterCode: string;
         semesterName: string;
@@ -85,19 +70,14 @@ export class AcademicStatsService {
         studentCount: number;
         lecturerSet: Set<string>;
       }>();
-
-
       const uniqueCourses = new Set<string>();
       classes.forEach((cls) => {
         if (cls.courseName) uniqueCourses.add(cls.courseName);
       });
-
-
       const uniqueLecturers = new Set<string>();
       classes.forEach((cls) => {
         if (cls.lecturerId) uniqueLecturers.add(cls.lecturerId);
       });
-
       classes.forEach((cls) => {
         const semesterKey = cls.semesterName || 'Unknown';
         if (!semesterMap.has(semesterKey)) {
@@ -116,7 +96,6 @@ export class AcademicStatsService {
           data.lecturerSet.add(cls.lecturerId);
         }
       });
-
       const classesBySemester = Array.from(semesterMap.values())
         .filter((item) => item.classCount > 0)
         .sort((a, b) => a.semesterCode.localeCompare(b.semesterCode))
@@ -127,15 +106,12 @@ export class AcademicStatsService {
           studentCount: item.studentCount,
           lecturerCount: item.lecturerSet.size,
         }));
-
-
       const lecturerWorkloadMap = new Map<string, {
         lecturerId: string;
         lecturerName: string;
         classCount: number;
         studentCount: number;
       }>();
-
       classes.forEach((cls) => {
         if (cls.lecturerId && cls.lecturerName) {
           if (!lecturerWorkloadMap.has(cls.lecturerId)) {
@@ -151,23 +127,18 @@ export class AcademicStatsService {
           lecturer.studentCount += parseInt(cls.studentCount || '0', 10);
         }
       });
-
       const lecturerWorkload = Array.from(lecturerWorkloadMap.values())
         .sort((a, b) => b.classCount - a.classCount)
         .slice(0, 20);
-
-
       const studentToLecturerRatio = uniqueLecturers.size > 0
         ? Math.round((totalStudents / uniqueLecturers.size) * 10) / 10
         : 0;
-
       const now = new Date();
       const activeSemesters = semesters.filter((s) => {
         const start = new Date(s.startDate);
         const end = new Date(s.endDate);
         return now >= start && now <= end;
       }).length;
-
       return {
         totalCourseElements: courseElements.length || 0,
         totalCourses: uniqueCourses.size,
@@ -188,6 +159,4 @@ export class AcademicStatsService {
     }
   }
 }
-
 export const academicStatsService = new AcademicStatsService();
-

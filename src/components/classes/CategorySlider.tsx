@@ -1,5 +1,4 @@
 "use client";
-
 import { Typography } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
@@ -8,7 +7,6 @@ import "swiper/css/pagination";
 import "swiper/css/navigation";
 import { CategoryCard } from "./CategoryCard";
 import styles from "./CategorySlider.module.css";
-
 import {
   EditOutlined,
   CodeOutlined,
@@ -17,7 +15,6 @@ import {
   DollarOutlined,
 } from "@ant-design/icons";
 import React from "react";
-
 const { Title } = Typography;
 interface CategoryDataItem {
   id: number;
@@ -80,7 +77,6 @@ export default function CategorySlider() {
       <Title level={3} className={styles.sectionTitle}>
         Course category
       </Title>
-
       <Swiper
         modules={[Pagination, Navigation]}
         spaceBetween={30}

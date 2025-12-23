@@ -1,8 +1,6 @@
 "use client";
-
 import { Modal, Checkbox, Space } from "antd";
 import { useState } from "react";
-
 interface ExportModalProps {
   visible: boolean;
   onCancel: () => void;
@@ -12,7 +10,6 @@ interface ExportModalProps {
     practicalExam: boolean;
   }) => void;
 }
-
 export const ExportModal = ({ visible, onCancel, onConfirm }: ExportModalProps) => {
   const [exportTypes, setExportTypes] = useState<{
     assignment: boolean;
@@ -23,11 +20,9 @@ export const ExportModal = ({ visible, onCancel, onConfirm }: ExportModalProps) 
     lab: true,
     practicalExam: true,
   });
-
   const handleOk = () => {
     onConfirm(exportTypes);
   };
-
   const handleCancel = () => {
     setExportTypes({
       assignment: true,
@@ -36,7 +31,6 @@ export const ExportModal = ({ visible, onCancel, onConfirm }: ExportModalProps) 
     });
     onCancel();
   };
-
   return (
     <Modal
       title="Export Grade Report"
@@ -75,4 +69,3 @@ export const ExportModal = ({ visible, onCancel, onConfirm }: ExportModalProps) 
     </Modal>
   );
 };
-

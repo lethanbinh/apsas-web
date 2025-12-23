@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { Modal, Space, Typography, Upload, App, Spin, Alert, Select } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -14,10 +13,8 @@ import styles from "./CreatePlanModal.module.css";
 import { adminService } from "@/services/adminService";
 import { PreviewData, PreviewPlanModal } from "./PreviewPlanModal";
 import * as XLSX from "xlsx";
-
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
-
 interface SemesterCourse {
   id: number;
   semesterId: number;
@@ -29,7 +26,6 @@ interface SemesterCourse {
     description: string;
   };
 }
-
 interface ImportClassStudentModalProps {
   open: boolean;
   onCancel: () => void;
@@ -39,7 +35,6 @@ interface ImportClassStudentModalProps {
   courseCode: string;
   courseName: string;
 }
-
 const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -48,20 +43,17 @@ const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
     reader.readAsArrayBuffer(file);
   });
 };
-
 const getNativeFile = (fileLike: any): File => {
   return fileLike && fileLike.originFileObj
     ? (fileLike.originFileObj as File)
     : (fileLike as File);
 };
-
 const parseExcelSheet = (sheet: XLSX.WorkSheet): any[] => {
   return XLSX.utils.sheet_to_json(sheet, {
     header: 1,
     defval: "",
   });
 };
-
 const mapToKeys = (
   data: any[],
   keys: string[]
@@ -69,14 +61,12 @@ const mapToKeys = (
   const headers = (data[0] || []).map((h: string) =>
     (h || "").toString().trim()
   );
-
   const normalize = (s: string) =>
     (s || "")
       .toString()
       .toLowerCase()
       .replace(/\s+/g, "")
       .replace(/[_-]/g, "");
-
   const normalizedHeaderToIndex: Record<string, number> = {};
   headers.forEach((h: string, idx: number) => {
     const n = normalize(h);
@@ -84,7 +74,6 @@ const mapToKeys = (
       normalizedHeaderToIndex[n] = idx;
     }
   });
-
   const missing: string[] = [];
   const keyToIndex: Record<string, number> = {};
   keys.forEach((k) => {
@@ -96,7 +85,6 @@ const mapToKeys = (
       keyToIndex[k] = idx;
     }
   });
-
   if (missing.length > 0) {
     throw new Error(
       `File headers do not match template. Missing: ${missing.join(
@@ -104,7 +92,6 @@ const mapToKeys = (
       )}. Found: ${headers.join(", ")}`
     );
   }
-
   return data.slice(1).map((row, rowIndex) => {
     const rowObject: { [key: string]: any } = {
       key: rowIndex.toString(),
@@ -116,7 +103,6 @@ const mapToKeys = (
     return rowObject;
   });
 };
-
 export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = ({
   open,
   onCancel,
@@ -132,9 +118,7 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
   const [livePreviewData, setLivePreviewData] = useState<PreviewData | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-
   const { notification } = App.useApp();
-
   const handleDownloadTemplate = async () => {
     try {
       const blob = await adminService.downloadClassStudentTemplate();
@@ -155,7 +139,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       });
     }
   };
-
   const handleImport = async () => {
     if (fileList.length === 0) {
       notification.warning({
@@ -165,7 +148,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       });
       return;
     }
-
     setIsImporting(true);
     try {
       const classFormData = new FormData();
@@ -176,25 +158,21 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
         setIsImporting(false);
         return;
       }
-
       const classResponse = await adminService.uploadClassStudentData(
         semesterCode,
         semesterCourseId,
         classFormData
       );
-
       if (classResponse.warnings && classResponse.warnings.length > 0) {
         classResponse.warnings.forEach((warning: string) => {
           console.warn(warning);
         });
       }
-
       notification.success({
         message: "Import Successful",
         description: "Class student data has been imported successfully.",
         placement: "topRight",
       });
-
       handleClose();
       onImport();
     } catch (error: any) {
@@ -208,7 +186,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       setIsImporting(false);
     }
   };
-
   const handleClose = () => {
     onCancel();
     setTimeout(() => {
@@ -217,32 +194,25 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       setPreviewError(null);
     }, 300);
   };
-
   const handlePreview = async () => {
     if (fileList.length === 0) {
       return;
     }
-
     setIsPreviewLoading(true);
     setIsPreviewModalOpen(true);
     setPreviewError(null);
-
     try {
       const fileRoster = getNativeFile(fileList[0]);
       const rosterBuffer = await readFileAsArrayBuffer(fileRoster);
       const rosterWb = XLSX.read(rosterBuffer);
       const rosterSheet = rosterWb.Sheets[rosterWb.SheetNames[0]];
-
       if (!rosterSheet) {
         throw new Error("The Excel file is empty or invalid.");
       }
-
       const rosterJson = parseExcelSheet(rosterSheet);
-
       if (!rosterJson || rosterJson.length === 0) {
         throw new Error("The Excel file is empty or has no data.");
       }
-
       const classRosterKeys = [
         "ClassCode",
         "ClassDescription",
@@ -250,9 +220,7 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
         "StudentAccountCode",
         "EnrollmentDescription",
       ];
-
       const classRosterData = mapToKeys(rosterJson, classRosterKeys);
-
       setLivePreviewData({
         semesterPlan: [],
         classRoster: classRosterData as any,
@@ -274,7 +242,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       setIsPreviewLoading(false);
     }
   };
-
   const uploadProps = {
     fileList: fileList,
     maxCount: 1,
@@ -286,7 +253,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
       return false;
     },
   };
-
   const fileNameStyle: React.CSSProperties = {
     fontSize: "16px",
     color: "#333",
@@ -300,7 +266,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
     boxSizing: "border-box",
     textAlign: "center",
   };
-
   return (
     <>
       <Modal
@@ -341,7 +306,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
             </div>
           </div>
         </div>
-
         <div style={{ marginBottom: "24px" }}>
           <Title level={5}>Template Actions</Title>
           <Space direction="horizontal" style={{ width: "100%" }} wrap>
@@ -360,7 +324,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
             </Button>
           </Space>
         </div>
-
         <div>
           <Title level={5}>Upload Class Student File</Title>
           <Dragger {...uploadProps} className={styles.dragger}>
@@ -386,7 +349,6 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
           </Dragger>
         </div>
       </Modal>
-
       <PreviewPlanModal
         open={isPreviewModalOpen}
         onCancel={() => {
@@ -404,4 +366,3 @@ export const ImportClassStudentModal: React.FC<ImportClassStudentModalProps> = (
     </>
   );
 };
-

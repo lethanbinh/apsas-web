@@ -6,13 +6,11 @@ import { AssessmentTemplate } from "@/services/assessmentTemplateService";
 import { CourseElement } from "@/services/courseElementService";
 import { RubricItem, rubricItemService } from "@/services/rubricItemService";
 import { Submission } from "@/services/submissionService";
-
 export interface AssignmentWithData {
   assignment: CourseElement;
   template?: AssessmentTemplate;
   submissions: Submission[];
 }
-
 export const handleDownloadAll = async (
   assignments: AssignmentWithData[],
   message: ReturnType<typeof App.useApp>['message']
@@ -21,35 +19,26 @@ export const handleDownloadAll = async (
     message.warning("No assignments to download");
     return;
   }
-
   try {
     message.loading("Preparing download...", 0);
-
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
-
     for (const { assignment, template, submissions } of assignments) {
       if (!submissions || submissions.length === 0) continue;
-
       const assignmentFolder = zip.folder(assignment.name.replace(/[^a-zA-Z0-9]/g, "_"));
       if (!assignmentFolder) continue;
-
-      // Download requirement files if template exists
       if (template?.id) {
         try {
           const requirementFolder = assignmentFolder.folder("Requirements");
           if (requirementFolder) {
-            // Generate requirement document
             const papersRes = await assessmentPaperService.getAssessmentPapers({
               assessmentTemplateId: template.id,
               pageNumber: 1,
               pageSize: 100,
             });
             const papers = papersRes.items;
-
             const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
             const rubricsMap: { [questionId: number]: RubricItem[] } = {};
-
             for (const paper of papers) {
               const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
                 assessmentPaperId: paper.id,
@@ -60,7 +49,6 @@ export const handleDownloadAll = async (
                 (a.questionNumber || 0) - (b.questionNumber || 0)
               );
               questionsMap[paper.id] = sortedQuestions;
-
               for (const question of sortedQuestions) {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
                   assessmentQuestionId: question.id,
@@ -70,10 +58,8 @@ export const handleDownloadAll = async (
                 rubricsMap[question.id] = rubricsRes.items;
               }
             }
-
             const docxModule = await import("docx");
             const { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType } = docxModule;
-
             const docSections = [];
             docSections.push(
               new Paragraph({
@@ -88,7 +74,6 @@ export const handleDownloadAll = async (
               );
             }
             docSections.push(new Paragraph({ text: " " }));
-
             for (const paper of papers) {
               docSections.push(
                 new Paragraph({
@@ -100,7 +85,6 @@ export const handleDownloadAll = async (
                 docSections.push(new Paragraph({ text: paper.description }));
               }
               docSections.push(new Paragraph({ text: " " }));
-
               const questions = questionsMap[paper.id] || [];
               for (const [index, question] of questions.entries()) {
                 docSections.push(
@@ -137,7 +121,6 @@ export const handleDownloadAll = async (
                   );
                   docSections.push(new Paragraph({ text: question.questionSampleOutput }));
                 }
-
                 const rubrics = rubricsMap[question.id] || [];
                 if (rubrics.length > 0) {
                   docSections.push(new Paragraph({ text: " " }));
@@ -189,23 +172,18 @@ export const handleDownloadAll = async (
                 docSections.push(new Paragraph({ text: " " }));
               }
             }
-
             const doc = new Document({
               sections: [{ properties: {}, children: docSections }],
             });
-
             const wordBlob = await Packer.toBlob(doc);
             const templateName = template.name || `Template_${template.id}`;
             requirementFolder.file(`${templateName.replace(/[^a-zA-Z0-9]/g, "_")}_Requirement.docx`, wordBlob);
-
-            // Download assessment files
             try {
               const filesRes = await assessmentFileService.getFilesForTemplate({
                 assessmentTemplateId: template.id,
                 pageNumber: 1,
                 pageSize: 1000,
               });
-
               if (filesRes.items.length > 0) {
                 for (const file of filesRes.items) {
                   try {
@@ -228,13 +206,10 @@ export const handleDownloadAll = async (
           console.error(`Failed to generate requirement for assignment ${assignment.id}:`, err);
         }
       }
-
-      // Download submissions
       const submissionsFolder = assignmentFolder.folder("Submissions");
       if (submissionsFolder) {
         for (const sub of submissions) {
           if (!sub || !sub.id) continue;
-
           if (sub.submissionFile?.submissionUrl) {
             try {
               const proxyUrl = `/api/file-proxy?url=${encodeURIComponent(sub.submissionFile.submissionUrl)}`;
@@ -257,13 +232,11 @@ export const handleDownloadAll = async (
         }
       }
     }
-
     if (zip.files && Object.keys(zip.files).length === 0) {
       message.destroy();
       message.warning("No files found to download");
       return;
     }
-
     const blob = await zip.generateAsync({ type: "blob" });
     const saveAs = (await import("file-saver")).default;
     saveAs(blob, "Assignments_All.zip");
@@ -275,4 +248,3 @@ export const handleDownloadAll = async (
     message.error(err.message || "Failed to download all assignments");
   }
 };
-

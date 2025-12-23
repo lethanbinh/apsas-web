@@ -1,5 +1,4 @@
 "use client";
-
 import { RequirementModal } from "@/components/student/RequirementModal";
 import { RequirementContent } from "@/components/student/data";
 import styles from "@/components/student/AssignmentList.module.css";
@@ -48,18 +47,13 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Panel } = Collapse;
 const { Text, Paragraph, Title } = Typography;
-
-
 function isLab(element: CourseElement): boolean {
   return element.elementType === 1;
 }
-
 const LabDetailItem = ({
   lab,
   template,
@@ -85,8 +79,6 @@ const LabDetailItem = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);
   const [publishGradeLoading, setPublishGradeLoading] = useState(false);
-
-
   const { data: filesResponse, isLoading: isFilesLoading } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(template?.id!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -96,10 +88,7 @@ const LabDetailItem = ({
     }),
     enabled: !!template?.id,
   });
-
   const assessmentFiles = filesResponse?.items || [];
-
-  // Fetch grading sessions for all submissions
   const gradingSessionsQueries = useQueries({
     queries: submissions.map((sub) => ({
       queryKey: queryKeys.grading.sessions.list({ submissionId: sub.id, pageNumber: 1, pageSize: 1 }),
@@ -111,8 +100,6 @@ const LabDetailItem = ({
       enabled: submissions.length > 0,
     })),
   });
-
-  // Fetch grade items for all submissions
   const gradeItemsQueries = useQueries({
     queries: gradingSessionsQueries.map((sessionQuery: any, index: number) => ({
       queryKey: ['gradeItems', 'byGradingSessionId', sessionQuery.data?.items?.[0]?.id],
@@ -128,8 +115,6 @@ const LabDetailItem = ({
       enabled: submissions.length > 0 && !!sessionQuery.data?.items?.[0]?.id,
     })),
   });
-
-  // Calculate max score from template
   const { data: papersResponse } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(template?.id!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -139,7 +124,6 @@ const LabDetailItem = ({
     }),
     enabled: !!template?.id,
   });
-
   const questionsQueries = useQueries({
     queries: (papersResponse?.items || []).map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -151,7 +135,6 @@ const LabDetailItem = ({
       enabled: (papersResponse?.items || []).length > 0,
     })),
   });
-
   const allQuestions = useMemo(() => {
     const questions: any[] = [];
     questionsQueries.forEach((query: any) => {
@@ -161,7 +144,6 @@ const LabDetailItem = ({
     });
     return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [questionsQueries]);
-
   const rubricsQueries = useQueries({
     queries: allQuestions.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -173,7 +155,6 @@ const LabDetailItem = ({
       enabled: allQuestions.length > 0,
     })),
   });
-
   const maxScore = useMemo(() => {
     let total = 0;
     rubricsQueries.forEach((query: any) => {
@@ -185,17 +166,13 @@ const LabDetailItem = ({
     });
     return total;
   }, [rubricsQueries]);
-
-  // Calculate submission scores
   const submissionScores = useMemo(() => {
     const scoreMap: Record<number, { total: number; max: number }> = {};
     submissions.forEach((submission, index) => {
       const sessionsQuery = gradingSessionsQueries[index];
       const gradeItemsQuery = gradeItemsQueries[index];
-
       if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
         const latestSession = sessionsQuery.data.items[0];
-
         if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
           const totalScore = gradeItemsQuery.data.items.reduce((sum: number, item: any) => sum + item.score, 0);
           scoreMap[submission.id] = { total: totalScore, max: maxScore };
@@ -206,8 +183,6 @@ const LabDetailItem = ({
     });
     return scoreMap;
   }, [submissions, gradingSessionsQueries, gradeItemsQueries, maxScore]);
-
-
   const batchGradingMutation = useMutation({
     mutationFn: async ({ submissionId, assessmentTemplateId }: { submissionId: number; assessmentTemplateId: number }) => {
       return gradingService.autoGrading({
@@ -216,12 +191,10 @@ const LabDetailItem = ({
       });
     },
     onSuccess: () => {
-
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
     },
   });
-
   const publishGradeMutation = useMutation({
     mutationFn: async (classAssessmentId: number) => {
       return classAssessmentService.updateClassAssessment(classAssessmentId, {
@@ -237,10 +210,8 @@ const LabDetailItem = ({
       message.error(err.message || "Failed to publish grades");
     },
   });
-
   const handlePublishGrade = () => {
     if (!classAssessment) return;
-
     modal.confirm({
       title: "Publish Grades",
       content: "Once you confirm, the grades cannot be changed anymore. Are you sure you want to publish the grades?",
@@ -256,11 +227,8 @@ const LabDetailItem = ({
       },
     });
   };
-
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
-
-  // Đếm số lần nộp của mỗi student (chỉ đếm các submissions đã thực sự nộp)
   const submissionCountByStudent = useMemo(() => {
     const countMap: Record<number, number> = {};
     allSubmissions.forEach((sub) => {
@@ -270,58 +238,43 @@ const LabDetailItem = ({
     });
     return countMap;
   }, [allSubmissions]);
-
-  // Kiểm tra xem có thể chấm submission này không
   const canGradeSubmission = (submission: Submission): boolean => {
-    // Kiểm tra deadline đã hết chưa
     if (classAssessment?.endAt) {
       const deadline = dayjs.utc(classAssessment.endAt).tz("Asia/Ho_Chi_Minh");
       const now = dayjs().tz("Asia/Ho_Chi_Minh");
       if (now.isAfter(deadline)) {
-        return true; // Deadline đã hết, có thể chấm
+        return true;
       }
     }
-
-    // Kiểm tra student đã nộp đủ 3 lần chưa
     if (submission.studentId) {
       const submissionCount = submissionCountByStudent[submission.studentId] || 0;
       if (submissionCount >= 3) {
-        return true; // Đã nộp đủ 3 lần, có thể chấm
+        return true;
       }
     }
-
-    return false; // Chưa đủ điều kiện
+    return false;
   };
-
-  // Kiểm tra xem có submission nào có thể chấm được không
   const hasGradableSubmissions = useMemo(() => {
     return submissions.some(submission => canGradeSubmission(submission));
   }, [submissions, submissionCountByStudent, classAssessment]);
-
   const handleSubmissionClick = (submission: Submission) => {
     if (!canGradeSubmission(submission)) {
       message.warning("You can only grade labs after the deadline has passed or when the student has submitted 3 times.");
       return;
     }
-
     localStorage.setItem("selectedSubmissionId", submission.id.toString());
     router.push("/lecturer/assignment-grading");
   };
-
   const handleBatchGrading = async () => {
     if (submissions.length === 0) {
       message.warning("No submissions to grade");
       return;
     }
-
-    // Chỉ lấy các submissions có thể chấm được
     const gradableSubmissions = submissions.filter(submission => canGradeSubmission(submission));
-    
     if (gradableSubmissions.length === 0) {
       message.warning("No submissions are eligible for grading. Deadline must pass or students must submit 3 times.");
       return;
     }
-
     if (semesterEndDate) {
       const semesterEnd = dayjs.utc(semesterEndDate).tz("Asia/Ho_Chi_Minh");
       const now = dayjs().tz("Asia/Ho_Chi_Minh");
@@ -330,18 +283,13 @@ const LabDetailItem = ({
         return;
       }
     }
-
-
     const assessmentTemplateId = template?.id || classAssessment?.assessmentTemplateId;
     if (!assessmentTemplateId) {
       message.error("Cannot find assessment template. Please contact administrator.");
       return;
     }
-
       setBatchGradingLoading(true);
       message.loading(`Starting batch grading for ${gradableSubmissions.length} submission(s)...`, 0);
-
-
       const gradingPromises = gradableSubmissions.map(async (submission) => {
         try {
         await batchGradingMutation.mutateAsync({
@@ -354,22 +302,16 @@ const LabDetailItem = ({
           return { success: false, submissionId: submission.id, error: err.message };
         }
       });
-
     try {
       const results = await Promise.all(gradingPromises);
       const successCount = results.filter(r => r.success).length;
       const failCount = results.filter(r => !r.success).length;
-
       const successfulSubmissionIds = results.filter(r => r.success).map(r => r.submissionId);
-
       if (successCount > 0) {
         message.destroy();
         message.loading(`Batch grading in progress for ${successCount} submission(s)...`, 0);
-
-
         const pollInterval = setInterval(async () => {
           try {
-
             const sessionPromises = successfulSubmissionIds.map(submissionId =>
               gradingService.getGradingSessions({
                 submissionId: submissionId,
@@ -377,10 +319,7 @@ const LabDetailItem = ({
                 pageSize: 100,
               }).catch(() => ({ items: [] }))
             );
-
             const sessionResults = await Promise.all(sessionPromises);
-
-
             let allCompleted = true;
             for (const result of sessionResults) {
               if (result.items.length > 0) {
@@ -392,12 +331,10 @@ const LabDetailItem = ({
                   break;
                 }
               } else {
-
                 allCompleted = false;
                 break;
               }
             }
-
             if (allCompleted) {
               clearInterval(pollInterval);
               message.destroy();
@@ -411,14 +348,11 @@ const LabDetailItem = ({
             console.error("Failed to poll grading status:", err);
           }
         }, 5000);
-
-
         (window as any).batchGradingPollInterval = pollInterval;
       } else {
         message.destroy();
         setBatchGradingLoading(false);
       }
-
       if (failCount > 0) {
         message.warning(`Failed to start grading for ${failCount} submission(s)`);
       }
@@ -429,7 +363,6 @@ const LabDetailItem = ({
       message.error(err.message || "Failed to start batch grading");
     }
   };
-
   return (
     <>
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
@@ -437,9 +370,9 @@ const LabDetailItem = ({
           <Descriptions column={1} layout="vertical" title="Lab Details">
           </Descriptions>
           {template && (
-            <Button 
-              type="primary" 
-              onClick={openModal} 
+            <Button
+              type="primary"
+              onClick={openModal}
               style={{ marginTop: 16 }}
               className={styles.viewRequirementButton}
             >
@@ -447,7 +380,6 @@ const LabDetailItem = ({
             </Button>
           )}
         </Card>
-
         {onDeadlineSave && (
           <Card bordered={false}>
             <Descriptions column={1} layout="vertical">
@@ -464,7 +396,6 @@ const LabDetailItem = ({
             </Descriptions>
           </Card>
         )}
-
         <Card
           title="Submissions"
           extra={
@@ -507,7 +438,7 @@ const LabDetailItem = ({
                 const submissionCount = submission.studentId ? (submissionCountByStudent[submission.studentId] || 0) : 0;
                 return (
                 <List.Item
-                    style={{ 
+                    style={{
                       cursor: canGrade ? "pointer" : "not-allowed",
                       opacity: canGrade ? 1 : 0.6
                     }}
@@ -570,7 +501,6 @@ const LabDetailItem = ({
           )}
         </Card>
       </Space>
-
       <RequirementModal
         open={isModalOpen}
         onCancel={closeModal}
@@ -584,24 +514,18 @@ const LabDetailItem = ({
     </>
   );
 };
-
 const LabsPage = () => {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-
   useEffect(() => {
     const classId = localStorage.getItem("selectedClassId");
     setSelectedClassId(classId);
   }, []);
-
-
   const { data: classData, isLoading: isLoadingClass } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),
     queryFn: () => classService.getClassById(selectedClassId!),
     enabled: !!selectedClassId,
   });
-
-
   const { data: allElements = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({}),
     queryFn: () => courseElementService.getCourseElements({
@@ -609,8 +533,6 @@ const LabsPage = () => {
           pageSize: 1000,
         }),
   });
-
-
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -618,8 +540,6 @@ const LabsPage = () => {
           pageSize: 1000,
         }),
   });
-
-
   const { data: templateResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({}),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -627,8 +547,6 @@ const LabsPage = () => {
           pageSize: 1000,
         }),
   });
-
-
   const { data: classAssessmentRes } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -638,18 +556,12 @@ const LabsPage = () => {
     }),
     enabled: !!selectedClassId,
   });
-
-
   const { labs, templates, classAssessments, semesterInfo } = useMemo(() => {
     if (!classData || !allElements.length) {
       return { labs: [], templates: [], classAssessments: new Map(), semesterInfo: null };
     }
-
-
     const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
       const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-
-
     const approvedTemplates = (templateResponse?.items || []).filter(t =>
         t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
       );
@@ -659,22 +571,17 @@ const LabsPage = () => {
           approvedTemplateMap.set(t.courseElementId, t);
         }
       });
-
       const allLabs = allElements.filter(
         (el) =>
           el.semesterCourseId.toString() === classData.semesterCourseId &&
         isLab(el)
       );
-
-
       const assessmentMap = new Map<number, ClassAssessment>();
     for (const assessment of (classAssessmentRes?.items || [])) {
         if (assessment.courseElementId) {
           assessmentMap.set(assessment.courseElementId, assessment);
         }
       }
-
-
     let semesterStartDate: string | undefined;
     let semesterEndDate: string | undefined;
     const classElement = allElements.find(
@@ -684,7 +591,6 @@ const LabsPage = () => {
       semesterStartDate = classElement.semesterCourse.semester.startDate;
       semesterEndDate = classElement.semesterCourse.semester.endDate;
     }
-
     return {
       labs: allLabs,
       templates: approvedTemplates,
@@ -692,53 +598,38 @@ const LabsPage = () => {
       semesterInfo: semesterStartDate && semesterEndDate ? { startDate: semesterStartDate, endDate: semesterEndDate } : null,
     };
   }, [classData, allElements, assignRequestResponse, templateResponse, classAssessmentRes]);
-
-
   const classAssessmentIds = Array.from(classAssessments.values()).map(ca => ca.id);
   const { data: submissionsData } = useQuery({
     queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return { latest: new Map<number, Submission[]>(), all: new Map<number, Submission[]>() };
-
           const submissionPromises = classAssessmentIds.map(classAssessmentId =>
             submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
           );
           const submissionArrays = await Promise.all(submissionPromises);
           const allSubmissions = submissionArrays.flat();
-
       const submissionsByCourseElement = new Map<number, Submission[]>();
       const allSubmissionsByCourseElement = new Map<number, Submission[]>();
-
-
           for (const submission of allSubmissions) {
         const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
             if (classAssessment && classAssessment.courseElementId) {
               const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
               existing.push(submission);
               submissionsByCourseElement.set(classAssessment.courseElementId, existing);
-              
-              // Lưu tất cả submissions để đếm số lần nộp
               const allExisting = allSubmissionsByCourseElement.get(classAssessment.courseElementId) || [];
               allExisting.push(submission);
               allSubmissionsByCourseElement.set(classAssessment.courseElementId, allExisting);
             }
           }
-
-
-
           for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
-
             const sortedSubs = [...subs].sort((a, b) => {
               const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
               const dateB = new Date(b.updatedAt || b.submittedAt || 0).getTime();
               if (dateB !== dateA) {
                 return dateB - dateA;
               }
-
               return (b.id || 0) - (a.id || 0);
             });
-
-
             const studentSubmissions = new Map<number, Submission>();
             for (const sub of sortedSubs) {
               if (!sub.studentId) continue;
@@ -746,7 +637,6 @@ const LabsPage = () => {
               if (!existing) {
                 studentSubmissions.set(sub.studentId, sub);
               } else {
-
                 const existingDate = new Date(existing.updatedAt || existing.submittedAt || 0).getTime();
                 const currentDate = new Date(sub.updatedAt || sub.submittedAt || 0).getTime();
                 if (currentDate > existingDate ||
@@ -755,8 +645,6 @@ const LabsPage = () => {
                 }
               }
             }
-
-
             const latestSubs = Array.from(studentSubmissions.values()).sort(
               (a, b) => {
                 const dateA = new Date(a.updatedAt || a.submittedAt || 0).getTime();
@@ -769,27 +657,21 @@ const LabsPage = () => {
             );
             submissionsByCourseElement.set(courseElementId, latestSubs);
       }
-
       return { latest: submissionsByCourseElement, all: allSubmissionsByCourseElement };
     },
     enabled: classAssessmentIds.length > 0,
   });
-
   const submissions = submissionsData?.latest || new Map<number, Submission[]>();
   const allSubmissions = submissionsData?.all || new Map<number, Submission[]>();
   const isLoading = isLoadingClass && !classData;
   const error = !selectedClassId ? "No class selected. Please select a class first." : null;
-
   const { message } = App.useApp();
   const { user } = useAuth();
-
-
   const updateDeadlineMutation = useMutation({
     mutationFn: async ({ classAssessmentId, payload }: { classAssessmentId: number; payload: any }) => {
       return classAssessmentService.updateClassAssessment(classAssessmentId, payload);
     },
     onSuccess: () => {
-
       if (selectedClassId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
       }
@@ -800,14 +682,11 @@ const LabsPage = () => {
       message.error(err.message || "Failed to update deadline");
     },
   });
-
-
   const createDeadlineMutation = useMutation({
     mutationFn: async (payload: any) => {
       return classAssessmentService.createClassAssessment(payload);
     },
     onSuccess: () => {
-
       if (selectedClassId) {
         queryClient.invalidateQueries({ queryKey: queryKeys.classAssessments.byClassId(selectedClassId) });
       }
@@ -818,79 +697,55 @@ const LabsPage = () => {
       message.error(err.message || "Failed to create deadline");
     },
   });
-
   const handleExportReport = async () => {
     if (!selectedClassId || !user?.id) {
       message.error("Class ID or User ID not found");
       return;
     }
-
     try {
       message.info("Preparing report...");
-
       const classData = await classService.getClassById(selectedClassId);
       if (!classData) {
         message.error("Class not found");
         return;
       }
-
-
       const courseElementsRes = await courseElementService.getCourseElements({
         pageNumber: 1,
         pageSize: 1000,
       });
-
-
       const classAssessmentRes = await classAssessmentService.getClassAssessments({
         classId: Number(selectedClassId),
         pageNumber: 1,
         pageSize: 1000,
       });
-
-
       const labElements = courseElementsRes.filter(ce => {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === ce.id);
         return classAssessment && classAssessment.classId === Number(selectedClassId) && isLab(ce);
       });
-
       const reportData: GradeReportData[] = [];
-
-
       for (const courseElement of labElements) {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === courseElement.id);
         if (!classAssessment) continue;
-
-
         const allStudents = await classService.getStudentsInClass(Number(selectedClassId)).catch(() => []);
-
-
         const submissions = await submissionService.getSubmissionList({
           classAssessmentId: classAssessment.id,
         }).catch(() => []);
-
-
         const submissionMap = new Map<number, Submission>();
         for (const submission of submissions) {
           if (submission.studentId) {
             submissionMap.set(submission.studentId, submission);
           }
         }
-
-
         let questions: any[] = [];
         const rubrics: { [questionId: number]: any[] } = {};
-
         try {
           const assessmentTemplateId = classAssessment.assessmentTemplateId;
           if (assessmentTemplateId !== null) {
-
             const papersRes = await assessmentPaperService.getAssessmentPapers({
               assessmentTemplateId: assessmentTemplateId,
               pageNumber: 1,
               pageSize: 100,
             });
-
-
             for (const paper of papersRes.items) {
               const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
                 assessmentPaperId: paper.id,
@@ -898,8 +753,6 @@ const LabsPage = () => {
                 pageSize: 100,
               });
               questions = [...questions, ...questionsRes.items];
-
-
               for (const question of questionsRes.items) {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
                   assessmentQuestionId: question.id,
@@ -913,13 +766,10 @@ const LabsPage = () => {
         } catch (err) {
           console.error(`Failed to fetch questions/rubrics for lab ${courseElement.id}:`, err);
         }
-
-
         for (const student of allStudents) {
           const submission = submissionMap.get(student.studentId) || null;
           let gradingSession = null;
           let gradeItems: any[] = [];
-
           if (submission) {
             try {
               const gradingSessionsResult = await gradingService.getGradingSessions({
@@ -929,7 +779,6 @@ const LabsPage = () => {
                 gradingSession = gradingSessionsResult.items.sort((a, b) =>
                   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                 )[0];
-
                 const gradeItemsResult = await gradeItemService.getGradeItems({
                   gradingSessionId: gradingSession.id,
                 });
@@ -939,8 +788,6 @@ const LabsPage = () => {
               console.error(`Failed to fetch grading data for submission ${submission.id}:`, err);
             }
           }
-
-
           const submissionData: Submission = submission || {
             id: 0,
             studentId: student.studentId,
@@ -954,7 +801,6 @@ const LabsPage = () => {
             updatedAt: "",
             submissionFile: null,
           };
-
           reportData.push({
             submission: submissionData,
             gradingSession,
@@ -976,12 +822,10 @@ const LabsPage = () => {
           });
         }
       }
-
       if (reportData.length === 0) {
         message.warning("No data available to export");
         return;
       }
-
       await exportGradeReportToExcel(reportData, "Lab_Grade_Report");
       message.success("Lab grade report exported successfully");
     } catch (err: any) {
@@ -989,25 +833,19 @@ const LabsPage = () => {
       message.error(err.message || "Export failed. Please check browser console for details.");
     }
   };
-
   const handleDeadlineSave = async (
     courseElementId: number,
     startDate: dayjs.Dayjs | null,
     endDate: dayjs.Dayjs | null
   ) => {
     if (!startDate || !endDate || !selectedClassId) return;
-
-
     if (startDate.isAfter(endDate) || startDate.isSame(endDate)) {
       message.error("Start date must be before end date");
       return;
     }
-
     const classAssessment = classAssessments.get(courseElementId);
     const lab = labs.find(l => l.id === courseElementId);
     const matchingTemplate = templates.find(t => t.courseElementId === courseElementId);
-
-
     if (classAssessment) {
       updateDeadlineMutation.mutate({
         classAssessmentId: classAssessment.id,
@@ -1020,12 +858,10 @@ const LabsPage = () => {
         },
         });
     } else {
-
       if (!matchingTemplate) {
         message.error("Assessment template not found. Cannot create deadline.");
         return;
       }
-
       createDeadlineMutation.mutate({
           classId: Number(selectedClassId),
           assessmentTemplateId: matchingTemplate.id,
@@ -1035,7 +871,6 @@ const LabsPage = () => {
       });
     }
   };
-
   if (isLoading) {
     return (
       <div className={styles.wrapper}>
@@ -1043,7 +878,6 @@ const LabsPage = () => {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className={styles.wrapper}>
@@ -1051,7 +885,6 @@ const LabsPage = () => {
       </div>
     );
   }
-
   return (
     <div className={styles.wrapper}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -1119,27 +952,20 @@ const LabsPage = () => {
         >
           {labs.map((lab) => {
             const classAssessment = classAssessments.get(lab.id);
-
             let matchingTemplate: AssessmentTemplate | undefined;
             if (classAssessment?.assessmentTemplateId) {
-
               matchingTemplate = templates.find(
                 (t) => t.id === classAssessment.assessmentTemplateId
               );
             } else {
-
               matchingTemplate = templates.find(
                 (t) => t.courseElementId === lab.id
               );
             }
-
-
             const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
               ? classAssessment
               : undefined;
-
             const labSubmissions = approvedClassAssessment ? (submissions.get(lab.id) || []) : [];
-
             return (
               <Panel
                 key={lab.id}
@@ -1177,6 +1003,4 @@ const LabsPage = () => {
     </div>
   );
 };
-
 export default LabsPage;
-

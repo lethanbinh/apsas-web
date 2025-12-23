@@ -1,9 +1,7 @@
 import { Tag, Typography } from "antd";
 import type { RubricItem } from "@/services/rubricItemService";
 import type { QuestionWithRubrics } from "../page";
-
 const { Text } = Typography;
-
 export function getQuestionColumns(question: QuestionWithRubrics) {
   return [
     {
@@ -57,4 +55,3 @@ export function getQuestionColumns(question: QuestionWithRubrics) {
     },
   ];
 }
-

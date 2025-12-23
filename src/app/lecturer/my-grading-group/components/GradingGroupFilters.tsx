@@ -1,21 +1,16 @@
 "use client";
-
 import { Semester } from "@/services/semesterService";
 import { Card, Select, Space, Typography } from "antd";
-
 const { Text } = Typography;
-
 interface CourseOption {
   courseId: number;
   courseName: string;
 }
-
 interface TemplateOption {
   id: number;
   name: string;
   assessmentTemplateId: number | null;
 }
-
 interface GradingGroupFiltersProps {
   semesters: Semester[];
   availableCourses: CourseOption[];
@@ -27,7 +22,6 @@ interface GradingGroupFiltersProps {
   onCourseChange: (value: number | undefined) => void;
   onTemplateChange: (value: number | undefined) => void;
 }
-
 export function GradingGroupFilters({
   semesters,
   availableCourses,
@@ -112,4 +106,3 @@ export function GradingGroupFilters({
     </Card>
   );
 }
-

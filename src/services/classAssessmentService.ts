@@ -1,5 +1,4 @@
 import { apiService } from "./api";
-
 export interface CreateClassAssessmentPayload {
   classId: number;
   assessmentTemplateId: number;
@@ -7,7 +6,6 @@ export interface CreateClassAssessmentPayload {
   endAt: string;
   isPublished?: boolean;
 }
-
 export interface ClassAssessment {
   id: number;
   classId: number;
@@ -29,14 +27,12 @@ export interface ClassAssessment {
   status: number;
   isPublished?: boolean;
 }
-
 export interface ClassAssessmentApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: ClassAssessment;
 }
-
 export interface ClassAssessmentListResult {
   currentPage: number;
   pageSize: number;
@@ -44,14 +40,12 @@ export interface ClassAssessmentListResult {
   totalPages: number;
   items: ClassAssessment[];
 }
-
 export interface ClassAssessmentListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: ClassAssessmentListResult;
 }
-
 export interface GetClassAssessmentsParams {
   classId?: number;
   assessmentTemplateId?: number;
@@ -61,12 +55,10 @@ export interface GetClassAssessmentsParams {
   pageNumber: number;
   pageSize: number;
 }
-
 export interface GetClassAssessmentsResponse {
   items: ClassAssessment[];
   total: number;
 }
-
 export class ClassAssessmentService {
   async createClassAssessment(
     payload: CreateClassAssessmentPayload
@@ -77,7 +69,6 @@ export class ClassAssessmentService {
     );
     return response.result;
   }
-
   async getClassAssessments(
     params: GetClassAssessmentsParams
   ): Promise<GetClassAssessmentsResponse> {
@@ -90,7 +81,6 @@ export class ClassAssessmentService {
       total: response.result.totalCount,
     };
   }
-
   async updateClassAssessment(
     classAssessmentId: string | number,
     payload: Partial<CreateClassAssessmentPayload>
@@ -102,5 +92,4 @@ export class ClassAssessmentService {
     return response.result;
   }
 }
-
 export const classAssessmentService = new ClassAssessmentService();

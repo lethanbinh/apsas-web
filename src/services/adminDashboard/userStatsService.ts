@@ -2,45 +2,28 @@ import { ROLES } from '@/lib/constants';
 import { adminService } from '../adminService';
 import type { UserStats, UserGrowthData } from './types';
 import { getDefaultUserStats } from './defaultStats';
-
 export class UserStatsService {
-
   async getUserStats(): Promise<UserStats> {
     try {
-
       const { users, total } = await adminService.getAccountList(1, 1000);
-
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
       const byRole = {
         admin: 0,
         lecturer: 0,
         student: 0,
         hod: 0,
       };
-
       let newThisMonth = 0;
       let active = 0;
-
-
       const filteredUsers = users.filter((user) => user.role !== 4);
-
       filteredUsers.forEach((user) => {
-
         if (user.role === ROLES.ADMIN) byRole.admin++;
         else if (user.role === ROLES.LECTURER) byRole.lecturer++;
         else if (user.role === ROLES.STUDENT) byRole.student++;
         else if (user.role === ROLES.HOD) byRole.hod++;
-
-
         active++;
       });
-
-
-
-
-
       const byGender = {
         male: 0,
         female: 0,
@@ -54,22 +37,14 @@ export class UserStatsService {
       let usersWithoutPhone = 0;
       let inactive = 0;
       let neverLoggedIn = 0;
-
       filteredUsers.forEach((user) => {
-
         if (user.gender === 0) byGender.male++;
         else if (user.gender === 1) byGender.female++;
         else byGender.other++;
-
-
         if (user.avatar) usersWithAvatar++;
         else usersWithoutAvatar++;
-
-
         if (user.phoneNumber && user.phoneNumber.trim() !== '') usersWithPhone++;
         else usersWithoutPhone++;
-
-
         if (user.dateOfBirth) {
           try {
             const birthDate = new Date(user.dateOfBirth);
@@ -79,16 +54,10 @@ export class UserStatsService {
               ageCount++;
             }
           } catch (e) {
-
           }
         }
-
-
-
       });
-
       const averageAge = ageCount > 0 ? Math.round(totalAge / ageCount) : undefined;
-
       return {
         total: filteredUsers.length,
         byRole,
@@ -108,27 +77,18 @@ export class UserStatsService {
       return getDefaultUserStats();
     }
   }
-
   async getUserGrowthData(): Promise<UserGrowthData[]> {
     try {
       const { users } = await adminService.getAccountList(1, 1000);
-
-
-
-
       const monthlyData: Record<string, { total: number; students: number; lecturers: number }> = {};
       const now = new Date();
       const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-
       monthlyData[currentMonthKey] = { total: 0, students: 0, lecturers: 0 };
-
       users.forEach((user) => {
         monthlyData[currentMonthKey].total++;
         if (user.role === ROLES.STUDENT) monthlyData[currentMonthKey].students++;
         if (user.role === ROLES.LECTURER) monthlyData[currentMonthKey].lecturers++;
       });
-
       return Object.entries(monthlyData)
         .map(([month, data]) => ({
           month,
@@ -141,12 +101,8 @@ export class UserStatsService {
       return [];
     }
   }
-
-
   async getDetailedUserStats(): Promise<UserStats> {
     return this.getUserStats();
   }
 }
-
 export const userStatsService = new UserStatsService();
-

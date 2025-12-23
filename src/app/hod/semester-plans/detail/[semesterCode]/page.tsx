@@ -37,9 +37,7 @@ import { use, useState } from "react";
 import { SemesterCoursesTable } from "./components/SemesterCoursesTable";
 import { useSemesterDetailData } from "./hooks/useSemesterDetailData";
 import { formatUtcDate, isSemesterEnded } from "./utils";
-
 const { Title, Text } = Typography;
-
 const SemesterDetailPageContent = ({
   params,
 }: {
@@ -56,16 +54,13 @@ const SemesterDetailPageContent = ({
     elementsWithAssessment,
     elementsWithApprovedRequest,
   } = useSemesterDetailData(params.semesterCode);
-
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<Class | null>(null);
   const [currentSemesterCourseId, setCurrentSemesterCourseId] = useState<
     number | null
   >(null);
-
   const [isElementModalOpen, setIsElementModalOpen] = useState(false);
   const [editingElement, setEditingElement] = useState<CourseElement | null>(
     null
@@ -74,7 +69,6 @@ const SemesterDetailPageContent = ({
     currentSemesterCourseIdForElement,
     setCurrentSemesterCourseIdForElement,
   ] = useState<number | null>(null);
-
   const [isAssignRequestModalOpen, setIsAssignRequestModalOpen] =
     useState(false);
   const [editingAssignRequest, setEditingAssignRequest] =
@@ -85,10 +79,8 @@ const SemesterDetailPageContent = ({
   const [currentAssignRequests, setCurrentAssignRequests] = useState<
     AssignRequest[]
   >([]);
-
   const [isStudentGroupModalOpen, setIsStudentGroupModalOpen] = useState(false);
   const [currentClassId, setCurrentClassId] = useState<number | null>(null);
-
   const [isViewStudentsModalOpen, setIsViewStudentsModalOpen] = useState(false);
   const [viewingClassId, setViewingClassId] = useState<number | null>(null);
   const [viewingClassCode, setViewingClassCode] = useState<string>("");
@@ -98,22 +90,18 @@ const SemesterDetailPageContent = ({
   const [importingSemesterCode, setImportingSemesterCode] = useState<string>("");
   const [importingCourseCode, setImportingCourseCode] = useState<string>("");
   const [importingCourseName, setImportingCourseName] = useState<string>("");
-
   const handleOpenCreateCourseModal = () => {
     setEditingCourse(null);
     setIsCourseModalOpen(true);
   };
-
   const handleOpenEditCourseModal = (course: Course) => {
     setEditingCourse(course);
     setIsCourseModalOpen(true);
   };
-
   const handleCourseModalCancel = () => {
     setIsCourseModalOpen(false);
     setEditingCourse(null);
   };
-
   const handleCourseModalOk = () => {
     setIsCourseModalOpen(false);
     const wasEditing = !!editingCourse;
@@ -127,7 +115,6 @@ const SemesterDetailPageContent = ({
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
-
   const handleDeleteSemesterCourse = (semesterCourseId: number) => {
     modal.confirm({
       title: "Are you sure you want to unlink this course?",
@@ -156,13 +143,11 @@ const SemesterDetailPageContent = ({
       },
     });
   };
-
   const handleOpenCreateClassModal = (semesterCourseId: number) => {
     setCurrentSemesterCourseId(semesterCourseId);
     setEditingClass(null);
     setIsClassModalOpen(true);
   };
-
   const handleOpenEditClassModal = (cls: Class) => {
     const semesterCourse = semesterData?.semesterCourses.find((sc) =>
       sc.classes.some((c) => c.id === cls.id)
@@ -173,13 +158,11 @@ const SemesterDetailPageContent = ({
       setIsClassModalOpen(true);
     }
   };
-
   const handleClassModalCancel = () => {
     setIsClassModalOpen(false);
     setEditingClass(null);
     setCurrentSemesterCourseId(null);
   };
-
   const handleClassModalOk = () => {
     setIsClassModalOpen(false);
     const wasEditing = !!editingClass;
@@ -194,7 +177,6 @@ const SemesterDetailPageContent = ({
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
-
   const handleDeleteClass = (classId: number) => {
     modal.confirm({
       title: "Are you sure you want to delete this class?",
@@ -222,15 +204,12 @@ const SemesterDetailPageContent = ({
       },
     });
   };
-
   const handleOpenCreateElementModal = (semesterCourseId: number) => {
     setCurrentSemesterCourseIdForElement(semesterCourseId);
     setEditingElement(null);
     setIsElementModalOpen(true);
   };
-
   const handleOpenEditElementModal = (element: CourseElement) => {
-
     if (elementsWithAssessment.has(element.id)) {
       notification.warning({
         message: "Cannot Edit Course Element",
@@ -239,7 +218,6 @@ const SemesterDetailPageContent = ({
       });
       return;
     }
-
     const semesterCourse = semesterData?.semesterCourses.find((sc) =>
       sc.courseElements.some((el) => el.id === element.id)
     );
@@ -249,13 +227,11 @@ const SemesterDetailPageContent = ({
       setIsElementModalOpen(true);
     }
   };
-
   const handleElementModalCancel = () => {
     setIsElementModalOpen(false);
     setEditingElement(null);
     setCurrentSemesterCourseIdForElement(null);
   };
-
   const handleElementModalOk = () => {
     setIsElementModalOpen(false);
     const wasEditing = !!editingElement;
@@ -270,7 +246,6 @@ const SemesterDetailPageContent = ({
     });
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
   };
-
   const handleDeleteElement = (elementId: number) => {
     modal.confirm({
       title: "Are you sure you want to delete this course element?",
@@ -298,7 +273,6 @@ const SemesterDetailPageContent = ({
       },
     });
   };
-
   const handleOpenCreateAssignRequestModal = (
     semesterCourse: SemesterCourse
   ) => {
@@ -307,7 +281,6 @@ const SemesterDetailPageContent = ({
     setEditingAssignRequest(null);
     setIsAssignRequestModalOpen(true);
   };
-
   const handleOpenEditAssignRequestModal = (
     request: AssignRequest,
     semesterCourse: SemesterCourse
@@ -317,14 +290,12 @@ const SemesterDetailPageContent = ({
     setEditingAssignRequest(request);
     setIsAssignRequestModalOpen(true);
   };
-
   const handleAssignRequestModalCancel = () => {
     setIsAssignRequestModalOpen(false);
     setEditingAssignRequest(null);
     setCurrentCourseElements([]);
     setCurrentAssignRequests([]);
   };
-
   const handleAssignRequestModalOk = () => {
     setIsAssignRequestModalOpen(false);
     const wasEditing = !!editingAssignRequest;
@@ -341,7 +312,6 @@ const SemesterDetailPageContent = ({
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
     queryClient.invalidateQueries({ queryKey: queryKeys.assignRequests.all });
   };
-
   const handleDeleteAssignRequest = (requestId: number) => {
     modal.confirm({
       title: "Are you sure you want to delete this assign request?",
@@ -370,29 +340,24 @@ const SemesterDetailPageContent = ({
       },
     });
   };
-
   const handleOpenAddStudentModal = (classId: number) => {
     setCurrentClassId(classId);
     setIsStudentGroupModalOpen(true);
   };
-
   const handleViewStudents = (classId: number, classCode: string) => {
     setViewingClassId(classId);
     setViewingClassCode(classCode);
     setIsViewStudentsModalOpen(true);
   };
-
   const handleViewStudentsModalCancel = () => {
     setIsViewStudentsModalOpen(false);
     setViewingClassId(null);
     setViewingClassCode("");
   };
-
   const handleStudentGroupModalCancel = () => {
     setIsStudentGroupModalOpen(false);
     setCurrentClassId(null);
   };
-
   const handleStudentGroupModalOk = () => {
     setIsStudentGroupModalOpen(false);
     setCurrentClassId(null);
@@ -404,7 +369,6 @@ const SemesterDetailPageContent = ({
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
     setStudentCountRefreshTrigger(prev => prev + 1);
   };
-
   const handleDeleteStudentGroup = (studentGroupId: number) => {
     modal.confirm({
       title: "Are you sure you want to remove this student?",
@@ -433,7 +397,6 @@ const SemesterDetailPageContent = ({
       },
     });
   };
-
   const handleImportClassStudent = (semesterCourse: SemesterCourse) => {
     setImportingSemesterCourseId(semesterCourse.id);
     setImportingSemesterCode(semesterData?.semesterCode || "");
@@ -441,7 +404,6 @@ const SemesterDetailPageContent = ({
     setImportingCourseName(semesterCourse.course.name);
     setIsImportClassStudentModalOpen(true);
   };
-
   const handleImportClassStudentModalCancel = () => {
     setIsImportClassStudentModalOpen(false);
     setImportingSemesterCourseId(null);
@@ -449,7 +411,6 @@ const SemesterDetailPageContent = ({
     setImportingCourseCode("");
     setImportingCourseName("");
   };
-
   const handleImportClassStudentModalOk = () => {
     setIsImportClassStudentModalOpen(false);
     queryClient.invalidateQueries({ queryKey: queryKeys.semesters.detail(params.semesterCode) });
@@ -459,7 +420,6 @@ const SemesterDetailPageContent = ({
       placement: "topRight",
     });
   };
-
   if (loading) {
     return (
       <div
@@ -469,7 +429,6 @@ const SemesterDetailPageContent = ({
       </div>
     );
   }
-
   if (error) {
     return (
       <Text type="danger" style={{ padding: "24px" }}>
@@ -477,14 +436,10 @@ const SemesterDetailPageContent = ({
       </Text>
     );
   }
-
   if (!semesterData) {
     return <Text type="danger">No semester data found.</Text>;
   }
-
-
   const semesterEnded = isSemesterEnded(semesterData.endDate);
-
   return (
     <div style={{ padding: "24px", background: "#fff", minHeight: "100%" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
@@ -496,7 +451,6 @@ const SemesterDetailPageContent = ({
           Back
         </Button>
       </div>
-
       <Descriptions bordered style={{ marginBottom: 24 }} column={2}>
         <Descriptions.Item label="Semester Code">
           {semesterData.semesterCode}
@@ -520,7 +474,6 @@ const SemesterDetailPageContent = ({
           {semesterData.note || "N/A"}
         </Descriptions.Item>
       </Descriptions>
-
       <Space
         style={{
           display: "flex",
@@ -563,7 +516,6 @@ const SemesterDetailPageContent = ({
         elementsWithAssessment={elementsWithAssessment}
         elementsWithApprovedRequest={elementsWithApprovedRequest}
       />
-
       <CourseCrudModal
         open={isCourseModalOpen}
         semesterId={semesterData.id}
@@ -572,7 +524,6 @@ const SemesterDetailPageContent = ({
         onCancel={handleCourseModalCancel}
         onOk={handleCourseModalOk}
       />
-
       {currentSemesterCourseId && (
         <ClassCrudModal
           open={isClassModalOpen}
@@ -582,7 +533,6 @@ const SemesterDetailPageContent = ({
           onOk={handleClassModalOk}
         />
       )}
-
       {currentSemesterCourseIdForElement && (
         <CourseElementCrudModal
           open={isElementModalOpen}
@@ -597,7 +547,6 @@ const SemesterDetailPageContent = ({
           onOk={handleElementModalOk}
         />
       )}
-
       <AssignRequestCrudModal
         open={isAssignRequestModalOpen}
         initialData={editingAssignRequest}
@@ -607,7 +556,6 @@ const SemesterDetailPageContent = ({
         onCancel={handleAssignRequestModalCancel}
         onOk={handleAssignRequestModalOk}
       />
-
       {currentClassId && (
         <StudentGroupCrudModal
           open={isStudentGroupModalOpen}
@@ -616,7 +564,6 @@ const SemesterDetailPageContent = ({
           onOk={handleStudentGroupModalOk}
         />
       )}
-
       <ViewStudentsModal
         open={isViewStudentsModalOpen}
         classId={viewingClassId}
@@ -630,7 +577,6 @@ const SemesterDetailPageContent = ({
           setStudentCountRefreshTrigger(prev => prev + 1);
         }}
       />
-
       {importingSemesterCourseId !== null && (
         <ImportClassStudentModal
           open={isImportClassStudentModalOpen}
@@ -645,7 +591,6 @@ const SemesterDetailPageContent = ({
     </div>
   );
 };
-
 export default function SemesterDetailPage({
   params,
 }: {

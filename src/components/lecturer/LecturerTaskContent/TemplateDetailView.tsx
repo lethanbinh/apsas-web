@@ -1,5 +1,4 @@
 "use client";
-
 import { AssessmentFile, assessmentFileService } from "@/services/assessmentFileService";
 import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { AssessmentTemplate } from "@/services/assessmentTemplateService";
@@ -11,9 +10,7 @@ import { useState } from "react";
 import { TemplateFormModal } from "./TemplateFormModal";
 import { UploadFileModal } from "./UploadFileModal";
 import styles from "./TaskContent.module.css";
-
 const { Title } = Typography;
-
 interface TemplateDetailViewProps {
   template: AssessmentTemplate;
   papers: AssessmentPaper[];
@@ -31,7 +28,6 @@ interface TemplateDetailViewProps {
   onConfirmTemplateCreation?: () => Promise<void>;
   updateStatusToInProgress?: () => Promise<void>;
 }
-
 export const TemplateDetailView = ({
   template,
   papers,
@@ -55,14 +51,10 @@ export const TemplateDetailView = ({
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadFileType, setUploadFileType] = useState<0 | 1 | 2>(2);
   const { modal, notification } = App.useApp();
-
-
   const databaseFilesCount = files.filter(f => f.fileTemplate === 0).length;
   const postmanFilesCount = files.filter(f => f.fileTemplate === 1).length;
   const customFilesCount = files.filter(f => f.fileTemplate === 2).length;
-
   const handleOpenUploadModal = (fileType: 0 | 1 | 2) => {
-
     if (template.templateType === 1) {
       if (fileType === 0 && databaseFilesCount >= 1) {
         notification.warning({
@@ -82,16 +74,12 @@ export const TemplateDetailView = ({
     setUploadFileType(fileType);
     setIsUploadModalOpen(true);
   };
-
   const handleUploadFile = async (values: { name: string; databaseName?: string; file: File }) => {
     try {
       let fileTemplate = uploadFileType;
-
-
       if (template.templateType === 0) {
         fileTemplate = 2;
       }
-
       await assessmentFileService.createAssessmentFile({
         File: values.file,
         Name: values.name,
@@ -99,7 +87,6 @@ export const TemplateDetailView = ({
         FileTemplate: fileTemplate,
         AssessmentTemplateId: template.id,
       });
-
       setIsUploadModalOpen(false);
       setFileList([]);
       onFileChange();
@@ -114,7 +101,6 @@ export const TemplateDetailView = ({
       });
     }
   };
-
   const handleDeleteFile = (fileId: number) => {
     modal.confirm({
       title: "Delete this file?",
@@ -135,7 +121,6 @@ export const TemplateDetailView = ({
       },
     });
   };
-
   const confirmTemplateDelete = () => {
     modal.confirm({
       title: "Delete this template?",
@@ -145,7 +130,6 @@ export const TemplateDetailView = ({
       onOk: onTemplateDelete,
     });
   };
-
   return (
     <div className={styles.container}>
       <div className={styles.card}>
@@ -232,7 +216,6 @@ export const TemplateDetailView = ({
           </div>
         </div>
       </div>
-
       <TemplateFormModal
         open={isTemplateModalOpen}
         onCancel={() => setIsTemplateModalOpen(false)}
@@ -245,7 +228,6 @@ export const TemplateDetailView = ({
         assignedToHODId={assignedToHODId}
         task={task}
       />
-
       <div className={styles.card}>
         <div className={styles.cardHeader}>
           <Title level={4} className={styles.cardTitle} style={{ margin: 0 }}>Attached Files</Title>
@@ -294,7 +276,6 @@ export const TemplateDetailView = ({
                   </Typography.Text>
                 )}
               </div>
-
               <div className={styles.fileSection}>
                 <Typography.Text strong className={styles.fileSectionTitle}>Postman Files:</Typography.Text>
                 <List
@@ -336,7 +317,6 @@ export const TemplateDetailView = ({
                   </Typography.Text>
                 )}
               </div>
-
               <div className={styles.fileSection}>
                 <Typography.Text strong className={styles.fileSectionTitle}>Custom Files:</Typography.Text>
                 <List
@@ -414,7 +394,6 @@ export const TemplateDetailView = ({
               )}
             />
           )}
-
           {isEditable && (
             <div className={styles.uploadButtonGroup}>
               {template.templateType === 1 ? (
@@ -457,7 +436,6 @@ export const TemplateDetailView = ({
           )}
         </div>
       </div>
-
       <UploadFileModal
         open={isUploadModalOpen}
         onCancel={() => {
@@ -473,4 +451,3 @@ export const TemplateDetailView = ({
     </div>
   );
 };
-

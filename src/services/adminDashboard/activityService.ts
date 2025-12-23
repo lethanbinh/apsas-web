@@ -2,13 +2,10 @@ import { adminService } from '../adminService';
 import { classService } from '../classService';
 import { submissionService } from '../submissionService';
 import type { RecentActivity, PendingTask } from './types';
-
 export class ActivityService {
   async getRecentActivities(limit: number = 10): Promise<RecentActivity[]> {
     try {
       const activities: RecentActivity[] = [];
-
-
       const { users } = await adminService.getAccountList(1, 20);
       users.slice(0, 5).forEach((user) => {
         activities.push({
@@ -20,8 +17,6 @@ export class ActivityService {
           icon: '👤',
         });
       });
-
-
       const { classes } = await classService.getClassList({
         pageNumber: 1,
         pageSize: 10,
@@ -36,8 +31,6 @@ export class ActivityService {
           icon: '📚',
         });
       });
-
-
       const submissions = await submissionService.getSubmissionList({});
       submissions.slice(0, 5).forEach((submission) => {
         activities.push({
@@ -49,7 +42,6 @@ export class ActivityService {
           icon: '📝',
         });
       });
-
       return activities
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, limit);
@@ -58,12 +50,9 @@ export class ActivityService {
       return [];
     }
   }
-
   async getPendingTasks(): Promise<PendingTask[]> {
     try {
       const tasks: PendingTask[] = [];
-
-
       const requests = await adminService.getApprovalList(1, 100);
       requests.items
         .filter((r) => r.status === 0)
@@ -78,8 +67,6 @@ export class ActivityService {
             timestamp: request.createdAt,
           });
         });
-
-
       const submissions = await submissionService.getSubmissionList({});
       submissions
         .filter((s) => s.lastGrade === 0 && s.submittedAt)
@@ -94,7 +81,6 @@ export class ActivityService {
             timestamp: submission.submittedAt || submission.createdAt,
           });
         });
-
       return tasks
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
         .slice(0, 10);
@@ -104,6 +90,4 @@ export class ActivityService {
     }
   }
 }
-
 export const activityService = new ActivityService();
-

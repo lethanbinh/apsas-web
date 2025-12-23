@@ -1,26 +1,21 @@
 "use client";
-
 import ClassInfo from "@/components/student/ClassInfo";
 import { ClassInfo as ClassInfoType, classService } from "@/services/classService";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
 import { Spin } from "antd";
-
 export default function ClassDetailPage() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-
   useEffect(() => {
     const storedClassId = localStorage.getItem("selectedClassId");
     setSelectedClassId(storedClassId);
   }, []);
-
   const { data: classData, isLoading, error } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),
     queryFn: () => classService.getClassById(selectedClassId!),
     enabled: !!selectedClassId,
   });
-
   if (isLoading && !classData) {
     return (
       <div style={{
@@ -34,7 +29,6 @@ export default function ClassDetailPage() {
       </div>
     );
   }
-
   if (error || !classData) {
     return (
       <div style={{
@@ -46,7 +40,6 @@ export default function ClassDetailPage() {
       </div>
     );
   }
-
   return (
     <div style={{
       minHeight: '100vh',

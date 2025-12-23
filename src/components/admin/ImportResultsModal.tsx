@@ -1,26 +1,21 @@
 "use client";
-
 import { Alert, Button, Modal, Space, Table } from "antd";
-
 interface ImportError {
   row: number;
   accountCode?: string;
   email?: string;
   error: string;
 }
-
 interface ImportResults {
   success: number;
   failed: number;
   errors: ImportError[];
 }
-
 interface ImportResultsModalProps {
   open: boolean;
   results: ImportResults;
   onClose: () => void;
 }
-
 const importResultColumns = [
   {
     title: "Row",
@@ -47,7 +42,6 @@ const importResultColumns = [
     ellipsis: true,
   },
 ];
-
 export const ImportResultsModal = ({
   open,
   results,
@@ -87,5 +81,3 @@ export const ImportResultsModal = ({
     </Modal>
   );
 };
-
-

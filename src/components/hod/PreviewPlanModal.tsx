@@ -1,12 +1,9 @@
 "use client";
-
 import React from "react";
 import { Modal, Typography, Space, Spin, Alert } from "antd";
 import { Button } from "../ui/Button";
 import { PreviewTable } from "./PreviewTable";
-
 const { Title, Text } = Typography;
-
 interface CourseElementData {
   key: string;
   CourseCode: string;
@@ -31,17 +28,14 @@ interface ClassStudentData {
   StudentAccountCode: string;
   EnrollmentDescription: string;
 }
-
 export interface PreviewData {
   semesterPlan: CourseElementData[];
   classRoster: ClassStudentData[];
 }
-
 const emptyPreviewData: PreviewData = {
   semesterPlan: [],
   classRoster: [],
 };
-
 export interface PreviewPlanModalProps {
   open: boolean;
   onCancel: () => void;
@@ -85,7 +79,6 @@ const semesterPlanColumns = [
     key: "AssignedLecturerAccountCode",
   },
 ];
-
 const classRosterColumns = [
   { title: "ClassCode", dataIndex: "ClassCode", key: "ClassCode" },
   {
@@ -109,7 +102,6 @@ const classRosterColumns = [
     key: "EnrollmentDescription",
   },
 ];
-
 export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   open,
   onCancel,
@@ -119,20 +111,15 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
   error,
 }) => {
   const finalPreviewData = previewData || emptyPreviewData;
-
   const {
     semesterPlan: semesterPlanDataSource,
     classRoster: classRosterDataSource,
   } = finalPreviewData;
-
-
   const hasSemesterPlan = semesterPlanDataSource.length > 0;
   const hasClassRoster = classRosterDataSource.length > 0;
-
   const handleClose = () => {
     onCancel();
   };
-
   const renderContent = () => {
     if (hasSemesterPlan) {
       return (
@@ -147,7 +134,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
         </Space>
       );
     }
-
     if (hasClassRoster) {
       return (
         <Space direction="vertical" style={{ width: "100%", gap: "15px" }}>
@@ -161,14 +147,12 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
         </Space>
       );
     }
-
     return (
       <Text type="warning">
         No data found in the uploaded file.
       </Text>
     );
   };
-
   const getModalTitle = () => {
     if (hasSemesterPlan) {
       return "Preview Semester Plan";
@@ -178,7 +162,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
     }
     return "Preview Data";
   };
-
   return (
     <Modal
       title={
@@ -204,7 +187,6 @@ export const PreviewPlanModal: React.FC<PreviewPlanModalProps> = ({
           style={{ marginBottom: "20px" }}
         />
       )}
-
       {isLoading ? (
         <div style={{ padding: "50px", textAlign: "center" }}>
           <Spin />

@@ -10,7 +10,6 @@ export interface RubricItem {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface RubricItemListResult {
   currentPage: number;
   pageSize: number;
@@ -18,32 +17,27 @@ export interface RubricItemListResult {
   totalPages: number;
   items: RubricItem[];
 }
-
 export interface RubricItemListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: RubricItemListResult;
 }
-
 export interface RubricItemApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: RubricItem;
 }
-
 export interface GetRubricsParams {
   assessmentQuestionId?: number;
   pageNumber: number;
   pageSize: number;
 }
-
 export interface GetRubricsResponse {
   items: RubricItem[];
   total: number;
 }
-
 export interface CreateRubricItemPayload {
   description: string;
   input: string;
@@ -51,14 +45,12 @@ export interface CreateRubricItemPayload {
   score: number;
   assessmentQuestionId: number;
 }
-
 export interface UpdateRubricItemPayload {
   description: string;
   input: string;
   output: string;
   score: number;
 }
-
 export class RubricItemService {
   async getRubricsForQuestion(
     params: GetRubricsParams
@@ -72,7 +64,6 @@ export class RubricItemService {
       total: response.result.totalCount,
     };
   }
-
   async createRubricItem(
     payload: CreateRubricItemPayload
   ): Promise<RubricItem> {
@@ -82,7 +73,6 @@ export class RubricItemService {
     );
     return response.result;
   }
-
   async updateRubricItem(
     rubricItemId: string | number,
     payload: UpdateRubricItemPayload
@@ -93,10 +83,8 @@ export class RubricItemService {
     );
     return response.result;
   }
-
   async deleteRubricItem(rubricItemId: string | number): Promise<void> {
     await apiService.delete(`/RubricItem/${rubricItemId}`);
   }
 }
-
 export const rubricItemService = new RubricItemService();

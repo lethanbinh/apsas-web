@@ -1,5 +1,4 @@
 "use client";
-
 import {
   CreateStudentGroupPayload,
   StudentDetail,
@@ -8,14 +7,12 @@ import {
 import { StudentInClass } from "@/services/classService";
 import { Alert, App, Form, Input, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
-
 interface StudentGroupCrudModalProps {
   open: boolean;
   classId: number;
   onCancel: () => void;
   onOk: () => void;
 }
-
 const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
   open,
   classId,
@@ -28,15 +25,11 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
   const [students, setStudents] = useState<StudentDetail[]>([]);
   const [existingStudents, setExistingStudents] = useState<StudentInClass[]>([]);
   const { notification } = App.useApp();
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-
         const allStudents = await studentManagementService.getStudentList();
         setStudents(allStudents);
-
-
         if (classId) {
           const existing = await studentManagementService.getStudentsInClass(classId);
           setExistingStudents(existing);
@@ -45,18 +38,15 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
         console.error("Failed to fetch data:", err);
       }
     };
-
     if (open) {
       fetchData();
       form.resetFields();
     }
   }, [open, form, classId]);
-
   const studentOptions = students.map((s) => ({
     label: `${s.fullName} (${s.accountCode})`,
     value: Number(s.studentId),
   }));
-
   const handleFinish = async (values: any) => {
     setIsLoading(true);
     setError(null);
@@ -66,13 +56,11 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
         studentId: Number(values.studentId),
         description: values.description || "Enrolled by HOD",
       };
-
       await studentManagementService.createStudentGroup(payload);
       notification.success({
         message: "Student Added",
         description: "The student has been successfully added to the class.",
       });
-
       onOk();
     } catch (err: any) {
       console.error("CRUD Error:", err);
@@ -81,7 +69,6 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title="Add Student to Class"
@@ -108,18 +95,14 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
             {
               validator: (_, value) => {
                 if (!value) return Promise.resolve();
-
-
                 const existingStudent = existingStudents.find(
                   (s) => Number(s.studentId) === Number(value)
                 );
-
                 if (existingStudent) {
                   return Promise.reject(
-                    new Error("Student này đã có trong lớp rồi!")
+                    new Error("This student is already in the class!")
                   );
                 }
-
                 return Promise.resolve();
               },
             },
@@ -157,7 +140,6 @@ const StudentGroupCrudModalContent: React.FC<StudentGroupCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const StudentGroupCrudModal: React.FC<StudentGroupCrudModalProps> = (
   props
 ) => (

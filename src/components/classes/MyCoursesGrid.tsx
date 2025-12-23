@@ -1,12 +1,9 @@
 "use client";
-
 import React from "react";
 import { Row, Col, Typography, Select } from "antd";
 import { SimpleCourseCard, SimpleCourseCardProps } from "./SimpleCourseCard";
 import styles from "./MyCoursesGrid.module.css";
-
 const { Title } = Typography;
-
 const myCoursesData = [
   {
     id: 1,
@@ -57,7 +54,6 @@ const myCoursesData = [
     href: "/lecturer/info",
   },
 ];
-
 interface MyCoursesGridProps {
   userName?: string;
   courses?: SimpleCourseCardProps[];
@@ -65,7 +61,6 @@ interface MyCoursesGridProps {
   selectedSemester?: string;
   onSemesterChange?: (value: string) => void;
 }
-
 export default function MyCoursesGrid({
   userName = "User",
   courses = myCoursesData,
@@ -86,7 +81,6 @@ export default function MyCoursesGrid({
       >
         Welcome {userName}!
       </Title>
-
       <Select
         value={selectedSemester}
         onChange={onSemesterChange}
@@ -94,7 +88,6 @@ export default function MyCoursesGrid({
         placeholder="Filter by semester"
         style={{ width: 240, marginBottom: "30px" }}
       />
-
       <Row gutter={[32, 32]} justify="start">
         {courses.map((course) => (
           <Col key={course.id} xs={24} md={8}>

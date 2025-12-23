@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import type { TableProps } from "antd";
 import { Avatar, Button, Space, Table, Tag } from "antd";
@@ -7,9 +6,7 @@ import { TeamOutlined, UserOutlined } from "@ant-design/icons";
 import { Class } from "@/services/semesterService";
 import { studentManagementService } from "@/services/studentManagementService";
 import { Typography } from "antd";
-
 const { Text } = Typography;
-
 interface ClassesTableProps {
   classes: Class[];
   onEdit: (cls: Class) => void;
@@ -20,7 +17,6 @@ interface ClassesTableProps {
   refreshTrigger?: number;
   isSemesterEnded?: boolean;
 }
-
 export const ClassesTable = ({
   classes,
   onEdit,
@@ -33,12 +29,10 @@ export const ClassesTable = ({
 }: ClassesTableProps) => {
   const [studentCounts, setStudentCounts] = useState<Map<number, number>>(new Map());
   const [loadingCounts, setLoadingCounts] = useState(false);
-
   useEffect(() => {
     const fetchStudentCounts = async () => {
       setLoadingCounts(true);
       const counts = new Map<number, number>();
-
       try {
         await Promise.all(
           classes.map(async (cls) => {
@@ -58,12 +52,10 @@ export const ClassesTable = ({
         setLoadingCounts(false);
       }
     };
-
     if (classes.length > 0) {
       fetchStudentCounts();
     }
   }, [classes, refreshTrigger]);
-
   const columns: TableProps<Class>["columns"] = [
     {
       title: "Class Code",
@@ -134,7 +126,6 @@ export const ClassesTable = ({
       ),
     },
   ];
-
   return (
     <Table
       columns={columns}
@@ -145,4 +136,3 @@ export const ClassesTable = ({
     />
   );
 };
-

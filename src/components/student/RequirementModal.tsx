@@ -1,6 +1,4 @@
-
 "use client";
-
 import React, { useMemo } from "react";
 import { Modal, Typography, Image as AntImage, Spin, Collapse, Divider, List, Button as AntButton } from "antd";
 import { RequirementContent } from "./data";
@@ -14,9 +12,7 @@ import { PaperClipOutlined, FileTextOutlined, BookOutlined } from "@ant-design/i
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
 import styles from "./RequirementModal.module.css";
-
 const { Title, Paragraph, Text } = Typography;
-
 interface RequirementModalProps {
   open: boolean;
   onCancel: () => void;
@@ -28,7 +24,6 @@ interface RequirementModalProps {
   courseElementId?: number;
   examSessionId?: number;
 }
-
 const renderRequirementContent = (item: RequirementContent, index: number) => {
   switch (item.type) {
     case "heading":
@@ -60,7 +55,6 @@ const renderRequirementContent = (item: RequirementContent, index: number) => {
       return null;
   }
 };
-
 export const RequirementModal: React.FC<RequirementModalProps> = ({
   open,
   onCancel,
@@ -72,11 +66,8 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
   courseElementId,
   examSessionId,
 }) => {
-
   const localStorageClassId = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const effectiveClassId = classId || (localStorageClassId ? Number(localStorageClassId) : undefined);
-
-
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(effectiveClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -86,31 +77,24 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     }),
     enabled: open && !!effectiveClassId && (!!classAssessmentId || !!courseElementId),
   });
-
-
   const assessmentTemplateId = useMemo(() => {
     if (propAssessmentTemplateId) {
       return propAssessmentTemplateId;
           }
-
     if (classAssessmentId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.id === classAssessmentId);
               if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
               }
     }
-
     if (courseElementId && classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(ca => ca.courseElementId === courseElementId);
             if (classAssessment?.assessmentTemplateId) {
         return classAssessment.assessmentTemplateId;
       }
     }
-
     return null;
   }, [propAssessmentTemplateId, classAssessmentId, courseElementId, classAssessmentsData]);
-
-
   const { data: assignRequestsData } = useQuery({
     queryKey: queryKeys.assignRequests.all,
     queryFn: () => assignRequestService.getAssignRequests({
@@ -119,14 +103,11 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     }),
     enabled: open && !!assessmentTemplateId,
   });
-
   const approvedAssignRequestIds = useMemo(() => {
     if (!assignRequestsData?.items) return new Set<number>();
     const approved = assignRequestsData.items.filter(ar => ar.status === 5);
     return new Set(approved.map(ar => ar.id));
   }, [assignRequestsData]);
-
-
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -135,8 +116,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     }),
     enabled: open && !!assessmentTemplateId,
   });
-
-
   const template = useMemo(() => {
     if (!templatesData?.items || !assessmentTemplateId) return null;
     return templatesData.items.find((t) => {
@@ -145,10 +124,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
         return approvedAssignRequestIds.has(t.assignRequestId);
     }) || null;
   }, [templatesData, assessmentTemplateId, approvedAssignRequestIds]);
-
   const templateDescription = template?.description || "";
-
-
   const { data: filesData } = useQuery({
     queryKey: queryKeys.assessmentFiles.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentFileService.getFilesForTemplate({
@@ -158,10 +134,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     }),
     enabled: open && !!assessmentTemplateId && !!template,
   });
-
   const files = filesData?.items || [];
-
-
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -171,10 +144,7 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     }),
     enabled: open && !!assessmentTemplateId && !!template,
   });
-
   const papers = papersData?.items || [];
-
-
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -186,8 +156,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
       enabled: open && papers.length > 0,
     })),
           });
-
-
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     papers.forEach((paper, index) => {
@@ -201,8 +169,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     });
     return questionsMap;
   }, [papers, questionsQueries]);
-
-
   const loading = (
     (!!effectiveClassId && (!!classAssessmentId || !!courseElementId) && !classAssessmentsData) ||
     (!!assessmentTemplateId && !templatesData) ||
@@ -210,7 +176,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
     (!!assessmentTemplateId && !!template && !papersData) ||
     questionsQueries.some(q => q.isLoading)
   );
-
   return (
     <Modal
       title={
@@ -243,11 +208,9 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
               </Paragraph>
             </div>
           )}
-
           {templateDescription && (files.filter(f => f.fileTemplate !== 1).length > 0 || papers.length > 0) && (
             <Divider className={styles.divider} />
           )}
-
           {files.filter(f => f.fileTemplate !== 1).length > 0 && (
             <div className={styles.section}>
               <Title level={5} className={styles.sectionTitle}>
@@ -273,11 +236,9 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
               />
             </div>
           )}
-
           {files.filter(f => f.fileTemplate !== 1).length > 0 && papers.length > 0 && (
             <Divider className={styles.divider} />
           )}
-
           {papers.length > 0 && (
             <div className={styles.section}>
               <Title level={5} className={styles.sectionTitle}>
@@ -298,15 +259,15 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                   children: (
                     <div>
                       {paper.description && (
-                        <div style={{ 
+                        <div style={{
                           marginBottom: 24,
                           padding: "20px 24px",
                           background: "#f8f9fa",
                           borderRadius: "12px",
                           borderLeft: "4px solid #49BBBD"
                         }}>
-                          <Text strong style={{ 
-                            display: "block", 
+                          <Text strong style={{
+                            display: "block",
                             marginBottom: 12,
                             color: "#2F327D",
                             fontSize: 15
@@ -337,7 +298,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                           <div className={styles.questionText}>
                             {question.questionText}
                           </div>
-
                           {question.questionSampleInput && (
                             <div className={styles.sampleSection}>
                               <span className={styles.sampleLabel}>Sample Input:</span>
@@ -346,7 +306,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
                               </pre>
                             </div>
                           )}
-
                           {question.questionSampleOutput && (
                             <div className={styles.sampleSection}>
                               <span className={styles.sampleLabel}>Sample Output:</span>
@@ -363,7 +322,6 @@ export const RequirementModal: React.FC<RequirementModalProps> = ({
               />
             </div>
           )}
-
           {!templateDescription && files.filter(f => f.fileTemplate !== 1).length === 0 && papers.length === 0 && (
             <div className={styles.emptyState}>
               <Text className={styles.emptyStateText}>No requirement details available.</Text>

@@ -1,9 +1,7 @@
 "use client";
-
 import { User } from "@/types";
 import { Alert, Button, Input, Modal, Space } from "antd";
 import { useState } from "react";
-
 interface DeleteConfirmationModalProps {
   open: boolean;
   usersToDelete: User[];
@@ -11,7 +9,6 @@ interface DeleteConfirmationModalProps {
   onConfirm: (confirmText: string) => void;
   loading?: boolean;
 }
-
 export const DeleteConfirmationModal = ({
   open,
   usersToDelete,
@@ -20,16 +17,13 @@ export const DeleteConfirmationModal = ({
   loading = false,
 }: DeleteConfirmationModalProps) => {
   const [confirmText, setConfirmText] = useState<string>("");
-
   const handleConfirm = () => {
     onConfirm(confirmText);
   };
-
   const handleCancel = () => {
     setConfirmText("");
     onCancel();
   };
-
   return (
     <Modal
       title={
@@ -68,7 +62,6 @@ export const DeleteConfirmationModal = ({
           type="warning"
           showIcon
         />
-
         {usersToDelete.length === 1 ? (
           <div>
             <p style={{ marginBottom: "8px", fontWeight: 500 }}>
@@ -109,5 +102,3 @@ export const DeleteConfirmationModal = ({
     </Modal>
   );
 };
-
-

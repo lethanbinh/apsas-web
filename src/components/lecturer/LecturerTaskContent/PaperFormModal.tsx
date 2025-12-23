@@ -1,10 +1,8 @@
 "use client";
-
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { App, Button, Form, Input, Modal, Select } from "antd";
 import { useEffect } from "react";
-
 interface PaperFormModalProps {
   open: boolean;
   onCancel: () => void;
@@ -13,7 +11,6 @@ interface PaperFormModalProps {
   initialData?: AssessmentPaper;
   templateId?: number;
 }
-
 export const PaperFormModal = ({
   open,
   onCancel,
@@ -26,7 +23,6 @@ export const PaperFormModal = ({
   const { notification } = App.useApp();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Paper" : "Add New Paper";
-
   useEffect(() => {
     if (open) {
       if (initialData) {
@@ -40,7 +36,6 @@ export const PaperFormModal = ({
       }
     }
   }, [initialData, form, open]);
-
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing) {
@@ -63,7 +58,6 @@ export const PaperFormModal = ({
       notification.error({ message: "Failed to save paper" });
     }
   };
-
   return (
     <Modal
       title={title}
@@ -103,4 +97,3 @@ export const PaperFormModal = ({
     </Modal>
   );
 };
-

@@ -1,5 +1,4 @@
 "use client";
-
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
@@ -31,23 +30,18 @@ import { useSubmissionData } from "./hooks/useSubmissionData";
 import { classAssessmentService } from "@/services/classAssessmentService";
 import { semesterService } from "@/services/semesterService";
 import { isSemesterPassed } from "../utils/dateUtils";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 export interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
   rubricComments: { [rubricId: number]: string };
 }
-
 interface EditSubmissionModalProps {
   visible: boolean;
   onClose: () => void;
@@ -55,7 +49,6 @@ interface EditSubmissionModalProps {
   gradingGroup: GradingGroup;
   isGradeSheetSubmitted: boolean;
 }
-
 export function EditSubmissionModal({
   visible,
   onClose,
@@ -66,7 +59,6 @@ export function EditSubmissionModal({
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const { user } = useAuth();
-
   const [saving, setSaving] = useState(false);
   const [semesterEnded, setSemesterEnded] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
@@ -77,8 +69,6 @@ export function EditSubmissionModal({
     rubricScores: {},
     rubricComments: {},
   });
-
-
   const {
     questions,
     latestGradingSession,
@@ -94,7 +84,6 @@ export function EditSubmissionModal({
     setUserEdits,
     setTotalScore: () => {},
   });
-
   const {
     feedback,
     loadingFeedback,
@@ -108,7 +97,6 @@ export function EditSubmissionModal({
     submission,
     setSubmissionFeedbackId: () => {},
   });
-
   const { autoGradingLoading, handleAutoGrading } = useAutoGrading({
     submission,
     gradingGroup,
@@ -117,8 +105,6 @@ export function EditSubmissionModal({
     message,
     queryClient,
   });
-
-
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -127,13 +113,10 @@ export function EditSubmissionModal({
     }),
     enabled: visible && !!gradingGroup?.assessmentTemplateId,
   });
-
   const assessmentTemplate = useMemo(() => {
     if (!templatesResponse?.items || !gradingGroup?.assessmentTemplateId) return null;
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
-
-
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -142,21 +125,16 @@ export function EditSubmissionModal({
     }),
     enabled: visible && !!assessmentTemplate?.courseElementId,
   });
-
   const courseElement = useMemo(() => {
     if (!courseElementsData || !assessmentTemplate?.courseElementId) return null;
     return courseElementsData.find((ce) => ce.id === assessmentTemplate.courseElementId) || null;
   }, [courseElementsData, assessmentTemplate]);
-
-
   const semesterCode = courseElement?.semesterCourse?.semester?.semesterCode;
   const { data: semesterDetail } = useQuery({
     queryKey: ['semesterPlanDetail', semesterCode],
     queryFn: () => semesterService.getSemesterPlanDetail(semesterCode!),
     enabled: visible && !!semesterCode,
   });
-
-
   useEffect(() => {
     if (semesterDetail?.endDate) {
       const passed = isSemesterPassed(semesterDetail.endDate);
@@ -165,8 +143,6 @@ export function EditSubmissionModal({
       setSemesterEnded(false);
     }
   }, [semesterDetail?.endDate]);
-
-  // Get classAssessment to check isPublished
   const { data: classAssessmentData } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -175,14 +151,11 @@ export function EditSubmissionModal({
     }),
     enabled: visible && !!submission?.classAssessmentId,
   });
-
   const classAssessment = useMemo(() => {
     if (!classAssessmentData?.items || !submission?.classAssessmentId) return null;
     return classAssessmentData.items.find(ca => ca.id === submission.classAssessmentId) || null;
   }, [classAssessmentData, submission]);
-
   const isPublished = classAssessment?.isPublished ?? false;
-
   const updateRubricScore = useCallback((questionId: number, rubricId: number, score: number) => {
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
@@ -193,7 +166,6 @@ export function EditSubmissionModal({
       },
     }));
   }, []);
-
   const updateQuestionComment = useCallback((questionId: number, comment: string) => {
     setUserEdits((prev) => ({
       ...prev,
@@ -203,31 +175,25 @@ export function EditSubmissionModal({
       },
     }));
   }, []);
-
   const handleSave = async () => {
     if (!submission || !user?.id) {
       message.error("Submission or User ID not found");
       return;
     }
-
     if (isPublished) {
       message.warning("Cannot edit grades after they have been published.");
       return;
     }
-
     if (semesterEnded) {
       message.warning("Cannot save grade when the semester has ended");
       return;
     }
-
     if (isGradeSheetSubmitted) {
       message.warning("Cannot save grade when the grade sheet has been submitted");
       return;
     }
-
     try {
       setSaving(true);
-
       const calculatedTotal = questions.reduce((sum, question) => {
         const questionTotal = Object.values(question.rubricScores).reduce(
           (qSum, score) => qSum + (score || 0),
@@ -235,7 +201,6 @@ export function EditSubmissionModal({
         );
         return sum + questionTotal;
       }, 0);
-
       let gradingSessionId: number;
       if (latestGradingSession) {
         gradingSessionId = latestGradingSession.id;
@@ -245,18 +210,15 @@ export function EditSubmissionModal({
           setSaving(false);
           return;
         }
-
         await gradingService.createGrading({
           submissionId: submission.id,
           assessmentTemplateId: gradingGroup.assessmentTemplateId,
         });
-
         const gradingSessionsResult = await gradingService.getGradingSessions({
           submissionId: submission.id,
           pageNumber: 1,
           pageSize: 100,
         });
-
         if (gradingSessionsResult.items.length > 0) {
           const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
             const dateA = new Date(a.createdAt).getTime();
@@ -270,16 +232,13 @@ export function EditSubmissionModal({
           return;
         }
       }
-
       for (const question of questions) {
         const questionComment = question.rubricComments?.[question.id] || "";
-
         for (const rubric of question.rubrics) {
           const score = question.rubricScores[rubric.id] || 0;
           const existingGradeItem = latestGradeItems.find(
             (item) => item.rubricItemId === rubric.id
           );
-
           if (existingGradeItem) {
             await gradeItemService.updateGradeItem(existingGradeItem.id, {
               score: score,
@@ -295,14 +254,11 @@ export function EditSubmissionModal({
           }
         }
       }
-
       await gradingService.updateGradingSession(gradingSessionId, {
         grade: calculatedTotal,
         status: 1,
       });
-
       message.success("Grade saved successfully");
-
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
       queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId'] });
@@ -314,23 +270,18 @@ export function EditSubmissionModal({
       setSaving(false);
     }
   };
-
   const modalTitle = useMemo(() => {
     return `Edit Submission - ${submission.studentCode} - ${submission.studentName}`;
   }, [submission.studentCode, submission.studentName]);
-
   const handleFeedbackChange = useCallback((field: keyof FeedbackData, value: string) => {
     setFeedback((prev) => ({ ...prev, [field]: value }));
   }, []);
-
   const handleOpenGradingHistory = useCallback(() => {
     setGradingHistoryModalVisible(true);
   }, []);
-
   const handleCloseGradingHistory = useCallback(() => {
     setGradingHistoryModalVisible(false);
   }, []);
-
   return (
     <Modal
       title={
@@ -369,13 +320,11 @@ export function EditSubmissionModal({
             showIcon
           />
         )}
-
         <SubmissionHeaderCard
           submission={submission}
           totalScore={totalScore}
           maxScore={maxScore}
         />
-
         <GradingDetailsSection
           questions={questions}
           latestGradingSession={latestGradingSession}
@@ -392,7 +341,6 @@ export function EditSubmissionModal({
           updateQuestionComment={updateQuestionComment}
           message={message}
         />
-
         <FeedbackSection
           feedback={feedback}
           loading={loadingFeedback}
@@ -403,7 +351,6 @@ export function EditSubmissionModal({
           isPublished={isPublished}
         />
       </Space>
-
       {submission && (
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
@@ -414,4 +361,3 @@ export function EditSubmissionModal({
     </Modal>
   );
 }
-

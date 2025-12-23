@@ -1,25 +1,19 @@
-
 'use client';
-
 import React from 'react';
 import {
     InstagramOutlined, MailOutlined, UsergroupAddOutlined, ChromeOutlined
 } from "@ant-design/icons";
-
 import { LogoComponent } from "@/components/ui/Logo";
 import Link from "next/link";
 import styles from "./Footer.module.css";
-
 export const Footer: React.FC = () => {
     const currentYear = new Date().getFullYear();
-
     const socialIcons = [
         { icon: <InstagramOutlined />, href: "#instagram" },
         { icon: <MailOutlined />, href: "mailto:apsas@gmail.com" },
         { icon: <UsergroupAddOutlined />, href: "#community" },
         { icon: <ChromeOutlined />, href: "#chrome-extension" },
     ];
-
     return (
         <footer className={styles.footerBase}>
             <div className={styles.footerContainer}>
@@ -34,7 +28,6 @@ export const Footer: React.FC = () => {
                                 <div className={styles.taglineSecondary}>Skills Assessment System</div>
                             </div>
                         </div>
-
                         <div className={styles.infoSection}>
                             <div className={styles.contactInfo}>
                                 <Link href="mailto:apsas@gmail.com" className={styles.contactLink}>
@@ -58,7 +51,6 @@ export const Footer: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
                 <div className={styles.copyrightSection}>
                     <div className={styles.copyrightText}>
                         © {currentYear} APSAS. All rights reserved.

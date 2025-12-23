@@ -1,13 +1,9 @@
-
-
 import dayjs from "dayjs";
-
 export interface RequirementContent {
   type: "heading" | "paragraph" | "image";
   content?: string;
   src?: string;
 }
-
 export interface CriteriaData {
   id: string;
   title: string;
@@ -18,7 +14,6 @@ export interface CriteriaData {
     Score: number;
   };
 }
-
 export interface QuestionData {
   id: string;
   title: string;
@@ -27,23 +22,18 @@ export interface QuestionData {
   imageUrl: string;
   criteria?: CriteriaData[];
 }
-
 export interface SubmissionItem {
-
   id: string;
   fileName: string;
   thumbnailUrl: string;
   submissionTime: string;
 }
-
-
 export interface GradeCriteria {
   id: string;
   name: string;
   score: string;
   reason?: string;
 }
-
 export interface AssignmentApprovalDetails {
   id: string;
   type: string;
@@ -59,14 +49,12 @@ export interface AssignmentApprovalDetails {
   suggestionsImprove: string;
   submissions: SubmissionItem[];
 }
-
 export interface CourseApprovalData {
   id: string;
   title: string;
   status: "Pending" | "Approved" | "Rejected";
   assignments: AssignmentApprovalDetails[];
 }
-
 export const approvalListData: CourseApprovalData[] = [
   {
     id: "capstone",

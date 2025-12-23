@@ -1,5 +1,4 @@
 "use client";
-
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { queryKeys } from "@/lib/react-query";
 import { adminDashboardService } from "@/services/adminDashboardService";
@@ -23,9 +22,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import styles from "./DashboardAdmin.module.css";
-
 const { Title, Text } = Typography;
-
 const COLORS = {
   blue: "#2563EB",
   green: "#10B981",
@@ -36,29 +33,23 @@ const COLORS = {
   pink: "#EC4899",
   indigo: "#6366F1",
 };
-
 const AdminDashboardPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
-
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['adminDashboard', 'overview'],
     queryFn: () => adminDashboardService.getDashboardOverview(),
     refetchInterval: 5 * 60 * 1000,
   });
-
   const { data: chartData, isLoading: chartLoading } = useQuery({
     queryKey: ['adminDashboard', 'chartData'],
     queryFn: () => adminDashboardService.getChartData(),
     refetchInterval: 5 * 60 * 1000,
   });
-
   const loading = overviewLoading || chartLoading;
-
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminDashboard'] });
   };
-
   if (loading && !overview) {
     return (
       <>
@@ -78,7 +69,6 @@ const AdminDashboardPage = () => {
       </>
     );
   }
-
   if (!overview || !chartData) {
     return (
       <>
@@ -91,7 +81,6 @@ const AdminDashboardPage = () => {
       </>
     );
   }
-
   const grades = overview.grades || {
     totalGraded: 0,
     averageGrade: 0,
@@ -104,26 +93,19 @@ const AdminDashboardPage = () => {
     topClassesByAverage: [],
     bottomClassesByAverage: [],
   };
-
-  // Prepare chart data
   const gradeDistributionData = [
     { name: 'Excellent (≥8.5)', value: grades.gradeDistribution.excellent, color: COLORS.green },
     { name: 'Good (7.0-8.4)', value: grades.gradeDistribution.good, color: COLORS.blue },
     { name: 'Average (5.5-6.9)', value: grades.gradeDistribution.average, color: COLORS.orange },
     { name: 'Below Average (<5.5)', value: grades.gradeDistribution.belowAverage, color: COLORS.red },
   ];
-
   const averageGradeByTypeData = [
     { name: 'Assignment', value: grades.averageGradeByType.assignment },
     { name: 'Lab', value: grades.averageGradeByType.lab },
     { name: 'Practical Exam', value: grades.averageGradeByType.practicalExam },
   ];
-
-  // Submissions over time data
   const submissionsOverTimeData = chartData?.submissionsOverTime || [];
-
   const gradeDistributionChartData = grades.gradeDistributionChart || [];
-
   return (
     <>
       <QueryParamsHandler />
@@ -145,8 +127,7 @@ const AdminDashboardPage = () => {
             Refresh
           </Button>
         </div>
-
-        {/* Key Statistics - Focus on Grades */}
+        {}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card
@@ -159,7 +140,7 @@ const AdminDashboardPage = () => {
                 valueStyle={{ color: COLORS.green, fontSize: '28px', fontWeight: 600 }}
               />
               <Text type="secondary" style={{ fontSize: '12px' }}>
-                {overview.submissions.total > 0 
+                {overview.submissions.total > 0
                   ? `${Math.round((grades.totalGraded / overview.submissions.total) * 100)}% completion rate`
                   : 'No submissions'}
               </Text>
@@ -212,8 +193,7 @@ const AdminDashboardPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Grade Distribution Cards */}
+        {}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card>
@@ -276,12 +256,11 @@ const AdminDashboardPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Charts Row 1 */}
+        {}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} lg={12}>
-            <Card 
-              title="Grade Distribution" 
+            <Card
+              title="Grade Distribution"
               loading={loading}
               extra={<Tag color="blue">{grades.totalGraded} graded</Tag>}
             >
@@ -323,8 +302,7 @@ const AdminDashboardPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Charts Row 2 */}
+        {}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} lg={12}>
             <Card title="Average Grade by Assessment Type" loading={loading}>
@@ -336,13 +314,13 @@ const AdminDashboardPage = () => {
                   <Tooltip formatter={(value: number) => `${value.toFixed(2)} / 10`} />
                   <Bar dataKey="value" fill={COLORS.purple} radius={[8, 8, 0, 0]}>
                     {averageGradeByTypeData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
+                      <Cell
+                        key={`cell-${index}`}
                         fill={
                           entry.value >= 8 ? COLORS.green :
                           entry.value >= 7 ? COLORS.blue :
                           entry.value >= 5.5 ? COLORS.orange : COLORS.red
-                        } 
+                        }
                       />
                     ))}
                   </Bar>
@@ -351,23 +329,23 @@ const AdminDashboardPage = () => {
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card 
-              title="Submissions Over Time (Last 30 Days)" 
+            <Card
+              title="Submissions Over Time (Last 30 Days)"
               loading={loading}
               extra={<Tag color="blue">Activity Trend</Tag>}
             >
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={submissionsOverTimeData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tickFormatter={(value) => {
                       const date = new Date(value);
                       return `${date.getMonth() + 1}/${date.getDate()}`;
                     }}
                   />
                   <YAxis />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number, name: string) => [value, name]}
                     labelFormatter={(label) => {
                       const date = new Date(label);
@@ -375,26 +353,26 @@ const AdminDashboardPage = () => {
                     }}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="assignment" 
-                    stroke={COLORS.blue} 
+                  <Line
+                    type="monotone"
+                    dataKey="assignment"
+                    stroke={COLORS.blue}
                     strokeWidth={2}
                     name="Assignment"
                     dot={{ r: 3 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="lab" 
-                    stroke={COLORS.green} 
+                  <Line
+                    type="monotone"
+                    dataKey="lab"
+                    stroke={COLORS.green}
                     strokeWidth={2}
                     name="Lab"
                     dot={{ r: 3 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="practicalExam" 
-                    stroke={COLORS.purple} 
+                  <Line
+                    type="monotone"
+                    dataKey="practicalExam"
+                    stroke={COLORS.purple}
                     strokeWidth={2}
                     name="Practical Exam"
                     dot={{ r: 3 }}
@@ -404,8 +382,7 @@ const AdminDashboardPage = () => {
             </Card>
           </Col>
         </Row>
-
-        {/* Additional Stats */}
+        {}
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={8}>
             <Card title="Grading Completion" loading={loading}>
@@ -415,8 +392,8 @@ const AdminDashboardPage = () => {
                     <Text strong>Completion Rate</Text>
                     <Text strong>{grades.gradingCompletionRate.toFixed(1)}%</Text>
                   </div>
-                  <Progress 
-                    percent={grades.gradingCompletionRate} 
+                  <Progress
+                    percent={grades.gradingCompletionRate}
                     strokeColor={grades.gradingCompletionRate >= 80 ? COLORS.green : grades.gradingCompletionRate >= 50 ? COLORS.orange : COLORS.red}
                     status={grades.gradingCompletionRate === 100 ? 'success' : 'active'}
                   />
@@ -481,30 +458,30 @@ const AdminDashboardPage = () => {
           <Col xs={24} lg={8}>
             <Card title="Quick Actions" loading={loading}>
               <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-                <Button 
-                  type="primary" 
-                  block 
+                <Button
+                  type="primary"
+                  block
                   onClick={() => router.push('/admin/users')}
                   style={{ height: '40px' }}
                 >
                   Manage Users
                 </Button>
-                <Button 
-                  block 
+                <Button
+                  block
                   onClick={() => router.push('/admin/academic')}
                   style={{ height: '40px' }}
                 >
                   View Academic Data
                 </Button>
-                <Button 
-                  block 
+                <Button
+                  block
                   onClick={() => router.push('/admin/assessments')}
                   style={{ height: '40px' }}
                 >
                   Manage Assessments
                 </Button>
-                <Button 
-                  block 
+                <Button
+                  block
                   onClick={() => router.push('/admin/submissions')}
                   style={{ height: '40px' }}
                 >
@@ -518,5 +495,4 @@ const AdminDashboardPage = () => {
     </>
   );
 };
-
 export default AdminDashboardPage;

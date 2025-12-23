@@ -1,10 +1,8 @@
 "use client";
-
 import { UploadOutlined } from "@ant-design/icons";
 import type { UploadChangeParam, UploadFile } from "antd/es/upload/interface";
 import { App, Button, Form, Input, Modal, Space, Upload } from "antd";
 import { useEffect } from "react";
-
 interface UploadFileModalProps {
   open: boolean;
   onCancel: () => void;
@@ -14,7 +12,6 @@ interface UploadFileModalProps {
   fileList: UploadFile[];
   onFileListChange: (fileList: UploadFile[]) => void;
 }
-
 export const UploadFileModal = ({
   open,
   onCancel,
@@ -26,17 +23,14 @@ export const UploadFileModal = ({
 }: UploadFileModalProps) => {
   const [form] = Form.useForm();
   const { notification } = App.useApp();
-
   useEffect(() => {
     if (open) {
       form.resetFields();
       onFileListChange([]);
     }
   }, [open, form, onFileListChange]);
-
   const handleFileChange = (info: UploadChangeParam) => {
     onFileListChange(info.fileList);
-
     if (info.fileList.length > 0 && info.fileList[0].originFileObj) {
       const fileName = info.fileList[0].name;
       form.setFieldsValue({ name: fileName });
@@ -44,7 +38,6 @@ export const UploadFileModal = ({
       form.setFieldsValue({ name: "" });
     }
   };
-
   const handleSubmit = (values: { name: string; databaseName?: string }) => {
     if (fileList.length === 0) {
       notification.warning({ message: "Please select a file" });
@@ -57,14 +50,12 @@ export const UploadFileModal = ({
       file: file,
     });
   };
-
   const title =
     fileType === 0
       ? "Upload Database File"
       : fileType === 1
       ? "Upload Postman File"
       : "Upload Custom File";
-
   return (
     <Modal
       title={title}
@@ -92,7 +83,6 @@ export const UploadFileModal = ({
             <Button icon={<UploadOutlined />}>Select File</Button>
           </Upload>
         </Form.Item>
-
         <Form.Item
           label="Name"
           name="name"
@@ -101,7 +91,6 @@ export const UploadFileModal = ({
         >
           <Input placeholder="Enter file name" />
         </Form.Item>
-
         {fileType === 0 && templateType === 1 && (
           <Form.Item
             label="Database Name"
@@ -112,7 +101,6 @@ export const UploadFileModal = ({
             <Input placeholder="Enter database name" />
           </Form.Item>
         )}
-
         <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
           <Space style={{ width: "100%", justifyContent: "flex-end" }}>
             <Button onClick={onCancel}>Cancel</Button>
@@ -125,4 +113,3 @@ export const UploadFileModal = ({
     </Modal>
   );
 };
-

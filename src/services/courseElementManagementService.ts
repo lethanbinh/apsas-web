@@ -10,14 +10,12 @@ export interface CourseElementBasic {
   updatedAt: string;
   semesterCourse: null;
 }
-
 export interface CourseElementBasicApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: CourseElementBasic;
 }
-
 export interface CreateCourseElementPayload {
   name: string;
   description: string;
@@ -25,14 +23,12 @@ export interface CreateCourseElementPayload {
   elementType: number;
   semesterCourseId: number;
 }
-
 export interface UpdateCourseElementPayload {
   name: string;
   description: string;
   weight: number;
   elementType: number;
 }
-
 export class CourseElementManagementService {
   async createCourseElement(
     payload: CreateCourseElementPayload
@@ -43,7 +39,6 @@ export class CourseElementManagementService {
     );
     return response.result;
   }
-
   async updateCourseElement(
     courseElementsId: string | number,
     payload: UpdateCourseElementPayload
@@ -54,11 +49,9 @@ export class CourseElementManagementService {
     );
     return response.result;
   }
-
   async deleteCourseElement(courseElementsId: string | number): Promise<void> {
     await apiService.delete(`/CourseElements/${courseElementsId}`);
   }
 }
-
 export const courseElementManagementService =
   new CourseElementManagementService();

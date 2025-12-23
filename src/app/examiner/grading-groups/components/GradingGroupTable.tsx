@@ -1,5 +1,4 @@
 "use client";
-
 import { GradingGroup } from "@/services/gradingGroupService";
 import { Alert, Button, Empty, Popconfirm, Space, Table, Tag, Typography } from "antd";
 import type { TableProps } from "antd";
@@ -8,12 +7,9 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useRouter } from "next/navigation";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Text } = Typography;
-
 export interface FlatGradingGroup {
   id: number;
   courseCode: string;
@@ -26,17 +22,14 @@ export interface FlatGradingGroup {
   groupIds: number[];
   group: GradingGroup & { subs: any[]; semesterCode?: string };
 }
-
 interface GradingGroupTableProps {
   dataSource: FlatGradingGroup[];
   onAssign: (group: GradingGroup) => void;
   onDelete: (group: GradingGroup) => void;
   columns?: TableProps<FlatGradingGroup>["columns"];
 }
-
 export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: GradingGroupTableProps) {
   const router = useRouter();
-  
   const defaultColumns: TableProps<FlatGradingGroup>["columns"] = [
     {
       title: "Course",
@@ -127,9 +120,7 @@ export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: G
       ),
     },
   ];
-
   const tableColumns = columns || defaultColumns;
-
   if (dataSource.length === 0) {
     return (
       <Empty
@@ -138,7 +129,6 @@ export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: G
       />
     );
   }
-
   return (
     <Table
       columns={tableColumns}
@@ -153,4 +143,3 @@ export function GradingGroupTable({ dataSource, onAssign, onDelete, columns }: G
     />
   );
 }
-

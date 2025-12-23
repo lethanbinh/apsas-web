@@ -1,5 +1,4 @@
 "use client";
-
 import { ROLES } from "@/lib/constants";
 import { queryKeys } from "@/lib/react-query";
 import { adminService } from "@/services/adminService";
@@ -9,43 +8,33 @@ import { studentManagementService } from "@/services/studentManagementService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { App } from "antd";
 import { parseExcelFile, validateAccountData } from "@/utils/excelUtils";
-
 interface ImportError {
   row: number;
   email?: string;
   error: string;
 }
-
 interface ImportResults {
   success: number;
   failed: number;
   errors: ImportError[];
 }
-
 export const useAccountImport = () => {
   const queryClient = useQueryClient();
   const { notification } = App.useApp();
-
   const importAccountsMutation = useMutation({
     mutationFn: async (file: File): Promise<ImportResults> => {
       const data = await parseExcelFile(file);
-
       if (!data || data.length === 0) {
         throw new Error("Excel file is empty or invalid.");
       }
-
       const results: ImportResults = {
         success: 0,
         failed: 0,
         errors: [],
       };
-
-
       for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const rowNum = i + 2;
-
-
         const validationError = validateAccountData(row, i);
         if (validationError) {
           results.failed++;
@@ -56,8 +45,6 @@ export const useAccountImport = () => {
           });
           continue;
         }
-
-
         const role = parseInt(row["Role"].toString().trim());
         const baseData: any = {
           username: row["Username"].toString().trim(),
@@ -70,15 +57,11 @@ export const useAccountImport = () => {
           password: row["Password"].toString().trim(),
           avatar: row["Avatar"]?.toString().trim() || "",
         };
-
-
         let accountData: any = { ...baseData };
         if (role === ROLES.LECTURER) {
           accountData.department = row["Department"]?.toString().trim() || "";
           accountData.specialization = row["Specialization"]?.toString().trim() || "";
         }
-
-
         try {
           switch (role) {
             case ROLES.ADMIN:
@@ -112,12 +95,10 @@ export const useAccountImport = () => {
           });
         }
       }
-
       return results;
     },
     onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
-
       if (results.success > 0) {
         notification.success({
           message: "Import Completed",
@@ -138,10 +119,8 @@ export const useAccountImport = () => {
       });
     },
   });
-
   return {
     importAccounts: importAccountsMutation.mutateAsync,
     importLoading: importAccountsMutation.isPending,
   };
 };
-

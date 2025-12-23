@@ -6,7 +6,6 @@ import { rubricItemService, RubricItem } from "@/services/rubricItemService";
 import { assessmentFileService } from "@/services/assessmentFileService";
 import { lecturerService, Lecturer } from "@/services/lecturerService";
 import { ApiAssessmentTemplate } from "@/types";
-
 export const useApprovalData = (template: ApiAssessmentTemplate) => {
   const { message: antMessage } = App.useApp();
   const [loading, setLoading] = useState(true);
@@ -16,7 +15,6 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
   const [files, setFiles] = useState<any[]>([]);
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [questionComments, setQuestionComments] = useState<{ [questionId: number]: string }>({});
-
   useEffect(() => {
     const fetchLecturers = async () => {
       try {
@@ -28,12 +26,10 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
     };
     fetchLecturers();
   }, []);
-
   useEffect(() => {
     const fetchRequirementData = async () => {
       try {
         setLoading(true);
-
         try {
           const filesRes = await assessmentFileService.getFilesForTemplate({
             assessmentTemplateId: template.id,
@@ -45,7 +41,6 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
           console.error("Failed to fetch assessment files:", err);
           setFiles([]);
         }
-
         const papersRes = await assessmentPaperService.getAssessmentPapers({
           assessmentTemplateId: template.id,
           pageNumber: 1,
@@ -53,11 +48,9 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
         });
         const papersData = papersRes.items.length > 0 ? papersRes.items : [];
         setPapers(papersData);
-
         const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
         const rubricsMap: { [questionId: number]: RubricItem[] } = {};
         const commentsMap: { [questionId: number]: string } = {};
-
         for (const paper of papersData) {
           try {
             const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
@@ -69,13 +62,11 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
               (a.questionNumber || 0) - (b.questionNumber || 0)
             );
             questionsMap[paper.id] = sortedQuestions;
-
             sortedQuestions.forEach(q => {
               if (q.reviewerComment) {
                 commentsMap[q.id] = q.reviewerComment;
               }
             });
-
             for (const question of sortedQuestions) {
               try {
                 const rubricsRes = await rubricItemService.getRubricsForQuestion({
@@ -94,7 +85,6 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
             questionsMap[paper.id] = [];
           }
         }
-
         setQuestions(questionsMap);
         setRubrics(rubricsMap);
         setQuestionComments(commentsMap);
@@ -105,10 +95,8 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
         setLoading(false);
       }
     };
-
     fetchRequirementData();
   }, [template.id, antMessage]);
-
   const refreshQuestions = async () => {
     try {
       const papersRes = await assessmentPaperService.getAssessmentPapers({
@@ -118,7 +106,6 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
       });
       const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
       const commentsMap: { [questionId: number]: string } = {};
-
       for (const paper of papersRes.items) {
         try {
           const questionsRes = await assessmentQuestionService.getAssessmentQuestions({
@@ -130,7 +117,6 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
             (a.questionNumber || 0) - (b.questionNumber || 0)
           );
           questionsMap[paper.id] = sortedQuestions;
-
           sortedQuestions.forEach(q => {
             if (q.reviewerComment) {
               commentsMap[q.id] = q.reviewerComment;
@@ -140,14 +126,12 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
           console.error(`Failed to fetch questions for paper ${paper.id}:`, err);
         }
       }
-
       setQuestions(questionsMap);
       setQuestionComments(commentsMap);
     } catch (err) {
       console.error("Failed to refresh questions:", err);
     }
   };
-
   return {
     loading,
     papers,
@@ -160,4 +144,3 @@ export const useApprovalData = (template: ApiAssessmentTemplate) => {
     refreshQuestions,
   };
 };
-

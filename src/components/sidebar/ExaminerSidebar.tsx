@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -11,7 +10,6 @@ import {
 } from "@ant-design/icons";
 import { useSidebar } from "@/components/layout/SidebarContext";
 import styles from "./StudentSidebar.module.css";
-
 const { Sider } = Layout;
 const menuItems = [
   {
@@ -25,11 +23,9 @@ const menuItems = [
     label: <Link href="/examiner/templates">Templates</Link>,
   },
 ];
-
 export default function ExaminerSidebar() {
   const pathname = usePathname();
   const { isOpen, close } = useSidebar();
-
   const activeKey = useMemo(() => {
     const sortedKeys = [...menuItems].sort(
       (a, b) => b.key.length - a.key.length
@@ -39,7 +35,6 @@ export default function ExaminerSidebar() {
     );
     return matchingKey ? matchingKey.key : "";
   }, [pathname]);
-
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -47,25 +42,22 @@ export default function ExaminerSidebar() {
         close();
       }
     };
-
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = '';
     };
   }, [isOpen, close]);
-
   return (
     <>
       {isOpen && <div className={styles.overlay} onClick={close} />}
-      <Sider 
-        width={280} 
+      <Sider
+        width={280}
         className={`${styles.sider} ${isOpen ? styles.mobileOpen : ''}`}
       >
       <div className={styles.siderContent}>
@@ -86,4 +78,3 @@ export default function ExaminerSidebar() {
     </>
   );
 }
-

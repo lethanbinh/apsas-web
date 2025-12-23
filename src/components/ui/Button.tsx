@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button as AntButton, ButtonProps as AntButtonProps } from 'antd';
-
 interface ButtonProps extends Omit<AntButtonProps, 'type' | 'size' | 'variant'> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
   size?: 'small' | 'middle' | 'large';
@@ -8,7 +7,6 @@ interface ButtonProps extends Omit<AntButtonProps, 'type' | 'size' | 'variant'> 
   disabled?: boolean;
   children: React.ReactNode;
 }
-
 export const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'middle',
@@ -34,9 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
         return { type: 'primary' as const };
     }
   };
-
   const getSizeProps = () => ({ size });
-
   return (
     <AntButton
       {...getVariantProps()}

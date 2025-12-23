@@ -1,11 +1,9 @@
 "use client";
-
 import React, { useEffect } from "react";
 import { Modal, Form, Input, Select, DatePicker, Row, Col } from "antd";
 import { User } from "@/types";
 import { Role, ROLES } from "@/lib/constants";
 import dayjs from "dayjs";
-
 interface CreateUserFormModalProps {
   visible: boolean;
   onCancel: () => void;
@@ -13,9 +11,7 @@ interface CreateUserFormModalProps {
   editingUser: User | null;
   confirmLoading: boolean;
 }
-
 const { Option } = Select;
-
 export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
   visible,
   onCancel,
@@ -26,11 +22,8 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
   const [form] = Form.useForm();
   const selectedRole = Form.useWatch("role", form);
   const isEditMode = !!editingUser;
-
-
   useEffect(() => {
     if (!isEditMode && selectedRole !== undefined && selectedRole !== null) {
-
       const currentValues = form.getFieldsValue();
       const fieldsToReset = ['username', 'password', 'email', 'phoneNumber', 'fullName', 'gender', 'dateOfBirth', 'avatar', 'address', 'department', 'specialization'];
       fieldsToReset.forEach(field => {
@@ -40,7 +33,6 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
       });
     }
   }, [selectedRole, isEditMode, form]);
-
   useEffect(() => {
     if (editingUser) {
       form.setFieldsValue({
@@ -55,7 +47,6 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
       form.setFieldsValue({ role: undefined });
     }
   }, [editingUser, form, visible]);
-
   const handleOk = () => {
     form
       .validateFields()
@@ -68,14 +59,12 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
           gender: Number(values.gender),
           avatar: isEditMode ? (values.avatar || "") : "",
         };
-
         onOk(formattedValues, values.role);
       })
       .catch((info) => {
         console.log("Validate Failed:", info);
       });
   };
-
   const renderFormFields = () => {
     const commonFields = (
       <>
@@ -257,12 +246,9 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
         </Row>
       </>
     );
-
     if (isEditMode) {
       return commonFields;
     }
-
-
     if (selectedRole === undefined || selectedRole === null) {
       return (
         <Row gutter={16}>
@@ -284,8 +270,6 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
         </Row>
       );
     }
-
-
     return (
       <>
         <Row gutter={16}>
@@ -353,7 +337,6 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
       </>
     );
   };
-
   return (
     <Modal
       title={
@@ -379,4 +362,3 @@ export const CreateUserFormModal: React.FC<CreateUserFormModalProps> = ({
     </Modal>
   );
 };
-

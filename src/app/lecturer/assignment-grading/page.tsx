@@ -1,5 +1,4 @@
 "use client";
-
 import { queryKeys } from "@/lib/react-query";
 import { gradeItemService } from "@/services/gradeItemService";
 import { gradingService } from "@/services/gradingService";
@@ -19,20 +18,15 @@ import { useAutoGrading } from "./hooks/useAutoGrading";
 import { useFeedbackOperations } from "./hooks/useFeedbackOperations";
 import { useSubmissionGradingData } from "./hooks/useSubmissionGradingData";
 import styles from "./page.module.css";
-
 const { Title, Text } = Typography;
-
 export default function AssignmentGradingPage() {
   const router = useRouter();
   const { message } = App.useApp();
   const [submissionId, setSubmissionId] = useState<number | null>(null);
   const queryClient = useQueryClient();
-
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
   const [gradingHistoryModalVisible, setGradingHistoryModalVisible] = useState(false);
   const [feedbackHistoryModalVisible, setFeedbackHistoryModalVisible] = useState(false);
-
-
   const {
     submission,
     isLoadingSubmissions,
@@ -47,8 +41,6 @@ export default function AssignmentGradingPage() {
     totalScore,
     setTotalScore,
   } = useSubmissionGradingData(submissionId);
-
-
   const {
     feedback,
     loadingFeedback,
@@ -57,10 +49,7 @@ export default function AssignmentGradingPage() {
     handleSaveFeedback,
     handleGetAiFeedback,
   } = useFeedbackOperations(submissionId);
-
-
   useEffect(() => {
-
     const savedSubmissionId = localStorage.getItem("selectedSubmissionId");
     if (savedSubmissionId) {
       setSubmissionId(Number(savedSubmissionId));
@@ -69,31 +58,23 @@ export default function AssignmentGradingPage() {
       router.back();
     }
   }, []);
-
   const { autoGradingLoading, handleAutoGrading } = useAutoGrading(
     submission ?? undefined,
     submissionId,
     isSemesterPassed,
     message
   );
-
-
   useEffect(() => {
     if (!submission && submissionId && !isLoadingSubmissions) {
-
       message.error("Submission not found");
       router.back();
     }
   }, [submission, submissionId, isLoadingSubmissions, message, router]);
-
-
   useEffect(() => {
     if (submissionId) {
       localStorage.removeItem(`feedback_${submissionId}`);
     }
   }, [submissionId]);
-
-
   const handleRubricScoreChange = (
     questionId: number,
     rubricId: number,
@@ -101,13 +82,10 @@ export default function AssignmentGradingPage() {
     maxScore: number
   ) => {
     const scoreValue = score || 0;
-
-
     if (scoreValue > maxScore) {
       message.error(`Score cannot exceed maximum score of ${maxScore.toFixed(2)}`);
       return;
     }
-
     const editKey = `${questionId}_${rubricId}`;
     setUserEdits((prev) => ({
       ...prev,
@@ -117,7 +95,6 @@ export default function AssignmentGradingPage() {
       },
     }));
   };
-
   const handleRubricCommentChange = (
     questionId: number,
     rubricId: number,
@@ -131,8 +108,6 @@ export default function AssignmentGradingPage() {
       },
     }));
   };
-
-
   const handleOpenGradingHistory = () => {
     if (!submissionId) {
       message.error("No submission selected");
@@ -140,7 +115,6 @@ export default function AssignmentGradingPage() {
     }
     setGradingHistoryModalVisible(true);
   };
-
   const handleOpenFeedbackHistory = () => {
     if (!submissionId) {
       message.error("No submission selected");
@@ -148,8 +122,6 @@ export default function AssignmentGradingPage() {
     }
     setFeedbackHistoryModalVisible(true);
   };
-
-
   const { data: gradingHistoryData, isLoading: loadingGradingHistory } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1000 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -159,7 +131,6 @@ export default function AssignmentGradingPage() {
     }),
     enabled: gradingHistoryModalVisible && !!submissionId,
   });
-
   const { data: feedbackHistoryData, isLoading: loadingFeedbackHistory } = useQuery({
     queryKey: ['submissionFeedbackHistory', 'bySubmissionId', submissionId],
     queryFn: async () => {
@@ -175,14 +146,11 @@ export default function AssignmentGradingPage() {
     },
     enabled: feedbackHistoryModalVisible && !!submissionId,
   });
-
   const saveGradeMutation = useMutation({
     mutationFn: async () => {
       if (!submissionId || !submission) {
         throw new Error("No submission selected");
       }
-
-
       let calculatedTotal = 0;
       questions.forEach((q) => {
         const questionTotal = Object.values(q.rubricScores).reduce(
@@ -192,31 +160,22 @@ export default function AssignmentGradingPage() {
         calculatedTotal += questionTotal;
       });
       setTotalScore(calculatedTotal);
-
-
       let gradingSessionId: number;
-
       if (latestGradingSession) {
         gradingSessionId = latestGradingSession.id;
       } else {
-
         if (!assessmentTemplateId) {
           throw new Error("Cannot find assessment template. Please contact administrator.");
         }
-
-
         await gradingService.createGrading({
           submissionId: submission.id,
           assessmentTemplateId: assessmentTemplateId,
         });
-
-
         const gradingSessionsResult = await gradingService.getGradingSessions({
           submissionId: submission.id,
           pageNumber: 1,
           pageSize: 100,
         });
-
         if (gradingSessionsResult.items.length > 0) {
           const sortedSessions = [...gradingSessionsResult.items].sort((a, b) => {
             const dateA = new Date(a.createdAt).getTime();
@@ -228,26 +187,19 @@ export default function AssignmentGradingPage() {
           throw new Error("Failed to create grading session");
         }
       }
-
-
       for (const question of questions) {
-
         const questionComment = question.rubricComments?.[question.id] || "";
-
         for (const rubric of question.rubrics) {
           const score = question.rubricScores[rubric.id] || 0;
           const existingGradeItem = latestGradeItems.find(
             (item) => item.rubricItemId === rubric.id
           );
-
           if (existingGradeItem) {
-
             await gradeItemService.updateGradeItem(existingGradeItem.id, {
               score: score,
               comments: questionComment,
             });
           } else {
-
             await gradeItemService.createGradeItem({
               gradingSessionId: gradingSessionId,
               rubricItemId: rubric.id,
@@ -257,21 +209,16 @@ export default function AssignmentGradingPage() {
           }
         }
       }
-
-
       await gradingService.updateGradingSession(gradingSessionId, {
         grade: calculatedTotal,
         status: 1,
       });
-
       return { gradingSessionId, calculatedTotal };
     },
     onSuccess: () => {
       message.success("Grade saved successfully");
-
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }) });
       queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-
       queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submissionId] });
     },
     onError: (err: any) => {
@@ -279,24 +226,19 @@ export default function AssignmentGradingPage() {
       message.error(err.message || "Failed to save grade");
     },
   });
-
   const handleSave = async () => {
     if (!submissionId || !submission) {
       message.error("No submission selected");
       return;
     }
-
     if (isPublished) {
       message.warning("Cannot edit grades after they have been published.");
       return;
     }
-
     if (isSemesterPassed) {
       message.warning("Cannot edit grades when the semester has ended.");
       return;
     }
-
-
     for (const question of questions) {
       for (const rubric of question.rubrics) {
         const score = question.rubricScores[rubric.id] || 0;
@@ -306,14 +248,9 @@ export default function AssignmentGradingPage() {
         }
       }
     }
-
     saveGradeMutation.mutate();
   };
-
-
-
   const isLoadingSubmissionData = isLoadingSubmissions && !submission && !!submissionId;
-
   if (isLoadingSubmissionData) {
     return (
       <div className={styles.loadingContainer}>
@@ -321,12 +258,9 @@ export default function AssignmentGradingPage() {
       </div>
     );
   }
-
   if (!submission) {
     return null;
   }
-
-
   return (
     <App>
       <div className={styles.container}>
@@ -362,7 +296,6 @@ export default function AssignmentGradingPage() {
             isPublished={isPublished}
           />
         </Card>
-
         <Card className={styles.feedbackCard} style={{ marginTop: 24 }}>
           <Collapse
             defaultActiveKey={[]}
@@ -405,7 +338,6 @@ export default function AssignmentGradingPage() {
             ]}
           />
         </Card>
-
         <Card className={styles.questionsCard} style={{ marginTop: 24 }}>
           <Collapse
             defaultActiveKey={["grading-details"]}
@@ -439,19 +371,16 @@ export default function AssignmentGradingPage() {
             ]}
           />
         </Card>
-
         <ViewExamModal
           visible={viewExamModalVisible}
           onClose={() => setViewExamModalVisible(false)}
           submission={submission}
         />
-
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}
           onClose={() => setGradingHistoryModalVisible(false)}
           submissionId={submissionId}
         />
-
         <FeedbackHistoryModal
           visible={feedbackHistoryModalVisible}
           onClose={() => setFeedbackHistoryModalVisible(false)}

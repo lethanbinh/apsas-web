@@ -1,5 +1,4 @@
 "use client";
-
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
 import { DownOutlined, UserOutlined, MenuOutlined } from "@ant-design/icons";
@@ -14,13 +13,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ROLE_NAVIGATION, Role } from "@/lib/constants";
 import { useSidebar } from "./SidebarContext";
 import styles from "./Header.module.css";
-
 const AvatarPlaceholder = () => (
   <div className={styles.avatarContainer}>
     <UserOutlined className={styles.avatarIcon} />
   </div>
 );
-
 export const Header: React.FC = () => {
   const [hoverKey, setHoverKey] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -30,31 +27,21 @@ export const Header: React.FC = () => {
   const { user, logout: logoutAuth } = useAuth();
   const queryClient = useQueryClient();
   const { toggle: toggleSidebar } = useSidebar();
-
   useEffect(() => setMounted(true), []);
-
   const handleLogout = async () => {
-
     queryClient.clear();
-
     if (typeof window !== 'undefined') {
       sessionStorage.clear();
     }
-
     logoutAuth();
-
     window.location.href = "/login";
   };
-
   const navigation = useMemo(() => {
-
     if (!mounted || !user?.role) return [];
     const userRole = user.role as Role;
     return ROLE_NAVIGATION[userRole] || [];
   }, [user?.role, mounted]);
-
   const activeKey = useMemo(() => {
-
     if (user?.role === 1 && (
       pathname.startsWith("/lecturer/info/") ||
       pathname.startsWith("/lecturer/detail-assignment") ||
@@ -63,9 +50,6 @@ export const Header: React.FC = () => {
     )) {
       return "my-classes";
     }
-
-
-
     if (user?.role === 2 && (
       pathname.startsWith("/student/class-detail") ||
       pathname.startsWith("/student/assignments") ||
@@ -75,7 +59,6 @@ export const Header: React.FC = () => {
     )) {
       return "my-classes";
     }
-
     const sortedKeys = [...navigation].sort(
       (a, b) => b.href.length - a.href.length
     );
@@ -84,7 +67,6 @@ export const Header: React.FC = () => {
     );
     return matchingItem?.key || (user?.role === 2 ? "my-classes" : user?.role === 1 ? "my-classes" : "home");
   }, [pathname, navigation, user?.role]);
-
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
@@ -94,7 +76,6 @@ export const Header: React.FC = () => {
     { type: "divider" },
     { key: "logout", label: "Logout", onClick: handleLogout },
   ];
-
   return (
     <header className={styles.headerRoot}>
       <div className={styles.leftGroup}>
@@ -125,7 +106,6 @@ export const Header: React.FC = () => {
         >
           <LogoComponent />
         </Link>
-
         {mounted && (
           <nav className={styles.navGroup}>
             {navigation.map((item) => {
@@ -134,7 +114,6 @@ export const Header: React.FC = () => {
               const linkClass = `${styles.navLink} ${isActive ? styles.navActive : ""
                 } ${isHover && !isActive ? styles.navHover : ""} ${isHover && isActive ? styles.navActiveHover : ""
                 }`;
-
               return (
                 <Link
                   key={item.key}
@@ -150,7 +129,6 @@ export const Header: React.FC = () => {
           </nav>
         )}
       </div>
-
       <Dropdown
         menu={{ items: userMenuItems }}
         trigger={["click"]}
@@ -168,5 +146,4 @@ export const Header: React.FC = () => {
     </header>
   );
 };
-
 export default Header;

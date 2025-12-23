@@ -1,5 +1,4 @@
 "use client";
-
 import { queryKeys } from "@/lib/react-query";
 import { assessmentPaperService } from "@/services/assessmentPaperService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
@@ -10,17 +9,13 @@ import { Submission } from "@/services/submissionService";
 import { App, Collapse, Divider, Modal, Spin, Typography } from "antd";
 import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
-
 const { Title, Text } = Typography;
-
 interface ViewExamModalProps {
   visible: boolean;
   onClose: () => void;
   submission: Submission | null;
 }
-
 export function ViewExamModal({ visible, onClose, submission }: ViewExamModalProps) {
-
   const classIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
@@ -31,13 +26,11 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     }),
     enabled: !!classIdFromStorage && !!submission?.classAssessmentId && visible,
   });
-
   const { data: gradingGroupsData } = useQuery({
     queryKey: queryKeys.grading.groups.all,
     queryFn: () => gradingGroupService.getGradingGroups({}),
     enabled: !!submission?.gradingGroupId && visible,
   });
-
   const assessmentTemplateId = useMemo(() => {
     if (!submission) return null;
     if (submission.gradingGroupId && gradingGroupsData) {
@@ -56,8 +49,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     }
     return null;
   }, [submission, gradingGroupsData, classAssessmentsData]);
-
-
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -67,10 +58,7 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     }),
     enabled: !!assessmentTemplateId && visible,
   });
-
   const papers = papersData?.items || [];
-
-
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -82,7 +70,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
       enabled: papers.length > 0 && visible,
     })),
   });
-
   const questions = useMemo(() => {
     const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
     questionsQueries.forEach((query, index) => {
@@ -92,8 +79,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     });
     return questionsMap;
   }, [questionsQueries, papers]);
-
-
   const allQuestions = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {
@@ -103,7 +88,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     });
     return questions;
   }, [questionsQueries]);
-
   const rubricsQueries = useQueries({
     queries: allQuestions.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -115,7 +99,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
       enabled: allQuestions.length > 0 && visible,
     })),
   });
-
   const rubrics = useMemo(() => {
     const rubricsMap: { [questionId: number]: RubricItem[] } = {};
     allQuestions.forEach((question, index) => {
@@ -125,7 +108,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     });
     return rubricsMap;
   }, [allQuestions, rubricsQueries]);
-
   const loading = useMemo(() => {
     return (
       (!!submission?.gradingGroupId && !gradingGroupsData) ||
@@ -135,7 +117,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
       rubricsQueries.some(q => q.isLoading)
     );
   }, [submission, gradingGroupsData, classAssessmentsData, assessmentTemplateId, papersData, questionsQueries, rubricsQueries]);
-
   return (
     <Modal
       title="View Exam"
@@ -153,7 +134,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
         ) : (
           <div>
             <Divider />
-
             <Collapse
               items={papers.map((paper, paperIndex) => ({
                 key: paper.id.toString(),
@@ -175,7 +155,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
                           Question {qIndex + 1} (Score: {question.score})
                         </Title>
                         <Text>{question.questionText}</Text>
-
                         {question.questionSampleInput && (
                           <div style={{ marginTop: 12 }}>
                             <Text strong>Sample Input:</Text>
@@ -184,7 +163,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
                             </pre>
                           </div>
                         )}
-
                         {question.questionSampleOutput && (
                           <div style={{ marginTop: 12 }}>
                             <Text strong>Sample Output:</Text>
@@ -193,7 +171,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
                             </pre>
                           </div>
                         )}
-
                         {rubrics[question.id] && rubrics[question.id].length > 0 && (
                           <div style={{ marginTop: 12 }}>
                             <Text strong>Grading Criteria:</Text>
@@ -216,7 +193,6 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
                             </ul>
                           </div>
                         )}
-
                         <Divider />
                       </div>
                     ))}
@@ -230,4 +206,3 @@ export function ViewExamModal({ visible, onClose, submission }: ViewExamModalPro
     </Modal>
   );
 }
-

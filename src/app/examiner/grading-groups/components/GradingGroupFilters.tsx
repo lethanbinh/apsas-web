@@ -1,7 +1,5 @@
 "use client";
-
 import { Select, Space } from "antd";
-
 interface GradingGroupFiltersProps {
   availableSemesters: string[];
   availableCourses: Array<{ id: number; name: string; code: string }>;
@@ -17,7 +15,6 @@ interface GradingGroupFiltersProps {
   onLecturerChange: (value: number | null) => void;
   filterTemplatesByCourse?: (templateId: number) => boolean;
 }
-
 export function GradingGroupFilters({
   availableSemesters,
   availableCourses,
@@ -101,4 +98,3 @@ export function GradingGroupFilters({
     </div>
   );
 }
-

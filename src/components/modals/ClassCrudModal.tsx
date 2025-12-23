@@ -1,8 +1,6 @@
 "use client";
-
 import { Alert, App, Form, Input, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
-
 import {
   classManagementService,
   CreateClassPayload,
@@ -10,7 +8,6 @@ import {
 } from "@/services/classManagementService";
 import { Lecturer, lecturerService } from "@/services/lecturerService";
 import { Class } from "@/services/semesterService";
-
 interface ClassCrudModalProps {
   open: boolean;
   semesterCourseId: number;
@@ -18,7 +15,6 @@ interface ClassCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
   open,
   semesterCourseId,
@@ -31,9 +27,7 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const { notification } = App.useApp();
-
   const isEditMode = !!initialData;
-
   useEffect(() => {
     const fetchLecturers = async () => {
       try {
@@ -43,7 +37,6 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
         console.error("Failed to fetch lecturers:", err);
       }
     };
-
     if (open) {
       fetchLecturers();
       if (isEditMode) {
@@ -56,12 +49,10 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const lecturerOptions = lecturers.map((lec) => ({
     label: `${lec.fullName} (${lec.accountCode})`,
     value: Number(lec.lecturerId),
   }));
-
   const handleFinish = async (
     values: CreateClassPayload | UpdateClassPayload
   ) => {
@@ -74,7 +65,6 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
         lecturerId: Number(values.lecturerId),
         semesterCourseId: semesterCourseId,
       };
-
       if (isEditMode) {
         await classManagementService.updateClass(initialData!.id, payload);
         notification.success({
@@ -96,7 +86,6 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Class" : "Create New Class"}
@@ -128,11 +117,9 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Class code must be at least 2 characters!"));
                 }
-
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Class code cannot contain spaces!"));
                 }
-
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Class code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
@@ -181,7 +168,6 @@ const ClassCrudModalContent: React.FC<ClassCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const ClassCrudModal: React.FC<ClassCrudModalProps> = (props) => (
   <App>
     <ClassCrudModalContent {...props} />

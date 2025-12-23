@@ -2,10 +2,9 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { LoginForm } from '@/components/features/LoginForm';
 import { Metadata } from 'next';
 import Image from 'next/image';
-
 export const metadata: Metadata = {
-  title: 'Đăng nhập - APSAS Web',
-  description: 'Đăng nhập vào tài khoản APSAS Web',
+  title: 'Login - APSAS Web',
+  description: 'Login to your APSAS Web account',
 };
 export default function LoginPage() {
   return (
@@ -16,7 +15,6 @@ export default function LoginPage() {
           <div className="login-form-section">
             <LoginForm />
           </div>
-
           {}
           <div className="login-illustration">
             <div className="illustration-wrapper">

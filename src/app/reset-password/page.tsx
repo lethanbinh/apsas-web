@@ -1,15 +1,11 @@
-
-
 import { Metadata } from 'next';
 import ResetPasswordForm from '@/components/features/ResetPasswordForm';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import Image from 'next/image';
-
 export const metadata: Metadata = {
   title: 'Reset Password - APSAS Web',
   description: 'Reset your password on APSAS Web',
 };
-
 export default function ResetPasswordPage() {
   return (
     <AuthGuard requireAuth={false}>

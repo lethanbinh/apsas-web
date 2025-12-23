@@ -1,5 +1,4 @@
 "use client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import {
@@ -19,15 +18,12 @@ import { useApprovalHandlers } from "./ApprovalDetail/hooks/useApprovalHandlers"
 import { calculateTotalScore, getStatusProps } from "./ApprovalDetail/utils";
 import { QuestionCommentModal } from "./QuestionCommentModal";
 import { EmptyPapersState, EmptyQuestionsState, EmptyRubricsState } from "@/components/shared/EmptyState";
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface ApprovalDetailProps {
   template: ApiAssessmentTemplate;
   approvalItem: ApiApprovalItem;
 }
-
 export default function ApprovalDetail({
   template,
   approvalItem,
@@ -35,7 +31,6 @@ export default function ApprovalDetail({
   const router = useRouter();
   const { message: antMessage } = App.useApp();
   const { user } = useAuth();
-
   const [currentStatus, setCurrentStatus] = useState(approvalItem.status);
   const [outerActiveKeys, setOuterActiveKeys] = useState<string | string[]>([]);
   const [selectedQuestionForComment, setSelectedQuestionForComment] = useState<AssessmentQuestion | null>(null);
@@ -46,7 +41,6 @@ export default function ApprovalDetail({
       ? approvalItem.assignedApproverLecturerId
       : undefined
   );
-
   const {
     loading,
     papers,
@@ -57,7 +51,6 @@ export default function ApprovalDetail({
     questionComments,
     refreshQuestions,
   } = useApprovalData(template);
-
   const {
     isSubmitting,
     isUpdatingApprover,
@@ -77,71 +70,48 @@ export default function ApprovalDetail({
     selectedApproverLecturerId,
     refreshQuestions
   );
-
   useEffect(() => {
     if (papers.length > 0) {
       setOuterActiveKeys([`paper-${papers[0].id}`]);
     }
   }, [papers]);
-
-
   useEffect(() => {
     const handleScroll = () => {
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       setShowScrollTop(scrollTop > 300);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const handleOpenCommentModal = (question: AssessmentQuestion) => {
     setSelectedQuestionForComment(question);
     setIsCommentModalOpen(true);
   };
-
   const handleCommentUpdateSuccess = () => {
     refreshQuestions();
   };
-
   const isActionDisabled =
     isSubmitting || currentStatus !== AssignRequestStatus.ACCEPTED;
   const statusInfo = getStatusProps(currentStatus);
   const isRejected = currentStatus === AssignRequestStatus.REJECTED;
-
-
   const canCommentForPaper = (paperKey: string) => {
     return isRejected || rejectReasonVisibleForItem === paperKey;
   };
-
-
   const totalScore = calculateTotalScore(questions, rubrics);
-
-
   const availableApprovers = lecturers.filter(
     (lecturer) => Number(lecturer.lecturerId) !== approvalItem.assignedLecturerId
   );
-
-
   const approverLecturer = lecturers.find(
     (lecturer) => Number(lecturer.lecturerId) === selectedApproverLecturerId
   );
-
-
-
   const approversForSelect = approverLecturer &&
     !availableApprovers.find(lec => Number(lec.lecturerId) === selectedApproverLecturerId)
     ? [approverLecturer, ...availableApprovers]
     : availableApprovers;
-
-
-
   const canAssignApprover = currentStatus === AssignRequestStatus.ACCEPTED;
-
   if (loading) {
     return (
       <div style={{ textAlign: "center", padding: "50px" }}>
@@ -149,15 +119,12 @@ export default function ApprovalDetail({
       </div>
     );
   }
-
   if (papers.length === 0) {
     return <EmptyPapersState backPath="/hod/approval" />;
   }
-
   const courseCollapseItems: CollapseProps["items"] = papers.map((paper, paperIndex) => {
     const paperKey = `paper-${paper.id}`;
     const paperQuestions = questions[paper.id] || [];
-
     return {
       key: paperKey,
       label: (
@@ -186,7 +153,6 @@ export default function ApprovalDetail({
               <Divider className={styles.divider} />
             </>
           )}
-
           {files.length > 0 && (
             <div className={styles.filesSection}>
               <div className={styles.filesHeader}>
@@ -211,7 +177,6 @@ export default function ApprovalDetail({
                               link.click();
                               document.body.removeChild(link);
                               URL.revokeObjectURL(url);
-
                               await new Promise(resolve => setTimeout(resolve, 200));
                             }
                           } catch (err) {
@@ -271,7 +236,6 @@ export default function ApprovalDetail({
               <Divider className={styles.divider} />
             </div>
           )}
-
           {paperQuestions.length > 0 ? (
             <div>
               {paperQuestions.map((question, qIndex) => (
@@ -280,7 +244,6 @@ export default function ApprovalDetail({
                     Question {question.questionNumber || qIndex + 1} (Score: {question.score || 0})
                   </Title>
                   <Text className={styles.questionText}>{question.questionText}</Text>
-
                   {question.questionSampleInput && (
                     <div className={styles.sampleSection}>
                       <Text strong className={styles.sampleLabel}>Sample Input:</Text>
@@ -289,7 +252,6 @@ export default function ApprovalDetail({
                       </pre>
                     </div>
                   )}
-
                   {question.questionSampleOutput && (
                     <div className={styles.sampleSection}>
                       <Text strong className={styles.sampleLabel}>Sample Output:</Text>
@@ -298,7 +260,6 @@ export default function ApprovalDetail({
                       </pre>
                     </div>
                   )}
-
                   {rubrics[question.id] && rubrics[question.id].length > 0 ? (
                     <div className={styles.rubricsSection}>
                       <Text strong className={styles.rubricsLabel}>Grading Criteria:</Text>
@@ -325,7 +286,6 @@ export default function ApprovalDetail({
                       <EmptyRubricsState />
                     </div>
                   )}
-
                   {(question.reviewerComment || canCommentForPaper(paperKey)) && (
                     <div className={styles.commentSection}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
@@ -385,7 +345,6 @@ export default function ApprovalDetail({
       className: styles.mainPanel,
     };
   });
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.headerSection}>
@@ -409,7 +368,6 @@ export default function ApprovalDetail({
           </div>
         </div>
       </div>
-
       <div className={styles.actionCard}>
         <div className={styles.actionCardContent}>
           {rejectReasonVisibleForItem && (
@@ -427,7 +385,6 @@ export default function ApprovalDetail({
               />
             </div>
           )}
-
           <div className={styles.actionButtons}>
             <AntButton
               type="primary"
@@ -440,7 +397,6 @@ export default function ApprovalDetail({
             >
               {currentStatus === AssignRequestStatus.COMPLETED ? "Approved" : "Approve"}
             </AntButton>
-
             {rejectReasonVisibleForItem && (
               <AntButton
                 size="large"
@@ -455,7 +411,6 @@ export default function ApprovalDetail({
                 Cancel
               </AntButton>
             )}
-
             <AntButton
               danger
               type="primary"
@@ -484,7 +439,6 @@ export default function ApprovalDetail({
           </div>
         </div>
       </div>
-
       <Card className={styles.approverCard}>
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <div>
@@ -496,7 +450,6 @@ export default function ApprovalDetail({
               Assign a lecturer to review and approve this assessment template
             </Text>
           </div>
-
           {approverLecturer && (
             <Alert
               message={
@@ -510,7 +463,6 @@ export default function ApprovalDetail({
               style={{ borderRadius: "8px" }}
             />
           )}
-
           {canAssignApprover && (
             <div>
               <Text strong style={{ display: "block", marginBottom: "12px", fontSize: "15px" }}>
@@ -569,7 +521,6 @@ export default function ApprovalDetail({
           )}
         </Space>
       </Card>
-
       <Collapse
         activeKey={outerActiveKeys}
         onChange={(keys) => setOuterActiveKeys(keys)}
@@ -577,7 +528,6 @@ export default function ApprovalDetail({
         className={styles.mainCollapse}
         items={courseCollapseItems}
       />
-
       { }
       <QuestionCommentModal
         open={isCommentModalOpen}
@@ -590,7 +540,6 @@ export default function ApprovalDetail({
         isRejected={isRejected}
         disabled={isActionDisabled && !isRejected}
       />
-
       {showScrollTop && (
         <AntButton
           type="primary"

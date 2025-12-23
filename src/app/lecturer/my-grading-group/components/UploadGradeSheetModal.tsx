@@ -1,12 +1,9 @@
 "use client";
-
 import { Modal, Space, Upload, Button, Typography } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { useState } from "react";
 import { GradingGroup } from "@/services/gradingGroupService";
-
 const { Text } = Typography;
-
 interface UploadGradeSheetModalProps {
   open: boolean;
   onCancel: () => void;
@@ -14,7 +11,6 @@ interface UploadGradeSheetModalProps {
   gradingGroup: GradingGroup | null;
   loading?: boolean;
 }
-
 export const UploadGradeSheetModal = ({
   open,
   onCancel,
@@ -24,23 +20,19 @@ export const UploadGradeSheetModal = ({
 }: UploadGradeSheetModalProps) => {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadFileList, setUploadFileList] = useState<any[]>([]);
-
   const handleOk = () => {
     if (!gradingGroup || !uploadFile) {
       return;
     }
     onOk(gradingGroup.id, uploadFile);
-
     setUploadFile(null);
     setUploadFileList([]);
   };
-
   const handleCancel = () => {
     setUploadFile(null);
     setUploadFileList([]);
     onCancel();
   };
-
   return (
     <Modal
       title="Upload Grade Sheet"
@@ -79,4 +71,3 @@ export const UploadGradeSheetModal = ({
     </Modal>
   );
 };
-

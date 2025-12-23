@@ -1,13 +1,10 @@
 "use client";
-
 import { FeedbackData } from "@/services/geminiService";
 import { Button, Card, Collapse, Col, Row, Space, Spin, Typography, Input } from "antd";
 import { ReactNode } from "react";
 import { SaveOutlined } from "@ant-design/icons";
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface FeedbackSectionProps {
   feedback: FeedbackData;
   loading: boolean;
@@ -16,7 +13,6 @@ interface FeedbackSectionProps {
   onSaveFeedback: () => void;
   renderFeedbackFields: (feedbackData: FeedbackData) => ReactNode[];
 }
-
 export function FeedbackSection({
   feedback,
   loading,
@@ -66,4 +62,3 @@ export function FeedbackSection({
     </Card>
   );
 }
-

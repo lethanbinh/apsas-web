@@ -1,5 +1,4 @@
 "use client";
-
 import { assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { AssessmentTemplate } from "@/services/assessmentTemplateService";
 import { AssignRequestItem } from "@/services/assignRequestService";
@@ -7,7 +6,6 @@ import { App, Button, Form, Input, Modal, Radio } from "antd";
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/react-query";
-
 interface TemplateFormModalProps {
   open: boolean;
   onCancel: () => void;
@@ -17,7 +15,6 @@ interface TemplateFormModalProps {
   assignedToHODId?: number;
   task?: AssignRequestItem;
 }
-
 export const TemplateFormModal = ({
   open,
   onCancel,
@@ -32,7 +29,6 @@ export const TemplateFormModal = ({
   const queryClient = useQueryClient();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Assessment Template" : "Add New Template";
-
   useEffect(() => {
     if (open) {
       if (initialData) {
@@ -47,7 +43,6 @@ export const TemplateFormModal = ({
       }
     }
   }, [initialData, form, open]);
-
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing && initialData && assignedToHODId !== undefined) {
@@ -61,19 +56,13 @@ export const TemplateFormModal = ({
             assignedToHODId: assignedToHODId,
           }
         );
-
-
-
         notification.success({
           message: "Template updated successfully",
         });
-
         queryClient.invalidateQueries({
           queryKey: queryKeys.assessmentTemplates.all,
           exact: false
         });
-
-
         window.dispatchEvent(new CustomEvent('assessmentTemplatesChanged'));
       }
       onFinish();
@@ -82,7 +71,6 @@ export const TemplateFormModal = ({
       notification.error({ message: "Failed to save template" });
     }
   };
-
   return (
     <Modal
       title={title}
@@ -142,4 +130,3 @@ export const TemplateFormModal = ({
     </Modal>
   );
 };
-

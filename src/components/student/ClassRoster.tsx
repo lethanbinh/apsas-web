@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useMemo } from "react";
 import { Card, Input, Table, Tag, Typography, Spin } from "antd";
 import type { TableProps } from "antd";
@@ -8,9 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import styles from "./ClassRoster.module.css";
 import { classService } from "@/services/classService";
 import { queryKeys } from "@/lib/react-query";
-
 const { Title } = Typography;
-
 interface Member {
   key: string;
   no: number;
@@ -20,7 +17,6 @@ interface Member {
   role: "Student";
   class: string;
 }
-
 const columns: TableProps<Member>["columns"] = [
   {
     title: "No",
@@ -51,18 +47,13 @@ const columns: TableProps<Member>["columns"] = [
     key: "class",
   },
 ];
-
 export default function ClassRoster({ classId }: { classId: string | number }) {
   const [searchText, setSearchText] = useState("");
-
-
   const { data: studentGroup = [], isLoading: isLoadingStudents } = useQuery({
     queryKey: queryKeys.studentsInClass.byClassId(classId),
     queryFn: () => classService.getStudentsInClass(classId),
     enabled: !!classId,
   });
-
-
   const { data: studentDetails = [], isLoading: isLoadingDetails } = useQuery({
     queryKey: ['studentDetails', 'byStudentIds', studentGroup.map(s => s.studentId)],
     queryFn: async () => {
@@ -73,13 +64,11 @@ export default function ClassRoster({ classId }: { classId: string | number }) {
     },
     enabled: studentGroup.length > 0,
   });
-
   const memberData: Member[] = useMemo(() => {
     return studentGroup.map((enrolledStudent, index) => {
       const detail = studentDetails.find(
         (d) => d.studentId === enrolledStudent.studentId.toString()
       );
-
       return {
         key: enrolledStudent.id.toString(),
         no: index + 1,
@@ -91,13 +80,10 @@ export default function ClassRoster({ classId }: { classId: string | number }) {
       };
     });
   }, [studentGroup, studentDetails]);
-
   const isLoading = (isLoadingStudents && studentGroup.length === 0) || (isLoadingDetails && studentDetails.length === 0);
-
   const filteredData = memberData.filter((member) =>
     member.fullName.toLowerCase().includes(searchText.toLowerCase())
   );
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -118,7 +104,6 @@ export default function ClassRoster({ classId }: { classId: string | number }) {
           prefix={<SearchOutlined />}
         />
       </div>
-
       <Card className={styles.rosterCard}>
         <Spin spinning={isLoading}>
           <Table

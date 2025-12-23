@@ -9,7 +9,6 @@ export interface AssessmentFile {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface AssessmentFileListResult {
   currentPage: number;
   pageSize: number;
@@ -17,28 +16,24 @@ export interface AssessmentFileListResult {
   totalPages: number;
   items: AssessmentFile[];
 }
-
 export interface AssessmentFileListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentFileListResult;
 }
-
 export interface AssessmentFileApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentFile;
 }
-
 export interface AssessmentFileDeleteResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: string;
 }
-
 export interface CreateAssessmentFilePayload {
   File: File;
   Name: string;
@@ -46,13 +41,11 @@ export interface CreateAssessmentFilePayload {
   FileTemplate: number;
   AssessmentTemplateId: number;
 }
-
 export interface GetAssessmentFilesParams {
   assessmentTemplateId?: number;
   pageNumber: number;
   pageSize: number;
 }
-
 export interface GetAssessmentFilesResponse {
   items: AssessmentFile[];
   total: number;
@@ -70,7 +63,6 @@ export class AssessmentFileService {
       total: response.result.totalCount,
     };
   }
-
   async createAssessmentFile(
     payload: CreateAssessmentFilePayload
   ): Promise<AssessmentFile> {
@@ -85,7 +77,6 @@ export class AssessmentFileService {
       "AssessmentTemplateId",
       payload.AssessmentTemplateId.toString()
     );
-
     const response = await apiService.post<AssessmentFileApiResponse>(
       "/AssessmentFile/create",
       formData,
@@ -97,7 +88,6 @@ export class AssessmentFileService {
     );
     return response.result;
   }
-
   async deleteAssessmentFile(
     assessmentFileId: string | number
   ): Promise<string> {
@@ -107,5 +97,4 @@ export class AssessmentFileService {
     return response.result;
   }
 }
-
 export const assessmentFileService = new AssessmentFileService();

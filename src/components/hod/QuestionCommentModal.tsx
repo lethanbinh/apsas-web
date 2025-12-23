@@ -1,12 +1,9 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { Modal, Input, Button, Space, Typography, App } from "antd";
 import { assessmentQuestionService, UpdateAssessmentQuestionPayload, AssessmentQuestion } from "@/services/assessmentQuestionService";
-
 const { TextArea } = Input;
 const { Text } = Typography;
-
 interface QuestionCommentModalProps {
   open: boolean;
   onCancel: () => void;
@@ -15,7 +12,6 @@ interface QuestionCommentModalProps {
   isRejected?: boolean;
   disabled?: boolean;
 }
-
 export function QuestionCommentModal({
   open,
   onCancel,
@@ -27,16 +23,13 @@ export function QuestionCommentModal({
   const [comment, setComment] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const { message: antMessage } = App.useApp();
-
   useEffect(() => {
     if (question && open) {
       setComment(question.reviewerComment || "");
     }
   }, [question, open]);
-
   const handleSave = async () => {
     if (!question) return;
-
     setIsUpdating(true);
     try {
       const updatePayload: UpdateAssessmentQuestionPayload = {
@@ -47,7 +40,6 @@ export function QuestionCommentModal({
         questionNumber: question.questionNumber,
         reviewerComment: comment.trim() || undefined,
       };
-
       await assessmentQuestionService.updateAssessmentQuestion(question.id, updatePayload);
       antMessage.success("Comment updated successfully");
       onSuccess();
@@ -59,7 +51,6 @@ export function QuestionCommentModal({
       setIsUpdating(false);
     }
   };
-
   return (
     <Modal
       title={
@@ -135,4 +126,3 @@ export function QuestionCommentModal({
     </Modal>
   );
 }
-

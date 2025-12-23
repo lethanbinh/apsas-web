@@ -1,5 +1,4 @@
 "use client";
-
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { adminService } from "@/services/adminService";
 import { gradingGroupService } from "@/services/gradingGroupService";
@@ -11,10 +10,8 @@ import dayjs, { Dayjs } from "dayjs";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard/DashboardAdmin.module.css";
-
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
-
 const GradingPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -24,35 +21,28 @@ const GradingPage = () => {
   const [sessionDateRange, setSessionDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [selectedRequestStatus, setSelectedRequestStatus] = useState<number | undefined>(undefined);
   const [requestDateRange, setRequestDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
   const { data: groupsData, isLoading: groupsLoading } = useQuery({
     queryKey: ['adminGradingGroups'],
     queryFn: () => gradingGroupService.getGradingGroups({}),
   });
-
   const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
     queryKey: ['adminGradingSessions'],
     queryFn: () => gradingService.getGradingSessions({ pageNumber: 1, pageSize: 1000 }),
   });
-
   const { data: requestsData, isLoading: requestsLoading } = useQuery({
     queryKey: ['adminAssignRequests'],
     queryFn: () => adminService.getApprovalList(1, 1000),
   });
-
   const gradingGroups = groupsData || [];
   const gradingSessions = sessionsData?.items || [];
   const assignRequests = requestsData?.items || [];
-
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminGradingGroups'] });
     queryClient.invalidateQueries({ queryKey: ['adminGradingSessions'] });
     queryClient.invalidateQueries({ queryKey: ['adminAssignRequests'] });
   };
-
   const filteredGradingGroups = useMemo(() => {
     let filtered = [...gradingGroups];
-
     if (groupDateRange && groupDateRange[0] && groupDateRange[1]) {
       filtered = filtered.filter((group) => {
         if (!group.createdAt) return false;
@@ -65,21 +55,16 @@ const GradingPage = () => {
         );
       });
     }
-
     return filtered;
   }, [gradingGroups, groupDateRange?.[0]?.valueOf(), groupDateRange?.[1]?.valueOf()]);
-
   const filteredGradingSessions = useMemo(() => {
     let filtered = [...gradingSessions];
-
     if (selectedSessionStatus !== undefined) {
       filtered = filtered.filter((session) => session.status === selectedSessionStatus);
     }
-
     if (selectedSessionType !== undefined) {
       filtered = filtered.filter((session) => session.gradingType === selectedSessionType);
     }
-
     if (sessionDateRange && sessionDateRange[0] && sessionDateRange[1]) {
       filtered = filtered.filter((session) => {
         if (!session.createdAt) return false;
@@ -92,17 +77,13 @@ const GradingPage = () => {
         );
       });
     }
-
     return filtered;
   }, [gradingSessions, selectedSessionStatus, selectedSessionType, sessionDateRange?.[0]?.valueOf(), sessionDateRange?.[1]?.valueOf()]);
-
   const filteredAssignRequests = useMemo(() => {
     let filtered = [...assignRequests];
-
     if (selectedRequestStatus !== undefined) {
       filtered = filtered.filter((request) => request.status === selectedRequestStatus);
     }
-
     if (requestDateRange && requestDateRange[0] && requestDateRange[1]) {
       filtered = filtered.filter((request) => {
         if (!request.createdAt) return false;
@@ -115,10 +96,8 @@ const GradingPage = () => {
         );
       });
     }
-
     return filtered;
   }, [assignRequests, selectedRequestStatus, requestDateRange?.[0]?.valueOf(), requestDateRange?.[1]?.valueOf()]);
-
   const groupColumns = [
     {
       title: "ID",
@@ -145,7 +124,6 @@ const GradingPage = () => {
       render: (date: string) => date ? dayjs(date).format("YYYY-MM-DD") : "-",
     },
   ];
-
   const sessionColumns = [
     {
       title: "ID",
@@ -191,7 +169,6 @@ const GradingPage = () => {
       render: (date: string) => date ? dayjs(date).format("YYYY-MM-DD") : "-",
     },
   ];
-
   const requestColumns = [
     {
       title: "ID",
@@ -240,7 +217,6 @@ const GradingPage = () => {
       render: (date: string) => date ? dayjs(date).format("YYYY-MM-DD") : "-",
     },
   ];
-
   return (
     <>
       <QueryParamsHandler />
@@ -272,7 +248,6 @@ const GradingPage = () => {
             Refresh
           </Button>
         </div>
-
         <Card>
           <Title level={5} style={{ marginBottom: 16 }}>Filters</Title>
           <Space size="large" wrap>
@@ -355,7 +330,6 @@ const GradingPage = () => {
             </Space>
           </Space>
         </Card>
-
         <Card
           title={`Grading Groups (${filteredGradingGroups.length} of ${gradingGroups.length})`}
           loading={groupsLoading}
@@ -369,7 +343,6 @@ const GradingPage = () => {
             scroll={{ x: 800 }}
           />
         </Card>
-
         <Card
           title={`Grading Sessions (${filteredGradingSessions.length} of ${gradingSessions.length})`}
           loading={sessionsLoading}
@@ -383,7 +356,6 @@ const GradingPage = () => {
             scroll={{ x: 800 }}
           />
         </Card>
-
         <Card
           title={`Assign Requests (${filteredAssignRequests.length} of ${assignRequests.length})`}
           loading={requestsLoading}
@@ -400,6 +372,4 @@ const GradingPage = () => {
     </>
   );
 };
-
 export default GradingPage;
-

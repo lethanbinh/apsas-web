@@ -1,14 +1,11 @@
 import { Col, Input, Row } from "antd";
 import { ReactNode } from "react";
 import type { FeedbackData } from "@/services/geminiService";
-
 const { TextArea } = Input;
-
 interface FeedbackFieldsProps {
   feedbackData: FeedbackData;
   onFeedbackChange: (field: keyof FeedbackData, value: string) => void;
 }
-
 export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackFieldsProps) {
   const fields: Array<{ key: keyof FeedbackData; label: string; rows: number; fullWidth?: boolean }> = [
     { key: "overallFeedback", label: "Overall Feedback", rows: 6, fullWidth: true },
@@ -20,14 +17,11 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
     { key: "bestPractices", label: "Best Practices", rows: 5 },
     { key: "errorHandling", label: "Error Handling", rows: 5 },
   ];
-
   const fieldsToRender = fields;
   const elements: ReactNode[] = [];
   let currentRow: Array<typeof fields[0]> = [];
-
   fieldsToRender.forEach((field, index) => {
     const value = feedbackData[field.key] || "";
-
     if (field.fullWidth) {
       if (currentRow.length > 0) {
         if (currentRow.length === 1) {
@@ -67,7 +61,6 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
         }
         currentRow = [];
       }
-
       elements.push(
         <div key={`field-${field.key}`}>
           <h5 style={{ margin: 0, marginBottom: 8, fontSize: '14px', fontWeight: 600 }}>
@@ -83,7 +76,6 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
       );
     } else {
       currentRow.push(field);
-
       if (currentRow.length === 2 || index === fieldsToRender.length - 1) {
         if (currentRow.length === 1) {
           elements.push(
@@ -124,7 +116,5 @@ export function FeedbackFields({ feedbackData, onFeedbackChange }: FeedbackField
       }
     }
   });
-
   return <>{elements}</>;
 }
-

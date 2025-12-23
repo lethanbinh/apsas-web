@@ -1,11 +1,9 @@
 "use client";
-
 import { Alert, App, Button, Card, Popconfirm, Space, Spin, Typography } from "antd";
 import { ArrowLeftOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, EyeOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
 import { useRouter, useParams } from "next/navigation";
@@ -19,9 +17,7 @@ import { gradingService } from "@/services/gradingService";
 import { gradeItemService } from "@/services/gradeItemService";
 import { AssignSubmissionsModal } from "@/components/examiner/AssignSubmissionsModal";
 import { RequirementModal } from "@/components/student/RequirementModal";
-
 const { Title, Text } = Typography;
-
 export default function ExaminerGradingGroupPage() {
   const router = useRouter();
   const params = useParams();
@@ -32,33 +28,27 @@ export default function ExaminerGradingGroupPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedSubmissions, setSelectedSubmissions] = useState<Submission[]>([]);
   const [viewExamModalVisible, setViewExamModalVisible] = useState(false);
-
   const { data: gradingGroupsData, isLoading: isLoadingGradingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.all,
     queryFn: () => gradingGroupService.getGradingGroups({}),
     enabled: !!gradingGroupId,
   });
-
   const gradingGroup = useMemo(() => {
     if (!gradingGroupsData || !gradingGroupId) return null;
     return gradingGroupsData.find(g => g.id === gradingGroupId) || null;
   }, [gradingGroupsData, gradingGroupId]);
-
   const isGradeSheetSubmitted = useMemo(() => {
     return !!(gradingGroup?.submittedGradeSheetUrl || gradingGroup?.gradeSheetSubmittedAt);
   }, [gradingGroup]);
-
   const title = useMemo(() => {
     return gradingGroup?.assessmentTemplateName || "Grading Group";
   }, [gradingGroup?.assessmentTemplateName]);
-
   useEffect(() => {
     if (!gradingGroup && gradingGroupId && !isLoadingGradingGroups) {
       message.error("Grading group not found");
       router.back();
     }
   }, [gradingGroup, gradingGroupId, isLoadingGradingGroups, message, router]);
-
   const { data: allSubmissionsData = [] } = useQuery({
     queryKey: ['submissions', 'byGradingGroupId', gradingGroupId],
     queryFn: () => submissionService.getSubmissionList({
@@ -66,7 +56,6 @@ export default function ExaminerGradingGroupPage() {
     }),
     enabled: !!gradingGroupId,
   });
-
   const submissions = useMemo(() => {
     const studentSubmissions = new Map<number, Submission>();
     for (const sub of allSubmissionsData) {
@@ -77,7 +66,6 @@ export default function ExaminerGradingGroupPage() {
       } else {
         const existingDate = (existing.updatedAt || existing.submittedAt) ? new Date(existing.updatedAt || existing.submittedAt || 0).getTime() : 0;
         const currentDate = (sub.updatedAt || sub.submittedAt) ? new Date(sub.updatedAt || sub.submittedAt || 0).getTime() : 0;
-
         if (currentDate > existingDate) {
           studentSubmissions.set(sub.studentId, sub);
         } else if (currentDate === existingDate && sub.id > existing.id) {
@@ -85,12 +73,10 @@ export default function ExaminerGradingGroupPage() {
         }
       }
     }
-
     return Array.from(studentSubmissions.values()).sort((a, b) =>
       (a.studentCode || "").localeCompare(b.studentCode || "")
     );
   }, [allSubmissionsData]);
-
   const gradingSessionsQueries = useQueries({
     queries: submissions.map((sub) => ({
       queryKey: queryKeys.grading.sessions.list({ submissionId: sub.id, pageNumber: 1, pageSize: 1 }),
@@ -102,7 +88,6 @@ export default function ExaminerGradingGroupPage() {
       enabled: submissions.length > 0,
     })),
   });
-
   const gradeItemsQueries = useQueries({
     queries: gradingSessionsQueries.map((sessionQuery, index) => ({
       queryKey: ['gradeItems', 'byGradingSessionId', sessionQuery.data?.items?.[0]?.id],
@@ -118,16 +103,13 @@ export default function ExaminerGradingGroupPage() {
       enabled: submissions.length > 0 && !!sessionQuery.data?.items?.[0]?.id,
     })),
   });
-
   const submissionTotalScores = useMemo(() => {
     const scoreMap: Record<number, number> = {};
     submissions.forEach((submission, index) => {
       const sessionsQuery = gradingSessionsQueries[index];
       const gradeItemsQuery = gradeItemsQueries[index];
-
       if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
         const latestSession = sessionsQuery.data.items[0];
-
         if (gradeItemsQuery?.data?.items && gradeItemsQuery.data.items.length > 0) {
           const totalScore = gradeItemsQuery.data.items.reduce((sum, item) => sum + item.score, 0);
           scoreMap[submission.id] = totalScore;
@@ -138,40 +120,31 @@ export default function ExaminerGradingGroupPage() {
     });
     return scoreMap;
   }, [submissions, gradingSessionsQueries, gradeItemsQueries]);
-
   const handleBack = () => {
     router.back();
   };
-
   const handleSelectionChange = (selectedRowKeys: React.Key[], selectedRows: Submission[]) => {
     setSelectedRowKeys(selectedRowKeys);
     setSelectedSubmissions(selectedRows);
   };
-
   const handleOpenAssignModal = () => {
     setIsAssignModalOpen(true);
   };
-
   const handleCloseAssignModal = () => {
     setIsAssignModalOpen(false);
   };
-
   const handleViewExam = () => {
     setViewExamModalVisible(true);
   };
-
   const handleAssignModalOk = () => {
     setIsAssignModalOpen(false);
-    // Invalidate queries to refresh submissions
     queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
     queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
   };
-
   const handleDeleteSubmission = async (submission: Submission) => {
     try {
       await submissionService.deleteSubmission(submission.id);
       message.success(`Submission deleted successfully!`);
-      // Invalidate queries to refresh submissions
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       setSelectedRowKeys([]);
@@ -182,19 +155,16 @@ export default function ExaminerGradingGroupPage() {
       message.error(errorMsg);
     }
   };
-
   const handleDeleteSelected = async () => {
     if (selectedSubmissions.length === 0) {
       message.warning("Please select at least one submission to delete");
       return;
     }
-
     try {
       await Promise.all(
         selectedSubmissions.map(submission => submissionService.deleteSubmission(submission.id))
       );
       message.success(`Deleted ${selectedSubmissions.length} submission(s) successfully!`);
-      // Invalidate queries to refresh submissions
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroupId', gradingGroupId] });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       setSelectedRowKeys([]);
@@ -205,9 +175,7 @@ export default function ExaminerGradingGroupPage() {
       message.error(errorMsg);
     }
   };
-
   const loading = isLoadingGradingGroups && !gradingGroup;
-
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -215,7 +183,6 @@ export default function ExaminerGradingGroupPage() {
       </div>
     );
   }
-
   if (!gradingGroup) {
     return (
       <div style={{ padding: 24 }}>
@@ -223,7 +190,6 @@ export default function ExaminerGradingGroupPage() {
       </div>
     );
   }
-
   return (
     <div style={{ padding: '30px 40px', backgroundColor: '#f0f7ff', minHeight: '100vh' }}>
       <Card>
@@ -257,7 +223,6 @@ export default function ExaminerGradingGroupPage() {
               )}
             </Space>
           </div>
-
           {gradingGroup && (
             <Card title="Submitted Grade Sheet">
               {gradingGroup.submittedGradeSheetUrl ? (
@@ -287,8 +252,7 @@ export default function ExaminerGradingGroupPage() {
               )}
             </Card>
           )}
-
-          <Card 
+          <Card
             title="Submissions"
             extra={
               selectedSubmissions.length > 0 && (
@@ -323,7 +287,6 @@ export default function ExaminerGradingGroupPage() {
           </Card>
         </Space>
       </Card>
-
       {gradingGroup && gradingGroupsData && (
         <AssignSubmissionsModal
           open={isAssignModalOpen}
@@ -333,7 +296,6 @@ export default function ExaminerGradingGroupPage() {
           allGroups={gradingGroupsData}
         />
       )}
-
       {gradingGroup?.assessmentTemplateId && (
         <RequirementModal
           open={viewExamModalVisible}
@@ -346,4 +308,3 @@ export default function ExaminerGradingGroupPage() {
     </div>
   );
 }
-

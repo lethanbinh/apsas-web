@@ -8,16 +8,12 @@ import utc from "dayjs/plugin/utc";
 import { QuestionsGradingSection } from "./QuestionsGradingSection";
 import { GradingNotesModal } from "@/components/common/GradingNotesModal";
 import { useState } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Title, Text } = Typography;
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 interface GradingDetailsSectionProps {
   questions: QuestionWithRubrics[];
   latestGradingSession: any;
@@ -42,7 +38,6 @@ interface GradingDetailsSectionProps {
   onOpenGradingHistory: () => void;
   onOpenFeedbackHistory: () => void;
 }
-
 export function GradingDetailsSection({
   questions,
   latestGradingSession,
@@ -59,7 +54,6 @@ export function GradingDetailsSection({
   onOpenFeedbackHistory,
 }: GradingDetailsSectionProps) {
   const [isGradingNotesModalOpen, setIsGradingNotesModalOpen] = useState(false);
-
   return (
     <div>
       {}
@@ -151,4 +145,3 @@ export function GradingDetailsSection({
     </div>
   );
 }
-

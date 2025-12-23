@@ -1,10 +1,8 @@
 "use client";
-
 import { rubricItemService } from "@/services/rubricItemService";
 import { RubricItem } from "@/services/rubricItemService";
 import { Alert, App, Button, Form, Input, Modal } from "antd";
 import { useEffect } from "react";
-
 interface RubricFormModalProps {
   open: boolean;
   onCancel: () => void;
@@ -14,7 +12,6 @@ interface RubricFormModalProps {
   questionId?: number;
   currentRubricsCount?: number;
 }
-
 export const RubricFormModal = ({
   open,
   onCancel,
@@ -28,7 +25,6 @@ export const RubricFormModal = ({
   const { notification } = App.useApp();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Rubric" : "Add New Rubric";
-
   useEffect(() => {
     if (open) {
       if (initialData) {
@@ -38,7 +34,6 @@ export const RubricFormModal = ({
       }
     }
   }, [initialData, form, open]);
-
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing) {
@@ -58,7 +53,6 @@ export const RubricFormModal = ({
       notification.error({ message: "Failed to save rubric" });
     }
   };
-
   return (
     <Modal
       title={title}
@@ -102,4 +96,3 @@ export const RubricFormModal = ({
     </Modal>
   );
 };
-

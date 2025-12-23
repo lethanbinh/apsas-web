@@ -15,21 +15,18 @@ export interface Examiner {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface ExaminerListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: Examiner[];
 }
-
 export interface ExaminerApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: Examiner;
 }
-
 export interface CreateExaminerPayload {
   username: string;
   password: string;
@@ -41,7 +38,6 @@ export interface CreateExaminerPayload {
   gender: number;
   dateOfBirth: string;
 }
-
 export class ExaminerService {
   async getExaminerList(): Promise<Examiner[]> {
     const response = await apiService.get<ExaminerListApiResponse>(
@@ -49,7 +45,6 @@ export class ExaminerService {
     );
     return response.result;
   }
-
   async createExaminer(payload: CreateExaminerPayload): Promise<Examiner> {
     const response = await apiService.post<ExaminerApiResponse>(
       "/Examiner/create",
@@ -58,5 +53,4 @@ export class ExaminerService {
     return response.result;
   }
 }
-
 export const examinerService = new ExaminerService();

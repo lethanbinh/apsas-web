@@ -1,6 +1,5 @@
 import { apiService } from "./api";
 import { geminiService, FeedbackData } from "./geminiService";
-
 export interface Grading {
   id: number;
   submissionId: number;
@@ -10,29 +9,24 @@ export interface Grading {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface GradingApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: Grading;
 }
-
 export interface CreateGradingPayload {
   submissionId: number;
   assessmentTemplateId: number;
 }
-
 export interface UploadTestFileResponse {
   message: string;
   folderName: string;
 }
-
 export interface UploadPostmanCollectionResponse {
   message: string;
   path: string;
 }
-
 export interface AiFeedbackResult {
   feedback: string;
   language: string;
@@ -40,14 +34,12 @@ export interface AiFeedbackResult {
   submissionId: number;
   fileName: string;
 }
-
 export interface AiFeedbackApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AiFeedbackResult;
 }
-
 export interface GradeItem {
   id: number;
   score: number;
@@ -56,14 +48,12 @@ export interface GradeItem {
   rubricItemDescription: string;
   rubricItemMaxScore: number;
 }
-
 export interface GradingLog {
   id: number;
   action: string;
   details: string;
   timestamp: string;
 }
-
 export interface GradingSession {
   id: number;
   grade: number;
@@ -78,7 +68,6 @@ export interface GradingSession {
   gradeItems: GradeItem[];
   gradingLogs: GradingLog[];
 }
-
 export interface PaginatedGradingSessionsResponse {
   statusCode: number;
   isSuccess: boolean;
@@ -91,12 +80,10 @@ export interface PaginatedGradingSessionsResponse {
     items: GradingSession[];
   };
 }
-
 export interface UpdateGradingSessionPayload {
   grade: number;
   status: number;
 }
-
 export interface GetGradingSessionsParams {
   pageNumber?: number;
   pageSize?: number;
@@ -104,7 +91,6 @@ export interface GetGradingSessionsParams {
   gradingType?: number;
   status?: number;
 }
-
 export class GradingService {
   async createGrading(payload: CreateGradingPayload): Promise<Grading> {
     const response = await apiService.post<GradingApiResponse>(
@@ -116,8 +102,6 @@ export class GradingService {
     );
     return response.result;
   }
-
-
   async autoGrading(payload: CreateGradingPayload): Promise<GradingSession> {
     try {
       const response = await apiService.post<{
@@ -128,15 +112,12 @@ export class GradingService {
       }>("/grading", payload, {
         timeout: 0,
       });
-
       if (!response.isSuccess) {
         const errorMessage = response.errorMessages?.join(", ") || "Failed to start auto grading";
         throw new Error(errorMessage);
       }
-
       return response.result;
     } catch (error: any) {
-
       if (error.response?.data) {
         const apiError = error.response.data;
         if (apiError.errorMessages && apiError.errorMessages.length > 0) {
@@ -161,7 +142,6 @@ export class GradingService {
   ): Promise<UploadTestFileResponse> {
     const formData = new FormData();
     formData.append("file", file);
-
     const response = await apiService.post<{
       statusCode: number;
       isSuccess: boolean;
@@ -185,7 +165,6 @@ export class GradingService {
   ): Promise<UploadPostmanCollectionResponse> {
     const formData = new FormData();
     formData.append("file", file);
-
     const response = await apiService.post<{
       statusCode: number;
       isSuccess: boolean;
@@ -202,7 +181,6 @@ export class GradingService {
     );
     return response.result;
   }
-
   async getAiFeedback(
     submissionId: number,
     provider?: string
@@ -217,8 +195,6 @@ export class GradingService {
           timeout: 0
         }
       );
-
-
       if (!response.isSuccess) {
         const errorMessage = response.errorMessages?.join(", ") || "Failed to get AI feedback";
         const error = new Error(errorMessage) as any;
@@ -226,21 +202,16 @@ export class GradingService {
         error.apiResponse = response;
         throw error;
       }
-
       if (!response.result) {
         const error = new Error("No feedback data returned from API") as any;
         error.isApiError = true;
         throw error;
       }
-
       return response.result;
     } catch (error: any) {
-
       if (error.isApiError) {
         throw error;
       }
-
-
       if (error.response?.data) {
         const apiResponse = error.response.data as AiFeedbackApiResponse;
         if (apiResponse.errorMessages && apiResponse.errorMessages.length > 0) {
@@ -251,27 +222,17 @@ export class GradingService {
           throw apiError;
         }
       }
-
-
       throw error;
     }
   }
-
-
   async getFormattedAiFeedback(
     submissionId: number,
     provider: string = "OpenAI"
   ): Promise<FeedbackData> {
-
     const aiFeedback = await this.getAiFeedback(submissionId, provider);
-
-
     const formattedFeedback = await geminiService.formatFeedback(aiFeedback.feedback);
-
     return formattedFeedback;
   }
-
-
   async getGradingSessions(
     params?: GetGradingSessionsParams
   ): Promise<PaginatedGradingSessionsResponse["result"]> {
@@ -281,8 +242,6 @@ export class GradingService {
     );
     return response.result;
   }
-
-
   async updateGradingSession(
     gradingSessionId: number,
     payload: UpdateGradingSessionPayload
@@ -294,8 +253,6 @@ export class GradingService {
       result: any;
     }>(`/GradingSession/${gradingSessionId}`, payload);
   }
-
-
   async deleteGradingSession(gradingSessionId: number): Promise<void> {
     await apiService.delete<{
       statusCode: number;
@@ -305,5 +262,4 @@ export class GradingService {
     }>(`/GradingSession/${gradingSessionId}`);
   }
 }
-
 export const gradingService = new GradingService();

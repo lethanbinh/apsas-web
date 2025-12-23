@@ -2,21 +2,17 @@ import { Collapse, Divider, Input, Table, Tag, Typography } from "antd";
 import type { RubricItem } from "@/services/rubricItemService";
 import type { QuestionWithRubrics } from "../page";
 import styles from "../page.module.css";
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface QuestionsGradingSectionProps {
   questions: QuestionWithRubrics[];
   getQuestionColumns: (question: QuestionWithRubrics) => any[];
 }
-
 export function QuestionsGradingSection({
   questions,
   getQuestionColumns,
 }: QuestionsGradingSectionProps) {
   const sortedQuestions = [...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
-
   const renderQuestionCollapse = (question: QuestionWithRubrics, index: number) => {
     const questionTotalScore = Object.values(question.rubricScores).reduce(
       (sum, score) => sum + (score || 0),
@@ -26,7 +22,6 @@ export function QuestionsGradingSection({
       (sum, r) => sum + r.score,
       0
     );
-
     return {
       key: `question-${index}`,
       label: (
@@ -58,9 +53,7 @@ export function QuestionsGradingSection({
               </pre>
             </div>
           )}
-
           <Divider />
-
           <Title level={5}>Grading Criteria ({question.rubrics.length})</Title>
           <Table
             columns={getQuestionColumns(question)}
@@ -70,9 +63,7 @@ export function QuestionsGradingSection({
             size="small"
             scroll={{ x: "max-content" }}
           />
-
           <Divider />
-
           <div style={{ marginTop: 16 }}>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Comments
@@ -89,7 +80,6 @@ export function QuestionsGradingSection({
       ),
     };
   };
-
   return (
     <Collapse
       items={sortedQuestions.map((question, index) =>
@@ -98,4 +88,3 @@ export function QuestionsGradingSection({
     />
   );
 }
-

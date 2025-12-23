@@ -4,9 +4,7 @@ import Image from "next/image";
 import React from "react";
 import styles from "./MyCoursesGrid.module.css";
 import { useRouter } from "next/navigation";
-
 const { Title, Text } = Typography;
-
 export interface SimpleCourseCardProps {
   imageUrl: string;
   title: string;
@@ -15,7 +13,6 @@ export interface SimpleCourseCardProps {
   href?: string;
   id?: number;
 }
-
 export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
   imageUrl,
   title,
@@ -25,7 +22,6 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
   id,
 }) => {
   const router = useRouter();
-
   const cardContent = (
     <div className={styles.courseCard}>
       <div className={styles.paddedImageWrapper}>
@@ -38,7 +34,6 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
           />
         </div>
       </div>
-
       <div className={styles.cardContent}>
         <Title
           level={5}
@@ -51,7 +46,6 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
         >
           {title}
         </Title>
-
         <div className={styles.authorInfo}>
           <Avatar
             src={authorAvatarUrl}
@@ -75,10 +69,8 @@ export const SimpleCourseCard: React.FC<SimpleCourseCardProps> = ({
       router.push(`/lecturer/info/${id}`);
     }
   };
-
   if (href || id) {
     return <div onClick={handleCardClick} style={{ cursor: "pointer" }}>{cardContent}</div>;
   }
-
   return cardContent;
 };

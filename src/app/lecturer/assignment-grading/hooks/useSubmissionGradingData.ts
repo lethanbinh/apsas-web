@@ -12,20 +12,16 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useEffect, useMemo, useState } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 export interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
   rubricComments: { [rubricId: number]: string };
 }
-
 export interface UseSubmissionGradingDataResult {
   submission: Submission | null;
   isLoadingSubmissions: boolean;
@@ -41,7 +37,6 @@ export interface UseSubmissionGradingDataResult {
   totalScore: number;
   setTotalScore: React.Dispatch<React.SetStateAction<number>>;
 }
-
 export function useSubmissionGradingData(
   submissionId: number | null
 ): UseSubmissionGradingDataResult {
@@ -52,8 +47,6 @@ export function useSubmissionGradingData(
     rubricComments: {},
   });
   const [totalScore, setTotalScore] = useState(0);
-
-
   const classIdFromStorage = typeof window !== 'undefined' ? localStorage.getItem("selectedClassId") : null;
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
@@ -64,8 +57,6 @@ export function useSubmissionGradingData(
     }),
     enabled: !!classIdFromStorage && !!submissionId,
   });
-
-
   const classAssessmentIds = classAssessmentsData?.items.map(ca => ca.id) || [];
   const submissionsQueries = useQueries({
     queries: classAssessmentIds.map((classAssessmentId) => ({
@@ -76,7 +67,6 @@ export function useSubmissionGradingData(
       enabled: classAssessmentIds.length > 0 && !!submissionId,
     })),
   });
-
   const submissionFromClass = useMemo(() => {
     if (!submissionId) return null;
     for (const query of submissionsQueries) {
@@ -87,22 +77,17 @@ export function useSubmissionGradingData(
     }
     return null;
   }, [submissionsQueries, submissionId]);
-
   const { data: allSubmissionsData = [], isLoading: isLoadingAllSubmissions } = useQuery({
     queryKey: ['submissions', 'all'],
     queryFn: () => submissionService.getSubmissionList({}),
     enabled: !!submissionId && !submissionFromClass,
   });
-
   const submission = useMemo(() => {
     if (!submissionId) return null;
     if (submissionFromClass) return submissionFromClass;
     return allSubmissionsData.find((s: Submission) => s.id === submissionId) || null;
   }, [submissionId, submissionFromClass, allSubmissionsData]);
-
-
   const isLoadingSubmissions = submissionsQueries.some((q: any) => q.isLoading) || isLoadingAllSubmissions;
-
   const { data: gradingSessionsData } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -112,7 +97,6 @@ export function useSubmissionGradingData(
     }),
     enabled: !!submissionId,
   });
-
   const latestGradingSession = useMemo(() => {
     if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
     const sorted = [...gradingSessionsData.items].sort((a, b) => {
@@ -122,7 +106,6 @@ export function useSubmissionGradingData(
     });
     return sorted[0];
   }, [gradingSessionsData]);
-
   const { data: gradeItemsData } = useQuery({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: () => gradeItemService.getGradeItems({
@@ -132,9 +115,7 @@ export function useSubmissionGradingData(
     }),
     enabled: !!latestGradingSession?.id,
   });
-
   const latestGradeItems = gradeItemsData?.items || [];
-
   const { data: gradingGroupsData } = useQuery({
     queryKey: queryKeys.grading.groups.list({}),
     queryFn: async () => {
@@ -143,7 +124,6 @@ export function useSubmissionGradingData(
     },
     enabled: !!submission?.gradingGroupId,
   });
-
   const { data: allClassAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 10000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -152,17 +132,14 @@ export function useSubmissionGradingData(
     }),
     enabled: !!submission?.classAssessmentId && !classAssessmentsData,
   });
-
   const assessmentTemplateId = useMemo(() => {
     if (!submission) return null;
-
     if (submission.gradingGroupId && gradingGroupsData) {
       const gradingGroup = gradingGroupsData.find((gg) => gg.id === submission.gradingGroupId);
       if (gradingGroup?.assessmentTemplateId) {
         return gradingGroup.assessmentTemplateId;
       }
     }
-
     if (submission.classAssessmentId) {
       if (classAssessmentsData?.items) {
         const classAssessment = classAssessmentsData.items.find(
@@ -172,7 +149,6 @@ export function useSubmissionGradingData(
           return classAssessment.assessmentTemplateId;
         }
       }
-
       if (allClassAssessmentsData?.items) {
         const classAssessment = allClassAssessmentsData.items.find(
           (ca) => ca.id === submission.classAssessmentId
@@ -182,10 +158,8 @@ export function useSubmissionGradingData(
         }
       }
     }
-
     return null;
   }, [submission, gradingGroupsData, classAssessmentsData, allClassAssessmentsData]);
-
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -195,9 +169,7 @@ export function useSubmissionGradingData(
     }),
     enabled: !!assessmentTemplateId,
   });
-
   const papers = papersData?.items || [];
-
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -209,7 +181,6 @@ export function useSubmissionGradingData(
       enabled: papers.length > 0,
     })),
   });
-
   const allQuestionsFromQueries = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {
@@ -219,7 +190,6 @@ export function useSubmissionGradingData(
     });
     return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [questionsQueries]);
-
   const rubricsQueries = useQueries({
     queries: allQuestionsFromQueries.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -231,7 +201,6 @@ export function useSubmissionGradingData(
       enabled: allQuestionsFromQueries.length > 0,
     })),
   });
-
   const questionsWithRubrics = useMemo(() => {
     const result: QuestionWithRubrics[] = [];
     allQuestionsFromQueries.forEach((question, index) => {
@@ -247,17 +216,14 @@ export function useSubmissionGradingData(
     });
     return result;
   }, [allQuestionsFromQueries, rubricsQueries]);
-
   useEffect(() => {
     setUserEdits({
       rubricScores: {},
       rubricComments: {},
     });
   }, [submissionId]);
-
   const questions = useMemo(() => {
     if (questionsWithRubrics.length === 0) return [];
-
     if (latestGradeItems.length > 0) {
       const sortedItems = [...latestGradeItems].sort((a, b) => {
         const dateA = new Date(a.updatedAt).getTime();
@@ -269,20 +235,16 @@ export function useSubmissionGradingData(
         const createdB = new Date(b.createdAt).getTime();
         return createdB - createdA;
       });
-
       const latestGradeItemsMap = new Map<number, GradeItem>();
       sortedItems.forEach((item) => {
         if (item.rubricItemId && !latestGradeItemsMap.has(item.rubricItemId)) {
           latestGradeItemsMap.set(item.rubricItemId, item);
         }
       });
-
       const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
-
       return questionsWithRubrics.map((question) => {
         const newRubricScores = { ...question.rubricScores };
         const newRubricComments = { ...(question.rubricComments || {}) };
-
         let questionComment = "";
         question.rubrics.forEach((rubric) => {
           const matchingGradeItem = latestGradeItemsForDisplay.find(
@@ -303,11 +265,9 @@ export function useSubmissionGradingData(
             }
           }
         });
-
         newRubricComments[question.id] = userEdits.rubricComments[question.id] !== undefined
           ? userEdits.rubricComments[question.id]
           : questionComment;
-
         return {
           ...question,
           rubricScores: newRubricScores,
@@ -315,22 +275,18 @@ export function useSubmissionGradingData(
         };
       });
     }
-
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
       const newRubricComments = { ...(question.rubricComments || {}) };
-
       question.rubrics.forEach((rubric) => {
         const editKey = `${question.id}_${rubric.id}`;
         if (userEdits.rubricScores[editKey] !== undefined) {
           newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
         }
       });
-
       if (userEdits.rubricComments[question.id] !== undefined) {
         newRubricComments[question.id] = userEdits.rubricComments[question.id];
       }
-
       return {
         ...question,
         rubricScores: newRubricScores,
@@ -338,7 +294,6 @@ export function useSubmissionGradingData(
       };
     });
   }, [questionsWithRubrics, latestGradeItems, userEdits]);
-
   useEffect(() => {
     const calculatedTotal = questions.reduce((sum, q) => {
       const questionTotal = Object.values(q.rubricScores).reduce(
@@ -349,7 +304,6 @@ export function useSubmissionGradingData(
     }, 0);
     setTotalScore(calculatedTotal);
   }, [questions]);
-
   const classAssessmentForSemester = useMemo(() => {
     if (!submission?.classAssessmentId) return null;
     if (classAssessmentsData?.items) {
@@ -360,7 +314,6 @@ export function useSubmissionGradingData(
     }
     return null;
   }, [submission, classAssessmentsData, allClassAssessmentsData]);
-
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -369,7 +322,6 @@ export function useSubmissionGradingData(
     }),
     enabled: !!classAssessmentForSemester?.courseElementId,
   });
-
   const semesterInfoFromQuery = useMemo(() => {
     if (!classAssessmentForSemester?.courseElementId || !courseElementsData) return null;
     const courseElement = courseElementsData.find(
@@ -383,7 +335,6 @@ export function useSubmissionGradingData(
     }
     return null;
   }, [classAssessmentForSemester, courseElementsData]);
-
   useEffect(() => {
     if (semesterInfoFromQuery) {
       setSemesterInfo(semesterInfoFromQuery);
@@ -396,28 +347,22 @@ export function useSubmissionGradingData(
       setIsSemesterPassed(false);
     }
   }, [semesterInfoFromQuery]);
-
-  // Get isPublished from classAssessment
   const isPublished = useMemo(() => {
     if (!submission?.classAssessmentId) return false;
-    
     if (classAssessmentsData?.items) {
       const classAssessment = classAssessmentsData.items.find(
         (ca) => ca.id === submission.classAssessmentId
       );
       return classAssessment?.isPublished ?? false;
     }
-    
     if (allClassAssessmentsData?.items) {
       const classAssessment = allClassAssessmentsData.items.find(
         (ca) => ca.id === submission.classAssessmentId
       );
       return classAssessment?.isPublished ?? false;
     }
-    
     return false;
   }, [submission, classAssessmentsData, allClassAssessmentsData]);
-
   return {
     submission,
     isLoadingSubmissions,
@@ -434,4 +379,3 @@ export function useSubmissionGradingData(
     setTotalScore,
   };
 }
-

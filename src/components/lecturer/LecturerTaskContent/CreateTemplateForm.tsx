@@ -1,13 +1,10 @@
 "use client";
-
 import { DatabaseOutlined, DownloadOutlined, ImportOutlined, UploadOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, Radio, Space, Typography, Upload } from "antd";
 import type { RcFile, UploadFile } from "antd/es/upload/interface";
 import { UploadFileModal } from "./UploadFileModal";
 import styles from "./TaskContent.module.css";
-
 const { Title, Text } = Typography;
-
 interface CreateTemplateFormProps {
   newTemplateName: string;
   newTemplateDesc: string;
@@ -39,7 +36,6 @@ interface CreateTemplateFormProps {
   onDownloadTemplate: () => void;
   onImportTemplate: (file: File) => void;
 }
-
 export const CreateTemplateForm = ({
   newTemplateName,
   newTemplateDesc,
@@ -99,7 +95,6 @@ export const CreateTemplateForm = ({
             <Radio value={1}>WEBAPI</Radio>
           </Radio.Group>
         </Form.Item>
-
         {newTemplateType === 1 && (
           <Form.Item
             label="Startup Project"
@@ -114,7 +109,6 @@ export const CreateTemplateForm = ({
             />
           </Form.Item>
         )}
-
         {newTemplateType === 1 && (
           <>
             <Form.Item
@@ -148,7 +142,6 @@ export const CreateTemplateForm = ({
                 )}
               </Space>
             </Form.Item>
-
             <Form.Item
               label="Upload Postman Collection File (.postman_collection.json)"
               required
@@ -181,7 +174,6 @@ export const CreateTemplateForm = ({
             </Form.Item>
           </>
         )}
-
         <div className={styles.actionButtons}>
         <Button
           type="primary"
@@ -214,7 +206,6 @@ export const CreateTemplateForm = ({
           </Upload>
         </div>
       </Form>
-
       <UploadFileModal
         open={isDatabaseUploadModalOpen}
         onCancel={onDatabaseUploadModalClose}
@@ -224,7 +215,6 @@ export const CreateTemplateForm = ({
         fileList={databaseUploadFileList}
         onFileListChange={onDatabaseUploadFileListChange}
       />
-
       <UploadFileModal
         open={isPostmanUploadModalOpen}
         onCancel={onPostmanUploadModalClose}
@@ -237,4 +227,3 @@ export const CreateTemplateForm = ({
     </div>
   );
 };
-

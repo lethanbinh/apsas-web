@@ -6,7 +6,6 @@ export interface DashboardOverview {
   grading: GradingStats;
   grades: GradeStats;
 }
-
 export interface UserStats {
   total: number;
   byRole: {
@@ -19,7 +18,6 @@ export interface UserStats {
   active: number;
   inactive: number;
   neverLoggedIn: number;
-
   byGender: {
     male: number;
     female: number;
@@ -38,7 +36,6 @@ export interface UserStats {
     activityCount: number;
   }>;
 }
-
 export interface AcademicStats {
   totalSemesters: number;
   activeSemesters: number;
@@ -48,7 +45,6 @@ export interface AcademicStats {
   totalStudents: number;
   totalLecturers: number;
   classesOverloaded: number;
-
   classesBySemester: Array<{
     semesterCode: string;
     semesterName: string;
@@ -74,7 +70,6 @@ export interface AcademicStats {
   }>;
   studentToLecturerRatio: number;
 }
-
 export interface AssessmentStats {
   totalTemplates: number;
   totalClassAssessments: number;
@@ -83,7 +78,6 @@ export interface AssessmentStats {
     lab: number;
     practicalExam: number;
   };
-
   assessmentsByStatus: {
     active: number;
     completed: number;
@@ -110,14 +104,12 @@ export interface AssessmentStats {
     daysRemaining: number;
   }>;
 }
-
 export interface SubmissionStats {
   total: number;
   graded: number;
   pending: number;
   notSubmitted: number;
   completionRate: number;
-
   submissionsByType: {
     assignment: number;
     lab: number;
@@ -144,13 +136,11 @@ export interface SubmissionStats {
     count: number;
   }>;
 }
-
 export interface GradingStats {
   totalGradingGroups: number;
   totalGradingSessions: number;
   pendingAssignRequests: number;
   completedGradingSessions: number;
-
   gradingSessionsByStatus: {
     processing: number;
     completed: number;
@@ -178,7 +168,6 @@ export interface GradingStats {
     completed: number;
   };
 }
-
 export interface ChartData {
   userGrowth: UserGrowthData[];
   semesterActivity: SemesterActivityData[];
@@ -187,14 +176,12 @@ export interface ChartData {
   gradingPerformance: GradingPerformanceData[];
   submissionsOverTime: SubmissionsOverTimeData[];
 }
-
 export interface UserGrowthData {
   month: string;
   total: number;
   students: number;
   lecturers: number;
 }
-
 export interface SemesterActivityData {
   semester: string;
   courses: number;
@@ -202,23 +189,19 @@ export interface SemesterActivityData {
   assessments: number;
   submissions: number;
 }
-
 export interface AssessmentDistributionData {
   type: string;
   count: number;
 }
-
 export interface SubmissionStatusData {
   status: string;
   count: number;
 }
-
 export interface GradingPerformanceData {
   date: string;
   graded: number;
   pending: number;
 }
-
 export interface SubmissionsOverTimeData {
   date: string;
   count: number;
@@ -226,7 +209,6 @@ export interface SubmissionsOverTimeData {
   lab: number;
   practicalExam: number;
 }
-
 export interface RecentActivity {
   id: string;
   type: 'user' | 'class' | 'assessment' | 'submission' | 'grading';
@@ -235,7 +217,6 @@ export interface RecentActivity {
   timestamp: string;
   icon: string;
 }
-
 export interface PendingTask {
   id: string;
   type: 'assign_request' | 'submission' | 'grading';
@@ -244,16 +225,15 @@ export interface PendingTask {
   priority: 'high' | 'medium' | 'low';
   timestamp: string;
 }
-
 export interface GradeStats {
   totalGraded: number;
   averageGrade: number;
   medianGrade: number;
   gradeDistribution: {
-    excellent: number; // >= 8.5
-    good: number; // 7.0 - 8.4
-    average: number; // 5.5 - 6.9
-    belowAverage: number; // < 5.5
+    excellent: number;
+    good: number;
+    average: number;
+    belowAverage: number;
   };
   averageGradeByType: {
     assignment: number;
@@ -286,4 +266,3 @@ export interface GradeStats {
     averageGrade: number;
   }>;
 }
-

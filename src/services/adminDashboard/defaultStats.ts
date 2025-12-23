@@ -1,5 +1,4 @@
 import type { UserStats, AssessmentStats, SubmissionStats } from './types';
-
 export function getDefaultUserStats(): UserStats {
   return {
     total: 0,
@@ -20,7 +19,6 @@ export function getDefaultUserStats(): UserStats {
     usersWithoutPhone: 0,
   };
 }
-
 export function getDefaultAssessmentStats(): AssessmentStats {
   return {
     totalTemplates: 0,
@@ -38,7 +36,6 @@ export function getDefaultAssessmentStats(): AssessmentStats {
     upcomingDeadlines: [],
   };
 }
-
 export function getDefaultSubmissionStats(): SubmissionStats {
   return {
     total: 0,
@@ -55,4 +52,3 @@ export function getDefaultSubmissionStats(): SubmissionStats {
     submissionsByDay: [],
   };
 }
-

@@ -1,5 +1,4 @@
 "use client";
-
 import { Button, Modal, Spin, Table, Tag, Typography } from "antd";
 import { useQuery } from "@tanstack/react-query";
 import { gradeItemService, GradeItem } from "@/services/gradeItemService";
@@ -7,24 +6,19 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { toVietnamTime } from "../utils/dateUtils";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Text } = Typography;
-
 interface GradeItemHistoryModalProps {
   visible: boolean;
   onClose: () => void;
   selectedGradeItem: GradeItem | null;
 }
-
 export function GradeItemHistoryModal({
   visible,
   onClose,
   selectedGradeItem,
 }: GradeItemHistoryModalProps) {
-
   const { data: gradeItemHistoryData, isLoading: loadingGradeItemHistory } = useQuery({
     queryKey: ['gradeItemHistory', selectedGradeItem?.gradingSessionId, selectedGradeItem?.rubricItemDescription],
     queryFn: async () => {
@@ -52,9 +46,7 @@ export function GradeItemHistoryModal({
     },
     enabled: visible && !!selectedGradeItem,
   });
-
   const gradeItemHistory = gradeItemHistoryData?.items || [];
-
   return (
     <Modal
       title={
@@ -161,4 +153,3 @@ export function GradeItemHistoryModal({
     </Modal>
   );
 }
-

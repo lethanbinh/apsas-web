@@ -1,9 +1,7 @@
 "use client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { config } from "@/lib/config";
 import { Role } from "@/lib/constants";
-// import { DEMO_ACCOUNTS } from "@/lib/constants/demoAccounts";
 import { formatErrorMessage, DEFAULT_ERROR_MESSAGES } from "@/lib/constants/errorMessages";
 import { deleteCookie, setCookie } from "@/lib/utils/cookie";
 import { removeStorageItem, setStorageItem } from "@/lib/utils/storage";
@@ -24,7 +22,6 @@ interface LoginFormProps {
   onSuccess?: () => void;
   onError?: (error: string) => void;
 }
-
 const decodeJWT = (token: string): any => {
   try {
     const base64Url = token.split(".")[1];
@@ -43,7 +40,6 @@ const decodeJWT = (token: string): any => {
     return null;
   }
 };
-
 const mapRoleToNumber = (role: string | number): Role => {
   if (typeof role === "number") {
     return role as Role;
@@ -56,9 +52,6 @@ const mapRoleToNumber = (role: string | number): Role => {
   if (roleLower === "examiner") return 4;
   return 2;
 };
-
-
-
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
@@ -68,9 +61,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  // const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
-  // const [selectedDemoAccount, setSelectedDemoAccount] = useState<string | null>(null);
-
   let app;
   if (getApps().length === 0) {
     app = initializeApp(config.firebase);
@@ -78,38 +68,27 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
     app = getApps()[0];
   }
   const auth = getAuth(app);
-
   useEffect(() => { }, []);
-
   const handleSubmit = async (values: LoginCredentials) => {
     if (isLoggingIn) return;
-
     try {
       setIsLoggingIn(true);
       setErrors({});
-
       if (typeof window !== 'undefined') {
         removeStorageItem('auth_token');
         removeStorageItem('user_data');
         removeStorageItem('user_id');
         deleteCookie('auth_token');
       }
-
       dispatch(logout());
-
       const result = await login(values);
-
       if (!result) {
         throw new Error("Login failed: No response received");
       }
-
       if (!result.token) {
         throw new Error("Login failed: Invalid response from server");
       }
-
       console.log("Login successful!");
-
-      // Initialize session timeout
       if (result.token) {
         initSessionTimeout(result.token, () => {
           if (typeof window !== 'undefined') {
@@ -122,7 +101,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           }
         });
       }
-
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/manage-users",
         1: "/classes/my-classes/lecturer",
@@ -130,9 +108,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         3: "/hod/semester-plans",
         4: "/examiner/grading-groups",
       };
-
       let userRole: Role = 2;
-
       try {
         const decoded = decodeJWT(result.token);
         if (!decoded) {
@@ -143,16 +119,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         console.error("Token decode error:", decodeError);
         throw new Error("Failed to process authentication token");
       }
-
-
       const redirectParam = searchParams.get("redirect");
       let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
-
-
       if (redirectParam) {
         try {
           const decodedRedirect = decodeURIComponent(redirectParam);
-
           const roleRoutes: Record<number, string[]> = {
             0: ["/admin", "/profile"],
             1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
@@ -160,14 +131,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             3: ["/hod", "/profile"],
             4: ["/examiner", "/profile"],
           };
-
           const allowedPaths = roleRoutes[userRole] || [];
-
           const isAllowed = allowedPaths.some(path =>
             decodedRedirect === path || decodedRedirect.startsWith(path + "/")
           );
-
-
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
@@ -179,7 +146,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
               pathSegments.includes(identifier)
             );
           });
-
           if (isAllowed && !hasOtherRole) {
             redirectPath = decodedRedirect;
           }
@@ -187,11 +153,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           console.error("Failed to decode redirect parameter:", e);
         }
       }
-
       console.log("Redirecting to:", redirectPath);
       console.log("User role is:", userRole, "which maps to:", redirectPath);
-
-
       window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
@@ -201,15 +164,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         removeStorageItem('user_id');
         deleteCookie('auth_token');
       }
-
       dispatch(logout());
       let errorMessage: string = DEFAULT_ERROR_MESSAGES.LOGIN_FAILED;
       if (typeof error === 'string') {
         errorMessage = formatErrorMessage(error);
       }
-
       else if (error && typeof error === 'object') {
-
         if (error.payload !== undefined) {
           if (typeof error.payload === 'string') {
             errorMessage = formatErrorMessage(error.payload);
@@ -217,12 +177,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = formatErrorMessage(error.payload.message);
           }
         }
-
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
-
-
           if (status === 401) {
             errorMessage = DEFAULT_ERROR_MESSAGES.INVALID_CREDENTIALS;
           } else if (status === 403) {
@@ -236,21 +193,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = formatErrorMessage(errorData.errorMessages[0]);
             }
-
             else if (errorData.message) {
               errorMessage = formatErrorMessage(errorData.message);
             }
-
             else if (errorData.error) {
               errorMessage = formatErrorMessage(errorData.error);
             }
           }
         }
-
         else if (error.message) {
           errorMessage = formatErrorMessage(error.message);
         }
-
         else if (error.toString && error.toString() !== '[object Object]') {
           const errorStr = error.toString();
           if (errorStr && errorStr !== '[object Object]') {
@@ -258,8 +211,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           }
         }
       }
-
-
       setErrors({ general: errorMessage });
       message.error(errorMessage, 4);
       onError?.(errorMessage);
@@ -267,37 +218,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       setIsLoggingIn(false);
     }
   };
-  // const handleLogoClick = () => {
-  //   setIsDemoModalOpen(true);
-  //   setSelectedDemoAccount(null);
-  // };
-
-  // const handleDemoModalClose = () => {
-  //   setIsDemoModalOpen(false);
-  //   setSelectedDemoAccount(null);
-  // };
-
-  // const handleDemoAccountSelect = (accountCode: string) => {
-  //   setSelectedDemoAccount(accountCode);
-  //   const account = DEMO_ACCOUNTS.find((acc) => acc.accountCode === accountCode);
-  //   if (account) {
-  //     form.setFieldsValue({
-  //       email: account.email,
-  //       password: account.password,
-  //     });
-  //     setIsDemoModalOpen(false);
-  //     setSelectedDemoAccount(null);
-
-  //     setTimeout(() => {
-  //       form.submit();
-  //     }, 100);
-  //   }
-  // };
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
       setErrors({});
-
       if (typeof window !== 'undefined') {
         removeStorageItem('auth_token');
         removeStorageItem('user_data');
@@ -305,42 +229,31 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         deleteCookie('auth_token');
       }
       dispatch(logout());
-
       const result = await signInWithPopup(auth, provider);
       console.log("result:", result);
-
       if (!result || !result.user) {
         throw new Error(
           "Google authentication failed: No user information received"
         );
       }
-
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const googleIdToken =
         credential?.idToken ||
         (result as any)?._tokenResponse?.oauthIdToken ||
         null;
-
       if (!googleIdToken) {
         throw new Error("Google authentication failed: No Google ID token received");
       }
-
       console.log("Google ID Token:", googleIdToken);
-
       console.log("Sending ID Token to backend:", googleIdToken);
       const response = await authService.googleLogin({ idToken: googleIdToken });
       console.log("Backend response for Google Login:", response);
-
       if (!response || !response.result || !response.result.token) {
         throw new Error("Google login failed: Invalid response from server");
       }
-
       setStorageItem("auth_token", response.result.token);
       setCookie("auth_token", response.result.token);
-
       const token = response.result.token;
-
-      // Initialize session timeout for Google login
       if (token) {
         initSessionTimeout(token, () => {
           if (typeof window !== 'undefined') {
@@ -353,7 +266,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           }
         });
       }
-
       let decoded;
       try {
         decoded = decodeJWT(token);
@@ -364,14 +276,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         console.error("Token decode error:", decodeError);
         throw new Error("Failed to process authentication token");
       }
-
       const roleRedirects: { [key: number]: string } = {
         0: "/admin/manage-users",
         1: "/classes/my-classes/lecturer",
         2: "/classes/my-classes/student",
         3: "/hod/semester-plans",
       };
-
       const userRole = mapRoleToNumber(decoded?.role || 2);
       const rawUserId =
         decoded?.nameid ||
@@ -380,7 +290,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         decoded?.id ||
         result.user?.uid;
       const userIdNumber = rawUserId ? parseInt(rawUserId, 10) || rawUserId : null;
-
       const userInfo = {
         id: typeof userIdNumber === "number" ? userIdNumber : 0,
         accountCode: decoded?.accountCode || "",
@@ -394,14 +303,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         dateOfBirth: decoded?.dateOfBirth || "",
         role: userRole,
       };
-
       if (typeof window !== "undefined") {
         if (rawUserId) {
           setStorageItem("user_id", String(rawUserId));
         }
         setStorageItem("user_data", JSON.stringify(userInfo));
       }
-
       try {
         await dispatch(fetchUserProfile()).unwrap();
       } catch (profileError: any) {
@@ -413,16 +320,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         "Mapped to:",
         userRole
       );
-
-
       const redirectParam = searchParams.get("redirect");
       let redirectPath = roleRedirects[userRole] || "/classes/my-classes/student";
-
-
       if (redirectParam) {
         try {
           const decodedRedirect = decodeURIComponent(redirectParam);
-
           const roleRoutes: Record<number, string[]> = {
             0: ["/admin", "/profile"],
             1: ["/lecturer", "/classes/my-classes/lecturer", "/profile"],
@@ -430,14 +332,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             3: ["/hod", "/profile"],
             4: ["/examiner", "/profile"],
           };
-
           const allowedPaths = roleRoutes[userRole] || [];
-
           const isAllowed = allowedPaths.some(path =>
             decodedRedirect === path || decodedRedirect.startsWith(path + "/")
           );
-
-
           const roleIdentifiers: Record<number, string> = {
             0: "admin", 1: "lecturer", 2: "student", 3: "hod", 4: "examiner",
           };
@@ -449,7 +347,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
               pathSegments.includes(identifier)
             );
           });
-
           if (isAllowed && !hasOtherRole) {
             redirectPath = decodedRedirect;
           }
@@ -457,36 +354,23 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           console.error("Failed to decode redirect parameter:", e);
         }
       }
-
       console.log("Redirecting to:", redirectPath);
-
       window.location.href = redirectPath;
       onSuccess?.();
     } catch (error: any) {
       console.error("Google login failed:", error);
-
       if (typeof window !== 'undefined') {
         removeStorageItem('auth_token');
         removeStorageItem('user_data');
         removeStorageItem('user_id');
         deleteCookie('auth_token');
       }
-
       dispatch(logout());
-
-
       let errorMessage: string = DEFAULT_ERROR_MESSAGES.GOOGLE_LOGIN_FAILED;
-
-
-
-
-
       if (typeof error === 'string') {
         errorMessage = formatErrorMessage(error);
       }
-
       else if (error && typeof error === 'object') {
-
         if (error.payload !== undefined) {
           if (typeof error.payload === 'string') {
             errorMessage = formatErrorMessage(error.payload);
@@ -494,12 +378,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             errorMessage = formatErrorMessage(error.payload.message);
           }
         }
-
         else if (error.response) {
           const status = error.response.status;
           const errorData = error.response.data;
-
-
           if (status === 401) {
             errorMessage = DEFAULT_ERROR_MESSAGES.GOOGLE_ACCOUNT_NOT_REGISTERED;
           } else if (status === 403) {
@@ -509,27 +390,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           } else if (status >= 500) {
             errorMessage = DEFAULT_ERROR_MESSAGES.SERVER_ERROR;
           }
-
-
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = formatErrorMessage(errorData.errorMessages[0]);
             }
-
             else if (errorData.message) {
               errorMessage = formatErrorMessage(errorData.message);
             }
-
             else if (errorData.error) {
               errorMessage = formatErrorMessage(errorData.error);
             }
           }
         }
-
         else if (error.message) {
           errorMessage = formatErrorMessage(error.message);
         }
-
         else if (error.toString && error.toString() !== '[object Object]') {
           const errorStr = error.toString();
           if (errorStr && errorStr !== '[object Object]') {
@@ -537,26 +412,21 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           }
         }
       }
-
-
       setErrors({ general: errorMessage });
       message.error(errorMessage, 4);
       onError?.(errorMessage);
     }
   };
-
   return (
     <div className="login-form-container">
       {}
-      <div className="login-logo" /* onClick={handleLogoClick} */ style={{ /* cursor: "pointer" */ }}>
+      <div className="login-logo"  style={{  }}>
         <Logo />
       </div>
-
       <div className="login-form-header">
         <h1 className="login-title">Sign in</h1>
         <p className="login-subtitle">Please login to continue to your account.</p>
       </div>
-
       <Form
         form={form}
         layout="vertical"
@@ -575,7 +445,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
         >
           <Input placeholder="Enter your Email" className="login-input" />
         </Form.Item>
-
         <Form.Item
           name="password"
           label="Password"
@@ -589,7 +458,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             className="login-input"
           />
         </Form.Item>
-
         <div className="login-options">
           <Form.Item
             name="remember"
@@ -599,13 +467,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
             <Checkbox>Keep me logged in</Checkbox>
           </Form.Item>
         </div>
-
         {errors.general && (
           <div className="error-message">
             <p className="error-text">{errors.general}</p>
           </div>
         )}
-
         <Form.Item>
           <Button
             type="primary"
@@ -617,13 +483,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
           </Button>
         </Form.Item>
       </Form>
-
       <div className="login-divider">
         <div className="divider-line"></div>
         <span className="divider-text">or</span>
         <div className="divider-line"></div>
       </div>
-
       <Button
         onClick={handleGoogleLogin}
         className="google-login-button"
@@ -650,41 +514,12 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
       >
         Sign in with Google
       </Button>
-
       <div className="login-footer">
         <p>Forgot your password? <Link href="/reset-password" className="register-link">Reset it</Link></p>
       </div>
-
       {}
-      {/* Demo Login Modal - Commented out */}
-      {/* <Modal
-        title="Select Demo Account"
-        open={isDemoModalOpen}
-        onCancel={handleDemoModalClose}
-        footer={null}
-        width={500}
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Select
-            placeholder="Select a demo account to login"
-            style={{ width: "100%" }}
-            size="large"
-            value={selectedDemoAccount}
-            onChange={handleDemoAccountSelect}
-            showSearch
-            filterOption={(input, option) =>
-              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
-            }
-            options={DEMO_ACCOUNTS.map((account) => ({
-              label: `${account.accountCode} - ${account.email} (${account.role})`,
-              value: account.accountCode,
-            }))}
-          />
-        </div>
-        <div style={{ marginTop: 16, fontSize: "12px", color: "#666" }}>
-          <p>Select an account from the list to login automatically</p>
-        </div>
-      </Modal> */}
+      {}
+      {}
     </div>
   );
 };

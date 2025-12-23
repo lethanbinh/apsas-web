@@ -1,24 +1,14 @@
 "use client";
-
 import React from "react";
 import { Typography } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
-
-
-
 import { Pagination, Navigation } from "swiper/modules";
-
-
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
-
 import { CoachCard } from "./CoachCard";
 import styles from "./CoachesSlider.module.css";
-
 const { Title } = Typography;
-
-
 const coachData = [
   {
     id: 1,
@@ -51,7 +41,6 @@ const coachData = [
     imageUrl: "/classes/class.png",
   },
 ];
-
 export default function CoachesSlider() {
   return (
     <div className={styles.sliderSection}>
@@ -67,38 +56,26 @@ export default function CoachesSlider() {
       >
         Coaches list
       </Title>
-
       <Swiper
-
         modules={[Pagination, Navigation]}
         spaceBetween={24}
-
-
-
         pagination={{ clickable: true }}
         className={styles.swiperContainer}
-
-
         breakpoints={{
-
           640: {
             slidesPerView: 2,
             spaceBetween: 20,
             centeredSlides: false,
           },
-
           768: {
             slidesPerView: 3,
             spaceBetween: 24,
           },
-
           1024: {
             slidesPerView: 4,
             spaceBetween: 24,
           },
         }}
-
-
         slidesPerView={1.4}
       >
         {coachData.map((coach) => (

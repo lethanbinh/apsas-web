@@ -1,5 +1,4 @@
 "use client";
-
 import {
   CreateSemesterPayload,
   semesterService,
@@ -9,7 +8,6 @@ import { Semester } from "@/types";
 import { Alert, App, DatePicker, Form, Input, Modal, Select } from "antd";
 import moment from "moment";
 import { useEffect, useMemo, useRef, useState } from "react";
-
 interface SemesterCrudModalProps {
   open: boolean;
   initialData: Semester | null;
@@ -17,7 +15,6 @@ interface SemesterCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const getDatesForSeason = (
   season: string,
   year: number
@@ -39,13 +36,11 @@ const getDatesForSeason = (
     end: moment(new Date(year, 11, 31)),
   };
 };
-
 const allSeasons = [
   { label: "Spring", value: "Spring" },
   { label: "Summer", value: "Summer" },
   { label: "Fall", value: "Fall" },
 ];
-
 const generateYearOptions = () => {
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -54,7 +49,6 @@ const generateYearOptions = () => {
   }
   return years;
 };
-
 const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
   open,
   initialData,
@@ -67,10 +61,8 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
   const isUpdatingRef = useRef(false);
-
   const isEditMode = !!initialData;
   const selectedYear = Form.useWatch("academicYear", form);
-
   const existingSemestersByYear = useMemo(() => {
     const map = new Map<number, string[]>();
     existingSemesters.forEach((s) => {
@@ -81,14 +73,12 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
     });
     return map;
   }, [existingSemesters]);
-
   const yearOptions = useMemo(() => {
     return generateYearOptions().map((year) => ({
       ...year,
       disabled: (existingSemestersByYear.get(year.value) || []).length >= 3,
     }));
   }, [existingSemestersByYear]);
-
   const seasonOptions = useMemo(() => {
     if (!selectedYear) {
       return [];
@@ -100,17 +90,14 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
       (s) => !takenSeasons.includes(s.value.toLowerCase())
     );
   }, [selectedYear, existingSemestersByYear]);
-
   useEffect(() => {
     if (open) {
       if (isEditMode && initialData) {
-
         const season =
           initialData.semesterCode.replace(
             initialData.academicYear.toString(),
             ""
           ) || null;
-
         form.setFieldsValue({
           ...initialData,
           season: season,
@@ -130,22 +117,16 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const handleValuesChange = (
     changedValues: any,
     allValues: { academicYear: number; season: string }
   ) => {
     if (isEditMode) return;
-
-
     if (isUpdatingRef.current) {
       return;
     }
-
     if (changedValues.academicYear || changedValues.season) {
       const { academicYear, season } = allValues;
-
-
       if (changedValues.academicYear) {
         isUpdatingRef.current = true;
         setTimeout(() => {
@@ -153,8 +134,6 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
           isUpdatingRef.current = false;
         }, 0);
       }
-
-
       if (academicYear && season) {
         isUpdatingRef.current = true;
         setTimeout(() => {
@@ -166,7 +145,6 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
       }
     }
   };
-
   const handleFinish = async (values: any) => {
     setIsLoading(true);
     setError(null);
@@ -178,7 +156,6 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
         startDate: values.startDate.toISOString(),
         endDate: values.endDate.toISOString(),
       };
-
       if (isEditMode) {
         await semesterService.updateSemester(initialData!.id, payload);
         notification.success({
@@ -200,7 +177,6 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Semester" : "Create New Semester"}
@@ -286,7 +262,6 @@ const SemesterCrudModalContent: React.FC<SemesterCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const SemesterCrudModal: React.FC<SemesterCrudModalProps> = (props) => (
   <App>
     <SemesterCrudModalContent {...props} />

@@ -1,20 +1,14 @@
 "use client";
-
 import React from "react";
 import { Typography } from "antd";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination, Navigation } from "swiper/modules";
-
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/navigation";
-
 import { CourseCard } from "./CourseCard";
 import styles from "./AllCoursesSlider.module.css";
-
 const { Title } = Typography;
-
-
 const courseData = [
   {
     id: 1,
@@ -71,7 +65,6 @@ const courseData = [
     imageUrl: "/classes/class.png",
   },
 ];
-
 export default function AllCoursesSlider() {
   return (
     <div className={styles.sliderSection}>
@@ -87,7 +80,6 @@ export default function AllCoursesSlider() {
       >
         All <span style={{ color: "#49BBBD" }}>Courses</span>
       </Title>
-
       <Swiper
         modules={[Pagination, Navigation]}
         spaceBetween={30}

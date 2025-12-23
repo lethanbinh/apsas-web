@@ -1,6 +1,3 @@
-
-
-
 export function setStorageItem(key: string, value: string): void {
   if (typeof window === 'undefined') return;
   try {
@@ -9,8 +6,6 @@ export function setStorageItem(key: string, value: string): void {
     console.error('Error setting storage item:', error);
   }
 }
-
-
 export function getStorageItem(key: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -20,8 +15,6 @@ export function getStorageItem(key: string): string | null {
     return null;
   }
 }
-
-
 export function removeStorageItem(key: string): void {
   if (typeof window === 'undefined') return;
   try {
@@ -30,8 +23,6 @@ export function removeStorageItem(key: string): void {
     console.error('Error removing storage item:', error);
   }
 }
-
-
 export function clearStorage(): void {
   if (typeof window === 'undefined') return;
   try {
@@ -40,4 +31,3 @@ export function clearStorage(): void {
     console.error('Error clearing storage:', error);
   }
 }
-

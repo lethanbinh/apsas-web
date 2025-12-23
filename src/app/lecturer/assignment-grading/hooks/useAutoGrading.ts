@@ -5,7 +5,6 @@ import { classAssessmentService } from "@/services/classAssessmentService";
 import { queryKeys } from "@/lib/react-query";
 import type { Submission } from "@/services/submissionService";
 import type { MessageInstance } from "antd/es/message/interface";
-
 export function useAutoGrading(
   submission: Submission | undefined,
   submissionId: number | null,
@@ -15,26 +14,18 @@ export function useAutoGrading(
   const [autoGradingLoading, setAutoGradingLoading] = useState(false);
   const autoGradingPollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const queryClient = useQueryClient();
-
   const handleAutoGrading = async () => {
     if (!submissionId || !submission) {
       message.error("No submission selected");
       return;
     }
-
-
     if (isSemesterPassed) {
       message.warning("Cannot use auto grading when the semester has ended.");
       return;
     }
-
     try {
       setAutoGradingLoading(true);
-
-
       let assessmentTemplateId: number | null = null;
-
-
       if (submission.gradingGroupId) {
         try {
           const { gradingGroupService } = await import("@/services/gradingGroupService");
@@ -48,11 +39,8 @@ export function useAutoGrading(
           console.error("Failed to fetch from gradingGroup:", err);
         }
       }
-
-
       if (!assessmentTemplateId && submission.classAssessmentId) {
         try {
-
           const classId = localStorage.getItem("selectedClassId");
           if (classId) {
             const classAssessmentsRes = await classAssessmentService.getClassAssessments({
@@ -68,8 +56,6 @@ export function useAutoGrading(
               console.log("Found assessmentTemplateId from classAssessment (localStorage classId):", assessmentTemplateId);
             }
           }
-
-
           if (!assessmentTemplateId) {
             try {
               const allClassAssessmentsRes = await classAssessmentService.getClassAssessments({
@@ -84,11 +70,9 @@ export function useAutoGrading(
                 console.log("Found assessmentTemplateId from classAssessment (all classes):", assessmentTemplateId);
               }
             } catch (err) {
-
               console.log("Trying to fetch from multiple classes...");
               const { classService } = await import("@/services/classService");
               try {
-
                 const classes = await classService.getClassList({ pageNumber: 1, pageSize: 100 });
                 for (const classItem of classes.classes || []) {
                   try {
@@ -106,7 +90,6 @@ export function useAutoGrading(
                       break;
                     }
                   } catch (err) {
-
                   }
                 }
               } catch (err) {
@@ -118,28 +101,19 @@ export function useAutoGrading(
           console.error("Failed to fetch from classAssessment:", err);
         }
       }
-
       if (!assessmentTemplateId) {
         message.error("Cannot find assessment template. Please contact administrator.");
         setAutoGradingLoading(false);
         return;
       }
-
-
       const gradingSession = await gradingService.autoGrading({
         submissionId: submission.id,
         assessmentTemplateId: assessmentTemplateId,
       });
-
-
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1000 }) });
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }) });
-
-
       if (gradingSession.status === 0) {
         message.loading("Auto grading in progress...", 0);
-
-
         const pollInterval = setInterval(async () => {
           try {
             const sessionsResult = await gradingService.getGradingSessions({
@@ -147,17 +121,13 @@ export function useAutoGrading(
               pageNumber: 1,
               pageSize: 100,
             });
-
             if (sessionsResult.items.length > 0) {
               const sortedSessions = [...sessionsResult.items].sort((a, b) => {
                 const dateA = new Date(a.createdAt).getTime();
                 const dateB = new Date(b.createdAt).getTime();
                 return dateB - dateA;
               });
-
               const latestSession = sortedSessions[0];
-
-
               if (latestSession.status !== 0) {
                 if (autoGradingPollIntervalRef.current) {
                   clearInterval(autoGradingPollIntervalRef.current);
@@ -165,13 +135,10 @@ export function useAutoGrading(
                 }
                 message.destroy();
                 setAutoGradingLoading(false);
-
-
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 1000 }) });
                 queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 100 }) });
                 queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
                 queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-
                 if (latestSession.status === 1) {
                   message.success("Auto grading completed successfully");
                 } else if (latestSession.status === 2) {
@@ -190,10 +157,7 @@ export function useAutoGrading(
             message.error(err.message || "Failed to check grading status");
           }
         }, 2000);
-
         autoGradingPollIntervalRef.current = pollInterval;
-
-
         setTimeout(() => {
           if (autoGradingPollIntervalRef.current) {
             clearInterval(autoGradingPollIntervalRef.current);
@@ -203,14 +167,11 @@ export function useAutoGrading(
           setAutoGradingLoading(false);
         }, 300000);
       } else {
-
         setAutoGradingLoading(false);
-
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId, pageNumber: 1, pageSize: 1000 }) });
         queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId, pageNumber: 1, pageSize: 100 }) });
         queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
         queryClient.invalidateQueries({ queryKey: ['gradeItemHistory'] });
-
         if (gradingSession.status === 1) {
           message.success("Auto grading completed successfully");
         } else if (gradingSession.status === 2) {
@@ -224,10 +185,8 @@ export function useAutoGrading(
       message.error(errorMessage);
     }
   };
-
   return {
     autoGradingLoading,
     handleAutoGrading,
   };
 }
-

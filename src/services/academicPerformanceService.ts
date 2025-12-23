@@ -5,11 +5,7 @@ import { gradingService, GradingSession } from "./gradingService";
 import { gradeItemService, GradeItem } from "./gradeItemService";
 import { semesterService, Semester } from "./semesterService";
 import { courseElementService } from "./courseElementService";
-
-
 const PASS_THRESHOLD = 5.0;
-
-
 const GRADE_THRESHOLDS = {
   A: 8.5,
   B: 7.0,
@@ -17,23 +13,17 @@ const GRADE_THRESHOLDS = {
   D: 4.0,
   F: 0,
 };
-
 export interface AcademicPerformanceStats {
-
   totalStudents: number;
   totalClasses: number;
   totalCourses: number;
   totalAssessments: number;
   totalSubmissions: number;
   gradedSubmissions: number;
-
-
   passCount: number;
   failCount: number;
   passRate: number;
   notGradedCount: number;
-
-
   overallAverageGrade: number;
   averageGradeByClass: Array<{
     classId: number;
@@ -60,8 +50,6 @@ export interface AcademicPerformanceStats {
     passCount: number;
     failCount: number;
   }>;
-
-
   gradeDistribution: {
     A: number;
     B: number;
@@ -69,8 +57,6 @@ export interface AcademicPerformanceStats {
     D: number;
     F: number;
   };
-
-
   topStudents: Array<{
     studentId: number;
     studentName: string;
@@ -79,7 +65,6 @@ export interface AcademicPerformanceStats {
     classCode: string;
     courseName: string;
   }>;
-
   topClasses: Array<{
     classId: number;
     classCode: string;
@@ -88,79 +73,57 @@ export interface AcademicPerformanceStats {
     passRate: number;
     studentCount: number;
   }>;
-
-
   submissionRate: number;
   gradingCompletionRate: number;
 }
-
 export interface AcademicPerformanceFilters {
   classId?: number;
   courseId?: number;
   semesterCode?: string;
 }
-
 export class AcademicPerformanceService {
-
   private async calculateStudentGrade(
     submission: Submission,
     classAssessment: ClassAssessment
   ): Promise<{ grade: number; maxGrade: number; isGraded: boolean }> {
     try {
-
       const gradingSessionsResult = await gradingService.getGradingSessions({
         submissionId: submission.id,
         pageNumber: 1,
         pageSize: 100,
       });
-
       if (gradingSessionsResult.items.length === 0) {
         return { grade: 0, maxGrade: 100, isGraded: false };
       }
-
-
       const completedSessions = gradingSessionsResult.items.filter(
         (s) => s.status === 1
       );
-
       if (completedSessions.length === 0) {
         return { grade: 0, maxGrade: 100, isGraded: false };
       }
-
-
       const latestSession = completedSessions.sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )[0];
-
-
       const gradeItemsResult = await gradeItemService.getGradeItems({
         gradingSessionId: latestSession.id,
         pageNumber: 1,
         pageSize: 1000,
       });
-
       const gradeItems = gradeItemsResult.items;
-
       if (gradeItems.length === 0) {
-
         return {
           grade: latestSession.grade,
           maxGrade: 100,
           isGraded: true,
         };
       }
-
-
       const totalScore = gradeItems.reduce((sum, item) => sum + item.score, 0);
       const maxScore = gradeItems.reduce(
         (sum, item) => sum + item.rubricItemMaxScore,
         0
       );
-
-
       const grade = maxScore > 0 ? (totalScore / maxScore) * 10 : totalScore / 10;
-
       return {
         grade: Math.round(grade * 100) / 100,
         maxGrade: 10,
@@ -174,13 +137,10 @@ export class AcademicPerformanceService {
       return { grade: 0, maxGrade: 10, isGraded: false };
     }
   }
-
-
   async getAcademicPerformanceStats(
     filters?: AcademicPerformanceFilters
   ): Promise<AcademicPerformanceStats> {
     try {
-
       const [allClasses, allSemesters, allClassAssessments] = await Promise.all([
         classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
         semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
@@ -189,25 +149,16 @@ export class AcademicPerformanceService {
           pageSize: 1000,
         }),
       ]);
-
-
       let filteredClasses = allClasses.classes || [];
       let filteredAssessments = allClassAssessments.items || [];
-
       if (filters?.classId) {
         filteredClasses = filteredClasses.filter((c) => c.id === filters.classId);
         filteredAssessments = filteredAssessments.filter(
           (ca) => ca.classId === filters.classId
         );
       }
-
       if (filters?.semesterCode) {
-
-
-
       }
-
-
       const allSubmissions: Submission[] = [];
       for (const assessment of filteredAssessments) {
         try {
@@ -222,21 +173,16 @@ export class AcademicPerformanceService {
           );
         }
       }
-
-
       const studentGrades = new Map<
         number,
         Array<{ grade: number; maxGrade: number; isGraded: boolean; classAssessment: ClassAssessment }>
       >();
-
       for (const submission of allSubmissions) {
         const assessment = filteredAssessments.find(
           (ca) => ca.id === submission.classAssessmentId
         );
         if (!assessment) continue;
-
         const gradeData = await this.calculateStudentGrade(submission, assessment);
-
         if (!studentGrades.has(submission.studentId)) {
           studentGrades.set(submission.studentId, []);
         }
@@ -245,14 +191,11 @@ export class AcademicPerformanceService {
           classAssessment: assessment,
         });
       }
-
-
       let totalGraded = 0;
       let totalGradeSum = 0;
       let passCount = 0;
       let failCount = 0;
       let notGradedCount = 0;
-
       const gradeDistribution = {
         A: 0,
         B: 0,
@@ -260,8 +203,6 @@ export class AcademicPerformanceService {
         D: 0,
         F: 0,
       };
-
-
       const studentAverages = new Map<
         number,
         {
@@ -272,30 +213,21 @@ export class AcademicPerformanceService {
           courseName: string;
         }
       >();
-
       for (const [studentId, gradeDataList] of studentGrades.entries()) {
         const gradedGrades = gradeDataList.filter((g) => g.isGraded);
-
         if (gradedGrades.length === 0) {
           notGradedCount++;
           continue;
         }
-
-
         const averageGrade =
           gradedGrades.reduce((sum, g) => sum + g.grade, 0) / gradedGrades.length;
-
         totalGraded++;
         totalGradeSum += averageGrade;
-
-
         if (averageGrade >= PASS_THRESHOLD) {
           passCount++;
         } else {
           failCount++;
         }
-
-
         if (averageGrade >= GRADE_THRESHOLDS.A) {
           gradeDistribution.A++;
         } else if (averageGrade >= GRADE_THRESHOLDS.B) {
@@ -307,8 +239,6 @@ export class AcademicPerformanceService {
         } else {
           gradeDistribution.F++;
         }
-
-
         const firstGrade = gradeDataList[0];
         const assessment = firstGrade.classAssessment;
         studentAverages.set(studentId, {
@@ -319,19 +249,13 @@ export class AcademicPerformanceService {
           courseName: assessment.courseName,
         });
       }
-
-
       const overallAverageGrade =
         totalGraded > 0 ? totalGradeSum / totalGraded : 0;
-
-
       const totalGradedForPassRate = passCount + failCount;
       const passRate =
         totalGradedForPassRate > 0
           ? (passCount / totalGradedForPassRate) * 100
           : 0;
-
-
       const classAverages = new Map<
         number,
         {
@@ -342,13 +266,11 @@ export class AcademicPerformanceService {
           studentIds: Set<number>;
         }
       >();
-
       for (const [studentId, studentData] of studentAverages.entries()) {
         const assessment = filteredAssessments.find(
           (ca) => ca.classCode === studentData.classCode
         );
         if (!assessment) continue;
-
         const classId = assessment.classId;
         if (!classAverages.has(classId)) {
           classAverages.set(classId, {
@@ -359,7 +281,6 @@ export class AcademicPerformanceService {
             studentIds: new Set(),
           });
         }
-
         const classData = classAverages.get(classId)!;
         if (!classData.studentIds.has(studentId)) {
           const studentAvg =
@@ -369,7 +290,6 @@ export class AcademicPerformanceService {
           classData.studentIds.add(studentId);
         }
       }
-
       const averageGradeByClass = Array.from(classAverages.values())
         .map((classData) => {
           const avg =
@@ -379,7 +299,6 @@ export class AcademicPerformanceService {
               : 0;
           const passCount = classData.grades.filter((g) => g >= PASS_THRESHOLD).length;
           const failCount = classData.grades.filter((g) => g < PASS_THRESHOLD).length;
-
           return {
             classId: classData.classId,
             classCode: classData.classCode,
@@ -391,8 +310,6 @@ export class AcademicPerformanceService {
           };
         })
         .sort((a, b) => b.averageGrade - a.averageGrade);
-
-
       const topStudents = Array.from(studentAverages.entries())
         .map(([studentId, studentData]) => {
           const avg =
@@ -411,8 +328,6 @@ export class AcademicPerformanceService {
         })
         .sort((a, b) => b.averageGrade - a.averageGrade)
         .slice(0, 20);
-
-
       const topClasses = averageGradeByClass
         .map((classData) => ({
           ...classData,
@@ -423,8 +338,6 @@ export class AcademicPerformanceService {
         }))
         .sort((a, b) => b.averageGrade - a.averageGrade)
         .slice(0, 20);
-
-
       const totalStudents = new Set(allSubmissions.map((s) => s.studentId)).size;
       const submissionRate =
         totalStudents > 0 ? (allSubmissions.length / totalStudents) * 100 : 0;
@@ -432,7 +345,6 @@ export class AcademicPerformanceService {
         allSubmissions.length > 0
           ? (totalGraded / allSubmissions.length) * 100
           : 0;
-
       return {
         totalStudents,
         totalClasses: filteredClasses.length,
@@ -460,6 +372,4 @@ export class AcademicPerformanceService {
     }
   }
 }
-
 export const academicPerformanceService = new AcademicPerformanceService();
-

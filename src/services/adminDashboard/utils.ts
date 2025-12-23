@@ -1,4 +1,3 @@
-
 export function isPracticalExamTemplate(template: any): boolean {
   const name = (template.name || "").toLowerCase();
   const keywords = [
@@ -14,8 +13,6 @@ export function isPracticalExamTemplate(template: any): boolean {
   ];
   return keywords.some((keyword) => name.includes(keyword));
 }
-
-
 export function isLabTemplate(template: any): boolean {
   const name = (template.name || "").toLowerCase();
   const keywords = [
@@ -28,4 +25,3 @@ export function isLabTemplate(template: any): boolean {
   ];
   return keywords.some((keyword) => name.includes(keyword));
 }
-

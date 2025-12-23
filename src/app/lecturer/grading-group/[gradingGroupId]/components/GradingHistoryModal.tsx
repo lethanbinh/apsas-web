@@ -1,5 +1,4 @@
 "use client";
-
 import { Button, Collapse, Descriptions, Modal, Space, Spin, Table, Tag, Typography, Alert, Divider } from "antd";
 import { HistoryOutlined, WarningOutlined } from "@ant-design/icons";
 import { GradingNotesModal } from "@/components/common/GradingNotesModal";
@@ -13,16 +12,12 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { GradeItemHistoryModal } from "./GradeItemHistoryModal";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Title, Text } = Typography;
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 const getGradingTypeLabel = (type: number) => {
   switch (type) {
     case 0: return "AI";
@@ -31,7 +26,6 @@ const getGradingTypeLabel = (type: number) => {
     default: return "UNKNOWN";
   }
 };
-
 const getStatusLabel = (status: number) => {
   switch (status) {
     case 0: return <Tag color="processing">PROCESSING</Tag>;
@@ -40,13 +34,11 @@ const getStatusLabel = (status: number) => {
     default: return <Tag>UNKNOWN</Tag>;
   }
 };
-
 interface GradingHistoryModalProps {
   visible: boolean;
   onClose: () => void;
   submissionId: number;
 }
-
 export function GradingHistoryModal({
   visible,
   onClose,
@@ -58,8 +50,6 @@ export function GradingHistoryModal({
   const [selectedGradeItem, setSelectedGradeItem] = useState<GradeItem | null>(null);
   const [gradingNotesModalOpen, setGradingNotesModalOpen] = useState(false);
   const [selectedGradingLogs, setSelectedGradingLogs] = useState<any[]>([]);
-
-
   const { data: gradingHistoryData, isLoading: loadingGradingHistory } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId, pageNumber: 1, pageSize: 1000 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -69,7 +59,6 @@ export function GradingHistoryModal({
     }),
     enabled: visible && !!submissionId,
   });
-
   const gradingHistory = useMemo(() => {
     if (!gradingHistoryData?.items) return [];
     return [...gradingHistoryData.items].sort((a, b) => {
@@ -78,8 +67,6 @@ export function GradingHistoryModal({
       return dateB - dateA;
     });
   }, [gradingHistoryData]);
-
-
   const allSessionIds = gradingHistory.map(session => session.id);
   const gradeItemsQueries = useQueries({
     queries: allSessionIds.map((sessionId) => ({
@@ -92,7 +79,6 @@ export function GradingHistoryModal({
       enabled: visible && allSessionIds.length > 0,
     })),
   });
-
   const sessionGradeItems = useMemo(() => {
     const map: { [sessionId: number]: GradeItem[] } = {};
     allSessionIds.forEach((sessionId, index) => {
@@ -102,7 +88,6 @@ export function GradingHistoryModal({
     });
     return map;
   }, [allSessionIds, gradeItemsQueries]);
-
   const handleExpandSession = (sessionId: number) => {
     const newExpanded = new Set(expandedSessions);
     if (newExpanded.has(sessionId)) {
@@ -112,12 +97,10 @@ export function GradingHistoryModal({
     }
     setExpandedSessions(newExpanded);
   };
-
   const handleOpenGradeItemHistory = (gradeItem: GradeItem) => {
     setSelectedGradeItem(gradeItem);
     setGradeItemHistoryModalVisible(true);
   };
-
   const columns = [
     {
       title: "Rubric Item",
@@ -183,7 +166,6 @@ export function GradingHistoryModal({
       ),
     },
   ];
-
   return (
     <>
       <Modal
@@ -207,21 +189,15 @@ export function GradingHistoryModal({
               items={gradingHistory.map((session) => {
                 const isExpanded = expandedSessions.has(session.id);
                 const gradeItems = sessionGradeItems[session.id] || [];
-
-
                 const totalScore = gradeItems.length > 0
                   ? gradeItems.reduce((sum, item) => sum + item.score, 0)
                   : (session.grade || 0);
                 const maxScore = gradeItems.length > 0
                   ? gradeItems.reduce((sum, item) => sum + (item.rubricItemMaxScore || 0), 0)
                   : 0;
-
-
-
                 const gradeDisplay = gradeItems.length > 0 && maxScore > 0
                   ? `${totalScore.toFixed(2)}/${maxScore.toFixed(2)}`
                   : totalScore.toFixed(2);
-
                 return {
                   key: session.id.toString(),
                   label: (
@@ -256,7 +232,6 @@ export function GradingHistoryModal({
                           {toVietnamTime(session.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
                         </Descriptions.Item>
                       </Descriptions>
-
                       {}
                       {session.gradingLogs && session.gradingLogs.length > 0 && (
                         <div style={{ marginBottom: 16 }}>
@@ -284,7 +259,6 @@ export function GradingHistoryModal({
                           />
                         </div>
                       )}
-
                       {!isExpanded ? (
                         <Button
                           type="link"
@@ -319,7 +293,6 @@ export function GradingHistoryModal({
           )}
         </Spin>
       </Modal>
-
       <GradeItemHistoryModal
         visible={gradeItemHistoryModalVisible}
         onClose={() => {
@@ -339,4 +312,3 @@ export function GradingHistoryModal({
     </>
   );
 }
-

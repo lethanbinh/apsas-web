@@ -12,14 +12,11 @@ import { Submission, submissionService } from "@/services/submissionService";
 import { useMemo } from "react";
 import type { QuestionWithRubrics } from "../page";
 import { deserializeFeedback, getDefaultFeedback } from "../utils/feedbackUtils";
-
 interface UseSubmissionDataParams {
   submissionId: number | null;
   classIdFromStorage: string | null;
 }
-
 export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmissionDataParams) {
-
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(classIdFromStorage!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -29,8 +26,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }),
     enabled: !!classIdFromStorage && !!submissionId,
   });
-
-
   const classAssessmentIds = classAssessmentsData?.items.map(ca => ca.id) || [];
   const submissionsQueries = useQueries({
     queries: classAssessmentIds.map((classAssessmentId) => ({
@@ -41,8 +36,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       enabled: classAssessmentIds.length > 0 && !!submissionId,
     })),
   });
-
-
   const submissionFromClassAssessments = useMemo(() => {
     if (!submissionId) return null;
     for (const query of submissionsQueries) {
@@ -53,28 +46,21 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }
     return null;
   }, [submissionId, submissionsQueries]);
-
-
   const { data: allSubmissionsData } = useQuery({
     queryKey: ['submissions', 'all'],
     queryFn: () => submissionService.getSubmissionList({}),
     enabled: !!submissionId && !submissionFromClassAssessments && classAssessmentIds.length === 0,
   });
-
   const submissionFromAll = useMemo(() => {
     if (!submissionId || !allSubmissionsData) return null;
     return allSubmissionsData.find((s: Submission) => s.id === submissionId) || null;
   }, [submissionId, allSubmissionsData]);
-
   const finalSubmission = submissionFromClassAssessments || submissionFromAll;
-
-
   const { data: gradingGroupsData } = useQuery({
     queryKey: queryKeys.grading.groups.all,
     queryFn: () => gradingGroupService.getGradingGroups({}),
     enabled: !!finalSubmission?.gradingGroupId,
   });
-
   const classAssessment = useMemo(() => {
     if (!finalSubmission || !classAssessmentsData?.items) return null;
     if (finalSubmission.classAssessmentId) {
@@ -84,9 +70,7 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }
     return null;
   }, [finalSubmission, classAssessmentsData]);
-
   const isPublished = classAssessment?.isPublished ?? false;
-
   const assessmentTemplateId = useMemo(() => {
     if (!finalSubmission) return null;
     if (finalSubmission.gradingGroupId && gradingGroupsData) {
@@ -100,8 +84,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }
     return null;
   }, [finalSubmission, gradingGroupsData, classAssessment]);
-
-
   const { data: papersData } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplateId!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -111,8 +93,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }),
     enabled: !!assessmentTemplateId,
   });
-
-
   const papers = papersData?.items || [];
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
@@ -125,8 +105,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       enabled: papers.length > 0,
     })),
   });
-
-
   const allQuestions = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {
@@ -136,7 +114,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     });
     return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [questionsQueries]);
-
   const rubricsQueries = useQueries({
     queries: allQuestions.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -148,8 +125,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       enabled: allQuestions.length > 0,
     })),
   });
-
-
   const questionsWithRubrics = useMemo(() => {
     const questionsWithRubrics: QuestionWithRubrics[] = [];
     allQuestions.forEach((question, index) => {
@@ -163,8 +138,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     });
     return questionsWithRubrics;
   }, [allQuestions, rubricsQueries]);
-
-
   const { data: gradingSessionsData } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 1 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -174,13 +147,10 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }),
     enabled: !!submissionId,
   });
-
   const latestGradingSession = useMemo(() => {
     if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
     return gradingSessionsData.items[0];
   }, [gradingSessionsData]);
-
-
   const { data: gradeItemsData } = useQuery({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: () => gradeItemService.getGradeItems({
@@ -190,14 +160,9 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }),
     enabled: !!latestGradingSession?.id,
   });
-
   const latestGradeItems = gradeItemsData?.items || [];
-
-
   const questionsWithScores = useMemo((): QuestionWithRubrics[] => {
     if (latestGradeItems.length === 0) return questionsWithRubrics;
-
-
     const sortedItems = [...latestGradeItems].sort((a, b) => {
       const dateA = new Date(a.updatedAt).getTime();
       const dateB = new Date(b.updatedAt).getTime();
@@ -208,7 +173,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       const createdB = new Date(b.createdAt).getTime();
       return createdB - createdA;
     });
-
     const latestGradeItemsMap = new Map<number, GradeItem>();
     sortedItems.forEach((item) => {
       if (item.rubricItemId) {
@@ -217,13 +181,10 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
         }
       }
     });
-
     const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
-
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
       const newRubricComments = { ...(question.rubricComments || {}) };
-
       let questionComment = "";
       question.rubrics.forEach((rubric) => {
         const matchingGradeItem = latestGradeItemsForDisplay.find(
@@ -236,9 +197,7 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
           }
         }
       });
-
       newRubricComments[question.id] = questionComment;
-
       return {
         ...question,
         rubricScores: newRubricScores,
@@ -246,16 +205,12 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       };
     });
   }, [questionsWithRubrics, latestGradeItems]);
-
-
   const totalScore = useMemo(() => {
     if (latestGradeItems.length > 0) {
       return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
     }
     return latestGradingSession?.grade || 0;
   }, [latestGradeItems, latestGradingSession]);
-
-
   const { data: feedbackListData } = useQuery({
     queryKey: ['submissionFeedback', 'bySubmissionId', submissionId],
     queryFn: () => submissionFeedbackService.getSubmissionFeedbackList({
@@ -263,26 +218,20 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     }),
     enabled: !!submissionId,
   });
-
   const feedback = useMemo(() => {
     if (!feedbackListData || feedbackListData.length === 0) {
       return getDefaultFeedback();
     }
-
     const existingFeedback = feedbackListData[0];
     const parsedFeedback = deserializeFeedback(existingFeedback.feedbackText);
-
     if (parsedFeedback) {
       return parsedFeedback;
     }
-
-
     return {
       ...getDefaultFeedback(),
       overallFeedback: existingFeedback.feedbackText,
     };
   }, [feedbackListData]);
-
   const loading = useMemo(() => {
     return (
       (submissionsQueries.some(q => q.isLoading) && !finalSubmission) ||
@@ -295,7 +244,6 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
       (!!submissionId && !feedbackListData)
     );
   }, [submissionsQueries, finalSubmission, submissionId, allSubmissionsData, assessmentTemplateId, papersData, questionsQueries, rubricsQueries, gradingSessionsData, latestGradingSession, gradeItemsData, feedbackListData]);
-
   return {
     finalSubmission,
     questionsWithScores,
@@ -306,4 +254,3 @@ export function useSubmissionData({ submissionId, classIdFromStorage }: UseSubmi
     isPublished,
   };
 }
-

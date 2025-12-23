@@ -10,14 +10,12 @@ export interface AssessmentPaper {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface AssessmentPaperApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentPaper;
 }
-
 export interface AssessmentPaperListResult {
   currentPage: number;
   pageSize: number;
@@ -25,38 +23,32 @@ export interface AssessmentPaperListResult {
   totalPages: number;
   items: AssessmentPaper[];
 }
-
 export interface AssessmentPaperListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentPaperListResult;
 }
-
 export interface GetAssessmentPapersParams {
   assessmentTemplateId?: number;
   pageNumber: number;
   pageSize: number;
 }
-
 export interface CreateAssessmentPaperPayload {
   name: string;
   description: string;
   assessmentTemplateId: number;
   language: number;
 }
-
 export interface UpdateAssessmentPaperPayload {
   name: string;
   description: string;
   language: number;
 }
-
 export interface GetAssessmentPapersResponse {
   items: AssessmentPaper[];
   total: number;
 }
-
 export class AssessmentPaperService {
   async getAssessmentPapers(
     params: GetAssessmentPapersParams
@@ -70,7 +62,6 @@ export class AssessmentPaperService {
       total: response.result.totalCount,
     };
   }
-
   async createAssessmentPaper(
     payload: CreateAssessmentPaperPayload
   ): Promise<AssessmentPaper> {
@@ -80,7 +71,6 @@ export class AssessmentPaperService {
     );
     return response.result;
   }
-
   async updateAssessmentPaper(
     assessmentPaperId: string | number,
     payload: UpdateAssessmentPaperPayload
@@ -91,12 +81,10 @@ export class AssessmentPaperService {
     );
     return response.result;
   }
-
   async deleteAssessmentPaper(
     assessmentPaperId: string | number
   ): Promise<any> {
     await apiService.delete(`/AssessmentPaper/${assessmentPaperId}`);
   }
 }
-
 export const assessmentPaperService = new AssessmentPaperService();

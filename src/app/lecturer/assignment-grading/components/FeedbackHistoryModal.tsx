@@ -1,5 +1,4 @@
 "use client";
-
 import { queryKeys } from "@/lib/react-query";
 import { FeedbackData } from "@/services/geminiService";
 import { submissionFeedbackService } from "@/services/submissionFeedbackService";
@@ -9,25 +8,19 @@ import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface FeedbackHistoryModalProps {
   visible: boolean;
   onClose: () => void;
   submissionId: number | null;
 }
-
 export function FeedbackHistoryModal({ visible, onClose, submissionId }: FeedbackHistoryModalProps) {
-
   const { data: feedbackHistoryData, isLoading: loading } = useQuery({
     queryKey: ['submissionFeedbackHistory', 'bySubmissionId', submissionId],
     queryFn: async () => {
@@ -43,16 +36,12 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
     },
     enabled: visible && !!submissionId,
   });
-
   const feedbackHistory = feedbackHistoryData || [];
   const [expandedFeedbacks, setExpandedFeedbacks] = useState<Set<number>>(new Set());
-
-
   const deserializeFeedback = (feedbackText: string): FeedbackData | null => {
     if (!feedbackText || feedbackText.trim() === "") {
       return null;
     }
-
     try {
       const parsed = JSON.parse(feedbackText);
       if (typeof parsed === "object" && parsed !== null) {
@@ -69,24 +58,19 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
       }
       return null;
     } catch (error) {
-
       return null;
     }
   };
-
   const handleExpandFeedback = (feedbackId: number) => {
     const newExpanded = new Set(expandedFeedbacks);
     const isCurrentlyExpanded = newExpanded.has(feedbackId);
-
     if (isCurrentlyExpanded) {
       newExpanded.delete(feedbackId);
     } else {
       newExpanded.add(feedbackId);
     }
-
     setExpandedFeedbacks(newExpanded);
   };
-
   const renderFeedbackFields = (feedbackData: FeedbackData) => {
     const fields: Array<{ key: keyof FeedbackData; label: string }> = [
       { key: "overallFeedback", label: "Overall Feedback" },
@@ -98,11 +82,9 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
       { key: "bestPractices", label: "Best Practices" },
       { key: "errorHandling", label: "Error Handling" },
     ];
-
     return fields.map((field) => {
       const value = feedbackData[field.key] || "";
       if (!value) return null;
-
       return (
         <div key={field.key} style={{ marginBottom: 16 }}>
           <Text strong style={{ display: "block", marginBottom: 8 }}>
@@ -118,7 +100,6 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
       );
     });
   };
-
   return (
     <Modal
       title="Feedback History"
@@ -142,7 +123,6 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
               const isExpanded = expandedFeedbacks.has(feedback.id);
               const parsedFeedback = deserializeFeedback(feedback.feedbackText);
               const isPlainText = parsedFeedback === null;
-
               return {
                 key: feedback.id.toString(),
                 label: (
@@ -174,7 +154,6 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
                         {toVietnamTime(feedback.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
                       </Descriptions.Item>
                     </Descriptions>
-
                     {isPlainText ? (
                       <div>
                         <Text strong style={{ display: "block", marginBottom: 8 }}>
@@ -205,4 +184,3 @@ export function FeedbackHistoryModal({ visible, onClose, submissionId }: Feedbac
     </Modal>
   );
 }
-

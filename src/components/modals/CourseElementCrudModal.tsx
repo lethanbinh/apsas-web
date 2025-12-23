@@ -1,5 +1,4 @@
 "use client";
-
 import {
   courseElementManagementService,
   CreateCourseElementPayload,
@@ -8,7 +7,6 @@ import {
 import { CourseElement } from "@/services/semesterService";
 import { Alert, App, Form, Input, InputNumber, Modal, Select } from "antd";
 import { useEffect, useState } from "react";
-
 interface CourseElementCrudModalProps {
   open: boolean;
   semesterCourseId: number;
@@ -17,7 +15,6 @@ interface CourseElementCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
   open,
   semesterCourseId,
@@ -30,9 +27,7 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
-
   const isEditMode = !!initialData;
-
   useEffect(() => {
     if (open) {
       if (isEditMode) {
@@ -46,24 +41,17 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const handleFinish = async (values: any) => {
     setIsLoading(true);
     setError(null);
-
     const newWeight = Number(values.weight / 100);
-
-
     const currentTotalWeight = existingElements.reduce((sum, el) => {
-
       if (isEditMode && el.id === initialData!.id) {
         return sum;
       }
       return sum + el.weight;
     }, 0);
-
     const newTotalWeight = currentTotalWeight + newWeight;
-
     if (newTotalWeight > 1) {
       const currentTotalPercent = (currentTotalWeight * 100).toFixed(1);
       const remainingPercent = ((1 - currentTotalWeight) * 100).toFixed(1);
@@ -73,14 +61,12 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
       setIsLoading(false);
       return;
     }
-
     const payload = {
       name: values.name,
       description: values.description,
       weight: newWeight,
       elementType: Number(values.elementType),
     };
-
     try {
       if (isEditMode) {
         await courseElementManagementService.updateCourseElement(
@@ -110,7 +96,6 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Course Element" : "Create New Course Element"}
@@ -192,7 +177,6 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
                 }
                 const newWeight = Number(value / 100);
                 const currentTotalWeight = existingElements.reduce((sum, el) => {
-
                   if (isEditMode && el.id === initialData!.id) {
                     return sum;
                   }
@@ -225,7 +209,6 @@ const CourseElementCrudModalContent: React.FC<CourseElementCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const CourseElementCrudModal: React.FC<CourseElementCrudModalProps> = (
   props
 ) => (

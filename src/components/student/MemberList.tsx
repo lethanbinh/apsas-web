@@ -1,13 +1,9 @@
 "use client";
-
 import React from "react";
 import { Typography } from "antd";
 import { MemberItem } from "./MemberItem";
 import styles from "./MemberList.module.css";
-
 const { Title } = Typography;
-
-
 const memberData = [
   {
     id: 1,
@@ -31,7 +27,6 @@ const memberData = [
     flagUrl: "/flags/germany.png",
   },
 ];
-
 export default function MemberList() {
   return (
     <div className={styles.sectionWrapper}>
@@ -46,7 +41,6 @@ export default function MemberList() {
       >
         Members
       </Title>
-
       <div className={styles.listContainer}>
         {memberData.map((member) => (
           <MemberItem

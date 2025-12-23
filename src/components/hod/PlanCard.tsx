@@ -1,21 +1,17 @@
 "use client";
-
 import { UserOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 import Image from "next/image";
 import React from "react";
 import styles from "./SemesterPlans.module.css";
 import Link from "next/link";
-
 const { Title, Text } = Typography;
-
 export interface PlanCardProps {
   imageUrl: string;
   title: string;
   authorAvatarUrl: string;
   authorName: string;
 }
-
 export const PlanCard: React.FC<PlanCardProps> = ({
   imageUrl,
   title,
@@ -35,7 +31,6 @@ export const PlanCard: React.FC<PlanCardProps> = ({
             />
           </div>
         </div>
-
         <div className={styles.cardContent}>
           <Title
             level={4}
@@ -50,7 +45,6 @@ export const PlanCard: React.FC<PlanCardProps> = ({
           >
             {title}
           </Title>
-
           <div className={styles.authorInfo}>
             <UserOutlined
               style={{

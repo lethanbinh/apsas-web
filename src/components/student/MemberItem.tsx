@@ -1,21 +1,15 @@
-
 "use client";
-
 import React from "react";
 import Image from "next/image";
 import { Avatar, Typography } from "antd";
 import styles from "./MemberList.module.css";
-
 const { Title, Text } = Typography;
-
-
 export interface MemberItemProps {
   avatarUrl: string;
   flagUrl: string;
   name: string;
   details: string;
 }
-
 export const MemberItem: React.FC<MemberItemProps> = ({
   avatarUrl,
   flagUrl,
@@ -28,7 +22,6 @@ export const MemberItem: React.FC<MemberItemProps> = ({
       <div className={styles.avatarWrapper}>
         <Avatar src={avatarUrl} size={60} />
       </div>
-
       {}
       <div className={styles.textWrapper}>
         <Title

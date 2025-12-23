@@ -1,12 +1,10 @@
 import { Metadata } from "next";
 import Image from "next/image";
 import { Layout } from "@/components/layout/Layout";
-
 export const metadata: Metadata = {
   title: "Home - APSAS Web",
   description: "Programming Assessment is now effortless",
 };
-
 export default function HomePage() {
   return (
     <Layout>
@@ -28,7 +26,6 @@ export default function HomePage() {
                   for students.
                 </p>
               </div>
-
               <div className="hero-image-wrapper">
                 <div className="hero-image-inner-wrapper">
                   <Image
@@ -40,7 +37,6 @@ export default function HomePage() {
                     priority
                     unoptimized
                   />
-
                   <div className="hero-badge-top-left">
                     <div className="hero-badge-item">
                       <div className="hero-badge-icon-wrapper">📅</div>
@@ -52,11 +48,9 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-
                   <div className="hero-badge-middle-left">
                     <div className="hero-badge-icon-large">📩</div>
                   </div>
-
                   <div className="hero-badge-middle-right">
                     <div className="hero-badge-card-small">
                       <div className="hero-badge-card-title">
@@ -67,7 +61,6 @@ export default function HomePage() {
                       </div>
                     </div>
                   </div>
-
                   <div className="hero-badge-bottom">
                     <div className="hero-badge-long-card">
                       <div className="hero-badge-avatar" />
@@ -86,7 +79,6 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
           <div className="decorative-bottom-curve">
             <svg
               viewBox="0 0 1440 120"
@@ -98,11 +90,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       <section className="our-success-section">
         <div className="our-success-container">
           <h2 className="our-success-title">Our Success</h2>
-
           <div className="our-success-stats-grid">
             <div className="our-success-stat-item">
               <div className="our-success-stat-number">15K+</div>
@@ -121,7 +111,6 @@ export default function HomePage() {
               <div className="our-success-stat-label">Classes</div>
             </div>
           </div>
-
           <div className="our-success-description-section">
             <h3 className="our-success-description-title">
               Programming Assessment{" "}
@@ -137,7 +126,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       <section className="feature-cards-section">
         <div className="feature-cards-container">
           <div className="feature-card">
@@ -154,7 +142,6 @@ export default function HomePage() {
               test case evaluation through APIs such as Judge0 or Piston.
             </p>
           </div>
-
           <div className="feature-card">
             <div className="feature-card-icon-wrapper feature-card-icon-wrapper-2">
               <span className="feature-card-icon feature-card-icon-2">📅</span>
@@ -169,7 +156,6 @@ export default function HomePage() {
               helping students quickly understand their mistakes and improve.
             </p>
           </div>
-
           <div className="feature-card">
             <div className="feature-card-icon-wrapper feature-card-icon-wrapper-3">
               <span className="feature-card-icon feature-card-icon-3">👥</span>
@@ -186,7 +172,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-
       <section className="py-20 bg-white">
         <div className="what-is-apsas-container">
           <h2 className="what-is-apsas-title">
@@ -200,7 +185,6 @@ export default function HomePage() {
           </p>
         </div>
       </section>
-
       <section className="image-cards-section">
         <div className="image-cards-container">
           <div className="image-card">
@@ -214,7 +198,6 @@ export default function HomePage() {
             />
             <div className="image-card-overlay-text">FOR INSTRUCTORS</div>
           </div>
-
           <div className="image-card">
             <Image
               src="https://study.com/cimages/multimages/16/group_project4152137855063887692.jpg"

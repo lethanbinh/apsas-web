@@ -3,15 +3,12 @@ import type { ColumnsType } from "antd/es/table";
 import type { RubricItem } from "@/services/rubricItemService";
 import type { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import React from "react";
-
 const { Text } = Typography;
-
 interface QuestionWithRubrics extends AssessmentQuestion {
   rubrics: RubricItem[];
   rubricScores: { [rubricId: number]: number };
   rubricComments: { [rubricId: number]: string };
 }
-
 export function getQuestionColumns(
   question: QuestionWithRubrics,
   onScoreChange: (questionId: number, rubricId: number, score: number | null, maxScore: number) => void,
@@ -87,4 +84,3 @@ export function getQuestionColumns(
     },
   ];
 }
-

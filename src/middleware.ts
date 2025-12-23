@@ -12,10 +12,8 @@ function decodeJWT(token: string): any {
     while (padded.length % 4) {
       padded += "=";
     }
-
     try {
       const binaryString = atob(padded);
-
       const jsonPayload = decodeURIComponent(
         binaryString
           .split("")
@@ -24,11 +22,9 @@ function decodeJWT(token: string): any {
       );
       return JSON.parse(jsonPayload);
     } catch (decodeError) {
-
       return null;
     }
   } catch (error) {
-
     return null;
   }
 }
@@ -100,7 +96,6 @@ export function middleware(request: NextRequest) {
     }
     return pathname === route || pathname.startsWith(route + "/");
   });
-
   if (isPublicRoute) {
     return NextResponse.next();
   }
@@ -124,36 +119,30 @@ export function middleware(request: NextRequest) {
     3: "hod",
     4: "examiner",
   };
-
   const userRoleIdentifier = roleIdentifiers[userRole];
   if (pathname === "/classes") {
     return NextResponse.redirect(new URL(`/classes/my-classes/${userRoleIdentifier}`, request.url));
   }
   const roleRoutes: Record<number, string[]> = {
     0: [
-
       "/admin",
       "/profile",
     ],
     1: [
-
       "/lecturer",
       "/classes/my-classes/lecturer",
       "/profile",
     ],
     2: [
-
       "/student",
       "/classes/my-classes/student",
       "/profile",
     ],
     3: [
-
       "/hod",
       "/profile",
     ],
     4: [
-
       "/examiner",
       "/profile",
     ],
@@ -163,11 +152,9 @@ export function middleware(request: NextRequest) {
   if (!hasRouteAccess) {
     const defaultRoute = getDefaultRouteForRole(userRole, request.url);
     defaultRoute.searchParams.set("error", "unauthorized");
-    defaultRoute.searchParams.set("message", "Bạn không có quyền truy cập đường dẫn này");
+    defaultRoute.searchParams.set("message", "You do not have permission to access this route");
     return NextResponse.redirect(defaultRoute);
   }
-  
-  // Prevent caching of protected pages
   const response = NextResponse.next();
   response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
   response.headers.set('Pragma', 'no-cache');
@@ -182,14 +169,11 @@ function getDefaultRouteForRole(role: number, baseUrl: string): URL {
     3: "/hod/semester-plans",
     4: "/examiner/grading-groups",
   };
-
   const defaultRoute = defaultRoutes[role] || "/classes/my-classes/student";
   return new URL(defaultRoute, baseUrl);
 }
-
 export const config = {
   matcher: [
-
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

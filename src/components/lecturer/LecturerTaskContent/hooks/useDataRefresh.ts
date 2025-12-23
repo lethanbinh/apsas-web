@@ -3,7 +3,6 @@ import { assessmentQuestionService } from "@/services/assessmentQuestionService"
 import { assessmentFileService } from "@/services/assessmentFileService";
 import type { AssessmentPaper } from "@/services/assessmentPaperService";
 import type { AssessmentQuestion } from "@/services/assessmentQuestionService";
-
 interface UseDataRefreshProps {
   templateId: number | null;
   allQuestions: { [paperId: number]: AssessmentQuestion[] };
@@ -12,7 +11,6 @@ interface UseDataRefreshProps {
   setFiles: (files: any[]) => void;
   resetStatusIfRejected: () => Promise<void>;
 }
-
 export function useDataRefresh({
   templateId,
   allQuestions,
@@ -30,7 +28,6 @@ export function useDataRefresh({
         pageSize: 100,
       });
       setPapers(paperResponse.items);
-
       const newQuestionsMap = { ...allQuestions };
       paperResponse.items.forEach((p) => {
         if (!newQuestionsMap[p.id]) {
@@ -38,14 +35,10 @@ export function useDataRefresh({
         }
       });
       setAllQuestions(newQuestionsMap);
-
-
-
     } catch (error) {
       console.error("Failed to refresh papers:", error);
     }
   };
-
   const refreshQuestions = async (paperId: number, shouldResetStatus = false) => {
     try {
       const questionResponse =
@@ -54,7 +47,6 @@ export function useDataRefresh({
           pageNumber: 1,
           pageSize: 100,
         });
-
       const sortedQuestions = [...questionResponse.items].sort((a, b) =>
         (a.questionNumber || 0) - (b.questionNumber || 0)
       );
@@ -62,14 +54,10 @@ export function useDataRefresh({
         ...prev,
         [paperId]: sortedQuestions,
       }));
-
-
-
     } catch (error) {
       console.error("Failed to refresh questions:", error);
     }
   };
-
   const refreshFiles = async (shouldResetStatus = false) => {
     if (!templateId) return;
     try {
@@ -79,17 +67,13 @@ export function useDataRefresh({
         pageSize: 100,
       });
       setFiles(fileResponse.items);
-
-
     } catch (error) {
       console.error("Failed to refresh files:", error);
     }
   };
-
   return {
     refreshPapers,
     refreshQuestions,
     refreshFiles,
   };
 }
-

@@ -1,20 +1,15 @@
 "use client";
-
 import React, { memo } from "react";
 import Image from "next/image";
 import { Typography } from "antd";
 import { AppstoreOutlined } from "@ant-design/icons";
 import styles from "./CoachesSlider.module.css";
-
 const { Title, Text } = Typography;
-
-
 export interface CoachCardProps {
   imageUrl: string;
   category: string;
   name: string;
 }
-
 const CoachCardComponent: React.FC<CoachCardProps> = ({
   imageUrl,
   category,
@@ -33,7 +28,6 @@ const CoachCardComponent: React.FC<CoachCardProps> = ({
           />
         </div>
       </div>
-
       <div className={styles.cardContent}>
         <div className={styles.categoryInfo}>
           <AppstoreOutlined
@@ -47,7 +41,6 @@ const CoachCardComponent: React.FC<CoachCardProps> = ({
             {category}
           </Text>
         </div>
-
         <Title
           level={5}
           style={{
@@ -63,7 +56,5 @@ const CoachCardComponent: React.FC<CoachCardProps> = ({
     </div>
   );
 };
-
 CoachCardComponent.displayName = 'CoachCard';
-
 export const CoachCard = memo(CoachCardComponent);

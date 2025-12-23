@@ -1,11 +1,9 @@
 "use client";
-
 import { AssessmentPaper } from "@/services/assessmentPaperService";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { BookOutlined, DeleteOutlined, EditOutlined, FileTextOutlined, InboxOutlined, PlusOutlined } from "@ant-design/icons";
 import { Button, Menu, Space } from "antd";
 import styles from "./TaskContent.module.css";
-
 interface TaskSiderMenuProps {
   selectedKey: string;
   papers: AssessmentPaper[];
@@ -17,7 +15,6 @@ interface TaskSiderMenuProps {
   onDeletePaper: (paper: AssessmentPaper) => void;
   onDeleteQuestion: (question: AssessmentQuestion) => void;
 }
-
 export function TaskSiderMenu({
   selectedKey,
   papers,
@@ -98,7 +95,6 @@ export function TaskSiderMenu({
       })),
     };
   });
-
   return (
     <Menu
       mode="inline"
@@ -116,4 +112,3 @@ export function TaskSiderMenu({
     />
   );
 }
-

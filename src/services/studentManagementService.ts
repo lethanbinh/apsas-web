@@ -17,14 +17,12 @@ export interface StudentDetail {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface StudentListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: StudentDetail[];
 }
-
 export interface StudentInClassBasic {
   id: number;
   enrollmentDate: string;
@@ -44,31 +42,26 @@ export interface StudentInClassBasic {
   studentName: string;
   studentCode: string;
 }
-
 export interface StudentGroupApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: StudentInClassBasic;
 }
-
 export interface CreateStudentGroupPayload {
   classId: number;
   studentId: number;
   description: string;
 }
-
 export interface UpdateStudentGroupPayload {
   description: string;
 }
-
 export interface StudentGroupListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: StudentInClass[];
 }
-
 export class StudentManagementService {
   async getStudentsInClass(
     classId: string | number
@@ -84,7 +77,6 @@ export class StudentManagementService {
     );
     return response.result;
   }
-
   async createStudentGroup(
     payload: CreateStudentGroupPayload
   ): Promise<StudentInClassBasic> {
@@ -94,7 +86,6 @@ export class StudentManagementService {
     );
     return response.result;
   }
-
   async updateStudentGroup(
     studentGroupId: string | number,
     payload: UpdateStudentGroupPayload
@@ -105,11 +96,9 @@ export class StudentManagementService {
     );
     return response.result;
   }
-
   async deleteStudentGroup(studentGroupId: string | number): Promise<void> {
     await apiService.delete(`/StudentGroup/${studentGroupId}`);
   }
-
   async createStudent(payload: CreateStudentPayload): Promise<StudentDetail> {
     const response = await apiService.post<StudentListApiResponse>(
       "/Student/create",
@@ -118,7 +107,6 @@ export class StudentManagementService {
     return response.result as any;
   }
 }
-
 export interface CreateStudentPayload {
   username: string;
   password: string;
@@ -130,5 +118,4 @@ export interface CreateStudentPayload {
   gender: number;
   dateOfBirth: string;
 }
-
 export const studentManagementService = new StudentManagementService();

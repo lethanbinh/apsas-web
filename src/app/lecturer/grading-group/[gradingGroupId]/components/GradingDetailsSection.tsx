@@ -9,14 +9,11 @@ import type { MessageInstance } from "antd/es/message/interface";
 import { GradingSession } from "@/services/gradingService";
 import { useCallback, useState } from "react";
 import { GradingNotesModal } from "@/components/common/GradingNotesModal";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 interface GradingDetailsSectionProps {
   questions: QuestionWithRubrics[];
   latestGradingSession: GradingSession | null;
@@ -33,7 +30,6 @@ interface GradingDetailsSectionProps {
   updateQuestionComment: (questionId: number, comment: string) => void;
   message: MessageInstance;
 }
-
 export function GradingDetailsSection({
   questions,
   latestGradingSession,
@@ -60,13 +56,10 @@ export function GradingDetailsSection({
       updateRubricScore(questionId, rubricId, score);
     }
   }, [updateRubricScore, message]);
-
   const handleRubricCommentChange = useCallback((questionId: number, rubricId: number, comment: string) => {
     updateQuestionComment(questionId, comment);
   }, [updateQuestionComment]);
-
   const [isGradingNotesModalOpen, setIsGradingNotesModalOpen] = useState(false);
-
   return (
     <div>
       {}
@@ -149,4 +142,3 @@ export function GradingDetailsSection({
     </div>
   );
 }
-

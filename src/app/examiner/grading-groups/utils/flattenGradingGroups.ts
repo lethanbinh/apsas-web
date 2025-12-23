@@ -1,6 +1,5 @@
 import { GradingGroup } from "@/services/gradingGroupService";
 import { FlatGradingGroup } from "../components/GradingGroupTable";
-
 export interface GroupedByCourse {
   courseId: number;
   courseName: string;
@@ -16,22 +15,17 @@ export interface GroupedByCourse {
     }[];
   }[];
 }
-
 export function flattenGradingGroups(
   groupedByCourse: GroupedByCourse[]
 ): FlatGradingGroup[] {
   const groupedMap = new Map<string, FlatGradingGroup>();
-
   groupedByCourse.forEach((course) => {
     course.templates.forEach((template) => {
       template.lecturers.forEach((lecturer) => {
         lecturer.groups.forEach((group) => {
           const semesterCode = group.semesterCode;
           if (!semesterCode) return;
-
-
           const key = `${course.courseId}_${template.templateId}_${lecturer.lecturerId}`;
-
           const existing = groupedMap.get(key);
           if (!existing) {
             groupedMap.set(key, {
@@ -47,10 +41,8 @@ export function flattenGradingGroups(
               group: group,
             });
           } else {
-
             const existingDate = existing.group.createdAt ? new Date(existing.group.createdAt).getTime() : 0;
             const currentDate = group.createdAt ? new Date(group.createdAt).getTime() : 0;
-
             groupedMap.set(key, {
               ...existing,
               submissionCount: existing.submissionCount + group.subs.length,
@@ -63,7 +55,5 @@ export function flattenGradingGroups(
       });
     });
   });
-
   return Array.from(groupedMap.values());
 }
-

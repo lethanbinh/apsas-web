@@ -4,7 +4,6 @@ import { FeedbackData } from "@/services/geminiService";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { RubricItem } from "@/services/rubricItemService";
 import * as XLSX from "xlsx";
-
 export interface GradeReportData {
   submission: Submission;
   gradingSession?: GradingSession | null;
@@ -15,8 +14,6 @@ export interface GradeReportData {
   courseElementName?: string;
   assignmentType?: "Assignment" | "Lab" | "Practical Exam";
 }
-
-
 function getAssignmentTypeFromName(courseElementName: string): "Assignment" | "Lab" | "Practical Exam" {
   const nameLower = (courseElementName || "").toLowerCase();
   if (nameLower.includes("lab") || nameLower.includes("thực hành")) {
@@ -27,7 +24,6 @@ function getAssignmentTypeFromName(courseElementName: string): "Assignment" | "L
   }
   return "Assignment";
 }
-
 export async function exportGradeReportToExcel(
   reportData: GradeReportData[],
   fileName: string = "Grade_Report"
@@ -35,17 +31,13 @@ export async function exportGradeReportToExcel(
   if (typeof window === "undefined") {
     throw new Error("Export is only available in the browser.");
   }
-
   const wb = XLSX.utils.book_new();
   const exportData: any[] = [];
-
-
   const studentMap = new Map<string, { studentCode: string; studentName: string; reports: GradeReportData[] }>();
   for (const data of reportData) {
     const studentId = data.submission.studentId?.toString() || "0";
     const studentCode = data.submission.studentCode || "";
     const studentName = data.submission.studentName || "";
-
     if (!studentMap.has(studentId)) {
       studentMap.set(studentId, {
         studentCode,
@@ -55,15 +47,10 @@ export async function exportGradeReportToExcel(
     }
     studentMap.get(studentId)!.reports.push(data);
   }
-
   console.log(`Total students to export: ${studentMap.size}`);
-
-
   for (const [studentId, studentData] of studentMap.entries()) {
     const { studentCode, studentName, reports: studentReports } = studentData;
     let isFirstStudentRow = true;
-
-
     const courseElementMap = new Map<string, GradeReportData[]>();
     for (const report of studentReports) {
       const courseElementName = report.courseElementName || "N/A";
@@ -72,14 +59,9 @@ export async function exportGradeReportToExcel(
       }
       courseElementMap.get(courseElementName)!.push(report);
     }
-
-
     for (const [courseElementName, courseElementReports] of courseElementMap.entries()) {
       let isFirstCourseElementRow = true;
-
       const assignmentType = getAssignmentTypeFromName(courseElementName);
-
-
       const criteriaMap = new Map<string, {
         question: string;
         criteria: string;
@@ -90,21 +72,14 @@ export async function exportGradeReportToExcel(
         submittedAt: string;
         totalScore: string;
       }>();
-
-
-
       const allQuestionsMap = new Map<number, AssessmentQuestion>();
       const allRubricsMap = new Map<number, Map<number, RubricItem>>();
-
       for (const report of courseElementReports) {
-
         for (const question of report.questions) {
           if (!allQuestionsMap.has(question.id)) {
             allQuestionsMap.set(question.id, question);
           }
         }
-
-
         for (const questionId in report.rubrics) {
           const questionRubrics = report.rubrics[questionId] || [];
           if (!allRubricsMap.has(Number(questionId))) {
@@ -118,15 +93,11 @@ export async function exportGradeReportToExcel(
           }
         }
       }
-
-
       const questions = Array.from(allQuestionsMap.values());
       const rubrics: { [questionId: number]: RubricItem[] } = {};
       for (const [questionId, rubricMap] of allRubricsMap.entries()) {
         rubrics[questionId] = Array.from(rubricMap.values());
       }
-
-
       let calculatedMaxScore = 0;
       if (questions.length > 0) {
         for (const question of questions) {
@@ -134,46 +105,32 @@ export async function exportGradeReportToExcel(
           calculatedMaxScore += questionRubrics.reduce((sum, rubric) => sum + (rubric.score || 0), 0);
         }
       }
-
-
-
       let latestSubmission: Submission | null = null;
       let allGradeItems: GradeItem[] = [];
       let latestGradingSession: GradingSession | null = null;
       let latestReport: GradeReportData | null = null;
       let hasSubmission = false;
-
-
       for (const report of courseElementReports) {
         const { submission, gradeItems, gradingSession } = report;
         hasSubmission = true;
-
-
         if (submission.submittedAt && submission.submittedAt !== "") {
           if (!latestSubmission || new Date(submission.submittedAt).getTime() > new Date(latestSubmission.submittedAt).getTime()) {
             latestSubmission = submission;
           }
         } else if (!latestSubmission) {
-
           latestSubmission = submission;
         }
-
-
         if (gradingSession) {
           if (!latestGradingSession || new Date(gradingSession.createdAt).getTime() > new Date(latestGradingSession.createdAt).getTime()) {
             latestGradingSession = gradingSession;
             latestReport = report;
           }
         } else if (!latestReport) {
-
           if (gradeItems.length > 0) {
             latestReport = report;
           }
         }
       }
-
-
-
       if (latestReport) {
         allGradeItems = latestReport.gradeItems;
         if (!latestGradingSession && latestReport.gradingSession) {
@@ -183,14 +140,8 @@ export async function exportGradeReportToExcel(
           latestSubmission = latestReport.submission;
         }
       }
-
-
       const calculatedTotalScore = allGradeItems.reduce((sum, item) => sum + item.score, 0);
-
-
       const isGraded = allGradeItems.length > 0 || (latestGradingSession && latestGradingSession.status === 1);
-
-
       const totalScoreDisplay = isGraded
         ? (calculatedMaxScore > 0
             ? `${calculatedTotalScore.toFixed(2)}/${calculatedMaxScore.toFixed(2)}`
@@ -198,7 +149,6 @@ export async function exportGradeReportToExcel(
               ? calculatedTotalScore.toFixed(2)
               : "0")
         : "Not graded";
-
       const submissionId = latestSubmission?.id || 0;
       const submittedAt = latestSubmission && latestSubmission.submittedAt && latestSubmission.submittedAt !== ""
         ? new Date(latestSubmission.submittedAt).toLocaleString("en-US", {
@@ -209,14 +159,9 @@ export async function exportGradeReportToExcel(
             minute: "2-digit",
           })
         : "N/A";
-
-
-
       if (questions.length > 0) {
         for (const question of questions) {
           const questionRubrics = rubrics[question.id] || [];
-
-
           if (questionRubrics.length === 0) {
             const questionText = `Q${question.questionNumber || question.id}: ${question.questionText}`;
             const criteriaKey = `${questionText}_N/A`;
@@ -233,18 +178,13 @@ export async function exportGradeReportToExcel(
               });
             }
           } else {
-
             for (const rubric of questionRubrics) {
               const questionText = `Q${question.questionNumber || question.id}: ${question.questionText}`;
               const criteriaText = rubric.description || "N/A";
               const criteriaKey = `${questionText}_${criteriaText}`;
-
-
               const gradeItem = allGradeItems.find(
                 (item) => item.rubricItemId === rubric.id
               );
-
-
               if (!criteriaMap.has(criteriaKey)) {
                 criteriaMap.set(criteriaKey, {
                   question: questionText,
@@ -261,9 +201,6 @@ export async function exportGradeReportToExcel(
           }
         }
       }
-
-
-
       if (criteriaMap.size === 0) {
         const criteriaKey = "N/A_N/A";
         criteriaMap.set(criteriaKey, {
@@ -277,8 +214,6 @@ export async function exportGradeReportToExcel(
           totalScore: totalScoreDisplay,
         });
       }
-
-
       for (const criteriaData of criteriaMap.values()) {
         exportData.push({
           "Student Code": isFirstStudentRow ? studentCode : "",
@@ -299,19 +234,13 @@ export async function exportGradeReportToExcel(
       }
     }
   }
-
-
   console.log("Total rows to export:", exportData.length);
   if (exportData.length === 0) {
     throw new Error("No data available to export");
   }
-
-
   console.log("Creating worksheet...");
   const ws = XLSX.utils.json_to_sheet(exportData);
   console.log("Worksheet created, range:", ws["!ref"]);
-
-
   const colWidths: { [key: string]: number } = {
     A: 15,
     B: 25,
@@ -326,12 +255,9 @@ export async function exportGradeReportToExcel(
     K: 10,
     L: 30,
   };
-
   ws["!cols"] = Object.keys(colWidths).map((col) => ({
     wch: colWidths[col],
   }));
-
-
   const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
   const textColumns = ["H", "I", "L"];
   for (let R = range.s.r; R <= range.e.r; ++R) {
@@ -343,17 +269,11 @@ export async function exportGradeReportToExcel(
       };
     }
   }
-
-
   for (let R = 0; R <= range.e.r; ++R) {
     if (!ws["!rows"]) ws["!rows"] = [];
     ws["!rows"][R] = { hpt: 30 };
   }
-
-
   XLSX.utils.book_append_sheet(wb, ws, "Grade Report");
-
-
   try {
     const finalFileName = `${fileName}_${new Date().toISOString().split("T")[0]}.xlsx`;
     console.log("Attempting to write file:", finalFileName);

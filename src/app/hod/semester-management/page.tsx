@@ -1,5 +1,4 @@
 "use client";
-
 import { SemesterCrudModal } from "@/components/modals/SemesterCrudModal";
 import { Semester, semesterService } from "@/services/semesterService";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
@@ -18,38 +17,28 @@ import {
 } from "antd";
 import { format } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 const { Title } = Typography;
-
-
 const sortSemesters = (semesters: Semester[]): Semester[] => {
   const seasonOrder: { [key: string]: number } = {
     spring: 1,
     summer: 2,
     fall: 3,
   };
-
   return [...semesters].sort((a, b) => {
-
     if (b.academicYear !== a.academicYear) {
       return b.academicYear - a.academicYear;
     }
-
-
     const aSeason = a.semesterCode
       .replace(a.academicYear.toString(), "")
       .toLowerCase();
     const bSeason = b.semesterCode
       .replace(b.academicYear.toString(), "")
       .toLowerCase();
-
     const aOrder = seasonOrder[aSeason] || 999;
     const bOrder = seasonOrder[bSeason] || 999;
-
     return aOrder - bOrder;
   });
 };
-
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
   const date = new Date(
@@ -57,8 +46,6 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   );
   return format(date, formatStr);
 };
-
-
 const isSemesterStarted = (startDate: string): boolean => {
   if (!startDate) return false;
   const semesterStartDate = new Date(
@@ -69,7 +56,6 @@ const isSemesterStarted = (startDate: string): boolean => {
   semesterStartDate.setHours(0, 0, 0, 0);
   return semesterStartDate <= today;
 };
-
 const SemesterManagementPageContent = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +68,6 @@ const SemesterManagementPageContent = () => {
     confirmValue: "",
   });
   const { modal, notification } = App.useApp();
-
   const fetchSemesters = useCallback(async () => {
     try {
       setLoading(true);
@@ -98,18 +83,14 @@ const SemesterManagementPageContent = () => {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => {
     fetchSemesters();
   }, [fetchSemesters]);
-
   const handleOpenCreate = () => {
     setEditingSemester(null);
     setIsModalOpen(true);
   };
-
   const handleOpenEdit = (record: Semester) => {
-
     if (isSemesterStarted(record.startDate)) {
       notification.warning({
         message: "Cannot edit semester",
@@ -120,20 +101,16 @@ const SemesterManagementPageContent = () => {
     setEditingSemester(record);
     setIsModalOpen(true);
   };
-
   const handleModalCancel = () => {
     setIsModalOpen(false);
     setEditingSemester(null);
   };
-
   const handleModalOk = () => {
     setIsModalOpen(false);
     setEditingSemester(null);
     fetchSemesters();
   };
-
   const handleDelete = (record: Semester) => {
-
     if (isSemesterStarted(record.startDate)) {
       notification.warning({
         message: "Cannot delete semester",
@@ -141,14 +118,12 @@ const SemesterManagementPageContent = () => {
       });
       return;
     }
-
     setDeleteConfirm({
       open: true,
       record,
       confirmValue: "",
     });
   };
-
   const handleDeleteConfirmCancel = () => {
     setDeleteConfirm({
       open: false,
@@ -156,10 +131,8 @@ const SemesterManagementPageContent = () => {
       confirmValue: "",
     });
   };
-
   const handleDeleteConfirmOk = async () => {
     if (!deleteConfirm.record) return;
-
     if (deleteConfirm.confirmValue !== deleteConfirm.record.semesterCode) {
       notification.error({
         message: "Confirmation failed",
@@ -167,7 +140,6 @@ const SemesterManagementPageContent = () => {
       });
       return;
     }
-
     try {
       await semesterService.deleteSemester(deleteConfirm.record.id);
       notification.success({ message: "Semester deleted successfully!" });
@@ -185,12 +157,9 @@ const SemesterManagementPageContent = () => {
       });
     }
   };
-
-
   const sortedSemesters = useMemo(() => {
     return sortSemesters(semesters);
   }, [semesters]);
-
   const columns: TableProps<Semester>["columns"] = [
     {
       title: "Semester Code",
@@ -272,7 +241,6 @@ const SemesterManagementPageContent = () => {
       },
     },
   ];
-
   return (
     <div style={{ padding: "2rem", background: "#f0f7ff", minHeight: "100vh" }}>
       <Space
@@ -296,7 +264,6 @@ const SemesterManagementPageContent = () => {
           Create Semester
         </Button>
       </Space>
-
       {loading && (
         <div style={{ textAlign: "center", padding: "50px" }}>
           <Spin size="large" />
@@ -319,7 +286,6 @@ const SemesterManagementPageContent = () => {
           pagination={{ pageSize: 10 }}
         />
       )}
-
       <SemesterCrudModal
         open={isModalOpen}
         initialData={editingSemester}
@@ -327,7 +293,6 @@ const SemesterManagementPageContent = () => {
         onCancel={handleModalCancel}
         onOk={handleModalOk}
       />
-
       <Modal
         title="Are you sure you want to delete this semester?"
         open={deleteConfirm.open}
@@ -365,7 +330,6 @@ const SemesterManagementPageContent = () => {
     </div>
   );
 };
-
 export default function SemesterManagementPage() {
   return <SemesterManagementPageContent />;
 }

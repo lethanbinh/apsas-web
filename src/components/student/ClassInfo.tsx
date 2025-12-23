@@ -1,5 +1,4 @@
 "use client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { useStudent } from "@/hooks/useStudent";
 import { ROLES } from "@/lib/constants";
@@ -13,13 +12,11 @@ import { ClassInfoAuthor } from "./ClassInfoAuthor";
 import { ClassInfoHeader } from "./ClassInfoHeader";
 import { ExportModal } from "./ExportModal";
 import { useExportGradeReport } from "./hooks/useExportGradeReport";
-
 const { Title, Paragraph } = Typography;
-
-export default function ClassInfo({ 
-  classData, 
-  showTotalStudents = true 
-}: { 
+export default function ClassInfo({
+  classData,
+  showTotalStudents = true
+}: {
   classData: ClassInfoType;
   showTotalStudents?: boolean;
 }) {
@@ -27,7 +24,6 @@ export default function ClassInfo({
   const { studentId } = useStudent();
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [gradingGroups, setGradingGroups] = useState<GradingGroup[]>([]);
-
   useEffect(() => {
     const fetchGradingGroups = async () => {
       if (user?.role === ROLES.LECTURER && user?.id) {
@@ -43,7 +39,6 @@ export default function ClassInfo({
     };
     fetchGradingGroups();
   }, [user]);
-
   const { handleConfirmExport } = useExportGradeReport({
     user,
     studentId,
@@ -69,10 +64,8 @@ export default function ClassInfo({
           className={styles.image}
         />
       </div>
-
       <div className={styles.contentWrapper}>
         <ClassInfoHeader classData={classData} showTotalStudents={showTotalStudents} />
-
         <Title level={4} style={{ marginTop: "30px" }}>
           Class Description
         </Title>
@@ -86,11 +79,9 @@ export default function ClassInfo({
         >
           {classData.description}
         </Paragraph>
-
         <Divider />
         <ClassInfoAuthor lecturerName={classData.lecturerName} />
       </div>
-
       <ExportModal
         visible={exportModalVisible}
         onCancel={() => setExportModalVisible(false)}

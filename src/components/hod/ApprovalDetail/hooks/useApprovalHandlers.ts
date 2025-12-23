@@ -6,7 +6,6 @@ import {
   ApiApprovalItem,
   ApiAssignRequestUpdatePayload,
 } from "@/types";
-
 export const useApprovalHandlers = (
   approvalItem: ApiApprovalItem,
   currentStatus: number,
@@ -21,7 +20,6 @@ export const useApprovalHandlers = (
   const [isUpdatingApprover, setIsUpdatingApprover] = useState(false);
   const [rejectReasonVisibleForItem, setRejectReasonVisibleForItem] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-
   const createPayload = (
     status: number,
     message: string,
@@ -37,7 +35,6 @@ export const useApprovalHandlers = (
       assignedAt: approvalItem.assignedAt,
     };
   };
-
   const handleApproverChange = async (lecturerId: number | null | undefined, setSelectedApproverLecturerId: (id: number | undefined) => void) => {
     setIsUpdatingApprover(true);
     try {
@@ -61,7 +58,6 @@ export const useApprovalHandlers = (
       setIsUpdatingApprover(false);
     }
   };
-
   const handleApprove = () => {
     modal.confirm({
       title: "Confirm Approval",
@@ -74,7 +70,6 @@ export const useApprovalHandlers = (
         try {
           const payload = createPayload(5, "Approved by HOD", selectedApproverLecturerId);
           await adminService.updateAssignRequestStatus(approvalItem.id, payload);
-
           setCurrentStatus(5);
           setRejectReasonVisibleForItem(null);
           antMessage.success("Request approved successfully");
@@ -87,7 +82,6 @@ export const useApprovalHandlers = (
       },
     });
   };
-
   const handleRejectClick = (questions: { [paperId: number]: AssessmentQuestion[] }) => {
     if (!rejectReasonVisibleForItem) {
       const firstPaperKey = papers.length > 0 ? `paper-${papers[0].id}` : null;
@@ -96,22 +90,18 @@ export const useApprovalHandlers = (
       }
       return;
     }
-
     if (!rejectReason.trim()) {
       antMessage.error("Please enter a reject reason.");
       return;
     }
-
     const allQuestions = Object.values(questions).flat();
     const questionsWithComments = allQuestions.filter(
       q => questionComments[q.id] && questionComments[q.id].trim()
     );
-
     if (questionsWithComments.length === 0) {
       antMessage.error("Please provide comments for at least one question before rejecting.");
       return;
     }
-
     modal.confirm({
       title: "Confirm Rejection",
       content: "Are you sure you want to reject this assessment template? This action will reject the request with the comments you provided.",
@@ -135,10 +125,8 @@ export const useApprovalHandlers = (
               await assessmentQuestionService.updateAssessmentQuestion(question.id, updatePayload);
             }
           }
-
           const payload = createPayload(3, rejectReason, selectedApproverLecturerId);
           await adminService.updateAssignRequestStatus(approvalItem.id, payload);
-
           setCurrentStatus(3);
           setRejectReasonVisibleForItem(null);
           antMessage.success("Request rejected with comments");
@@ -151,7 +139,6 @@ export const useApprovalHandlers = (
       },
     });
   };
-
   return {
     isSubmitting,
     isUpdatingApprover,
@@ -164,4 +151,3 @@ export const useApprovalHandlers = (
     handleRejectClick,
   };
 };
-

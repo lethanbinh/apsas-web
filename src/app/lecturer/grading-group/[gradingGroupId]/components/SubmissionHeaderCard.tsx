@@ -4,20 +4,16 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { memo, useMemo } from "react";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 interface SubmissionHeaderCardProps {
   submission: Submission;
   totalScore: number;
   maxScore: number;
 }
-
 export const SubmissionHeaderCard = memo(function SubmissionHeaderCard({
   submission,
   totalScore,
@@ -29,7 +25,6 @@ export const SubmissionHeaderCard = memo(function SubmissionHeaderCard({
       ? toVietnamTime(submission.updatedAt || submission.submittedAt).format("DD/MM/YYYY HH:mm:ss")
       : "N/A";
   }, [submission.updatedAt, submission.submittedAt]);
-
   return (
     <Space direction="vertical" style={{ width: "100%" }} size="large">
       <Descriptions bordered column={2}>
@@ -55,4 +50,3 @@ export const SubmissionHeaderCard = memo(function SubmissionHeaderCard({
     </Space>
   );
 });
-

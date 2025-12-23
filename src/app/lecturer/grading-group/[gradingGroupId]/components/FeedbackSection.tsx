@@ -1,12 +1,9 @@
 "use client";
-
 import { FeedbackData } from "@/services/geminiService";
 import { Button, Card, Collapse, Space, Spin, Typography } from "antd";
 import { SaveOutlined, RobotOutlined } from "@ant-design/icons";
 import { FeedbackFields } from "./FeedbackFields";
-
 const { Text } = Typography;
-
 interface FeedbackSectionProps {
   feedback: FeedbackData;
   loading: boolean;
@@ -16,7 +13,6 @@ interface FeedbackSectionProps {
   onGetAiFeedback?: () => void;
   isPublished?: boolean;
 }
-
 export function FeedbackSection({
   feedback,
   loading,
@@ -80,4 +76,3 @@ export function FeedbackSection({
     </Card>
   );
 }
-

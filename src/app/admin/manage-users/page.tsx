@@ -1,5 +1,4 @@
 "use client";
-
 import { CreateUserFormModal } from "@/components/admin/CreateUserFormModal";
 import { DeleteConfirmationModal } from "@/components/admin/DeleteConfirmationModal";
 import { ImportResultsModal } from "@/components/admin/ImportResultsModal";
@@ -23,7 +22,6 @@ import { App, Alert, Spin } from "antd";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useMemo, useState } from "react";
 import styles from "./ManageUsers.module.css";
-
 const ManageUsersPageContent: React.FC = () => {
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
@@ -44,45 +42,30 @@ const ManageUsersPageContent: React.FC = () => {
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState<boolean>(false);
   const [usersToDelete, setUsersToDelete] = useState<User[]>([]);
-
-  // Check if we have any active filters
   const hasFilter = searchTerm.trim() !== "" || selectedRole !== undefined;
-
-  // Fetch all users when filtering
   const { data: allUsersResponse, isLoading: allUsersLoading } = useQuery({
     queryKey: ['users', 'all', 'filter'],
     queryFn: () => accountService.getAccountList(1, 10000),
-    enabled: hasFilter, // Only fetch when filtering
+    enabled: hasFilter,
   });
-
-  // Regular paginated query when no filters
   const { data: usersResponse, isLoading: loading, error: queryError } = useQuery({
     queryKey: queryKeys.users.list({ page: currentPage, pageSize }),
     queryFn: () => accountService.getAccountList(currentPage, pageSize),
-    enabled: !hasFilter, // Only fetch when not filtering
+    enabled: !hasFilter,
   });
-
-  // Get the base users list - always use the appropriate source
-  // When not filtering, only use usersResponse if it's available (not loading or has data)
-  const baseUsers = hasFilter 
-    ? (allUsersResponse?.users || []) 
+  const baseUsers = hasFilter
+    ? (allUsersResponse?.users || [])
     : (usersResponse?.users || []);
-  const totalUsers = hasFilter 
-    ? (allUsersResponse?.total || 0) 
+  const totalUsers = hasFilter
+    ? (allUsersResponse?.total || 0)
     : (usersResponse?.total || 0);
   const isLoading = hasFilter ? allUsersLoading : loading;
   const error = queryError ? (queryError as any).message || "Failed to fetch users" : null;
-
-  // Filter all users
   const filteredUsers = useMemo(() => {
     let filtered = baseUsers;
-
-    // Filter by role
     if (selectedRole !== undefined) {
       filtered = filtered.filter(user => Number(user.role) === Number(selectedRole));
     }
-
-    // Filter by search term
     if (searchTerm.trim()) {
       const searchLower = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(user =>
@@ -93,52 +76,36 @@ const ManageUsersPageContent: React.FC = () => {
         user.phoneNumber?.toLowerCase().includes(searchLower)
       );
     }
-
     return filtered;
   }, [baseUsers, searchTerm, selectedRole]);
-
-  // Paginate filtered results
   const paginatedUsers = useMemo(() => {
     if (!hasFilter) {
-      return baseUsers; // Use server-paginated results when not filtering
+      return baseUsers;
     }
-    // Client-side pagination when filtering
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return filteredUsers.slice(startIndex, endIndex);
   }, [filteredUsers, baseUsers, currentPage, pageSize, hasFilter]);
-
   const filteredTotal = filteredUsers.length;
-
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedRole]);
-
-  // Invalidate and refetch queries when filter state changes
   useEffect(() => {
-    // Use a small delay to ensure state is updated before invalidating
     const timeoutId = setTimeout(() => {
       if (hasFilter) {
-        // When filtering, ensure all users query is fresh
-        queryClient.invalidateQueries({ 
+        queryClient.invalidateQueries({
           queryKey: ['users', 'all', 'filter']
         });
       } else {
-        // When not filtering, ensure paginated query is fresh
-        queryClient.invalidateQueries({ 
-          queryKey: queryKeys.users.list({ page: currentPage, pageSize }) 
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.users.list({ page: currentPage, pageSize })
         });
       }
     }, 0);
-
     return () => clearTimeout(timeoutId);
   }, [hasFilter, currentPage, pageSize, queryClient]);
-
   const { importAccounts, importLoading } = useAccountImport();
   const { handleExportAllAccounts, exportLoading } = useAccountExport();
-
-
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, payload }: { userId: number; payload: UserUpdatePayload }) => {
       return adminService.updateAccount(userId, payload);
@@ -157,8 +124,6 @@ const ManageUsersPageContent: React.FC = () => {
       });
     },
   });
-
-
   const createUserMutation = useMutation({
     mutationFn: async ({ payload, role }: { payload: any; role: Role }) => {
       switch (role) {
@@ -190,17 +155,13 @@ const ManageUsersPageContent: React.FC = () => {
       });
     },
   });
-
-
   const deleteAccountMutation = useMutation({
     mutationFn: async (accountIds: number[]) => {
       const results = await Promise.allSettled(
         accountIds.map(id => accountService.deleteAccount(id))
       );
-
       const successful: number[] = [];
       const failed: Array<{ id: number; error: string }> = [];
-
       results.forEach((result, index) => {
         if (result.status === "fulfilled") {
           successful.push(accountIds[index]);
@@ -211,7 +172,6 @@ const ManageUsersPageContent: React.FC = () => {
           failed.push({ id: accountIds[index], error: errorMessage });
         }
       });
-
       return { successful, failed };
     },
     onSuccess: (results) => {
@@ -219,7 +179,6 @@ const ManageUsersPageContent: React.FC = () => {
       setSelectedUserIds([]);
       setIsDeleteModalVisible(false);
       setUsersToDelete([]);
-
       if (results.failed.length === 0) {
         notification.success({
           message: "Delete Successful",
@@ -250,13 +209,10 @@ const ManageUsersPageContent: React.FC = () => {
       });
     },
   });
-
-
   const showEditModal = (user: User) => {
     setEditingUser(user);
     setIsEditModalVisible(true);
   };
-
   const handleEditOk = async (values: UserUpdatePayload, role: Role) => {
     if (editingUser) {
         const updatePayload = {
@@ -267,20 +223,16 @@ const ManageUsersPageContent: React.FC = () => {
       updateUserMutation.mutate({ userId: editingUser.id, payload: updatePayload });
     }
   };
-
   const handleEditCancel = () => {
     setIsEditModalVisible(false);
     setEditingUser(null);
   };
-
   const handleCreateOk = async (values: any, role: Role) => {
     createUserMutation.mutate({ payload: values, role });
   };
-
   const handleCreateCancel = () => {
     setIsCreateModalVisible(false);
   };
-
   const handleDeleteClick = (user?: User) => {
     if (user) {
       setUsersToDelete([user]);
@@ -290,11 +242,8 @@ const ManageUsersPageContent: React.FC = () => {
     }
     setIsDeleteModalVisible(true);
   };
-
   const handleDeleteConfirm = (confirmText: string) => {
     if (!usersToDelete.length) return;
-
-
     if (usersToDelete.length === 1) {
       const user = usersToDelete[0];
       const expectedText = user.accountCode || user.email || "";
@@ -315,12 +264,9 @@ const ManageUsersPageContent: React.FC = () => {
         return;
       }
     }
-
-
     const accountIds = usersToDelete.map(u => u.id);
     const hasSelf = accountIds.includes(currentUser?.id || -1);
     const hasOtherAdmins = usersToDelete.some(u => u.role === ROLES.ADMIN && u.id !== currentUser?.id);
-
     if (hasSelf) {
       notification.error({
         message: "Delete Failed",
@@ -328,7 +274,6 @@ const ManageUsersPageContent: React.FC = () => {
       });
       return;
     }
-
     if (hasOtherAdmins) {
       notification.error({
         message: "Delete Failed",
@@ -336,16 +281,12 @@ const ManageUsersPageContent: React.FC = () => {
         });
         return;
       }
-
-
     deleteAccountMutation.mutate(accountIds);
   };
-
   const handleDeleteCancel = () => {
     setIsDeleteModalVisible(false);
     setUsersToDelete([]);
   };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       const allUserIds = filteredUsers
@@ -356,7 +297,6 @@ const ManageUsersPageContent: React.FC = () => {
       setSelectedUserIds([]);
     }
   };
-
   const handleSelectUser = (userId: number, checked: boolean) => {
     if (checked) {
       setSelectedUserIds([...selectedUserIds, userId]);
@@ -364,7 +304,6 @@ const ManageUsersPageContent: React.FC = () => {
       setSelectedUserIds(selectedUserIds.filter(id => id !== userId));
     }
   };
-
   const handleImportFile = async (file: File) => {
     try {
       const results = await importAccounts(file);
@@ -379,10 +318,8 @@ const ManageUsersPageContent: React.FC = () => {
       });
       setImportResultVisible(true);
     } catch (error) {
-
     }
   };
-
   const handleDownloadTemplate = () => {
     try {
       generateSampleTemplate();
@@ -398,17 +335,13 @@ const ManageUsersPageContent: React.FC = () => {
       });
     }
   };
-
-
   const totalPages = hasFilter ? Math.ceil(filteredTotal / pageSize) : Math.ceil(totalUsers / pageSize);
   const displayUsers = paginatedUsers;
   const isIndeterminate = selectedUserIds.length > 0 && selectedUserIds.length < displayUsers.filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN).length;
   const isAllSelected = selectedUserIds.length > 0 && selectedUserIds.length === displayUsers.filter(u => u.id !== currentUser?.id && u.role !== ROLES.ADMIN).length;
-
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Manage users</h1>
-
       <SearchAndActionsBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -423,7 +356,6 @@ const ManageUsersPageContent: React.FC = () => {
         onImportFile={handleImportFile}
         importLoading={importLoading}
       />
-
       {isLoading && !baseUsers.length ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
           <Spin size="large" />
@@ -456,7 +388,6 @@ const ManageUsersPageContent: React.FC = () => {
           mapRoleToString={mapRoleToString}
         />
       )}
-
       {!isLoading && !error && ((hasFilter && filteredTotal > pageSize) || (!hasFilter && totalUsers > pageSize)) && (
         <Pagination
           currentPage={currentPage}
@@ -467,7 +398,6 @@ const ManageUsersPageContent: React.FC = () => {
           getPaginationItems={() => getPaginationItems(currentPage, totalPages)}
         />
       )}
-
       {isEditModalVisible && (
         <CreateUserFormModal
           visible={isEditModalVisible}
@@ -477,7 +407,6 @@ const ManageUsersPageContent: React.FC = () => {
           confirmLoading={updateUserMutation.isPending}
         />
       )}
-
       {isCreateModalVisible && (
         <CreateUserFormModal
           visible={isCreateModalVisible}
@@ -487,13 +416,11 @@ const ManageUsersPageContent: React.FC = () => {
           confirmLoading={createUserMutation.isPending}
         />
       )}
-
       <ImportResultsModal
         open={importResultVisible}
         results={importResults}
         onClose={() => setImportResultVisible(false)}
       />
-
       <DeleteConfirmationModal
         open={isDeleteModalVisible}
         usersToDelete={usersToDelete}
@@ -504,7 +431,6 @@ const ManageUsersPageContent: React.FC = () => {
     </div>
   );
 };
-
 export default function ManageUsersPage() {
   return (
     <App>

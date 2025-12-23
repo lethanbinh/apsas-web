@@ -1,5 +1,4 @@
 "use client";
-
 import { StudentInClass } from "@/services/classService";
 import {
   CreateStudentGroupPayload,
@@ -23,7 +22,6 @@ import {
 } from "antd";
 import { format } from "date-fns";
 import { useEffect, useState } from "react";
-
 const formatUtcDate = (dateString: string, formatStr: string) => {
   if (!dateString) return "N/A";
   const date = new Date(
@@ -31,7 +29,6 @@ const formatUtcDate = (dateString: string, formatStr: string) => {
   );
   return format(date, formatStr);
 };
-
 interface ViewStudentsModalProps {
   open: boolean;
   classId: number | null;
@@ -41,7 +38,6 @@ interface ViewStudentsModalProps {
   onRefresh?: () => void;
   refreshTrigger?: number;
 }
-
 export const ViewStudentsModal = ({
   open,
   classId,
@@ -61,14 +57,12 @@ export const ViewStudentsModal = ({
   const [editForm] = Form.useForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { modal, notification } = App.useApp();
-
   useEffect(() => {
     const fetchData = async () => {
       if (!classId || !open) {
         setStudents([]);
         return;
       }
-
       setLoading(true);
       try {
         const [studentsData, allStudentsData] = await Promise.all([
@@ -85,23 +79,18 @@ export const ViewStudentsModal = ({
         setLoading(false);
       }
     };
-
     fetchData();
   }, [classId, open, refreshTrigger]);
-
   const handleAddStudent = () => {
     setIsAddModalOpen(true);
     addForm.resetFields();
   };
-
   const handleAddCancel = () => {
     setIsAddModalOpen(false);
     addForm.resetFields();
   };
-
   const handleAddFinish = async (values: any) => {
     if (!classId) return;
-
     setIsSubmitting(true);
     try {
       const payload: CreateStudentGroupPayload = {
@@ -109,17 +98,13 @@ export const ViewStudentsModal = ({
         studentId: Number(values.studentId),
         description: values.description || "Enrolled by HOD",
       };
-
       await studentManagementService.createStudentGroup(payload);
       notification.success({
         message: "Student Added",
         description: "The student has been successfully added to the class.",
       });
-
-
       const updatedStudents = await studentManagementService.getStudentsInClass(classId);
       setStudents(updatedStudents);
-
       setIsAddModalOpen(false);
       addForm.resetFields();
       if (onRefresh) {
@@ -135,7 +120,6 @@ export const ViewStudentsModal = ({
       setIsSubmitting(false);
     }
   };
-
   const handleEditStudent = (record: StudentInClass) => {
     setEditingStudent(record);
     editForm.setFieldsValue({
@@ -143,34 +127,27 @@ export const ViewStudentsModal = ({
     });
     setIsEditModalOpen(true);
   };
-
   const handleEditCancel = () => {
     setIsEditModalOpen(false);
     setEditingStudent(null);
     editForm.resetFields();
   };
-
   const handleEditFinish = async (values: any) => {
     if (!editingStudent) return;
-
     setIsSubmitting(true);
     try {
       const payload: UpdateStudentGroupPayload = {
         description: values.description || "Enrolled by HOD",
       };
-
       await studentManagementService.updateStudentGroup(editingStudent.id, payload);
       notification.success({
         message: "Student Updated",
         description: "The student information has been successfully updated.",
       });
-
-
       if (classId) {
         const updatedStudents = await studentManagementService.getStudentsInClass(classId);
         setStudents(updatedStudents);
       }
-
       setIsEditModalOpen(false);
       setEditingStudent(null);
       editForm.resetFields();
@@ -187,7 +164,6 @@ export const ViewStudentsModal = ({
       setIsSubmitting(false);
     }
   };
-
   const handleDeleteStudent = async (studentGroupId: number) => {
     try {
       await studentManagementService.deleteStudentGroup(studentGroupId);
@@ -195,10 +171,7 @@ export const ViewStudentsModal = ({
         message: "Student Removed",
         description: "The student has been successfully removed from the class.",
       });
-
-
       setStudents(prev => prev.filter(s => s.id !== studentGroupId));
-
       if (onDeleteStudent) {
         onDeleteStudent(studentGroupId);
       }
@@ -213,14 +186,12 @@ export const ViewStudentsModal = ({
       });
     }
   };
-
   const studentOptions = allStudents
     .filter(s => !students.some(existing => Number(existing.studentId) === Number(s.studentId)))
     .map((s) => ({
       label: `${s.fullName} (${s.accountCode})`,
       value: Number(s.studentId),
     }));
-
   const columns: TableProps<StudentInClass>["columns"] = [
     {
       title: "Student Code",
@@ -286,7 +257,6 @@ export const ViewStudentsModal = ({
       ),
     },
   ];
-
   return (
     <>
       <Modal
@@ -314,7 +284,6 @@ export const ViewStudentsModal = ({
           scroll={{ x: 'max-content' }}
         />
       </Modal>
-
       {}
       <Modal
         title="Add Student to Class"
@@ -333,17 +302,14 @@ export const ViewStudentsModal = ({
               {
                 validator: (_, value) => {
                   if (!value) return Promise.resolve();
-
                   const existingStudent = students.find(
                     (s) => Number(s.studentId) === Number(value)
                   );
-
                   if (existingStudent) {
                     return Promise.reject(
                       new Error("This student is already in the class!")
                     );
                   }
-
                   return Promise.resolve();
                 },
               },
@@ -381,7 +347,6 @@ export const ViewStudentsModal = ({
           </Form.Item>
         </Form>
       </Modal>
-
       {}
       <Modal
         title="Edit Student Information"
@@ -426,4 +391,3 @@ export const ViewStudentsModal = ({
     </>
   );
 };
-

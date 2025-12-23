@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, Input, Table, Tag, Typography, Alert, Select, Space, Button, Drawer, App } from "antd";
 import type { TableProps } from "antd";
@@ -13,9 +12,7 @@ import { assessmentTemplateService } from "@/services/assessmentTemplateService"
 import type { TablePaginationConfig } from 'antd/es/table';
 import { useAuth } from "@/hooks/useAuth";
 import { lecturerService } from "@/services/lecturerService";
-
 const { Title, Text } = Typography;
-
 const getStatusProps = (status: number) => {
   switch (status) {
     case 1:
@@ -32,8 +29,6 @@ const getStatusProps = (status: number) => {
       return { color: "default", text: "Pending", displayValue: 1 };
   }
 };
-
-
 export default function LecturerApprovalList() {
   const { message } = App.useApp();
   const [searchText, setSearchText] = useState("");
@@ -44,7 +39,6 @@ export default function LecturerApprovalList() {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
-
   const [allApprovals, setAllApprovals] = useState<ApiApprovalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,8 +50,6 @@ export default function LecturerApprovalList() {
     pageSize: 10,
     total: 0,
   });
-
-
   useEffect(() => {
     const fetchLecturerId = async () => {
       if (user?.id) {
@@ -77,22 +69,15 @@ export default function LecturerApprovalList() {
     };
     fetchLecturerId();
   }, [user]);
-
-
   const uniqueSemesters = useMemo(() => {
     const semesters = Array.from(new Set(allApprovals.map(a => a.semesterName).filter(Boolean)));
-
-
     const semesterMap = new Map<string, any>();
     semesters.forEach((name) => {
-
       const exactMatch = allSemesters.find((sem) => sem.semesterCode === name);
       if (exactMatch) {
         semesterMap.set(name, exactMatch);
         return;
       }
-
-
       const partialMatch = allSemesters.find((sem) =>
         name.includes(sem.semesterCode) ||
         sem.semesterCode.includes(name) ||
@@ -103,12 +88,9 @@ export default function LecturerApprovalList() {
         semesterMap.set(name, partialMatch);
       }
     });
-
-
     const sortedSemesters = semesters.sort((a, b) => {
       const semA = semesterMap.get(a);
       const semB = semesterMap.get(b);
-
       if (semA && semB) {
         const dateA = new Date(semA.startDate.endsWith("Z") ? semA.startDate : semA.startDate + "Z");
         const dateB = new Date(semB.startDate.endsWith("Z") ? semB.startDate : semB.startDate + "Z");
@@ -116,14 +98,10 @@ export default function LecturerApprovalList() {
       }
       if (semA) return -1;
       if (semB) return 1;
-
       return b.localeCompare(a);
     });
-
     return sortedSemesters;
   }, [allApprovals, allSemesters]);
-
-
   const uniqueCourses = useMemo(() => {
     let filteredApprovals = allApprovals;
     if (selectedSemester) {
@@ -132,30 +110,23 @@ export default function LecturerApprovalList() {
     const courses = Array.from(new Set(filteredApprovals.map(a => a.courseName).filter(Boolean)));
     return courses.sort();
   }, [allApprovals, selectedSemester]);
-
-
   useEffect(() => {
     if (selectedSemester) {
       const coursesInSemester = allApprovals
         .filter(a => a.semesterName === selectedSemester)
         .map(a => a.courseName)
         .filter(Boolean);
-
       if (selectedCourse && !coursesInSemester.includes(selectedCourse)) {
         setSelectedCourse(undefined);
       }
     } else {
       setSelectedCourse(undefined);
     }
-
     setPagination(prev => ({ ...prev, current: 1 }));
   }, [selectedSemester, allApprovals, selectedCourse]);
-
-
   useEffect(() => {
     setPagination(prev => ({ ...prev, current: 1 }));
   }, [selectedStatus, selectedTemplateFilter]);
-
   const columns: TableProps<ApiApprovalItem>["columns"] = [
     {
       title: "No",
@@ -211,39 +182,28 @@ export default function LecturerApprovalList() {
       },
     },
   ];
-
   useEffect(() => {
     const fetchAllApprovals = async () => {
       if (!currentLecturerId) return;
-
       try {
         setLoading(true);
         setError(null);
-
-
         const [approvalsResponse, semesters, templatesResponse] = await Promise.all([
           adminService.getApprovalList(1, 10000),
           semesterService.getSemesters({ pageNumber: 1, pageSize: 1000 }),
           assessmentTemplateService.getAssessmentTemplates({ pageNumber: 1, pageSize: 10000 })
         ]);
-
-
         const filteredApprovals = approvalsResponse.items.filter(
           (item) => item.assignedApproverLecturerId === currentLecturerId
         );
-
         setAllApprovals(filteredApprovals);
         setAllSemesters(semesters);
-
-
         const templateRequestIds = new Set(
           templatesResponse.items
             .filter(t => t.assignRequestId)
             .map(t => t.assignRequestId)
         );
         setTemplatesWithRequestIds(templateRequestIds);
-
-
         if (selectedSemester === undefined) {
           const now = new Date();
           const currentSemester = semesters.find((sem) => {
@@ -251,21 +211,15 @@ export default function LecturerApprovalList() {
             const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
             return now >= startDate && now <= endDate;
           });
-
           if (currentSemester) {
-
             const uniqueSemesterNames = Array.from(
               new Set(filteredApprovals.map(a => a.semesterName).filter(Boolean))
             );
-
-
             const matchingSemesterName = uniqueSemesterNames.find(
               name => name === currentSemester.semesterCode ||
                       name.startsWith(currentSemester.semesterCode) ||
                       name.includes(currentSemester.semesterCode)
             );
-
-
             if (matchingSemesterName) {
               setSelectedSemester(matchingSemesterName);
             }
@@ -280,59 +234,40 @@ export default function LecturerApprovalList() {
         setLoading(false);
       }
     };
-
     fetchAllApprovals();
   }, [currentLecturerId]);
-
-
   const filteredData = useMemo(() => {
     return allApprovals.filter((item) => {
       const matchesSearch =
         item.courseElementName.toLowerCase().includes(searchText.toLowerCase()) ||
         item.courseName.toLowerCase().includes(searchText.toLowerCase()) ||
         item.assignedLecturerName.toLowerCase().includes(searchText.toLowerCase());
-
-
       const matchesSemester = !selectedSemester || item.semesterName === selectedSemester;
-
-
       const matchesCourse = !selectedCourse || item.courseName === selectedCourse;
-
-
       let matchesStatus = true;
       if (selectedStatus !== undefined) {
         matchesStatus = item.status === selectedStatus;
       }
-
-
       const matchesTemplate = !selectedTemplateFilter ||
         (selectedTemplateFilter === "with" && templatesWithRequestIds.has(item.id)) ||
         (selectedTemplateFilter === "without" && !templatesWithRequestIds.has(item.id));
-
       return matchesSearch && matchesSemester && matchesCourse && matchesStatus && matchesTemplate;
     });
   }, [allApprovals, searchText, selectedSemester, selectedCourse, selectedStatus, selectedTemplateFilter, templatesWithRequestIds]);
-
-
   const paginatedData = useMemo(() => {
     const start = ((pagination.current || 1) - 1) * (pagination.pageSize || 10);
     const end = start + (pagination.pageSize || 10);
     return filteredData.slice(start, end);
   }, [filteredData, pagination.current, pagination.pageSize]);
-
-
   useEffect(() => {
     setPagination(prev => ({
       ...prev,
       total: filteredData.length,
     }));
   }, [filteredData.length]);
-
   const handleRowClick = (record: ApiApprovalItem) => {
-    // Allow viewing details for all statuses
     router.push(`/lecturer/approval/${record.id}`);
   };
-
   const handleTableChange: TableProps<ApiApprovalItem>['onChange'] = (newPagination) => {
     setPagination(prev => ({
       ...prev,
@@ -340,7 +275,6 @@ export default function LecturerApprovalList() {
       pageSize: newPagination.pageSize,
     }));
   };
-
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (selectedSemester) count++;
@@ -349,7 +283,6 @@ export default function LecturerApprovalList() {
     if (selectedTemplateFilter) count++;
     return count;
   }, [selectedSemester, selectedCourse, selectedStatus, selectedTemplateFilter]);
-
   const handleClearAllFilters = () => {
     setSelectedSemester(undefined);
     setSelectedCourse(undefined);
@@ -357,7 +290,6 @@ export default function LecturerApprovalList() {
     setSelectedTemplateFilter(undefined);
     setPagination(prev => ({ ...prev, current: 1 }));
   };
-
   if (!currentLecturerId && !loading) {
     return (
       <Alert
@@ -368,7 +300,6 @@ export default function LecturerApprovalList() {
       />
     );
   }
-
   return (
     <div className={styles.wrapper}>
       <div className={styles.header}>
@@ -406,7 +337,6 @@ export default function LecturerApprovalList() {
           </Button>
         </div>
       </div>
-
       {activeFilterCount > 0 && (
         <div className={styles.activeFilters}>
           <Space size="small" wrap>
@@ -455,7 +385,6 @@ export default function LecturerApprovalList() {
           </Space>
         </div>
       )}
-
       <Drawer
         title="Filter Options"
         placement="right"
@@ -484,7 +413,6 @@ export default function LecturerApprovalList() {
             }))}
           />
           </div>
-
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Course
@@ -505,7 +433,6 @@ export default function LecturerApprovalList() {
             }))}
           />
           </div>
-
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Status
@@ -528,7 +455,6 @@ export default function LecturerApprovalList() {
             ]}
           />
           </div>
-
           <div>
             <Text strong style={{ display: "block", marginBottom: 8 }}>
               Template
@@ -548,7 +474,6 @@ export default function LecturerApprovalList() {
             ]}
           />
           </div>
-
           <Button
             type="default"
             block
@@ -559,9 +484,7 @@ export default function LecturerApprovalList() {
           </Button>
         </Space>
       </Drawer>
-
       {error && <Alert message="Error" description={error} type="error" showIcon style={{ marginBottom: 16 }} />}
-
       <Card className={styles.approvalCard}>
         <Table
           columns={columns}
@@ -586,4 +509,3 @@ export default function LecturerApprovalList() {
     </div>
   );
 }
-

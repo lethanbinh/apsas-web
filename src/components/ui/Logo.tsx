@@ -1,15 +1,12 @@
 "use client";
-
 import logoWebp from "@/assets/APSAS_logo.webp";
 import Image from "next/image";
 import React, { useState } from "react";
 import styles from "./LogoComponent.module.css";
 import Logo from "../../../public/logo/Logo";
-
 interface LogoComponentProps {
   size?: "small" | "medium" | "large";
 }
-
 export const LogoComponent: React.FC<LogoComponentProps> = ({
   size = "large",
 }) => {
@@ -29,7 +26,6 @@ export const LogoComponent: React.FC<LogoComponentProps> = ({
       </div>
     );
   }
-
   return (
     <div
       className={`${styles.logoWrapper} ${

@@ -30,11 +30,9 @@ export const API_ENDPOINTS = {
     CLASS_STUDENT_DATA: "/Import/excel/class-student-data",
     CLASS_STUDENT_TEMPLATE: "/Import/excel/class-student-template",
   },
-
   SEMESTER: {
     PAGINATED_LIST: "/Semester",
   },
-
   HOD: {
     APPROVAL_LIST: "/AssignRequest/list",
     ASSIGN_REQUEST_UPDATE: "/AssignRequest",
@@ -46,7 +44,6 @@ export const API_ENDPOINTS = {
     UPLOAD: "/File/upload",
   },
 } as const;
-
 export const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
@@ -56,13 +53,11 @@ export const HTTP_STATUS = {
   NOT_FOUND: 404,
   INTERNAL_SERVER_ERROR: 500,
 } as const;
-
 export const STORAGE_KEYS = {
   TOKEN: "auth_token",
   USER: "user_data",
   THEME: "theme",
 } as const;
-
 export const ROUTES = {
   HOME: "/",
   LOGIN: "/login",
@@ -72,7 +67,6 @@ export const ROUTES = {
   PE_LOGIN: "/pe",
   PE_SUBMISSION: "/pe/submission",
 } as const;
-
 export const ROLES = {
   ADMIN: 0,
   LECTURER: 1,
@@ -80,16 +74,13 @@ export const ROLES = {
   HOD: 3,
   EXAMINER: 4,
 } as const;
-
 export type Role = (typeof ROLES)[keyof typeof ROLES];
-
 export interface NavigationItem {
   key: string;
   label: string;
   href: string;
   requiredRole?: Role[];
 }
-
 export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
   [ROLES.STUDENT]: [
     {
@@ -145,7 +136,6 @@ export const ROLE_NAVIGATION: Record<Role, NavigationItem[]> = {
     },
   ],
 };
-
 export const VALIDATION = {
   EMAIL_REGEX: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   PASSWORD_MIN_LENGTH: 8,

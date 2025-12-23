@@ -1,5 +1,4 @@
 "use client";
-
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { queryKeys } from "@/lib/react-query";
 import { adminService } from "@/services/adminService";
@@ -24,10 +23,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import styles from "../dashboard/DashboardAdmin.module.css";
-
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
-
 const COLORS = {
   blue: "#2563EB",
   green: "#10B981",
@@ -35,35 +32,28 @@ const COLORS = {
   orange: "#F59E0B",
   red: "#EF4444",
 };
-
 const AcademicPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
   const [semesterDateRange, setSemesterDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [classDateRange, setClassDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
   const { data: semestersRes, isLoading: semestersLoading } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => adminService.getPaginatedSemesters(1, 100),
   });
-
   const { data: classesRes, isLoading: classesLoading } = useQuery({
     queryKey: queryKeys.classes.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
   });
-
   const semesters = semestersRes || [];
   const classes = classesRes?.classes || [];
-
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: [queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 })] });
     queryClient.invalidateQueries({ queryKey: [queryKeys.classes.list({ pageNumber: 1, pageSize: 1000 })] });
   };
-
   const filteredSemesters = useMemo(() => {
     let filtered = [...semesters];
-
     if (semesterDateRange && semesterDateRange[0] && semesterDateRange[1]) {
       filtered = filtered.filter((sem) => {
         const startDate = dayjs(sem.startDate);
@@ -76,24 +66,17 @@ const AcademicPage = () => {
         );
       });
     }
-
     return filtered;
   }, [semesters, semesterDateRange?.[0]?.valueOf(), semesterDateRange?.[1]?.valueOf()]);
-
   const filteredClasses = useMemo(() => {
     let filtered = [...classes];
-
     if (selectedSemester) {
-      // selectedSemester is semesterCode from Select
-      // cls.semesterName might be semesterCode or a different format
       filtered = filtered.filter((cls) => {
-        // Exact match first
         if (cls.semesterName === selectedSemester) {
           return true;
         }
-        // Check if semesterName contains semesterCode or vice versa
         if (cls.semesterName && selectedSemester) {
-          return cls.semesterName.includes(selectedSemester) || 
+          return cls.semesterName.includes(selectedSemester) ||
                  selectedSemester.includes(cls.semesterName) ||
                  cls.semesterName.toLowerCase().includes(selectedSemester.toLowerCase()) ||
                  selectedSemester.toLowerCase().includes(cls.semesterName.toLowerCase());
@@ -101,7 +84,6 @@ const AcademicPage = () => {
         return false;
       });
     }
-
     if (classDateRange && classDateRange[0] && classDateRange[1]) {
       filtered = filtered.filter((cls) => {
         const createdAt = dayjs(cls.createdAt);
@@ -111,10 +93,8 @@ const AcademicPage = () => {
         );
       });
     }
-
     return filtered;
   }, [classes, selectedSemester, classDateRange?.[0]?.valueOf(), classDateRange?.[1]?.valueOf()]);
-
   const semesterColumns = [
     {
       title: "Semester Code",
@@ -154,7 +134,6 @@ const AcademicPage = () => {
       },
     },
   ];
-
   const classColumns = [
     {
       title: "Class Code",
@@ -183,7 +162,6 @@ const AcademicPage = () => {
       render: (count: string) => parseInt(count) || 0,
     },
   ];
-
   const classesBySemesterData = useMemo(() => {
     const data: Record<string, number> = {};
     filteredClasses.forEach((cls) => {
@@ -192,7 +170,6 @@ const AcademicPage = () => {
     });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
   }, [filteredClasses]);
-
   return (
     <>
       <QueryParamsHandler />
@@ -224,7 +201,6 @@ const AcademicPage = () => {
             Refresh
           </Button>
         </div>
-
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card>
@@ -263,7 +239,6 @@ const AcademicPage = () => {
             </Card>
           </Col>
         </Row>
-
         <Card>
           <Title level={5} style={{ marginBottom: 16 }}>Filters</Title>
           <Space size="large" wrap>
@@ -308,7 +283,6 @@ const AcademicPage = () => {
             </Space>
           </Space>
         </Card>
-
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} lg={12}>
             <Card title="Classes by Semester" loading={classesLoading}>
@@ -335,7 +309,6 @@ const AcademicPage = () => {
             </Card>
           </Col>
         </Row>
-
         <Card
           title={`All Classes (${filteredClasses.length} of ${classes.length})`}
           loading={classesLoading}
@@ -352,6 +325,4 @@ const AcademicPage = () => {
     </>
   );
 };
-
 export default AcademicPage;
-

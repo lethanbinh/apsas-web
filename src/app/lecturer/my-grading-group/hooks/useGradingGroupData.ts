@@ -17,7 +17,6 @@ import {
 import { Submission, submissionService } from "@/services/submissionService";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-
 export interface UseGradingGroupDataResult {
   currentLecturerId: number | null;
   error: string | null;
@@ -37,20 +36,16 @@ export interface UseGradingGroupDataResult {
   setSelectedSemester: (semester: number | undefined) => void;
   selectedSemester: number | undefined;
 }
-
 export function useGradingGroupData(
   selectedSemester: number | undefined,
   setSelectedSemester: (semester: number | undefined) => void
 ): UseGradingGroupDataResult {
   const { user, isLoading: authLoading } = useAuth();
-
-
   const { data: lecturersData } = useQuery({
     queryKey: queryKeys.lecturers.list(),
     queryFn: () => lecturerService.getLecturerList(),
     enabled: !authLoading && !!user && user.role === ROLES.LECTURER,
   });
-
   const currentLecturerId = useMemo(() => {
     if (!lecturersData || !user) return null;
     const currentLecturer = lecturersData.find(
@@ -58,19 +53,16 @@ export function useGradingGroupData(
     );
     return currentLecturer ? Number(currentLecturer.lecturerId) : null;
   }, [lecturersData, user]);
-
   const error = useMemo(() => {
     if (authLoading) return null;
     if (!user || user.role !== ROLES.LECTURER) {
-      return "Bạn không có quyền truy cập trang này.";
+      return "You do not have permission to access this page.";
     }
     if (currentLecturerId === null && lecturersData) {
-      return "Không tìm thấy thông tin giảng viên cho tài khoản này.";
+      return "Lecturer information not found for this account.";
     }
     return null;
   }, [authLoading, user, currentLecturerId, lecturersData]);
-
-
   const { data: allSemestersData } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
@@ -78,8 +70,6 @@ export function useGradingGroupData(
       pageSize: 1000,
     }),
   });
-
-
   const { data: gradingGroups = [], isLoading: isLoadingGroups } = useQuery({
     queryKey: queryKeys.grading.groups.list({ lecturerId: currentLecturerId! }),
     queryFn: () => gradingGroupService.getGradingGroups({
@@ -87,8 +77,6 @@ export function useGradingGroupData(
     }),
     enabled: !!currentLecturerId,
   });
-
-
   const assessmentTemplateIds = useMemo(() => {
     return Array.from(
       new Set(
@@ -98,8 +86,6 @@ export function useGradingGroupData(
       )
     );
   }, [gradingGroups]);
-
-
   const { data: templatesData } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -108,7 +94,6 @@ export function useGradingGroupData(
     }),
     enabled: assessmentTemplateIds.length > 0,
   });
-
   const assessmentTemplateMap = useMemo(() => {
     const map: Record<number, AssessmentTemplate> = {};
     if (templatesData?.items) {
@@ -120,15 +105,11 @@ export function useGradingGroupData(
     }
     return map;
   }, [templatesData, assessmentTemplateIds]);
-
-
   const courseElementIds = useMemo(() => {
     return Array.from(
       new Set(Object.values(assessmentTemplateMap).map((t) => t.courseElementId))
     );
   }, [assessmentTemplateMap]);
-
-
   const { data: courseElementsData } = useQuery({
     queryKey: queryKeys.courseElements.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => courseElementService.getCourseElements({
@@ -137,7 +118,6 @@ export function useGradingGroupData(
     }),
     enabled: courseElementIds.length > 0,
   });
-
   const courseElementMap = useMemo(() => {
     const map: Record<number, CourseElement> = {};
     if (courseElementsData) {
@@ -149,8 +129,6 @@ export function useGradingGroupData(
     }
     return map;
   }, [courseElementsData, courseElementIds]);
-
-
   const gradingGroupToSemesterMap = useMemo(() => {
     const map: Record<number, string> = {};
     gradingGroups.forEach((group) => {
@@ -166,7 +144,6 @@ export function useGradingGroupData(
     });
     return map;
   }, [gradingGroups, assessmentTemplateMap, courseElementMap]);
-
   const gradingGroupToCourseMap = useMemo(() => {
     const map: Record<number, { courseId: number; courseName: string }> = {};
     gradingGroups.forEach((group) => {
@@ -185,8 +162,6 @@ export function useGradingGroupData(
     });
     return map;
   }, [gradingGroups, assessmentTemplateMap, courseElementMap]);
-
-
   const gradingGroupIds = gradingGroups.map(g => g.id);
   const submissionsQueries = useQueries({
     queries: gradingGroupIds.map((groupId) => ({
@@ -197,14 +172,11 @@ export function useGradingGroupData(
       enabled: gradingGroupIds.length > 0,
     })),
   });
-
   const allSubmissions = useMemo(() => {
     return submissionsQueries
       .map(q => q.data || [])
       .flat();
   }, [submissionsQueries]);
-
-
   const gradingSessionsQueries = useQueries({
     queries: allSubmissions.map((submission) => ({
       queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 1 }),
@@ -216,14 +188,11 @@ export function useGradingGroupData(
       enabled: allSubmissions.length > 0,
     })),
   });
-
-
   const submissionTotalScores = useMemo(() => {
     const scoreMap: Record<number, number> = {};
     allSubmissions.forEach((submission, index) => {
       const sessionsQuery = gradingSessionsQueries[index];
       if (sessionsQuery?.data?.items && sessionsQuery.data.items.length > 0) {
-
         const latestSession = sessionsQuery.data.items[0];
         if (latestSession.grade !== undefined && latestSession.grade !== null) {
           scoreMap[submission.id] = latestSession.grade;
@@ -232,14 +201,11 @@ export function useGradingGroupData(
     });
     return scoreMap;
   }, [allSubmissions, gradingSessionsQueries]);
-
-
   const classAssessmentIds = useMemo(() => {
     return Array.from(
       new Set(allSubmissions.filter((s) => s.classAssessmentId).map((s) => s.classAssessmentId!))
     );
   }, [allSubmissions]);
-
   const { data: classAssessmentsData } = useQuery({
     queryKey: queryKeys.classAssessments.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -248,7 +214,6 @@ export function useGradingGroupData(
     }),
     enabled: classAssessmentIds.length > 0,
   });
-
   const classAssessments = useMemo(() => {
     const map: Record<number, ClassAssessment> = {};
     if (classAssessmentsData?.items) {
@@ -260,13 +225,9 @@ export function useGradingGroupData(
     }
     return map;
   }, [classAssessmentsData, classAssessmentIds]);
-
-
   const classIds = useMemo(() => {
     return Array.from(new Set(Object.values(classAssessments).map((ca) => ca.classId)));
   }, [classAssessments]);
-
-
   const classesQueries = useQueries({
     queries: classIds.map((classId) => ({
       queryKey: queryKeys.classes.detail(classId),
@@ -274,7 +235,6 @@ export function useGradingGroupData(
       enabled: classIds.length > 0,
     })),
   });
-
   const classes = useMemo(() => {
     const map: Record<number, ClassInfo> = {};
     classesQueries.forEach((query, index) => {
@@ -284,13 +244,9 @@ export function useGradingGroupData(
     });
     return map;
   }, [classesQueries, classIds]);
-
-
   const semesterCodesFromGroups = useMemo(() => {
     return Array.from(new Set(Object.values(gradingGroupToSemesterMap).filter(Boolean)));
   }, [gradingGroupToSemesterMap]);
-
-
   const semesterDetailsQueries = useQueries({
     queries: semesterCodesFromGroups.map((semesterCode) => ({
       queryKey: ['semesterPlanDetail', semesterCode],
@@ -298,7 +254,6 @@ export function useGradingGroupData(
       enabled: semesterCodesFromGroups.length > 0,
     })),
   });
-
   const semesters = useMemo(() => {
     const now = new Date();
     const filtered = semesterDetailsQueries
@@ -309,37 +264,27 @@ export function useGradingGroupData(
         const startDate = new Date(s.startDate.endsWith("Z") ? s.startDate : s.startDate + "Z");
         return startDate <= now;
       });
-
-
     return [...filtered].sort((a, b) => {
       const dateA = new Date(a.endDate || 0).getTime();
       const dateB = new Date(b.endDate || 0).getTime();
       return dateB - dateA;
     });
   }, [semesterDetailsQueries]);
-
-
   useEffect(() => {
     if (allSemestersData && semesters.length > 0 && selectedSemester === undefined) {
       const now = new Date();
-
       const currentSemester = allSemestersData.find((sem: Semester) => {
         const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
         const endDate = new Date(sem.endDate.endsWith("Z") ? sem.endDate : sem.endDate + "Z");
         return now >= startDate && now <= endDate;
       });
-
-
       if (currentSemester) {
         const semesterDetail = semesters.find((s) => s.semesterCode === currentSemester.semesterCode);
         if (semesterDetail) {
-
           setSelectedSemester(Number(semesterDetail.id));
           return;
         }
       }
-
-
       const latestSemester = [...semesters].sort((a, b) => {
         const dateA = new Date(a.endDate || 0).getTime();
         const dateB = new Date(b.endDate || 0).getTime();
@@ -350,8 +295,6 @@ export function useGradingGroupData(
       }
     }
   }, [allSemestersData, semesters, selectedSemester, setSelectedSemester]);
-
-
   const loading = (
     isLoadingGroups ||
     (assessmentTemplateIds.length > 0 && !templatesData) ||
@@ -362,7 +305,6 @@ export function useGradingGroupData(
     classesQueries.some((q: any) => q.isLoading) ||
     (semesterCodesFromGroups.length > 0 && semesterDetailsQueries.some((q: any) => q.isLoading))
   );
-
   return {
     currentLecturerId,
     error,
@@ -383,4 +325,3 @@ export function useGradingGroupData(
     selectedSemester,
   };
 }
-

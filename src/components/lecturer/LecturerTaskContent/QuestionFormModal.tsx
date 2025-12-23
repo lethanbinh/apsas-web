@@ -1,12 +1,9 @@
 "use client";
-
 import { assessmentQuestionService } from "@/services/assessmentQuestionService";
 import { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import { App, Button, Form, Input, Modal } from "antd";
 import { useEffect } from "react";
-
 const { TextArea } = Input;
-
 interface QuestionFormModalProps {
   open: boolean;
   onCancel: () => void;
@@ -17,7 +14,6 @@ interface QuestionFormModalProps {
   existingQuestionsCount?: number;
   hasComment?: boolean;
 }
-
 export const QuestionFormModal = ({
   open,
   onCancel,
@@ -32,13 +28,11 @@ export const QuestionFormModal = ({
   const { notification } = App.useApp();
   const isEditing = !!initialData;
   const title = isEditing ? "Edit Question" : "Add New Question";
-
   useEffect(() => {
     if (open) {
       if (initialData) {
         form.setFieldsValue(initialData);
       } else {
-
         form.resetFields();
         form.setFieldsValue({
           questionNumber: existingQuestionsCount + 1,
@@ -46,11 +40,9 @@ export const QuestionFormModal = ({
       }
     }
   }, [initialData, form, open, existingQuestionsCount]);
-
   const handleSubmit = async (values: any) => {
     try {
       if (isEditing) {
-
         const updatePayload = {
           ...values,
           reviewerComment: hasComment ? undefined : initialData?.reviewerComment,
@@ -84,7 +76,6 @@ export const QuestionFormModal = ({
       notification.error({ message: "Failed to save question" });
     }
   };
-
   return (
     <Modal
       title={title}
@@ -131,4 +122,3 @@ export const QuestionFormModal = ({
     </Modal>
   );
 };
-

@@ -9,7 +9,6 @@ import type { AssessmentPaper } from "@/services/assessmentPaperService";
 import type { AssessmentQuestion } from "@/services/assessmentQuestionService";
 import type { AssignRequestItem } from "@/services/assignRequestService";
 import type { NotificationInstance } from "antd/es/notification/interface";
-
 interface ImportTemplateParams {
   file: File;
   existingTemplate: AssessmentTemplate | null | undefined;
@@ -23,7 +22,6 @@ interface ImportTemplateParams {
   resetStatusIfRejected: () => Promise<void>;
   updateStatusToInProgress?: () => Promise<void>;
 }
-
 export async function importTemplate({
   file,
   existingTemplate,
@@ -40,20 +38,15 @@ export async function importTemplate({
   try {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: "array" });
-
-
     const templateSheet = workbook.Sheets["Assessment Template"];
     if (!templateSheet) {
       throw new Error("Assessment Template sheet not found");
     }
     const templateRows = XLSX.utils.sheet_to_json(templateSheet, { header: 1 }) as any[][];
-
-
     let templateName = "";
     let templateDesc = "";
     let templateType = 0;
     let startupProject = "";
-
     for (let i = 2; i < templateRows.length; i++) {
       const row = templateRows[i];
       if (row && row[0]) {
@@ -78,18 +71,12 @@ export async function importTemplate({
         }
       }
     }
-
-
     if (!templateName) {
       throw new Error("Template name is required in the Assessment Template sheet");
     }
-
-
     if (templateType === 1 && !startupProject) {
       throw new Error("Startup Project is required for WEBAPI templates in the Assessment Template sheet");
     }
-
-
     let currentTemplate: AssessmentTemplate;
     if (existingTemplate) {
       const existingStartupProject = existingTemplate.startupProject || "";
@@ -108,7 +95,6 @@ export async function importTemplate({
       if (templates.length > 0 && !isRejected) {
         throw new Error("Template already exists. Please delete existing template first or import will update it.");
       }
-
       currentTemplate = await assessmentTemplateService.createAssessmentTemplate({
         name: templateName,
         description: templateDesc,
@@ -118,26 +104,19 @@ export async function importTemplate({
         createdByLecturerId: lecturerId,
         assignedToHODId: task.assignedByHODId,
       });
-
-      // When rejected and importing, updateStatusToInProgress will be called after resetStatusIfRejected
-      // So we don't need to manually update status here
     }
-
-
     const papersSheet = workbook.Sheets["Papers"];
     if (!papersSheet) {
       throw new Error("Papers sheet not found");
     }
     const papersRows = XLSX.utils.sheet_to_json(papersSheet, { header: 1 }) as any[][];
-
     const paperDataMap = new Map<string, { name: string; description: string; language: number }>();
     for (let i = 2; i < papersRows.length; i++) {
       const row = papersRows[i];
       if (row && row[0]) {
         const firstCell = String(row[0]).trim();
-        // Skip Instructions rows and empty rows
-        if (firstCell && 
-            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+        if (firstCell &&
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") &&
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "PAPERS") {
           const name = firstCell;
@@ -156,14 +135,11 @@ export async function importTemplate({
       }
     }
     const paperData = Array.from(paperDataMap.values());
-
-
     const questionsSheet = workbook.Sheets["Questions"];
     if (!questionsSheet) {
       throw new Error("Questions sheet not found");
     }
     const questionsRows = XLSX.utils.sheet_to_json(questionsSheet, { header: 1 }) as any[][];
-
     const questionDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -176,9 +152,8 @@ export async function importTemplate({
       const row = questionsRows[i];
       if (row && row[0]) {
         const firstCell = String(row[0]).trim();
-        // Skip Instructions rows and empty rows
-        if (firstCell && 
-            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+        if (firstCell &&
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") &&
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "QUESTIONS") {
           const paperName = firstCell;
@@ -197,14 +172,11 @@ export async function importTemplate({
       }
     }
     const questionData = Array.from(questionDataMap.values());
-
-
     const rubricsSheet = workbook.Sheets["Rubrics"];
     if (!rubricsSheet) {
       throw new Error("Rubrics sheet not found");
     }
     const rubricsRows = XLSX.utils.sheet_to_json(rubricsSheet, { header: 1 }) as any[][];
-
     const rubricDataMap = new Map<string, {
       paperName: string;
       questionNumber: number;
@@ -217,9 +189,8 @@ export async function importTemplate({
       const row = rubricsRows[i];
       if (row && row[0]) {
         const firstCell = String(row[0]).trim();
-        // Skip Instructions rows and empty rows
-        if (firstCell && 
-            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") && 
+        if (firstCell &&
+            !firstCell.toUpperCase().startsWith("INSTRUCTIONS") &&
             !firstCell.startsWith("-") &&
             firstCell.toUpperCase() !== "RUBRICS") {
           const paperName = firstCell;
@@ -238,7 +209,6 @@ export async function importTemplate({
       }
     }
     const rubricData = Array.from(rubricDataMap.values());
-
     const createdPapers = new Map<string, AssessmentPaper>();
     for (const paper of paperData) {
       try {
@@ -264,8 +234,6 @@ export async function importTemplate({
         });
       }
     }
-
-
     const questionsByPaper = new Map<string, typeof questionData>();
     for (const question of questionData) {
       if (!questionsByPaper.has(question.paperName)) {
@@ -273,7 +241,6 @@ export async function importTemplate({
       }
       questionsByPaper.get(question.paperName)!.push(question);
     }
-
     const createdQuestions = new Map<string, AssessmentQuestion>();
     for (const [paperName, questions] of questionsByPaper.entries()) {
       const paper = createdPapers.get(paperName);
@@ -284,7 +251,6 @@ export async function importTemplate({
         });
         continue;
       }
-
       for (const question of questions) {
         try {
           const createdQuestion = await assessmentQuestionService.createAssessmentQuestion({
@@ -305,12 +271,9 @@ export async function importTemplate({
         }
       }
     }
-
-
     for (const rubric of rubricData) {
       const questionKey = `${rubric.paperName}-${rubric.questionNumber}`;
       const foundQuestion = createdQuestions.get(questionKey);
-
       if (!foundQuestion) {
         notification.warning({
           message: `Question not found`,
@@ -318,7 +281,6 @@ export async function importTemplate({
         });
         continue;
       }
-
       try {
         await rubricItemService.createRubricItem({
           description: rubric.description,
@@ -335,16 +297,12 @@ export async function importTemplate({
         });
       }
     }
-
     await refetchTemplates();
     await fetchAllData(currentTemplate.id);
     await resetStatusIfRejected();
-    
-    // Update status to IN_PROGRESS after import (unless already rejected and will be reset)
     if (updateStatusToInProgress && !isRejected) {
       await updateStatusToInProgress();
     }
-
     notification.success({
       message: "Import Successful",
       description: `Imported template "${templateName}" with ${paperData.length} papers, ${questionData.length} questions, and ${rubricData.length} rubrics.`,
@@ -357,4 +315,3 @@ export async function importTemplate({
     });
   }
 }
-

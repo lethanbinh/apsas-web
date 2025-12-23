@@ -10,7 +10,6 @@ import { Submission } from "@/services/submissionService";
 import { GradingGroup } from "@/services/gradingGroupService";
 import { useMemo, useEffect } from "react";
 import type { QuestionWithRubrics } from "../EditSubmissionModal";
-
 interface UseSubmissionDataProps {
   visible: boolean;
   submission: Submission;
@@ -25,7 +24,6 @@ interface UseSubmissionDataProps {
   }>>;
   setTotalScore: (score: number) => void;
 }
-
 export function useSubmissionData({
   visible,
   submission,
@@ -34,7 +32,6 @@ export function useSubmissionData({
   setUserEdits,
   setTotalScore,
 }: UseSubmissionDataProps) {
-
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -43,13 +40,10 @@ export function useSubmissionData({
     }),
     enabled: visible && !!gradingGroup?.assessmentTemplateId,
   });
-
   const assessmentTemplate = useMemo(() => {
     if (!templatesResponse?.items || !gradingGroup?.assessmentTemplateId) return null;
     return templatesResponse.items.find((t) => t.id === gradingGroup.assessmentTemplateId) || null;
   }, [templatesResponse, gradingGroup?.assessmentTemplateId]);
-
-
   const { data: papersResponse } = useQuery({
     queryKey: queryKeys.assessmentPapers.byTemplateId(assessmentTemplate?.id!),
     queryFn: () => assessmentPaperService.getAssessmentPapers({
@@ -59,10 +53,7 @@ export function useSubmissionData({
     }),
     enabled: visible && !!assessmentTemplate?.id,
   });
-
   const papers = papersResponse?.items || [];
-
-
   const questionsQueries = useQueries({
     queries: papers.map((paper) => ({
       queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
@@ -74,7 +65,6 @@ export function useSubmissionData({
       enabled: visible && papers.length > 0,
     })),
   });
-
   const allQuestionsFromQueries = useMemo(() => {
     const questions: AssessmentQuestion[] = [];
     questionsQueries.forEach((query) => {
@@ -84,7 +74,6 @@ export function useSubmissionData({
     });
     return questions.sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0));
   }, [questionsQueries]);
-
   const rubricsQueries = useQueries({
     queries: allQuestionsFromQueries.map((question) => ({
       queryKey: queryKeys.rubricItems.byQuestionId(question.id),
@@ -96,7 +85,6 @@ export function useSubmissionData({
       enabled: visible && allQuestionsFromQueries.length > 0,
     })),
   });
-
   const questionsWithRubrics = useMemo(() => {
     const result: QuestionWithRubrics[] = [];
     allQuestionsFromQueries.forEach((question, index) => {
@@ -112,8 +100,6 @@ export function useSubmissionData({
     });
     return result;
   }, [allQuestionsFromQueries, rubricsQueries]);
-
-
   const { data: gradingSessionsData } = useQuery({
     queryKey: queryKeys.grading.sessions.list({ submissionId: submission.id, pageNumber: 1, pageSize: 100 }),
     queryFn: () => gradingService.getGradingSessions({
@@ -123,7 +109,6 @@ export function useSubmissionData({
     }),
     enabled: visible && !!submission.id,
   });
-
   const latestGradingSession = useMemo(() => {
     if (!gradingSessionsData?.items || gradingSessionsData.items.length === 0) return null;
     const sorted = [...gradingSessionsData.items].sort((a, b) => {
@@ -133,8 +118,6 @@ export function useSubmissionData({
     });
     return sorted[0];
   }, [gradingSessionsData]);
-
-
   const { data: gradeItemsData } = useQuery({
     queryKey: ['gradeItems', 'byGradingSessionId', latestGradingSession?.id],
     queryFn: () => gradeItemService.getGradeItems({
@@ -144,22 +127,15 @@ export function useSubmissionData({
     }),
     enabled: visible && !!latestGradingSession?.id,
   });
-
   const latestGradeItems = gradeItemsData?.items || [];
-
-
   useEffect(() => {
     setUserEdits({
       rubricScores: {},
       rubricComments: {},
     });
-
   }, [submission.id]);
-
-
   const questions = useMemo(() => {
     if (questionsWithRubrics.length === 0) return [];
-
     if (latestGradeItems.length > 0) {
       const sortedItems = [...latestGradeItems].sort((a, b) => {
         const dateA = new Date(a.updatedAt).getTime();
@@ -171,20 +147,16 @@ export function useSubmissionData({
         const createdB = new Date(b.createdAt).getTime();
         return createdB - createdA;
       });
-
       const latestGradeItemsMap = new Map<number, GradeItem>();
       sortedItems.forEach((item) => {
         if (item.rubricItemId && !latestGradeItemsMap.has(item.rubricItemId)) {
           latestGradeItemsMap.set(item.rubricItemId, item);
         }
       });
-
       const latestGradeItemsForDisplay = Array.from(latestGradeItemsMap.values());
-
       return questionsWithRubrics.map((question) => {
         const newRubricScores = { ...question.rubricScores };
         const newRubricComments = { ...(question.rubricComments || {}) };
-
         let questionComment = "";
         question.rubrics.forEach((rubric) => {
           const matchingGradeItem = latestGradeItemsForDisplay.find(
@@ -205,11 +177,9 @@ export function useSubmissionData({
             }
           }
         });
-
         newRubricComments[question.id] = userEdits.rubricComments[question.id] !== undefined
           ? userEdits.rubricComments[question.id]
           : questionComment;
-
         return {
           ...question,
           rubricScores: newRubricScores,
@@ -217,22 +187,18 @@ export function useSubmissionData({
         };
       });
     }
-
     return questionsWithRubrics.map((question) => {
       const newRubricScores = { ...question.rubricScores };
       const newRubricComments = { ...(question.rubricComments || {}) };
-
       question.rubrics.forEach((rubric) => {
         const editKey = `${question.id}_${rubric.id}`;
         if (userEdits.rubricScores[editKey] !== undefined) {
           newRubricScores[rubric.id] = userEdits.rubricScores[editKey];
         }
       });
-
       if (userEdits.rubricComments[question.id] !== undefined) {
         newRubricComments[question.id] = userEdits.rubricComments[question.id];
       }
-
       return {
         ...question,
         rubricScores: newRubricScores,
@@ -240,8 +206,6 @@ export function useSubmissionData({
       };
     });
   }, [questionsWithRubrics, latestGradeItems, userEdits]);
-
-
   const totalScore = useMemo(() => {
     if (latestGradeItems.length > 0) {
       return latestGradeItems.reduce((sum, item) => sum + item.score, 0);
@@ -250,16 +214,12 @@ export function useSubmissionData({
     }
     return 0;
   }, [latestGradeItems, latestGradingSession]);
-
-
   const maxScore = useMemo(() => {
     return questions.reduce((sum, q) => {
       return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
     }, 0);
   }, [questions]);
-
   const loading = questionsQueries.some(q => q.isLoading) || rubricsQueries.some(q => q.isLoading) || !assessmentTemplate;
-
   return {
     questions,
     latestGradingSession,
@@ -269,4 +229,3 @@ export function useSubmissionData({
     loading,
   };
 }
-

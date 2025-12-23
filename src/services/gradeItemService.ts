@@ -1,5 +1,4 @@
 import { apiService } from "./api";
-
 export interface GradeItem {
   id: number;
   score: number;
@@ -12,26 +11,22 @@ export interface GradeItem {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface GradeItemApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: GradeItem;
 }
-
 export interface CreateGradeItemPayload {
   gradingSessionId: number;
   rubricItemId: number;
   score: number;
   comments: string;
 }
-
 export interface UpdateGradeItemPayload {
   score: number;
   comments: string;
 }
-
 export interface PaginatedGradeItemsResponse {
   statusCode: number;
   isSuccess: boolean;
@@ -44,16 +39,13 @@ export interface PaginatedGradeItemsResponse {
     items: GradeItem[];
   };
 }
-
 export interface GetGradeItemsParams {
   pageNumber?: number;
   pageSize?: number;
   gradingSessionId?: number;
   rubricItemId?: number;
 }
-
 export class GradeItemService {
-
   async createGradeItem(payload: CreateGradeItemPayload): Promise<GradeItem> {
     const response = await apiService.post<GradeItemApiResponse>(
       "/GradeItem/create",
@@ -61,16 +53,12 @@ export class GradeItemService {
     );
     return response.result;
   }
-
-
   async getGradeItem(gradeItemId: number): Promise<GradeItem> {
     const response = await apiService.get<GradeItemApiResponse>(
       `/GradeItem/${gradeItemId}`
     );
     return response.result;
   }
-
-
   async updateGradeItem(
     gradeItemId: number,
     payload: UpdateGradeItemPayload
@@ -81,8 +69,6 @@ export class GradeItemService {
     );
     return response.result;
   }
-
-
   async deleteGradeItem(gradeItemId: number): Promise<void> {
     await apiService.delete<{
       statusCode: number;
@@ -91,8 +77,6 @@ export class GradeItemService {
       result: any;
     }>(`/GradeItem/${gradeItemId}`);
   }
-
-
   async getGradeItems(
     params?: GetGradeItemsParams
   ): Promise<PaginatedGradeItemsResponse["result"]> {
@@ -103,6 +87,4 @@ export class GradeItemService {
     return response.result;
   }
 }
-
 export const gradeItemService = new GradeItemService();
-

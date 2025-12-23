@@ -7,10 +7,8 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import { useRouter } from "next/navigation";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string | null | undefined) => {
   if (!dateString) return null;
   try {
@@ -19,14 +17,12 @@ const toVietnamTime = (dateString: string | null | undefined) => {
     return null;
   }
 };
-
 const formatUtcDate = (dateString: string | null | undefined, formatStr: string) => {
   if (!dateString) return "N/A";
   const vietnamTime = toVietnamTime(dateString);
   if (!vietnamTime || !vietnamTime.isValid()) return "N/A";
   return vietnamTime.format(formatStr);
 };
-
 const getStatusTag = (status: number) => {
   switch (status) {
     case 0:
@@ -39,7 +35,6 @@ const getStatusTag = (status: number) => {
       return <Tag>Unknown</Tag>;
   }
 };
-
 export function getTableColumns(router: ReturnType<typeof useRouter>): ColumnsType<EnrichedSubmission> {
   return [
     {
@@ -129,4 +124,3 @@ export function getTableColumns(router: ReturnType<typeof useRouter>): ColumnsTy
     },
   ];
 }
-

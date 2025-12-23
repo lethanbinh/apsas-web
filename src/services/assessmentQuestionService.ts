@@ -1,5 +1,4 @@
 import { apiService } from "./api";
-
 export interface AssessmentQuestion {
   id: number;
   questionText: string;
@@ -14,14 +13,12 @@ export interface AssessmentQuestion {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface AssessmentQuestionApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentQuestion;
 }
-
 export interface AssessmentQuestionListResult {
   currentPage: number;
   pageSize: number;
@@ -29,20 +26,17 @@ export interface AssessmentQuestionListResult {
   totalPages: number;
   items: AssessmentQuestion[];
 }
-
 export interface AssessmentQuestionListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentQuestionListResult;
 }
-
 export interface GetAssessmentQuestionsParams {
   assessmentPaperId?: number;
   pageNumber: number;
   pageSize: number;
 }
-
 export interface CreateAssessmentQuestionPayload {
   questionText: string;
   questionSampleInput: string;
@@ -51,7 +45,6 @@ export interface CreateAssessmentQuestionPayload {
   questionNumber: number;
   assessmentPaperId: number;
 }
-
 export interface UpdateAssessmentQuestionPayload {
   questionText: string;
   questionSampleInput: string;
@@ -60,12 +53,10 @@ export interface UpdateAssessmentQuestionPayload {
   questionNumber: number;
   reviewerComment?: string;
 }
-
 export interface GetAssessmentQuestionsResponse {
   items: AssessmentQuestion[];
   total: number;
 }
-
 export class AssessmentQuestionService {
   async getAssessmentQuestions(
     params: GetAssessmentQuestionsParams
@@ -79,7 +70,6 @@ export class AssessmentQuestionService {
       total: response.result.totalCount,
     };
   }
-
   async createAssessmentQuestion(
     payload: CreateAssessmentQuestionPayload
   ): Promise<AssessmentQuestion> {
@@ -89,7 +79,6 @@ export class AssessmentQuestionService {
     );
     return response.result;
   }
-
   async updateAssessmentQuestion(
     assessmentQuestionId: string | number,
     payload: UpdateAssessmentQuestionPayload
@@ -100,12 +89,10 @@ export class AssessmentQuestionService {
     );
     return response.result;
   }
-
   async deleteAssessmentQuestion(
     assessmentQuestionId: string | number
   ): Promise<void> {
     await apiService.delete(`/AssessmentQuestion/${assessmentQuestionId}`);
   }
 }
-
 export const assessmentQuestionService = new AssessmentQuestionService();

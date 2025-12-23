@@ -1,5 +1,4 @@
 "use client";
-
 import { Course } from "@/services/courseElementService";
 import {
   courseService,
@@ -10,7 +9,6 @@ import {
 import { SemesterCourse } from "@/services/semesterService";
 import { Alert, App, Form, Input, Modal } from "antd";
 import { useEffect, useState } from "react";
-
 interface CourseCrudModalProps {
   open: boolean;
   semesterId: number;
@@ -19,7 +17,6 @@ interface CourseCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
   open,
   semesterId,
@@ -32,9 +29,7 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
-
   const isEditMode = !!initialData;
-
   useEffect(() => {
     if (open) {
       if (isEditMode) {
@@ -44,7 +39,6 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const handleFinish = async (
     values: CreateCoursePayload | UpdateCoursePayload
   ) => {
@@ -83,7 +77,6 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Course" : "Create New Course"}
@@ -115,20 +108,16 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course name must be at least 2 characters!"));
                 }
-
-
                 if (!isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) => sc.course.name.toLowerCase().trim() === value.toLowerCase().trim()
                   );
                   if (duplicate) {
                     return Promise.reject(
-                      new Error("Đã tồn tại course với tên này trong học kỳ này!")
+                      new Error("A course with this name already exists in this semester!")
                     );
                   }
                 }
-
-
                 if (isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) =>
@@ -137,11 +126,10 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                   );
                   if (duplicate) {
                     return Promise.reject(
-                      new Error("Đã tồn tại course với tên này trong học kỳ này!")
+                      new Error("A course with this name already exists in this semester!")
                     );
                   }
                 }
-
                 return Promise.resolve();
               },
             },
@@ -163,28 +151,22 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course code must be at least 2 characters!"));
                 }
-
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Course code cannot contain spaces!"));
                 }
-
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
-
-
                 if (!isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) => sc.course.code.toLowerCase().trim() === value.toLowerCase().trim()
                   );
                   if (duplicate) {
                     return Promise.reject(
-                      new Error("Đã tồn tại course với mã code này trong học kỳ này!")
+                      new Error("A course with this code already exists in this semester!")
                     );
                   }
                 }
-
-
                 if (isEditMode && existingSemesterCourses) {
                   const duplicate = existingSemesterCourses.find(
                     (sc) =>
@@ -193,11 +175,10 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
                   );
                   if (duplicate) {
                     return Promise.reject(
-                      new Error("Đã tồn tại course với mã code này trong học kỳ này!")
+                      new Error("A course with this code already exists in this semester!")
                     );
                   }
                 }
-
                 return Promise.resolve();
               },
             },
@@ -230,7 +211,6 @@ const CourseCrudModalContent: React.FC<CourseCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const CourseCrudModal: React.FC<CourseCrudModalProps> = (props) => (
   <App>
     <CourseCrudModalContent {...props} />

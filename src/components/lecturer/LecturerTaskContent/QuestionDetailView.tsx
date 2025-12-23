@@ -1,5 +1,4 @@
 "use client";
-
 import { rubricItemService } from "@/services/rubricItemService";
 import { RubricItem } from "@/services/rubricItemService";
 import { AssessmentQuestion, assessmentQuestionService } from "@/services/assessmentQuestionService";
@@ -10,9 +9,7 @@ import { QuestionFormModal } from "./QuestionFormModal";
 import { RubricFormModal } from "./RubricFormModal";
 import { AssignRequestItem } from "@/services/assignRequestService";
 import styles from "./TaskContent.module.css";
-
 const { Title, Text } = Typography;
-
 interface QuestionDetailViewProps {
   question: AssessmentQuestion;
   isEditable: boolean;
@@ -22,7 +19,6 @@ interface QuestionDetailViewProps {
   task?: AssignRequestItem;
   updateStatusToInProgress?: () => Promise<void>;
 }
-
 export const QuestionDetailView = ({
   question,
   isEditable,
@@ -40,9 +36,7 @@ export const QuestionDetailView = ({
     undefined
   );
   const { modal, notification } = App.useApp();
-
   const isRejected = task && Number(task.status) === 3;
-
   const fetchRubrics = async () => {
     setIsLoading(true);
     try {
@@ -58,21 +52,17 @@ export const QuestionDetailView = ({
       setIsLoading(false);
     }
   };
-
   useEffect(() => {
     fetchRubrics();
   }, [question.id]);
-
   const openRubricModal = (rubric?: RubricItem) => {
     setSelectedRubric(rubric);
     setIsRubricModalOpen(true);
   };
-
   const closeRubricModal = () => {
     setIsRubricModalOpen(false);
     setSelectedRubric(undefined);
   };
-
   const handleRubricFinish = async () => {
     closeRubricModal();
     fetchRubrics();
@@ -80,8 +70,6 @@ export const QuestionDetailView = ({
     if (updateStatusToInProgress) {
       await updateStatusToInProgress();
     }
-
-
     const hadComment = !!(question.reviewerComment && question.reviewerComment.trim());
     if (hadComment) {
       try {
@@ -97,17 +85,12 @@ export const QuestionDetailView = ({
           message: "Rubric updated and comment resolved",
           description: "The rubric has been updated and the reviewer comment has been marked as resolved.",
         });
-
         onQuestionChange();
       } catch (error) {
         console.error("Failed to clear comment:", error);
-
       }
     }
-
-
     if (hadComment && task) {
-
       const storageKey = `task-${task.id}-resolved-questions`;
       try {
         const resolvedQuestions = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -119,19 +102,14 @@ export const QuestionDetailView = ({
       } catch (err) {
         console.error("Failed to save to localStorage:", err);
       }
-
-
       if (onResetStatus) {
         console.log("Rubric edit cleared comment, will check and reset status after delay");
-
         await new Promise(resolve => setTimeout(resolve, 1500));
-
         console.log("Calling onResetStatus to check if all comments resolved");
         await onResetStatus();
       }
     }
   };
-
   const handleDeleteRubric = (id: number) => {
     modal.confirm({
       title: "Delete this rubric?",
@@ -149,7 +127,6 @@ export const QuestionDetailView = ({
       },
     });
   };
-
   return (
     <div className={styles.container}>
       <div className={styles.card}>
@@ -232,7 +209,6 @@ export const QuestionDetailView = ({
           </Descriptions>
         </div>
       </div>
-
       <div className={styles.rubricCard}>
         <div className={styles.rubricCardHeader}>
           <Title level={5} className={styles.rubricCardTitle} style={{ margin: 0 }}>Grading Rubrics</Title>
@@ -294,7 +270,6 @@ export const QuestionDetailView = ({
           )}
         </div>
       </div>
-
       <RubricFormModal
         open={isRubricModalOpen}
         onCancel={closeRubricModal}
@@ -304,22 +279,17 @@ export const QuestionDetailView = ({
         questionId={question.id}
         currentRubricsCount={rubrics.length}
       />
-
       <QuestionFormModal
         open={isQuestionModalOpen}
         onCancel={() => setIsQuestionModalOpen(false)}
         onFinish={async () => {
           setIsQuestionModalOpen(false);
-
           const hadComment = !!question.reviewerComment;
           onQuestionChange();
           if (updateStatusToInProgress) {
             await updateStatusToInProgress();
           }
-
-
           if (hadComment && task) {
-
             const storageKey = `task-${task.id}-resolved-questions`;
             try {
               const resolvedQuestions = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -331,13 +301,9 @@ export const QuestionDetailView = ({
             } catch (err) {
               console.error("Failed to save to localStorage:", err);
             }
-
-
             if (onResetStatus) {
               console.log("Question had comment, will check and reset status after delay");
-
               await new Promise(resolve => setTimeout(resolve, 1500));
-
               console.log("Calling onResetStatus to check if all comments resolved");
               await onResetStatus();
             }
@@ -350,4 +316,3 @@ export const QuestionDetailView = ({
     </div>
   );
 };
-

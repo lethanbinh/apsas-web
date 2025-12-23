@@ -1,12 +1,10 @@
 import { apiService } from "./api";
-
 export interface FileTemplate {
   id: number;
   name: string;
   fileUrl: string;
   fileTemplate: number;
 }
-
 export interface QuestionTemplate {
   id: number;
   questionText: string;
@@ -15,7 +13,6 @@ export interface QuestionTemplate {
   score: number;
   rubricCount: number;
 }
-
 export interface PaperTemplate {
   id: number;
   name: string;
@@ -23,7 +20,6 @@ export interface PaperTemplate {
   questionCount: number;
   questions: QuestionTemplate[];
 }
-
 export interface AssessmentTemplate {
   id: number;
   assignRequestId: number;
@@ -45,7 +41,6 @@ export interface AssessmentTemplate {
   papers: PaperTemplate[];
   status?: number;
 }
-
 export interface AssessmentTemplateListResult {
   currentPage: number;
   pageSize: number;
@@ -53,14 +48,12 @@ export interface AssessmentTemplateListResult {
   totalPages: number;
   items: AssessmentTemplate[];
 }
-
 export interface AssessmentTemplateListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentTemplateListResult;
 }
-
 export interface GetAssessmentTemplatesParams {
   lecturerId?: number;
   assignedToHODId?: number;
@@ -69,12 +62,10 @@ export interface GetAssessmentTemplatesParams {
   pageNumber: number;
   pageSize: number;
 }
-
 export interface GetAssessmentTemplatesResponse {
   items: AssessmentTemplate[];
   total: number;
 }
-
 export interface CreateAssessmentTemplatePayload {
   assignRequestId: number;
   templateType: number;
@@ -84,14 +75,12 @@ export interface CreateAssessmentTemplatePayload {
   createdByLecturerId: number;
   assignedToHODId: number;
 }
-
 export interface AssessmentTemplateApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssessmentTemplate;
 }
-
 export interface UpdateAssessmentTemplatePayload {
   templateType: number;
   name: string;
@@ -99,7 +88,6 @@ export interface UpdateAssessmentTemplatePayload {
   startupProject?: string;
   assignedToHODId: number;
 }
-
 export class AssessmentTemplateService {
   async getAssessmentTemplates(
     params: GetAssessmentTemplatesParams
@@ -113,7 +101,6 @@ export class AssessmentTemplateService {
       total: response.result.totalCount,
     };
   }
-
   async createAssessmentTemplate(
     payload: CreateAssessmentTemplatePayload
   ): Promise<AssessmentTemplate> {
@@ -123,7 +110,6 @@ export class AssessmentTemplateService {
     );
     return response.result;
   }
-
   async updateAssessmentTemplate(
     assessmentTemplateId: string | number,
     payload: UpdateAssessmentTemplatePayload
@@ -134,12 +120,10 @@ export class AssessmentTemplateService {
     );
     return response.result;
   }
-
   async deleteAssessmentTemplate(
     assessmentTemplateId: string | number
   ): Promise<void> {
     await apiService.delete(`/AssessmentTemplate/${assessmentTemplateId}`);
   }
 }
-
 export const assessmentTemplateService = new AssessmentTemplateService();

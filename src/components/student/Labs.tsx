@@ -1,5 +1,4 @@
 "use client";
-
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
 import { assignRequestService } from "@/services/assignRequestService";
 import { ClassAssessment, classAssessmentService } from "@/services/classAssessmentService";
@@ -17,14 +16,10 @@ import { queryKeys } from "@/lib/react-query";
 import { handleDownloadAll, AssignmentWithSubmissions } from "./utils/downloadAll";
 import { useStudent } from "@/hooks/useStudent";
 import { submissionService } from "@/services/submissionService";
-
 const { Title, Text } = Typography;
-
-
 function isLab(element: CourseElement): boolean {
   return element.elementType === 1;
 }
-
 function mapCourseElementToLabData(
   element: CourseElement,
   classAssessmentMap: Map<number, ClassAssessment>
@@ -35,9 +30,6 @@ function mapCourseElementToLabData(
   let deadline: string | undefined = undefined;
   let startAt = dayjs().toISOString();
   let assessmentTemplateId: number | undefined;
-
-
-
   try {
     if (classAssessment?.endAt) {
       deadline = classAssessment.endAt;
@@ -46,14 +38,10 @@ function mapCourseElementToLabData(
     }
   } catch (error) {
     console.error("Error parsing deadline:", error);
-
   }
-
-
   if (deadline) {
     const endDate = dayjs(deadline);
     const startDate = dayjs(startAt);
-
     if (now.isBefore(startDate)) {
       status = "Upcoming Lab";
     } else if (now.isAfter(endDate)) {
@@ -64,7 +52,6 @@ function mapCourseElementToLabData(
   } else {
     status = "No Deadline";
   }
-
   return {
     id: element.id.toString(),
     status: status,
@@ -91,25 +78,19 @@ function mapCourseElementToLabData(
     isPublished: classAssessment?.isPublished ?? false,
   };
 }
-
 export default function Labs() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const { message } = App.useApp();
   const { studentId } = useStudent();
-
   useEffect(() => {
       const classId = localStorage.getItem("selectedClassId");
     setSelectedClassId(classId);
   }, []);
-
-
   const { data: classData, isLoading: isLoadingClass } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),
     queryFn: () => classService.getClassById(selectedClassId!),
     enabled: !!selectedClassId,
   });
-
-
   const { data: allElements = [] } = useQuery({
     queryKey: queryKeys.courseElements.list({}),
     queryFn: () => courseElementService.getCourseElements({
@@ -117,8 +98,6 @@ export default function Labs() {
           pageSize: 1000,
     }),
   });
-
-
   const { data: assignRequestResponse } = useQuery({
     queryKey: queryKeys.assignRequests.lists(),
     queryFn: () => assignRequestService.getAssignRequests({
@@ -126,8 +105,6 @@ export default function Labs() {
             pageSize: 1000,
     }),
   });
-
-
   const { data: templateResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({}),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -135,8 +112,6 @@ export default function Labs() {
       pageSize: 1000,
     }),
   });
-
-
   const { data: classAssessmentRes } = useQuery({
     queryKey: queryKeys.classAssessments.byClassId(selectedClassId!),
     queryFn: () => classAssessmentService.getClassAssessments({
@@ -146,59 +121,45 @@ export default function Labs() {
     }),
     enabled: !!selectedClassId,
   });
-
-
   const { approvedTemplateByCourseElementMap, approvedTemplateByIdMap } = useMemo(() => {
     const approvedAssignRequests = (assignRequestResponse?.items || []).filter(ar => ar.status === 5);
     const approvedAssignRequestIds = new Set(approvedAssignRequests.map(ar => ar.id));
-
     const approvedTemplates = (templateResponse?.items || []).filter(t =>
       t.assignRequestId && approvedAssignRequestIds.has(t.assignRequestId)
     );
-
     const approvedTemplateByCourseElementMap = new Map<number, AssessmentTemplate>();
     const approvedTemplateByIdMap = new Map<number, AssessmentTemplate>();
-
           approvedTemplates.forEach(t => {
             if (t.courseElementId) {
               approvedTemplateByCourseElementMap.set(t.courseElementId, t);
             }
             approvedTemplateByIdMap.set(t.id, t);
           });
-
     return { approvedTemplateByCourseElementMap, approvedTemplateByIdMap };
   }, [assignRequestResponse, templateResponse]);
-
-
   const { labs, error } = useMemo(() => {
     if (!classData || !allElements.length) {
       return { labs: [], error: !selectedClassId ? "No class selected. Please select a class first." : null };
     }
-
     const semesterCourseId = parseInt(classData.semesterCourseId, 10);
     const classElements = allElements.filter(
       (el) => el.semesterCourseId === semesterCourseId && isLab(el)
     );
-
     const classAssessmentMap = new Map<number, ClassAssessment>();
     for (const assessment of (classAssessmentRes?.items || [])) {
             if (assessment.courseElementId) {
               classAssessmentMap.set(assessment.courseElementId, assessment);
             }
         }
-
         const mappedLabs = classElements.map((el) => {
           const classAssessment = classAssessmentMap.get(el.id);
           let approvedTemplate: AssessmentTemplate | undefined;
-
           if (classAssessment?.assessmentTemplateId) {
             approvedTemplate = approvedTemplateByIdMap.get(classAssessment.assessmentTemplateId);
           }
-
           if (!approvedTemplate) {
             approvedTemplate = approvedTemplateByCourseElementMap.get(el.id);
           }
-
           if (approvedTemplate) {
             if (classAssessment?.assessmentTemplateId === approvedTemplate.id) {
               return mapCourseElementToLabData(el, classAssessmentMap);
@@ -209,13 +170,9 @@ export default function Labs() {
             return mapCourseElementToLabData(el, new Map());
           }
         });
-
     return { labs: mappedLabs, error: null };
   }, [classData, allElements, classAssessmentRes, approvedTemplateByCourseElementMap, approvedTemplateByIdMap, selectedClassId]);
-
   const isLoading = isLoadingClass && !classData;
-
-
   if (isLoading) {
     return (
       <div className={styles.wrapper}>
@@ -223,7 +180,6 @@ export default function Labs() {
       </div>
     );
   }
-
   if (error) {
     return (
       <div className={styles.wrapper}>
@@ -231,18 +187,15 @@ export default function Labs() {
       </div>
     );
   }
-
   const handleDownloadAllClick = async () => {
     if (!studentId) {
       message.error("Student ID not found");
       return;
     }
-
     const labsWithData: AssignmentWithSubmissions[] = await Promise.all(
       labs.map(async (lab) => {
         let submissions: any[] = [];
         let template = undefined;
-
         if (lab.classAssessmentId) {
           try {
             submissions = await submissionService.getSubmissionList({
@@ -253,7 +206,6 @@ export default function Labs() {
             console.error(`Failed to fetch submissions for lab ${lab.id}:`, err);
           }
         }
-
         if (lab.assessmentTemplateId) {
           try {
             const templatesRes = await assessmentTemplateService.getAssessmentTemplates({
@@ -265,7 +217,6 @@ export default function Labs() {
             console.error(`Failed to fetch template for lab ${lab.id}:`, err);
           }
         }
-
         return {
           assignment: lab,
           template,
@@ -273,11 +224,9 @@ export default function Labs() {
         };
       })
     );
-
     const labsWithSubmissions = labsWithData.filter(item => item.submissions.length > 0);
     handleDownloadAll(labsWithSubmissions, message, true);
   };
-
   return (
     <div className={styles.wrapper}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
@@ -332,4 +281,3 @@ export default function Labs() {
     </div>
   );
 }
-

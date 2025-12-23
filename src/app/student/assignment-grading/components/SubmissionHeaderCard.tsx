@@ -6,16 +6,12 @@ import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import styles from "../page.module.css";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const { Text } = Typography;
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 interface SubmissionHeaderCardProps {
   submission: Submission;
   totalScore: number;
@@ -23,7 +19,6 @@ interface SubmissionHeaderCardProps {
   onBack: () => void;
   onViewExam: () => void;
 }
-
 export function SubmissionHeaderCard({
   submission,
   totalScore,
@@ -34,7 +29,6 @@ export function SubmissionHeaderCard({
   const maxScore = questions.reduce((sum, q) => {
     return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
   }, 0);
-
   return (
     <Card className={styles.headerCard}>
       <Space direction="vertical" style={{ width: "100%" }} size="large">
@@ -48,7 +42,6 @@ export function SubmissionHeaderCard({
             </Button>
           </Space>
         </div>
-
         <Descriptions bordered column={2}>
           <Descriptions.Item label="Submission ID">{submission.id}</Descriptions.Item>
           <Descriptions.Item label="Student Code">{submission.studentCode}</Descriptions.Item>
@@ -71,4 +64,3 @@ export function SubmissionHeaderCard({
     </Card>
   );
 }
-

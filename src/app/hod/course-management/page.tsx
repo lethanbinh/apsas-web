@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Table, Spin, Alert, App, Button, Space, Typography, Select, Input, Modal, Tooltip } from "antd";
 import type { TableProps } from "antd";
@@ -7,10 +6,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { courseService, Course } from "@/services/courseManagementService";
 import { CourseOnlyCrudModal } from "@/components/modals/CourseOnlyCrudModal";
 import { semesterService, Semester } from "@/services/semesterService";
-
 const { Title } = Typography;
-
-
 const isSemesterStarted = (startDate: string): boolean => {
   if (!startDate) return false;
   const semesterStartDate = new Date(
@@ -21,7 +17,6 @@ const isSemesterStarted = (startDate: string): boolean => {
   semesterStartDate.setHours(0, 0, 0, 0);
   return semesterStartDate <= today;
 };
-
 const CourseManagementPageContent = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
@@ -32,7 +27,6 @@ const CourseManagementPageContent = () => {
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState<number | null>(null);
   const [selectedSemesterCourses, setSelectedSemesterCourses] = useState<Course[]>([]);
-
   const [courseSemesterMap, setCourseSemesterMap] = useState<Map<number, number[]>>(new Map());
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; record: Course | null; confirmValue: string }>({
     open: false,
@@ -40,7 +34,6 @@ const CourseManagementPageContent = () => {
     confirmValue: "",
   });
   const { modal, notification } = App.useApp();
-
   const fetchSemesters = useCallback(async () => {
     try {
       const data = await semesterService.getSemesters({
@@ -52,13 +45,9 @@ const CourseManagementPageContent = () => {
       console.error("Failed to fetch semesters:", err);
     }
   }, []);
-
-
   const fetchAllCourseSemesterMapping = useCallback(async (semestersList: Semester[]) => {
     try {
       const newMap = new Map<number, number[]>();
-
-
       for (const semester of semestersList) {
         try {
           const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
@@ -72,13 +61,11 @@ const CourseManagementPageContent = () => {
           console.error(`Failed to fetch semester detail for ${semester.semesterCode}:`, err);
         }
       }
-
       setCourseSemesterMap(newMap);
     } catch (err) {
       console.error("Failed to fetch course-semester mapping:", err);
     }
   }, []);
-
   const fetchCourses = useCallback(async () => {
     try {
       setLoading(true);
@@ -99,7 +86,6 @@ const CourseManagementPageContent = () => {
       setLoading(false);
     }
   }, [notification]);
-
   const fetchSemesterCourses = useCallback(async (semesterId: number) => {
     try {
       setLoading(true);
@@ -108,7 +94,6 @@ const CourseManagementPageContent = () => {
         setLoading(false);
         return;
       }
-
       const semesterDetail = await semesterService.getSemesterPlanDetail(semester.semesterCode);
       const semesterCourses: Course[] = semesterDetail.semesterCourses.map(sc => ({
         ...sc.course,
@@ -117,8 +102,6 @@ const CourseManagementPageContent = () => {
       }));
       setSelectedSemesterCourses(semesterCourses);
       setCourses(semesterCourses);
-
-
       setCourseSemesterMap(prevMap => {
         const newMap = new Map(prevMap);
         semesterCourses.forEach(course => {
@@ -141,20 +124,15 @@ const CourseManagementPageContent = () => {
       setLoading(false);
     }
   }, [semesters, notification]);
-
   useEffect(() => {
     fetchSemesters();
     fetchCourses();
   }, [fetchSemesters, fetchCourses]);
-
-
   useEffect(() => {
     if (semesters.length > 0) {
       fetchAllCourseSemesterMapping(semesters);
     }
-
   }, [semesters.length]);
-
   useEffect(() => {
     if (selectedSemesterId && semesters.length > 0) {
       fetchSemesterCourses(selectedSemesterId);
@@ -163,18 +141,14 @@ const CourseManagementPageContent = () => {
       setSelectedSemesterCourses([]);
     }
   }, [selectedSemesterId, fetchSemesterCourses, allCourses, semesters.length]);
-
   const handleSemesterChange = (value: number | null) => {
     setSelectedSemesterId(value);
   };
-
   const handleOpenCreate = () => {
     setEditingCourse(null);
     setIsModalOpen(true);
   };
-
   const handleOpenEdit = (record: Course) => {
-
     if (!canEditCourse(record)) {
       notification.warning({
         message: "Cannot edit course",
@@ -185,21 +159,16 @@ const CourseManagementPageContent = () => {
     setEditingCourse(record);
     setIsModalOpen(true);
   };
-
   const handleModalCancel = () => {
     setIsModalOpen(false);
     setEditingCourse(null);
   };
-
   const handleModalOk = () => {
     setIsModalOpen(false);
     setEditingCourse(null);
     fetchCourses();
   };
-
-
   const canDeleteCourse = useCallback((course: Course): boolean => {
-
     if (selectedSemesterId) {
       const semester = semesters.find(s => s.id === selectedSemesterId);
       if (semester && isSemesterStarted(semester.startDate)) {
@@ -207,30 +176,19 @@ const CourseManagementPageContent = () => {
       }
       return true;
     }
-
-
     const courseSemesterIds = courseSemesterMap.get(course.id) || [];
     if (courseSemesterIds.length === 0) {
-
       return true;
     }
-
-
     const startedSemesterIds = semesters
       .filter(s => isSemesterStarted(s.startDate))
       .map(s => s.id);
-
-
     const hasStartedSemester = courseSemesterIds.some(semesterId =>
       startedSemesterIds.includes(semesterId)
     );
-
     return !hasStartedSemester;
   }, [selectedSemesterId, semesters, courseSemesterMap]);
-
-
   const canEditCourse = useCallback((course: Course): boolean => {
-
     if (selectedSemesterId) {
       const semester = semesters.find(s => s.id === selectedSemesterId);
       if (semester && isSemesterStarted(semester.startDate)) {
@@ -238,29 +196,19 @@ const CourseManagementPageContent = () => {
       }
       return true;
     }
-
-
     const courseSemesterIds = courseSemesterMap.get(course.id) || [];
     if (courseSemesterIds.length === 0) {
-
       return true;
     }
-
-
     const startedSemesterIds = semesters
       .filter(s => isSemesterStarted(s.startDate))
       .map(s => s.id);
-
-
     const hasStartedSemester = courseSemesterIds.some(semesterId =>
       startedSemesterIds.includes(semesterId)
     );
-
     return !hasStartedSemester;
   }, [selectedSemesterId, semesters, courseSemesterMap]);
-
   const handleDelete = (record: Course) => {
-
     if (!canDeleteCourse(record)) {
       notification.warning({
         message: "Cannot delete course",
@@ -268,14 +216,12 @@ const CourseManagementPageContent = () => {
       });
       return;
     }
-
     setDeleteConfirm({
       open: true,
       record,
       confirmValue: "",
     });
   };
-
   const handleDeleteConfirmCancel = () => {
     setDeleteConfirm({
       open: false,
@@ -283,10 +229,8 @@ const CourseManagementPageContent = () => {
       confirmValue: "",
     });
   };
-
   const handleDeleteConfirmOk = async () => {
     if (!deleteConfirm.record) return;
-
     if (deleteConfirm.confirmValue !== deleteConfirm.record.name) {
       notification.error({
         message: "Confirmation failed",
@@ -294,7 +238,6 @@ const CourseManagementPageContent = () => {
       });
       return;
     }
-
     try {
       await courseService.deleteCourse(deleteConfirm.record.id);
       notification.success({ message: "Course deleted successfully!" });
@@ -312,7 +255,6 @@ const CourseManagementPageContent = () => {
       });
     }
   };
-
   const columns: TableProps<Course>["columns"] = [
     {
       title: "Course Code",
@@ -382,7 +324,6 @@ const CourseManagementPageContent = () => {
       },
     },
   ];
-
   return (
     <div
       style={{
@@ -431,7 +372,6 @@ const CourseManagementPageContent = () => {
           </Button>
         </Space>
       </Space>
-
       {loading && (
         <div style={{ textAlign: "center", padding: "50px" }}>
           <Spin size="large" />
@@ -454,7 +394,6 @@ const CourseManagementPageContent = () => {
           pagination={{ pageSize: 10 }}
         />
       )}
-
       <CourseOnlyCrudModal
         open={isModalOpen}
         initialData={editingCourse}
@@ -464,7 +403,6 @@ const CourseManagementPageContent = () => {
         onCancel={handleModalCancel}
         onOk={handleModalOk}
       />
-
       <Modal
         title="Are you sure you want to delete this course?"
         open={deleteConfirm.open}
@@ -502,7 +440,6 @@ const CourseManagementPageContent = () => {
     </div>
   );
 };
-
 export default function CourseManagementPage() {
   return (
     <App>

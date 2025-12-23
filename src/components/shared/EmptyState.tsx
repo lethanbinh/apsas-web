@@ -2,9 +2,7 @@ import { Button } from "antd";
 import { ArrowLeftOutlined, FileTextOutlined, QuestionCircleOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { useRouter } from "next/navigation";
 import { Typography } from "antd";
-
 const { Title, Text } = Typography;
-
 interface EmptyStateProps {
   title: string;
   description: string;
@@ -12,10 +10,8 @@ interface EmptyStateProps {
   icon?: React.ReactNode;
   compact?: boolean;
 }
-
 export function EmptyState({ title, description, backPath, icon, compact = false }: EmptyStateProps) {
   const router = useRouter();
-
   if (compact) {
     return (
       <div
@@ -68,7 +64,6 @@ export function EmptyState({ title, description, backPath, icon, compact = false
       </div>
     );
   }
-
   return (
     <div
       style={{
@@ -142,8 +137,6 @@ export function EmptyState({ title, description, backPath, icon, compact = false
     </div>
   );
 }
-
-// Predefined empty states for common cases
 export function EmptyTemplateState({ backPath }: { backPath: string }) {
   return (
     <EmptyState
@@ -154,7 +147,6 @@ export function EmptyTemplateState({ backPath }: { backPath: string }) {
     />
   );
 }
-
 export function EmptyPapersState({ backPath }: { backPath: string }) {
   return (
     <EmptyState
@@ -165,7 +157,6 @@ export function EmptyPapersState({ backPath }: { backPath: string }) {
     />
   );
 }
-
 export function EmptyQuestionsState() {
   return (
     <div
@@ -216,7 +207,6 @@ export function EmptyQuestionsState() {
     </div>
   );
 }
-
 export function EmptyRubricsState() {
   return (
     <div
@@ -267,4 +257,3 @@ export function EmptyRubricsState() {
     </div>
   );
 }
-

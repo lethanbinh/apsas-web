@@ -1,5 +1,4 @@
 "use client";
-
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { queryKeys } from "@/lib/react-query";
 import { adminService } from "@/services/adminService";
@@ -25,10 +24,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import styles from "../dashboard/DashboardAdmin.module.css";
-
 const { Title } = Typography;
 const { RangePicker } = DatePicker;
-
 const COLORS = {
   blue: "#2563EB",
   green: "#10B981",
@@ -36,7 +33,6 @@ const COLORS = {
   orange: "#F59E0B",
   red: "#EF4444",
 };
-
 const AssessmentsPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -44,28 +40,22 @@ const AssessmentsPage = () => {
   const [selectedAssessmentStatus, setSelectedAssessmentStatus] = useState<number | undefined>(undefined);
   const [templateDateRange, setTemplateDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
   const [assessmentDateRange, setAssessmentDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
   const { data: templatesRes, isLoading: templatesLoading } = useQuery({
     queryKey: ['adminTemplates'],
     queryFn: () => adminService.getAssessmentTemplateList(1, 1000),
   });
-
   const { data: assessmentsRes, isLoading: assessmentsLoading } = useQuery({
     queryKey: ['adminAssessments'],
     queryFn: () => classAssessmentService.getClassAssessments({ pageNumber: 1, pageSize: 1000 }),
   });
-
   const templates = templatesRes?.items || [];
   const assessments = assessmentsRes?.items || [];
-
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ['adminTemplates'] });
     queryClient.invalidateQueries({ queryKey: ['adminAssessments'] });
   };
-
   const filteredTemplates = useMemo(() => {
     let filtered = [...templates];
-
     if (selectedTemplateType) {
       if (selectedTemplateType === "lab") {
         const labKeywords = ["lab", "laboratory", "thực hành"];
@@ -91,7 +81,6 @@ const AssessmentsPage = () => {
         });
       }
     }
-
     if (templateDateRange && templateDateRange[0] && templateDateRange[1]) {
       filtered = filtered.filter((tpl) => {
         if (!tpl.createdAt) return false;
@@ -104,17 +93,13 @@ const AssessmentsPage = () => {
         );
       });
     }
-
     return filtered;
   }, [templates, selectedTemplateType, templateDateRange?.[0]?.valueOf(), templateDateRange?.[1]?.valueOf()]);
-
   const filteredAssessments = useMemo(() => {
     let filtered = [...assessments];
-
     if (selectedAssessmentStatus !== undefined) {
       filtered = filtered.filter((ass) => ass.status === selectedAssessmentStatus);
     }
-
     if (assessmentDateRange && assessmentDateRange[0] && assessmentDateRange[1]) {
       filtered = filtered.filter((ass) => {
         const startAt = dayjs(ass.startAt);
@@ -127,22 +112,15 @@ const AssessmentsPage = () => {
         );
       });
     }
-
     return filtered;
   }, [assessments, selectedAssessmentStatus, assessmentDateRange?.[0]?.valueOf(), assessmentDateRange?.[1]?.valueOf()]);
-
   const assessmentTypeData = useMemo(() => {
     const data: Record<string, number> = {};
-    
-    // Create a map from template ID to template for quick lookup
     const templateMap = new Map(templates.map(t => [t.id, t]));
-    
     filteredAssessments.forEach((ass) => {
       if (!ass.assessmentTemplateId) return;
-      
       const template = templateMap.get(ass.assessmentTemplateId);
       if (!template) return;
-      
       let type: string;
       if (isPracticalExamTemplate(template)) {
         type = "Practical Exam";
@@ -151,12 +129,10 @@ const AssessmentsPage = () => {
       } else {
         type = "Assignment";
       }
-      
       data[type] = (data[type] || 0) + 1;
     });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
   }, [filteredAssessments, templates]);
-
   const templateColumns = [
     {
       title: "Template Name",
@@ -190,7 +166,6 @@ const AssessmentsPage = () => {
       render: (date: string) => dayjs(date).format("YYYY-MM-DD"),
     },
   ];
-
   const assessmentColumns = [
     {
       title: "Assessment Name",
@@ -240,7 +215,6 @@ const AssessmentsPage = () => {
       render: (count: string) => parseInt(count || "0", 10),
     },
   ];
-
   return (
     <>
       <QueryParamsHandler />
@@ -272,7 +246,6 @@ const AssessmentsPage = () => {
             Refresh
           </Button>
         </div>
-
         <Card>
           <Title level={5} style={{ marginBottom: 16 }}>Filters</Title>
           <Space size="large" wrap>
@@ -329,7 +302,6 @@ const AssessmentsPage = () => {
             </Space>
           </Space>
         </Card>
-
         <Card title="Assessment Type Distribution" loading={assessmentsLoading} style={{ marginBottom: 24 }}>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -354,7 +326,6 @@ const AssessmentsPage = () => {
             </PieChart>
           </ResponsiveContainer>
         </Card>
-
         <Card
           title={`Assessment Templates (${filteredTemplates.length} of ${templates.length})`}
           loading={templatesLoading}
@@ -368,7 +339,6 @@ const AssessmentsPage = () => {
             scroll={{ x: 1000 }}
           />
         </Card>
-
         <Card
           title={`Class Assessments (${filteredAssessments.length} of ${assessments.length})`}
           loading={assessmentsLoading}
@@ -385,6 +355,4 @@ const AssessmentsPage = () => {
     </>
   );
 };
-
 export default AssessmentsPage;
-

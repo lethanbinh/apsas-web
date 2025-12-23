@@ -1,5 +1,4 @@
 "use client";
-
 import { useAuth } from "@/hooks/useAuth";
 import { queryKeys } from "@/lib/react-query";
 import { AssessmentTemplate, assessmentTemplateService } from "@/services/assessmentTemplateService";
@@ -20,20 +19,14 @@ import {
   Upload
 } from "antd";
 import { useEffect, useMemo, useState } from "react";
-
 const { Text } = Typography;
-
-
-
 function isPracticalExamTemplate(
   template: AssessmentTemplate,
   courseElementsMap: Map<number, CourseElement>
 ): boolean {
-  // PE (Practical Exam) has courseElement.elementType === 2
   const courseElement = courseElementsMap.get(template.courseElementId);
   return courseElement?.elementType === 2;
 }
-
 interface CreateGradingGroupModalProps {
   open: boolean;
   onCancel: () => void;
@@ -44,7 +37,6 @@ interface CreateGradingGroupModalProps {
   assessmentTemplatesMap?: Map<number, AssessmentTemplate>;
   courseElementsMap?: Map<number, CourseElement>;
 }
-
 export const CreateGradingGroupModal: React.FC<
   CreateGradingGroupModalProps
 > = ({
@@ -63,18 +55,12 @@ export const CreateGradingGroupModal: React.FC<
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectedSemesterCode, setSelectedSemesterCode] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
-
-
   const { data: semesterDetail, isLoading: loadingCourses } = useQuery({
     queryKey: ['semesterPlanDetail', selectedSemesterCode],
     queryFn: () => semesterService.getSemesterPlanDetail(selectedSemesterCode!),
     enabled: !!selectedSemesterCode && open,
   });
-
   const courses = semesterDetail?.semesterCourses || [];
-
-
-  // Fetch all courseElements for filtering templates (not just by semester)
   const { data: allCourseElementsRes = [] } = useQuery({
     queryKey: ['courseElements', 'all'],
     queryFn: () => courseElementService.getCourseElements({
@@ -83,7 +69,6 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: open,
   });
-
   const { data: courseElementsRes = [] } = useQuery({
     queryKey: ['courseElements', 'bySemester', selectedSemesterCode],
     queryFn: () => courseElementService.getCourseElements({
@@ -93,18 +78,12 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: !!selectedSemesterCode && open,
   });
-
-  // Create a map of all course elements for filtering templates
   const allCourseElementsMap = useMemo(() => {
     const map = new Map<number, CourseElement>();
-    // Add courseElements from props (if available)
     courseElementsMap.forEach((ce, id) => map.set(id, ce));
-    // Add courseElements from all courseElements query (for filtering)
     allCourseElementsRes.forEach(ce => map.set(ce.id, ce));
     return map;
   }, [courseElementsMap, allCourseElementsRes]);
-
-
   const { data: templatesResponse } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => assessmentTemplateService.getAssessmentTemplates({
@@ -113,15 +92,11 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: open,
   });
-
-
   const assessmentTemplates = useMemo(() => {
     if (!templatesResponse?.items) return [];
-    // Filter by courseElement.elementType === 2 (PE)
     let peTemplates = templatesResponse.items.filter(template =>
       isPracticalExamTemplate(template, allCourseElementsMap)
     );
-
     if (selectedCourseId && selectedSemesterCode) {
       const courseElementIds = courseElementsRes
         .filter(ce => ce.semesterCourse?.courseId === selectedCourseId)
@@ -130,13 +105,10 @@ export const CreateGradingGroupModal: React.FC<
         courseElementIds.includes(template.courseElementId)
       );
     }
-
     return peTemplates;
   }, [templatesResponse, selectedCourseId, selectedSemesterCode, courseElementsRes, allCourseElementsMap]);
   const { message: messageApi } = App.useApp();
   const { user } = useAuth();
-
-
   const { data: allSemesters = [] } = useQuery({
     queryKey: queryKeys.semesters.list({ pageNumber: 1, pageSize: 1000 }),
     queryFn: () => semesterService.getSemesters({
@@ -145,28 +117,21 @@ export const CreateGradingGroupModal: React.FC<
     }),
     enabled: open,
   });
-
-
   const semesters = useMemo(() => {
     const now = new Date();
     const filtered = allSemesters.filter((sem) => {
       const startDate = new Date(sem.startDate.endsWith("Z") ? sem.startDate : sem.startDate + "Z");
-      return startDate <= now; // Only include past and current semesters
+      return startDate <= now;
     });
-    // Sort by startDate descending (newest first)
     return filtered.sort((a, b) => {
       const dateA = new Date(a.startDate.endsWith("Z") ? a.startDate : a.startDate + "Z").getTime();
       const dateB = new Date(b.startDate.endsWith("Z") ? b.startDate : b.startDate + "Z").getTime();
       return dateB - dateA;
     });
   }, [allSemesters]);
-
-
   const createGradingGroupMutation = useMutation({
     mutationFn: async (values: any) => {
-
       let currentExaminerId: number | null = null;
-
       if (user && user.id) {
         try {
           const examiners = await examinerService.getExaminerList();
@@ -174,7 +139,6 @@ export const CreateGradingGroupModal: React.FC<
           const matchingExaminer = examiners.find(
             (ex) => ex.accountId === String(currentUserAccountId)
           );
-
           console.log(examiners, currentUserAccountId);
           if (matchingExaminer) {
             currentExaminerId = Number(matchingExaminer.examinerId);
@@ -183,15 +147,11 @@ export const CreateGradingGroupModal: React.FC<
           console.error("Failed to fetch examiner list:", err);
         }
       }
-
       if (!currentExaminerId) {
         throw new Error("Examiner information not found. Please contact administrator.");
       }
-
-
       if (values.lecturerId && values.assessmentTemplateId) {
         const newSemesterCode = getSemesterCodeForTemplate(values.assessmentTemplateId);
-
         if (newSemesterCode) {
           const duplicateGroup = existingGroups.find(group => {
             if (group.lecturerId !== Number(values.lecturerId) || group.assessmentTemplateId !== values.assessmentTemplateId) {
@@ -200,21 +160,16 @@ export const CreateGradingGroupModal: React.FC<
             const existingSemester = gradingGroupToSemesterMap.get(group.id);
             return existingSemester === newSemesterCode;
           });
-
           if (duplicateGroup) {
             throw new Error(`This teacher has already been assigned this assessment template for semester ${newSemesterCode}!`);
           }
         }
       }
-
-
       const group = await gradingGroupService.createGradingGroup({
         lecturerId: values.lecturerId,
         assessmentTemplateId: values.assessmentTemplateId || null,
         createdByExaminerId: currentExaminerId,
       });
-
-
       if (fileList.length > 0) {
         const files: File[] = [];
         for (const fileItem of fileList) {
@@ -223,18 +178,15 @@ export const CreateGradingGroupModal: React.FC<
             files.push(file);
           }
         }
-
         if (files.length > 0) {
           await gradingGroupService.addSubmissionsByFile(group.id, {
             Files: files,
           });
         }
       }
-
       return group;
     },
     onSuccess: (group) => {
-
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.all });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroups'] });
       queryClient.invalidateQueries({ queryKey: ['submissions', 'byGradingGroup'] });
@@ -242,7 +194,6 @@ export const CreateGradingGroupModal: React.FC<
       queryClient.invalidateQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
       messageApi.success("Teacher assigned successfully!");
       onOk();
-
       setTimeout(() => {
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.all });
         queryClient.refetchQueries({ queryKey: queryKeys.grading.groups.detail(group.id) });
@@ -258,7 +209,6 @@ export const CreateGradingGroupModal: React.FC<
       messageApi.error(errorMsg);
     },
   });
-
   useEffect(() => {
     if (open) {
       form.resetFields();
@@ -268,62 +218,45 @@ export const CreateGradingGroupModal: React.FC<
       setSelectedCourseId(null);
     }
   }, [open, form]);
-
-
   const getSemesterCodeForTemplate = (templateId: number): string | null => {
     const template = assessmentTemplatesMap.get(templateId);
     if (!template) return null;
-
     const courseElement = courseElementsMap.get(template.courseElementId);
     return courseElement?.semesterCourse?.semester?.semesterCode || null;
   };
-
-
   const beforeUploadZip: UploadProps["beforeUpload"] = (file) => {
     const fileName = file.name.toLowerCase();
     const isZipExtension = fileName.endsWith(".zip");
-
     if (!isZipExtension) {
       messageApi.error("Only ZIP files are accepted! Please select a file with .zip extension");
       return Upload.LIST_IGNORE;
     }
-
     const isLt100M = file.size / 1024 / 1024 < 100;
     if (!isLt100M) {
       messageApi.error("File must be smaller than 100MB!");
       return Upload.LIST_IGNORE;
     }
-
     return false;
   };
-
-
   const handleFileChange: UploadProps["onChange"] = (info) => {
-
     const validFiles = info.fileList.filter(file => {
       if (file.status === 'error') return false;
       if (!file.name.toLowerCase().endsWith('.zip')) return false;
       return true;
     });
-
     setFileList(validFiles);
   };
-
-
   const handleFinish = async (values: any) => {
     setError(null);
     createGradingGroupMutation.mutate(values);
   };
-
   const isLoading = createGradingGroupMutation.isPending;
-
   const handleCancel = () => {
     form.resetFields();
     setFileList([]);
     setError(null);
     onCancel();
   };
-
   return (
     <Modal
       title="Assign Teacher"
@@ -347,7 +280,6 @@ export const CreateGradingGroupModal: React.FC<
             onClose={() => setError(null)}
           />
         )}
-
         <Form.Item
           name="lecturerId"
           label="Select Teacher"
@@ -365,7 +297,6 @@ export const CreateGradingGroupModal: React.FC<
             }))}
           />
         </Form.Item>
-
         <Form.Item
           name="semesterCode"
           label="Semester"
@@ -389,7 +320,6 @@ export const CreateGradingGroupModal: React.FC<
             }))}
           />
         </Form.Item>
-
         <Form.Item
           name="courseId"
           label="Course"
@@ -414,7 +344,6 @@ export const CreateGradingGroupModal: React.FC<
             }))}
           />
         </Form.Item>
-
         <Form.Item
           name="assessmentTemplateId"
           label="Assessment Template"
@@ -439,4 +368,3 @@ export const CreateGradingGroupModal: React.FC<
     </Modal>
   );
 };
-

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
@@ -12,29 +11,24 @@ import { logout } from "@/store/slices/authSlice";
 import { useAuth } from "@/hooks/useAuth";
 import { useSidebar } from "./SidebarContext";
 import styles from "./HeaderAdmin.module.css";
-
 const AvatarPlaceholder = () => (
   <div className={styles.avatarPlaceholder}>
     <UserOutlined className={styles.userIcon} />
   </div>
 );
-
 export const HeaderAdmin: React.FC = () => {
   const router = useRouter();
   const dispatch = useDispatch();
   const { user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const { toggle: toggleSidebar } = useSidebar();
-
   useEffect(() => {
     setMounted(true);
   }, []);
-
   const handleLogout = () => {
     dispatch(logout());
     router.push("/login");
   };
-
   const userMenuItems: MenuProps["items"] = [
     {
       key: "profile",
@@ -48,7 +42,6 @@ export const HeaderAdmin: React.FC = () => {
       onClick: handleLogout,
     },
   ];
-
   return (
     <header className={styles.headerRoot}>
       <div className={styles.headerLeftGroup}>
@@ -65,7 +58,6 @@ export const HeaderAdmin: React.FC = () => {
           <LogoComponent />
         </Link>
       </div>
-
       <Dropdown
         menu={{ items: userMenuItems }}
         trigger={["click"]}
@@ -74,7 +66,6 @@ export const HeaderAdmin: React.FC = () => {
       >
         <div className={styles.userGroup}>
           <AvatarPlaceholder />
-
           <span className={styles.userName}>
             {mounted && user?.fullName ? user.fullName : "User"}
             <DownOutlined className={styles.downArrowIcon} />
@@ -84,5 +75,4 @@ export const HeaderAdmin: React.FC = () => {
     </header>
   );
 };
-
 export default HeaderAdmin;

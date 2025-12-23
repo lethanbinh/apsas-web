@@ -1,5 +1,4 @@
 "use client";
-
 import { useQueryClient as useCustomQueryClient } from "@/hooks/useQueryClient";
 import { queryKeys } from "@/lib/react-query";
 import {
@@ -46,7 +45,6 @@ import { downloadTemplate, exportTemplate } from "./LecturerTaskContent/utils/te
 import { importTemplate } from "./LecturerTaskContent/utils/templateImportUtils";
 import styles from "./Tasks.module.css";
 import "./TasksGlobal.css";
-
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 export const LecturerTaskContent = ({
@@ -59,7 +57,6 @@ export const LecturerTaskContent = ({
   const queryClient = useCustomQueryClient();
   const [template, setTemplate] = useState<AssessmentTemplate | null>(null);
   const [selectedKey, setSelectedKey] = useState<string>("template-details");
-
   const [isPaperModalOpen, setIsPaperModalOpen] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
   const [paperForNewQuestion, setPaperForNewQuestion] = useState<
@@ -69,17 +66,12 @@ export const LecturerTaskContent = ({
   const [papers, setPapers] = useState<AssessmentPaper[]>([]);
   const [allQuestions, setAllQuestions] = useState<{ [paperId: number]: AssessmentQuestion[] }>({});
   const [files, setFiles] = useState<AssessmentFile[]>([]);
-
   const { modal, notification } = App.useApp();
-
   const [importFileListForNewTemplate, setImportFileListForNewTemplate] = useState<UploadFile[]>([]);
   const [isDatabaseUploadModalOpen, setIsDatabaseUploadModalOpen] = useState(false);
   const [isPostmanUploadModalOpen, setIsPostmanUploadModalOpen] = useState(false);
   const [databaseUploadFileList, setDatabaseUploadFileList] = useState<UploadFile[]>([]);
   const [postmanUploadFileList, setPostmanUploadFileList] = useState<UploadFile[]>([]);
-
-  // Editable when status is PENDING (1), REJECTED (3), or IN_PROGRESS (4)
-  // Not editable when ACCEPTED (2) or COMPLETED (5)
   const isEditable = [
     AssignRequestStatus.PENDING,
     AssignRequestStatus.REJECTED,
@@ -87,7 +79,6 @@ export const LecturerTaskContent = ({
   ].includes(Number(task.status));
   const isRejected = Number(task.status) === AssignRequestStatus.REJECTED;
   const isCompleted = Number(task.status) === AssignRequestStatus.COMPLETED;
-
   const fetchAllData = async (templateId: number) => {
     try {
       const paperResponse = await assessmentPaperService.getAssessmentPapers({
@@ -96,7 +87,6 @@ export const LecturerTaskContent = ({
         pageSize: 100,
       });
       setPapers(paperResponse.items);
-
       const questionsMap: { [paperId: number]: AssessmentQuestion[] } = {};
       for (const paper of paperResponse.items) {
         const questionResponse =
@@ -105,31 +95,24 @@ export const LecturerTaskContent = ({
             pageNumber: 1,
             pageSize: 100,
           });
-
         const sortedQuestions = [...questionResponse.items].sort((a, b) =>
           (a.questionNumber || 0) - (b.questionNumber || 0)
         );
         questionsMap[paper.id] = sortedQuestions;
       }
       setAllQuestions(questionsMap);
-
-
       if (isRejected) {
         try {
           const initialKey = `task-${task.id}-initial-commented-questions`;
           const existingInitial = localStorage.getItem(initialKey);
-
-
           if (!existingInitial) {
             const allQuestionsFlat: AssessmentQuestion[] = [];
             Object.values(questionsMap).forEach(questions => {
               allQuestionsFlat.push(...questions);
             });
-
             const questionsWithComments = allQuestionsFlat
               .filter(q => q.reviewerComment && q.reviewerComment.trim())
               .map(q => q.id);
-
             if (questionsWithComments.length > 0) {
               localStorage.setItem(initialKey, JSON.stringify(questionsWithComments));
               console.log("Initialized localStorage with commented questions:", questionsWithComments);
@@ -139,7 +122,6 @@ export const LecturerTaskContent = ({
           console.error("Failed to initialize localStorage:", err);
         }
       }
-
       const fileResponse = await assessmentFileService.getFilesForTemplate({
         assessmentTemplateId: templateId,
         pageNumber: 1,
@@ -150,7 +132,6 @@ export const LecturerTaskContent = ({
       console.error("Failed to fetch all data:", error);
     }
   };
-
   const { data: templatesResponse, isLoading: isLoadingTemplates, refetch: refetchTemplates } = useQuery({
     queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
     queryFn: async () => {
@@ -162,10 +143,8 @@ export const LecturerTaskContent = ({
       return response.items.filter((t) => t.courseElementId === task.courseElementId);
     },
   });
-
   const templates = templatesResponse || [];
   const isLoading = isLoadingTemplates;
-
   const templateOperations = useTemplateOperations({
     task,
     lecturerId,
@@ -176,7 +155,6 @@ export const LecturerTaskContent = ({
     allQuestions,
     templateId: template?.id || null,
   });
-
   const {
     newTemplateName,
     setNewTemplateName,
@@ -201,7 +179,6 @@ export const LecturerTaskContent = ({
     handleDeleteTemplate,
     updateStatusToInProgress,
   } = templateOperations;
-
   const { refreshPapers, refreshQuestions, refreshFiles } = useDataRefresh({
     templateId: template?.id || null,
     allQuestions,
@@ -210,7 +187,6 @@ export const LecturerTaskContent = ({
     setFiles,
     resetStatusIfRejected,
   });
-
   useEffect(() => {
     if (templates.length > 0 && !template) {
       const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
@@ -222,24 +198,18 @@ export const LecturerTaskContent = ({
         fetchAllData(templates[0].id);
       }
     }
-
   }, [templates, task.id]);
-
   useEffect(() => {
     refetchTemplates();
   }, [task.id, task.courseElementId, lecturerId, refetchTemplates]);
-
   useEffect(() => {
     const handleTemplateChange = async () => {
       await new Promise(resolve => setTimeout(resolve, 200));
-
       queryClient.invalidateQueries({
         queryKey: queryKeys.assessmentTemplates.list({ lecturerId, courseElementId: task.courseElementId }),
       });
-
       const result = await refetchTemplates();
       const updatedTemplates = result.data || [];
-
       if (template && !updatedTemplates.find((t) => t.id === template.id)) {
         setTemplate(null);
         setPapers([]);
@@ -250,14 +220,11 @@ export const LecturerTaskContent = ({
         await fetchAllData(template.id);
       }
     };
-
     window.addEventListener('assessmentTemplatesChanged', handleTemplateChange);
-
     return () => {
       window.removeEventListener('assessmentTemplatesChanged', handleTemplateChange);
     };
   }, [refetchTemplates, template, task.courseElementId, lecturerId, queryClient, fetchAllData]);
-
   const handleTemplateChange = async (templateId: number) => {
     const selectedTemplate = templates.find((t) => t.id === templateId);
     if (selectedTemplate) {
@@ -266,7 +233,6 @@ export const LecturerTaskContent = ({
       await fetchAllData(selectedTemplate.id);
     }
   };
-
   const handleDatabaseUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
     setDatabaseFileName(values.name);
     setDatabaseName(values.databaseName || "");
@@ -282,7 +248,6 @@ export const LecturerTaskContent = ({
     setDatabaseUploadFileList([]);
     notification.success({ message: "Database file selected successfully" });
   };
-
   const handlePostmanUploadViaModal = (values: { name: string; databaseName?: string; file: File }) => {
     setPostmanFileName(values.name);
     const uploadFile: UploadFile = {
@@ -297,15 +262,12 @@ export const LecturerTaskContent = ({
     setPostmanUploadFileList([]);
     notification.success({ message: "Postman file selected successfully" });
   };
-
   useEffect(() => {
     if (newTemplateType !== 1) {
       setDatabaseFileList([]);
       setPostmanFileList([]);
     }
   }, [newTemplateType]);
-
-
   const handleDownloadTemplate = async (templateToDownload?: AssessmentTemplate | null) => {
     try {
       await downloadTemplate({
@@ -319,7 +281,6 @@ export const LecturerTaskContent = ({
     } catch (error) {
     }
   };
-
   const handleImportTemplate = async (file: File, existingTemplate?: AssessmentTemplate | null) => {
     await importTemplate({
       file,
@@ -335,8 +296,6 @@ export const LecturerTaskContent = ({
       updateStatusToInProgress,
     });
   };
-
-
   const handleExport = async () => {
     await exportTemplate({
       template,
@@ -345,17 +304,14 @@ export const LecturerTaskContent = ({
       notification,
     });
   };
-
   const openAddQuestionModal = (paperId: number) => {
     setPaperForNewQuestion(paperId);
     setIsQuestionModalOpen(true);
   };
-
   const openEditPaperModal = (paper: AssessmentPaper) => {
     setPaperToEdit(paper);
     setIsPaperModalOpen(true);
   };
-
   const handleDeletePaper = async (paper: AssessmentPaper) => {
     modal.confirm({
       title: `Delete paper: ${paper.name}?`,
@@ -375,7 +331,6 @@ export const LecturerTaskContent = ({
       },
     });
   };
-
   const handleDeleteQuestion = (question: AssessmentQuestion) => {
     modal.confirm({
       title: `Delete this question?`,
@@ -395,19 +350,13 @@ export const LecturerTaskContent = ({
       },
     });
   };
-
-
   const refreshTemplate = async (shouldResetStatus = false) => {
     await refetchTemplates();
-
     if (shouldResetStatus) {
       await resetStatusIfRejected();
     }
   };
-
   const isCurrentTemplateEditable = template?.assignRequestId === task.id && isEditable;
-
-
   if (isLoading) {
     return (
       <div style={{ padding: 40, textAlign: "center" }}>
@@ -415,7 +364,6 @@ export const LecturerTaskContent = ({
       </div>
     );
   }
-
   return (
     <div className={`${styles["task-content"]} ${styles["nested-content"]}`}>
       {isRejected && (
@@ -432,7 +380,6 @@ export const LecturerTaskContent = ({
           (() => {
             const taskTemplate = templates.find((t) => t.assignRequestId === task.id);
             const otherTemplates = templates.filter((t) => t.assignRequestId !== task.id);
-
             if (otherTemplates.length > 0 && !isRejected && !taskTemplate) {
               return (
                 <Card title="Select Existing Template">
@@ -602,8 +549,8 @@ export const LecturerTaskContent = ({
                       type="primary"
                       icon={<PlusOutlined />}
                       onClick={() => setIsPaperModalOpen(true)}
-                      style={{ 
-                        width: "100%", 
+                      style={{
+                        width: "100%",
                         height: 44,
                         borderRadius: 10,
                         fontWeight: 600,
@@ -622,7 +569,6 @@ export const LecturerTaskContent = ({
                     />
                   )}
                 </div>
-
                 <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
                   <TaskSiderMenu
                     selectedKey={selectedKey}
@@ -637,7 +583,6 @@ export const LecturerTaskContent = ({
                   />
                 </div>
               </Sider>
-
               <Content
                 style={{
                   background: "#ffffff",
@@ -682,14 +627,11 @@ export const LecturerTaskContent = ({
                 onResetStatus={resetStatusIfRejected}
                 updateStatusToInProgress={updateStatusToInProgress}
                 onConfirmTemplateCreation={async () => {
-                  // Validation: Check total score of all questions and rubrics
                   try {
-                    // Get all questions from all papers
                     const allQuestionsFlat: AssessmentQuestion[] = [];
                     Object.values(allQuestions).forEach(questions => {
                       allQuestionsFlat.push(...questions);
                     });
-
                     if (allQuestionsFlat.length === 0) {
                       notification.error({
                         message: "Validation Failed",
@@ -697,10 +639,7 @@ export const LecturerTaskContent = ({
                       });
                       return;
                     }
-
-                    // Calculate total score of all questions
                     const totalQuestionScore = allQuestionsFlat.reduce((sum, q) => sum + (q.score || 0), 0);
-                    
                     if (Math.abs(totalQuestionScore - 10) > 0.01) {
                       notification.error({
                         message: "Validation Failed",
@@ -708,10 +647,7 @@ export const LecturerTaskContent = ({
                       });
                       return;
                     }
-
-                    // Validate each question: sum of rubrics must equal question score
                     const validationErrors: string[] = [];
-                    
                     for (const question of allQuestionsFlat) {
                       try {
                         const rubricsResponse = await rubricItemService.getRubricsForQuestion({
@@ -719,10 +655,8 @@ export const LecturerTaskContent = ({
                           pageNumber: 1,
                           pageSize: 100,
                         });
-                        
                         const totalRubricScore = rubricsResponse.items.reduce((sum, r) => sum + (r.score || 0), 0);
                         const questionScore = question.score || 0;
-                        
                         if (Math.abs(totalRubricScore - questionScore) > 0.01) {
                           validationErrors.push(
                             `Question ${question.questionNumber || question.id}: Total rubric score (${totalRubricScore.toFixed(2)}) does not equal question score (${questionScore.toFixed(2)})`
@@ -735,7 +669,6 @@ export const LecturerTaskContent = ({
                         );
                       }
                     }
-
                     if (validationErrors.length > 0) {
                       notification.error({
                         message: "Validation Failed",
@@ -744,8 +677,6 @@ export const LecturerTaskContent = ({
                       });
                       return;
                     }
-
-                    // All validations passed, show confirmation modal
                     modal.confirm({
                       title: "Confirm Template Creation",
                       content: "Once you confirm template creation, the content cannot be edited. Are you sure you want to proceed?",
@@ -760,7 +691,7 @@ export const LecturerTaskContent = ({
                             assignedLecturerId: task.assignedLecturerId,
                             assignedByHODId: task.assignedByHODId,
                             assignedApproverLecturerId: task.assignedApproverLecturerId ?? 0,
-                            status: 2, // ACCEPTED
+                            status: 2,
                             assignedAt: task.assignedAt,
                           });
                           await queryClient.invalidateQueries({
@@ -792,7 +723,6 @@ export const LecturerTaskContent = ({
               </Content>
             </Layout>
           </div>
-
           {}
           <PaperFormModal
             open={isPaperModalOpen}

@@ -1,12 +1,9 @@
-
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginCredentials, RegisterData } from '@/types';
 import { authService } from '@/services/authService';
 import { setCookie, deleteCookie } from '@/lib/utils/cookie';
 import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/storage';
 import { clearSessionTimeout } from '@/lib/utils/sessionTimeout';
-
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -14,11 +11,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 }
-
-
-
 const getInitialState = (): AuthState => {
-
   if (typeof window === 'undefined') {
     return {
       user: null,
@@ -28,11 +21,8 @@ const getInitialState = (): AuthState => {
       error: null,
     };
   }
-
-
   const token = getStorageItem('auth_token');
   const userDataStr = getStorageItem('user_data');
-
   if (token && userDataStr) {
     try {
       const user = JSON.parse(userDataStr);
@@ -47,7 +37,6 @@ const getInitialState = (): AuthState => {
       console.error('Failed to parse user data from sessionStorage:', error);
     }
   }
-
   return {
     user: null,
     token: null,
@@ -56,11 +45,7 @@ const getInitialState = (): AuthState => {
     error: null,
   };
 };
-
 const initialState: AuthState = getInitialState();
-
-
-
 const decodeJWT = (token: string): any => {
   try {
     const base64Url = token.split('.')[1];
@@ -74,17 +59,13 @@ const decodeJWT = (token: string): any => {
     return null;
   }
 };
-
 export const loginUser = createAsyncThunk(
   'Auth/login',
   async (credentials: LoginCredentials, { rejectWithValue }) => {
     try {
       const response = await authService.login(credentials);
       console.log('Login response:', response);
-
-
       let token;
-
       if (response.result) {
         token = response.result.token;
         console.log('Extracted token from result wrapper');
@@ -92,26 +73,18 @@ export const loginUser = createAsyncThunk(
         token = response.token;
         console.log('Extracted token from direct format');
       }
-
       console.log('Token:', token);
-
       if (!token) {
         throw new Error('No token in response');
       }
-
-
       if (typeof window !== 'undefined') {
         setStorageItem('auth_token', token);
         setCookie('auth_token', token);
       }
       console.log('Token saved to sessionStorage and session cookie');
-
-
       const decoded = decodeJWT(token);
       console.log('Decoded JWT:', decoded);
-
       if (decoded) {
-
         const userId = decoded.nameid || decoded.sub;
         const userInfo = {
           id: parseInt(userId),
@@ -136,54 +109,38 @@ export const loginUser = createAsyncThunk(
             : decoded.role === 'examiner' ? 4
             : 2,
         };
-
         console.log('👤 User info from JWT:', userInfo);
         console.log('👤 User ID:', userInfo.id);
         console.log('👤 User role:', userInfo.role);
-
-
         if (typeof window !== 'undefined') {
           setStorageItem('user_id', String(userInfo.id));
         }
         console.log('User ID saved:', userInfo.id);
-
-
         return { user: userInfo, token };
       }
-
-
       return { user: null, token };
     } catch (error: any) {
-
-      let errorMessage = 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.';
-
+      let errorMessage = 'Login failed. Please check your login information.';
       if (error?.response) {
         const status = error.response.status;
         const errorData = error.response.data;
-
-
         if (status === 401) {
-
-          errorMessage = 'Email hoặc mật khẩu không đúng. Vui lòng thử lại.';
-
-
+          errorMessage = 'Email or password is incorrect. Please try again.';
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               const apiMessage = errorData.errorMessages[0];
-
               if (apiMessage && !/^[a-zA-Z\s]+$/.test(apiMessage)) {
                 errorMessage = apiMessage;
               }
             }
           }
         } else if (status === 403) {
-          errorMessage = 'Bạn không có quyền truy cập.';
+          errorMessage = 'You do not have permission to access.';
         } else if (status === 404) {
-          errorMessage = 'Không tìm thấy tài khoản.';
+          errorMessage = 'Account not found.';
         } else if (status >= 500) {
-          errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+          errorMessage = 'Server error. Please try again later.';
         } else {
-
           if (errorData && typeof errorData === 'object' && !Array.isArray(errorData)) {
             if (errorData.errorMessages && Array.isArray(errorData.errorMessages) && errorData.errorMessages.length > 0) {
               errorMessage = errorData.errorMessages[0];
@@ -197,17 +154,13 @@ export const loginUser = createAsyncThunk(
           }
         }
       }
-
       else if (error?.message) {
         errorMessage = error.message;
       }
-
-
       return rejectWithValue(errorMessage);
     }
   }
 );
-
 export const registerUser = createAsyncThunk(
   'auth/register',
   async (data: RegisterData, { rejectWithValue }) => {
@@ -223,7 +176,6 @@ export const registerUser = createAsyncThunk(
     }
   }
 );
-
 export const fetchUserProfile = createAsyncThunk(
   'auth/fetchProfile',
   async (_, { rejectWithValue }) => {
@@ -235,7 +187,6 @@ export const fetchUserProfile = createAsyncThunk(
     }
   }
 );
-
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -259,7 +210,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-
       .addCase(loginUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -270,8 +220,6 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.isAuthenticated = true;
         state.error = null;
-
-
         if (typeof window !== 'undefined') {
           setStorageItem('auth_token', action.payload.token);
           setStorageItem('user_data', JSON.stringify(action.payload.user));
@@ -285,7 +233,6 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
         state.isAuthenticated = false;
-
         if (typeof window !== 'undefined') {
           removeStorageItem('auth_token');
           removeStorageItem('user_data');
@@ -293,7 +240,6 @@ const authSlice = createSlice({
           deleteCookie('auth_token');
         }
       })
-
       .addCase(registerUser.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -309,7 +255,6 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
-
       .addCase(fetchUserProfile.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -328,6 +273,5 @@ const authSlice = createSlice({
       });
   },
 });
-
 export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,5 +1,4 @@
 "use client";
-
 import { RubricItem } from "@/services/rubricItemService";
 import { CloseOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Collapse, Descriptions, Divider, Input, Modal, Row, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
@@ -11,14 +10,12 @@ import { QuestionWithRubrics, useScoreFeedbackData } from "./ScoreFeedbackModal/
 import { toVietnamTime } from "./ScoreFeedbackModal/utils";
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-
 interface ScoreFeedbackModalProps {
   open: boolean;
   onCancel: () => void;
   data: AssignmentData;
   isLab?: boolean;
 }
-
 export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   open,
   onCancel,
@@ -37,26 +34,19 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     isLoadingFeedback,
     isPublished,
   } = useScoreFeedbackData(open, data);
-
-
   const hasScore = () => {
-
     if (latestGradingSession && latestGradingSession.status === 1) {
       return true;
     }
-
     if (totalScore !== undefined && totalScore !== null) {
       return true;
     }
-
     if (latestGradeItems.length > 0) {
       return true;
     }
-
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
       return true;
     }
-
     if (questions.length > 0 && questions.some(q => {
       const scores = Object.values(q.rubricScores || {});
       return scores.length > 0;
@@ -65,65 +55,47 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     }
     return false;
   };
-
-
   const hasFeedback = () => {
-
     if (feedback?.overallFeedback && feedback.overallFeedback.trim() !== "") {
       return true;
     }
-
     if (feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality ||
       feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement ||
       feedback?.bestPractices || feedback?.errorHandling) {
       return true;
     }
-
     if (data.overallFeedback || data.suggestionsAvoid || data.suggestionsImprove) {
       return true;
     }
-
     if (latestGradeItems.length > 0 && latestGradeItems.some(item => item.comments && item.comments.trim() !== "")) {
       return true;
     }
     return false;
   };
-
-
   const maxScore = useMemo(() => {
     return questions.reduce((sum, q) => {
       return sum + q.rubrics.reduce((rubricSum, rubric) => rubricSum + rubric.score, 0);
     }, 0);
   }, [questions]);
-
-
   const getTotalScoreDisplay = () => {
-
     if (latestGradingSession && latestGradingSession.status === 1) {
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
-
       return Number(totalScore).toFixed(2);
     }
-
-
     if (totalScore !== undefined && totalScore !== null) {
       if (maxScore > 0) {
         return `${Number(totalScore).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
       return Number(totalScore).toFixed(2);
     }
-
-
     if (lastSubmission?.lastGrade !== undefined && lastSubmission?.lastGrade !== null) {
       if (maxScore > 0) {
         return `${Number(lastSubmission.lastGrade).toFixed(2)}/${Number(maxScore).toFixed(2)}`;
       }
       return Number(lastSubmission.lastGrade).toFixed(2);
     }
-
-
     if (latestGradeItems.length > 0) {
       const calculatedTotal = latestGradeItems.reduce((sum, item) => sum + item.score, 0);
       if (maxScore > 0) {
@@ -131,8 +103,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       }
       return Number(calculatedTotal).toFixed(2);
     }
-
-
     if (questions.length > 0) {
       const calculatedTotal = questions.reduce((sum, q) => {
         const questionTotal = Object.values(q.rubricScores || {}).reduce((s, score) => s + (score || 0), 0);
@@ -145,11 +115,8 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         return Number(calculatedTotal).toFixed(2);
       }
     }
-
-
     return null;
   };
-
   const getQuestionColumns = (question: QuestionWithRubrics): ColumnsType<RubricItem> => [
     {
       title: "Criteria",
@@ -255,12 +222,9 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
         if (!comment || comment === "-") {
           return <Text type="secondary" style={{ fontSize: "12px" }}>-</Text>;
         }
-
-
         const maxLength = 150;
         const isLong = comment.length > maxLength;
         const displayText = isLong ? comment.substring(0, maxLength) + "..." : comment;
-
         return (
           <Tooltip title={comment} placement="topLeft" overlayStyle={{ maxWidth: "500px" }}>
             <div style={{
@@ -280,7 +244,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
       },
     },
   ];
-
   return (
     <Modal
       title={
@@ -317,8 +280,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 )}
                 <Descriptions.Item label="Total Score">
                   {(() => {
-                    // For lab: always show score if available (auto-graded or teacher-graded)
-                    // For assignment: only show score when published
                     if (isLab) {
                       return getTotalScoreDisplay() !== null ? (
                     <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
@@ -330,7 +291,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                     </Text>
                       );
                     } else {
-                      // Assignment: only show when published
                       return isPublished && getTotalScoreDisplay() !== null ? (
                         <Text strong style={{ fontSize: "18px", color: "#1890ff" }}>
                           {getTotalScoreDisplay()}
@@ -371,7 +331,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 )}
               </Descriptions>
             </Card>
-
             {!isPublished && !isLab && (
               <Card className={styles.headerCard}>
                 <Alert
@@ -390,7 +349,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   {maxScore.toFixed(2)}
                 </Text>
                 <Divider />
-
                 <Collapse
                   defaultActiveKey={questions.map((_, i) => i.toString())}
                   items={[...questions].sort((a, b) => (a.questionNumber || 0) - (b.questionNumber || 0)).map((question, index) => {
@@ -402,7 +360,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                       (sum, r) => sum + r.score,
                       0
                     );
-
                     return {
                       key: index.toString(),
                       label: (
@@ -436,9 +393,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                               </pre>
                             </div>
                           )}
-
                           <Divider />
-
                           <Title level={5} style={{ marginBottom: 12 }}>
                             Grading Criteria ({question.rubrics.length})
                           </Title>
@@ -460,7 +415,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 />
               </Card>
             )}
-
             { }
             {questions.length === 0 && data.gradeCriteria && data.gradeCriteria.length > 0 && (
               <Card className={styles.questionsCard}>
@@ -469,7 +423,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                   Total Criteria: {data.gradeCriteria.length} | Total Score: {data.totalScore}
                 </Text>
                 <Divider />
-
                 <Collapse
                   defaultActiveKey={data.gradeCriteria.map((_, i) => i.toString())}
                   items={data.gradeCriteria.map((criterion, index) => {
@@ -503,13 +456,11 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                 />
               </Card>
             )}
-
             {((isLab && hasFeedback()) || isPublished) && (
             <Card className={styles.feedbackCard}>
               <Spin spinning={isLoadingFeedback || isLoadingFeedbackFormatting}>
                 <Title level={3}>Detailed Feedback</Title>
                 <Divider />
-
                 {!hasFeedback() && !isLoadingFeedback ? (
                   <Alert
                     message="No feedback available"
@@ -529,7 +480,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                         placeholder="No overall feedback provided yet."
                       />
                     </div>
-
                     { }
                     {(feedback?.strengths || feedback?.weaknesses || feedback?.codeQuality || feedback?.algorithmEfficiency || feedback?.suggestionsForImprovement || feedback?.bestPractices || feedback?.errorHandling) && (
                       <>
@@ -557,7 +507,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                             </div>
                           </Col>
                         </Row>
-
                         <Row gutter={16}>
                           <Col xs={24} md={12}>
                             <div>
@@ -582,7 +531,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                             </div>
                           </Col>
                         </Row>
-
                         <div>
                           <Title level={5}>Suggestions for Improvement</Title>
                           <TextArea
@@ -592,7 +540,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                             placeholder="No suggestions provided yet."
                           />
                         </div>
-
                         <Row gutter={16}>
                           <Col xs={24} md={12}>
                             <div>
@@ -619,7 +566,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
                         </Row>
                       </>
                     )}
-
                     { }
                     {!feedback && data.suggestionsAvoid && (
                       <>
@@ -658,7 +604,6 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
           </Space>
         </div>
       </Spin>
-
     </Modal>
   );
 };

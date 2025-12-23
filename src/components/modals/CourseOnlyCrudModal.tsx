@@ -1,8 +1,6 @@
 "use client";
-
 import { Alert, App, Form, Input, Modal } from "antd";
 import { useEffect, useState } from "react";
-
 import {
   Course,
   courseService,
@@ -10,7 +8,6 @@ import {
   UpdateCoursePayload,
   semesterCourseService,
 } from "@/services/courseManagementService";
-
 interface CourseOnlyCrudModalProps {
   open: boolean;
   initialData: Course | null;
@@ -20,7 +17,6 @@ interface CourseOnlyCrudModalProps {
   onCancel: () => void;
   onOk: () => void;
 }
-
 const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
   open,
   initialData,
@@ -34,9 +30,7 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { notification } = App.useApp();
-
   const isEditMode = !!initialData;
-
   useEffect(() => {
     if (open) {
       if (isEditMode) {
@@ -46,7 +40,6 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
       }
     }
   }, [open, initialData, form, isEditMode]);
-
   const handleFinish = async (
     values: CreateCoursePayload | UpdateCoursePayload
   ) => {
@@ -64,8 +57,6 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
         });
       } else {
         const newCourse = await courseService.createCourse(values as CreateCoursePayload);
-
-
         if (selectedSemesterId) {
           try {
             await semesterCourseService.createSemesterCourse({
@@ -78,7 +69,6 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
               description: "The new course has been created and linked to the selected semester.",
             });
           } catch (linkErr: any) {
-
             console.error("Failed to link course to semester:", linkErr);
             notification.warning({
               message: "Course Created",
@@ -100,7 +90,6 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
       setIsLoading(false);
     }
   };
-
   return (
     <Modal
       title={isEditMode ? "Edit Course" : "Create New Course"}
@@ -132,13 +121,9 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course name must be at least 2 characters!"));
                 }
-
-
-
                 const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0
                   ? existingSemesterCourses
                   : allCourses;
-
                 if (coursesToCheck.length > 0) {
                   if (!isEditMode) {
                     const duplicate = coursesToCheck.find(
@@ -146,12 +131,11 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                     );
                     if (duplicate) {
                       const message = selectedSemesterId
-                        ? "Đã tồn tại course với tên này trong học kỳ này!"
-                        : "Đã tồn tại course với tên này!";
+                        ? "A course with this name already exists in this semester!"
+                        : "A course with this name already exists!";
                       return Promise.reject(new Error(message));
                     }
                   } else {
-
                     const duplicate = coursesToCheck.find(
                       (c) =>
                         c.name.toLowerCase().trim() === value.toLowerCase().trim() &&
@@ -159,13 +143,12 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                     );
                     if (duplicate) {
                       const message = selectedSemesterId
-                        ? "Đã tồn tại course với tên này trong học kỳ này!"
-                        : "Đã tồn tại course với tên này!";
+                        ? "A course with this name already exists in this semester!"
+                        : "A course with this name already exists!";
                       return Promise.reject(new Error(message));
                     }
                   }
                 }
-
                 return Promise.resolve();
               },
             },
@@ -187,21 +170,15 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                 if (value.trim().length < 2) {
                   return Promise.reject(new Error("Course code must be at least 2 characters!"));
                 }
-
                 if (/\s/.test(value)) {
                   return Promise.reject(new Error("Course code cannot contain spaces!"));
                 }
-
                 if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
                   return Promise.reject(new Error("Course code can only contain letters, numbers, underscore (_), and hyphen (-)!"));
                 }
-
-
-
                 const coursesToCheck = selectedSemesterId && existingSemesterCourses.length > 0
                   ? existingSemesterCourses
                   : allCourses;
-
                 if (coursesToCheck.length > 0) {
                   if (!isEditMode) {
                     const duplicate = coursesToCheck.find(
@@ -209,12 +186,11 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                     );
                     if (duplicate) {
                       const message = selectedSemesterId
-                        ? "Đã tồn tại course với mã code này trong học kỳ này!"
-                        : "Đã tồn tại course với mã code này!";
+                        ? "A course with this code already exists in this semester!"
+                        : "A course with this code already exists!";
                       return Promise.reject(new Error(message));
                     }
                   } else {
-
                     const duplicate = coursesToCheck.find(
                       (c) =>
                         c.code.toLowerCase().trim() === value.toLowerCase().trim() &&
@@ -222,13 +198,12 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
                     );
                     if (duplicate) {
                       const message = selectedSemesterId
-                        ? "Đã tồn tại course với mã code này trong học kỳ này!"
-                        : "Đã tồn tại course với mã code này!";
+                        ? "A course with this code already exists in this semester!"
+                        : "A course with this code already exists!";
                       return Promise.reject(new Error(message));
                     }
                   }
                 }
-
                 return Promise.resolve();
               },
             },
@@ -248,7 +223,6 @@ const CourseOnlyCrudModalContent: React.FC<CourseOnlyCrudModalProps> = ({
     </Modal>
   );
 };
-
 export const CourseOnlyCrudModal: React.FC<CourseOnlyCrudModalProps> = (
   props
 ) => <CourseOnlyCrudModalContent {...props} />;

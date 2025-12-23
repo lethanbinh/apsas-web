@@ -1,5 +1,4 @@
 "use client";
-
 import { CalendarOutlined } from "@ant-design/icons";
 import type { DatePickerProps } from "antd";
 import { Alert, DatePicker, Popover, Space, Tag, Typography } from "antd";
@@ -9,14 +8,11 @@ import utc from "dayjs/plugin/utc";
 import React, { useState } from "react";
 import { Button } from "../ui/Button";
 import styles from "./AssignmentList.module.css";
-
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
 const toVietnamTime = (dateString: string) => {
   return dayjs.utc(dateString).tz("Asia/Ho_Chi_Minh");
 };
-
 interface DeadlinePopoverProps {
   id: string;
   startDate?: string;
@@ -25,9 +21,7 @@ interface DeadlinePopoverProps {
   semesterEndDate?: string;
   onSave: (id: string, startDate: dayjs.Dayjs | null, endDate: dayjs.Dayjs | null) => void;
 }
-
 const { Text } = Typography;
-
 export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
   id,
   startDate,
@@ -44,33 +38,27 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     endDate ? toVietnamTime(endDate) : dayjs().add(7, 'days')
   );
   const [validationError, setValidationError] = useState<string | null>(null);
-
   const validateDates = (start: dayjs.Dayjs | null, end: dayjs.Dayjs | null): string | null => {
     if (!start || !end) {
       return "Both start date and end date are required";
     }
-
     if (start.isAfter(end) || start.isSame(end)) {
       return "Start date must be before end date";
     }
-
     return null;
   };
-
   const handleSave = () => {
     const error = validateDates(tempStartDate, tempEndDate);
     if (error) {
       setValidationError(error);
       return;
     }
-
     setValidationError(null);
     const utcStartDate = tempStartDate ? tempStartDate.utc() : null;
     const utcEndDate = tempEndDate ? tempEndDate.utc() : null;
     onSave(id, utcStartDate, utcEndDate);
     setOpen(false);
   };
-
   const handleOpenChange = (visible: boolean) => {
     if (visible) {
       setTempStartDate(startDate ? toVietnamTime(startDate) : dayjs());
@@ -79,7 +67,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     }
     setOpen(visible);
   };
-
   const onStartDateChange: DatePickerProps["onChange"] = (date) => {
     setTempStartDate(date);
     setValidationError(null);
@@ -87,12 +74,10 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       setTempEndDate(date.add(1, 'day'));
     }
   };
-
   const onEndDateChange: DatePickerProps["onChange"] = (date) => {
     setTempEndDate(date);
     setValidationError(null);
   };
-
   const getDisabledDate = (isStartDate: boolean) => {
     return (current: dayjs.Dayjs) => {
       if (!isStartDate && tempStartDate) {
@@ -101,7 +86,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       return false;
     };
   };
-
   const popoverContent = (
     <Space direction="vertical" style={{ width: 300 }}>
       <div>
@@ -147,7 +131,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       </Button>
     </Space>
   );
-
   const isSemesterEnded = () => {
     if (semesterEndDate) {
       const semesterEnd = toVietnamTime(semesterEndDate);
@@ -156,9 +139,7 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     }
     return false;
   };
-
   const semesterEnded = isSemesterEnded();
-
   const displayText = () => {
     if (startDate && endDate) {
       const start = toVietnamTime(startDate);
@@ -167,7 +148,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
     }
     return "Click to set deadline";
   };
-
   const popoverContentWithWarning = (
     <Space direction="vertical" style={{ width: 300 }}>
       <Alert
@@ -178,7 +158,6 @@ export const DeadlinePopover: React.FC<DeadlinePopoverProps> = ({
       />
     </Space>
   );
-
   return (
     <Popover
       content={semesterEnded ? popoverContentWithWarning : popoverContent}

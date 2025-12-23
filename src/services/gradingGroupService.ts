@@ -9,7 +9,6 @@ export interface GradingGroupSubmission {
   status: number;
   lastGrade: number;
 }
-
 export interface GradingGroup {
   id: number;
   lecturerId: number;
@@ -30,65 +29,54 @@ export interface GradingGroup {
   submissionCount: number;
   submissions: GradingGroupSubmission[];
 }
-
 export interface GradingGroupListApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: GradingGroup[];
 }
-
 export interface GradingGroupApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: GradingGroup;
 }
-
 export interface GetGradingGroupsParams {
   lecturerId?: number;
 }
-
 export interface CreateGradingGroupPayload {
   lecturerId: number;
   assessmentTemplateId: number | null;
   createdByExaminerId: number | null;
 }
-
 export interface UpdateGradingGroupPayload {
   lecturerId: number;
   assessmentTemplateId: number;
 }
-
 export interface AssignSubmissionsPayload {
   submissionIds: number[];
 }
-
 export interface AssignSubmissionsResponse {
   gradingGroupId: number;
   createdSubmissionsCount: number;
   submissionIds: number[];
 }
-
 export interface AssignSubmissionsApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssignSubmissionsResponse;
 }
-
 export interface AddSubmissionsByFileApiResponse {
   statusCode: number;
   isSuccess: boolean;
   errorMessages: any[];
   result: AssignSubmissionsResponse;
 }
-
 export interface RemoveSubmissionsPayload {
   submissionIds: number[];
   targetGradingGroupId: number;
 }
-
 export class GradingGroupService {
   async getGradingGroups(
     params: GetGradingGroupsParams
@@ -99,14 +87,12 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async getGradingGroupById(id: number): Promise<GradingGroup> {
     const response = await apiService.get<GradingGroupApiResponse>(
       `/GradingGroup/${id}`
     );
     return response.result;
   }
-
   async createGradingGroup(
     payload: CreateGradingGroupPayload
   ): Promise<GradingGroup> {
@@ -116,7 +102,6 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async updateGradingGroup(
     id: number,
     payload: UpdateGradingGroupPayload
@@ -127,11 +112,9 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async deleteGradingGroup(id: number): Promise<void> {
     await apiService.delete(`/GradingGroup/${id}`);
   }
-
   async assignSubmissions(
     gradingGroupId: number,
     payload: AssignSubmissionsPayload
@@ -142,7 +125,6 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async removeSubmissions(
     gradingGroupId: number,
     payload: RemoveSubmissionsPayload
@@ -153,7 +135,6 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async addSubmissionsByFile(
     gradingGroupId: number,
     payload: { Files: File[] }
@@ -162,7 +143,6 @@ export class GradingGroupService {
     payload.Files.forEach((file) => {
       formData.append("Files", file);
     });
-
     const response = await apiService.post<AddSubmissionsByFileApiResponse>(
       `/GradingGroup/${gradingGroupId}/add-submissions`,
       formData,
@@ -175,14 +155,12 @@ export class GradingGroupService {
     );
     return response.result;
   }
-
   async submitGradesToExaminer(
     gradingGroupId: number,
     file: File
   ): Promise<void> {
     const formData = new FormData();
     formData.append("File", file);
-
     try {
       await apiService.post(
         `/GradingGroup/${gradingGroupId}/submit-grades-to-examiner`,
@@ -195,7 +173,6 @@ export class GradingGroupService {
         }
       );
     } catch (error: any) {
-
       if (error.response?.data?.errorMessages && Array.isArray(error.response.data.errorMessages)) {
         const errorMessage = error.response.data.errorMessages.join(", ");
         const customError = new Error(errorMessage);
@@ -206,5 +183,4 @@ export class GradingGroupService {
     }
   }
 }
-
 export const gradingGroupService = new GradingGroupService();

@@ -1,6 +1,5 @@
 import { Button, Space } from "antd";
 import { ArrowLeftOutlined, FileExcelOutlined, RobotOutlined, UploadOutlined, EyeOutlined } from "@ant-design/icons";
-
 interface GradingGroupHeaderProps {
   title: string;
   onBack: () => void;
@@ -14,7 +13,6 @@ interface GradingGroupHeaderProps {
   isGradeSheetSubmitted: boolean;
   selectedCount?: number;
 }
-
 export function GradingGroupHeader({
   title,
   onBack,
@@ -78,4 +76,3 @@ export function GradingGroupHeader({
     </div>
   );
 }
-
