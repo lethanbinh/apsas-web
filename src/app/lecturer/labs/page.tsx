@@ -630,9 +630,18 @@ const LabsPage = () => {
   }, [classAssessments]);
   
   const { data: submissionsData } = useQuery({
-    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
+    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds, classAssessmentRes?.items?.length],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return { latest: new Map<number, Submission[]>(), all: new Map<number, Submission[]>() };
+      
+      // Recreate the map inside queryFn to avoid stale closure
+      const map = new Map<number, number>();
+      classAssessments.forEach((ca, courseElementId) => {
+        if (ca.id) {
+          map.set(ca.id, courseElementId);
+        }
+      });
+      
           const submissionPromises = classAssessmentIds.map(classAssessmentId =>
             submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
           );
@@ -642,7 +651,7 @@ const LabsPage = () => {
       const allSubmissionsByCourseElement = new Map<number, Submission[]>();
           for (const submission of allSubmissions) {
             if (!submission.classAssessmentId) continue;
-            const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
+            const courseElementId = map.get(submission.classAssessmentId);
             if (courseElementId !== undefined) {
               const existing = submissionsByCourseElement.get(courseElementId) || [];
               existing.push(submission);
@@ -690,7 +699,10 @@ const LabsPage = () => {
       }
       return { latest: submissionsByCourseElement, all: allSubmissionsByCourseElement };
     },
-    enabled: classAssessmentIds.length > 0 && classAssessmentToCourseElementMap.size > 0,
+    enabled: classAssessmentIds.length > 0 && classAssessments.size > 0 && !!classAssessmentRes,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    staleTime: 0,
   });
   const submissions = submissionsData?.latest || new Map<number, Submission[]>();
   const allSubmissions = submissionsData?.all || new Map<number, Submission[]>();

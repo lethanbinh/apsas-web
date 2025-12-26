@@ -616,7 +616,7 @@ const DetailAssignmentPage = () => {
   }, [classAssessments]);
   
   const { data: submissionsData } = useQuery({
-    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
+    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds, classAssessmentRes?.items?.length],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
       
@@ -630,6 +630,14 @@ const DetailAssignmentPage = () => {
         console.error('submissionService.getSubmissionList is not a function', submissionService);
         return new Map<number, Submission[]>();
       }
+      
+      // Recreate the map inside queryFn to avoid stale closure
+      const map = new Map<number, number>();
+      classAssessments.forEach((ca, courseElementId) => {
+        if (ca.id) {
+          map.set(ca.id, courseElementId);
+        }
+      });
       
       const submissionPromises = classAssessmentIds.map(async (classAssessmentId) => {
         try {
@@ -652,7 +660,7 @@ const DetailAssignmentPage = () => {
       
       for (const submission of allSubmissions) {
         if (!submission || !submission.classAssessmentId) continue;
-        const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
+        const courseElementId = map.get(submission.classAssessmentId);
           if (courseElementId !== undefined) {
             const existing = submissionsByCourseElement.get(courseElementId) || [];
             existing.push(submission);
@@ -697,7 +705,10 @@ const DetailAssignmentPage = () => {
       }
       return submissionsByCourseElement;
     },
-    enabled: classAssessmentIds.length > 0 && classAssessmentToCourseElementMap.size > 0,
+    enabled: classAssessmentIds.length > 0 && classAssessments.size > 0 && !!classAssessmentRes,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    staleTime: 0,
   });
   const submissions = useMemo(() => {
     if (!submissionsData) {
