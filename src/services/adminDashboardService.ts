@@ -18,9 +18,7 @@ import type {
   UserStats
 } from './adminDashboard/types';
 import { userStatsService } from './adminDashboard/userStatsService';
-import { isLabTemplate, isPracticalExamTemplate } from './adminDashboard/utils';
 import { adminService } from './adminService';
-import { classAssessmentService } from './classAssessmentService';
 import { classService } from './classService';
 import { gradingGroupService } from './gradingGroupService';
 import { gradingService } from './gradingService';

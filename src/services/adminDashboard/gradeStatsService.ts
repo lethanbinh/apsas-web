@@ -393,18 +393,32 @@ export class GradeStatsService {
           gradedCount: classData.grades.length,
         }))
         .filter((c) => c.gradedCount > 0);
+      // Define grade ranges with proper boundaries
+      // Each range should cover: [min, max) except the last one which includes max
       const gradeRanges = [
         { min: 0, max: 2, label: '0-2' },
         { min: 2, max: 4, label: '2-4' },
         { min: 4, max: 5.5, label: '4-5.5' },
         { min: 5.5, max: 7, label: '5.5-7' },
         { min: 7, max: 8.5, label: '7-8.5' },
-        { min: 8.5, max: 10, label: '8.5-10' },
+        { min: 8.5, max: 10.01, label: '8.5-10' }, // Use 10.01 to include 10.0
       ];
-      const gradeDistributionChart = gradeRanges.map((range) => ({
-        range: range.label,
-        count: grades.filter((g) => g >= range.min && g < range.max).length,
-      }));
+      
+      const gradeDistributionChart = gradeRanges.map((range) => {
+        // For all ranges, use [min, max) to avoid overlap
+        // The last range uses 10.01 as max to include 10.0
+        const count = grades.filter((g) => g >= range.min && g < range.max).length;
+        return {
+          range: range.label,
+          count,
+        };
+      });
+      
+      // Verify all grades are counted (for debugging)
+      const totalCounted = gradeDistributionChart.reduce((sum, item) => sum + item.count, 0);
+      if (totalCounted !== grades.length && grades.length > 0) {
+        console.warn(`Grade distribution mismatch: counted ${totalCounted} but have ${grades.length} grades`);
+      }
       const totalSubmissions = submissions.length;
       const gradingCompletionRate = totalSubmissions > 0
         ? Math.round((totalGraded / totalSubmissions) * 100 * 100) / 100

@@ -485,16 +485,16 @@ const SubmissionsPage = () => {
     
     filteredSubmissions.forEach((sub) => {
       if (sub.classAssessmentId) {
-        const assessment = assessmentMap.get(sub.classAssessmentId);
-        if (!assessment?.assessmentTemplateId) return;
-        const template = templateMap.get(assessment.assessmentTemplateId);
-        if (!template) return;
-        if (isPracticalExamTemplate(template)) {
-          data["Practical Exam"]++;
-        } else if (isLabTemplate(template)) {
-          data["Lab"]++;
-        } else {
-          data["Assignment"]++;
+      const assessment = assessmentMap.get(sub.classAssessmentId);
+      if (!assessment?.assessmentTemplateId) return;
+      const template = templateMap.get(assessment.assessmentTemplateId);
+      if (!template) return;
+      if (isPracticalExamTemplate(template)) {
+        data["Practical Exam"]++;
+      } else if (isLabTemplate(template)) {
+        data["Lab"]++;
+      } else {
+        data["Assignment"]++;
         }
       } else if (sub.gradingGroupId) {
         // Count Practical Exam from grading groups (already filtered to only include those with submitted grade report)
@@ -535,8 +535,8 @@ const SubmissionsPage = () => {
         key: "course",
         render: (_: any, record: any) => {
           if (record.classAssessmentId) {
-            const assessment = assessmentMap.get(record.classAssessmentId);
-            return assessment?.courseName || "N/A";
+          const assessment = assessmentMap.get(record.classAssessmentId);
+          return assessment?.courseName || "N/A";
           } else if (record.gradingGroupId) {
             const gradingGroup = gradingGroupMap.get(record.gradingGroupId);
             if (gradingGroup?.assessmentTemplateId) {
@@ -554,8 +554,8 @@ const SubmissionsPage = () => {
         key: "class",
         render: (_: any, record: any) => {
           if (record.classAssessmentId) {
-            const assessment = assessmentMap.get(record.classAssessmentId);
-            return assessment?.classCode || "N/A";
+          const assessment = assessmentMap.get(record.classAssessmentId);
+          return assessment?.classCode || "N/A";
           } else if (record.gradingGroupId) {
             // For grading groups, we don't have a specific class
             return "N/A";
@@ -568,11 +568,11 @@ const SubmissionsPage = () => {
         key: "semester",
         render: (_: any, record: any) => {
           if (record.classAssessmentId) {
-            const assessment = assessmentMap.get(record.classAssessmentId);
-            if (!assessment) return "N/A";
-            const classData = classes.find(c => Number(c.id) === Number(assessment.classId));
-            if (classData?.semesterName) {
-              return classData.semesterName;
+          const assessment = assessmentMap.get(record.classAssessmentId);
+          if (!assessment) return "N/A";
+          const classData = classes.find(c => Number(c.id) === Number(assessment.classId));
+          if (classData?.semesterName) {
+            return classData.semesterName;
             }
             return "N/A";
           } else if (record.gradingGroupId) {
@@ -587,17 +587,17 @@ const SubmissionsPage = () => {
         key: "type",
         render: (_: any, record: any) => {
           if (record.classAssessmentId) {
-            const assessment = assessmentMap.get(record.classAssessmentId);
-            if (!assessment?.assessmentTemplateId || !templatesRes?.items) return "N/A";
-            const template = templatesRes.items.find(t => t.id === assessment.assessmentTemplateId);
-            if (!template) return "N/A";
-            if (isPracticalExamTemplate(template)) {
-              return <Tag color="purple">Practical Exam</Tag>;
-            } else if (isLabTemplate(template)) {
-              return <Tag color="green">Lab</Tag>;
-            } else {
-              return <Tag color="blue">Assignment</Tag>;
-            }
+          const assessment = assessmentMap.get(record.classAssessmentId);
+          if (!assessment?.assessmentTemplateId || !templatesRes?.items) return "N/A";
+          const template = templatesRes.items.find(t => t.id === assessment.assessmentTemplateId);
+          if (!template) return "N/A";
+          if (isPracticalExamTemplate(template)) {
+            return <Tag color="purple">Practical Exam</Tag>;
+          } else if (isLabTemplate(template)) {
+            return <Tag color="green">Lab</Tag>;
+          } else {
+            return <Tag color="blue">Assignment</Tag>;
+          }
           } else if (record.gradingGroupId) {
             // All submissions from grading groups are Practical Exam
             return <Tag color="purple">Practical Exam</Tag>;
