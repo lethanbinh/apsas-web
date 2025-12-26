@@ -618,6 +618,17 @@ const LabsPage = () => {
       .sort((a, b) => a - b);
   }, [classAssessments]);
   
+  // Create a lookup map for classAssessmentId -> courseElementId
+  const classAssessmentToCourseElementMap = useMemo(() => {
+    const map = new Map<number, number>();
+    classAssessments.forEach((ca, courseElementId) => {
+      if (ca.id) {
+        map.set(ca.id, courseElementId);
+      }
+    });
+    return map;
+  }, [classAssessments]);
+  
   const { data: submissionsData } = useQuery({
     queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
@@ -630,14 +641,14 @@ const LabsPage = () => {
       const submissionsByCourseElement = new Map<number, Submission[]>();
       const allSubmissionsByCourseElement = new Map<number, Submission[]>();
           for (const submission of allSubmissions) {
-        const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
-            if (classAssessment && classAssessment.courseElementId) {
-              const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
+        const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
+            if (courseElementId !== undefined) {
+              const existing = submissionsByCourseElement.get(courseElementId) || [];
               existing.push(submission);
-              submissionsByCourseElement.set(classAssessment.courseElementId, existing);
-              const allExisting = allSubmissionsByCourseElement.get(classAssessment.courseElementId) || [];
+              submissionsByCourseElement.set(courseElementId, existing);
+              const allExisting = allSubmissionsByCourseElement.get(courseElementId) || [];
               allExisting.push(submission);
-              allSubmissionsByCourseElement.set(classAssessment.courseElementId, allExisting);
+              allSubmissionsByCourseElement.set(courseElementId, allExisting);
             }
           }
           for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
@@ -678,7 +689,7 @@ const LabsPage = () => {
       }
       return { latest: submissionsByCourseElement, all: allSubmissionsByCourseElement };
     },
-    enabled: classAssessmentIds.length > 0,
+    enabled: classAssessmentIds.length > 0 && classAssessmentToCourseElementMap.size > 0,
   });
   const submissions = submissionsData?.latest || new Map<number, Submission[]>();
   const allSubmissions = submissionsData?.all || new Map<number, Submission[]>();

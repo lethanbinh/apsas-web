@@ -600,11 +600,23 @@ const DetailAssignmentPage = () => {
   const classAssessmentIds = useMemo(() => {
     return Array.from(classAssessments.values())
       .map(ca => ca.id)
-      .filter(id => id !== undefined && id !== null);
+      .filter(id => id !== undefined && id !== null)
+      .sort((a, b) => a - b);
+  }, [classAssessments]);
+  
+  // Create a lookup map for classAssessmentId -> courseElementId
+  const classAssessmentToCourseElementMap = useMemo(() => {
+    const map = new Map<number, number>();
+    classAssessments.forEach((ca, courseElementId) => {
+      if (ca.id) {
+        map.set(ca.id, courseElementId);
+      }
+    });
+    return map;
   }, [classAssessments]);
   
   const { data: submissionsData } = useQuery({
-    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds.sort((a, b) => a - b)],
+    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
       
@@ -640,11 +652,11 @@ const DetailAssignmentPage = () => {
       
       for (const submission of allSubmissions) {
         if (!submission || !submission.classAssessmentId) continue;
-        const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
-          if (classAssessment && classAssessment.courseElementId) {
-            const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
+        const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
+          if (courseElementId !== undefined) {
+            const existing = submissionsByCourseElement.get(courseElementId) || [];
             existing.push(submission);
-            submissionsByCourseElement.set(classAssessment.courseElementId, existing);
+            submissionsByCourseElement.set(courseElementId, existing);
           }
         }
         for (const [courseElementId, subs] of submissionsByCourseElement.entries()) {
@@ -685,7 +697,7 @@ const DetailAssignmentPage = () => {
       }
       return submissionsByCourseElement;
     },
-    enabled: classAssessmentIds.length > 0,
+    enabled: classAssessmentIds.length > 0 && classAssessmentToCourseElementMap.size > 0,
   });
   const submissions = useMemo(() => {
     if (!submissionsData) {
