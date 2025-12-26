@@ -15,12 +15,14 @@ interface ScoreFeedbackModalProps {
   onCancel: () => void;
   data: AssignmentData;
   isLab?: boolean;
+  submissionId?: number;
 }
 export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
   open,
   onCancel,
   data,
   isLab = false,
+  submissionId,
 }) => {
   const {
     lastSubmission,
@@ -33,7 +35,7 @@ export const ScoreFeedbackModal: React.FC<ScoreFeedbackModalProps> = ({
     isLoadingFeedbackFormatting,
     isLoadingFeedback,
     isPublished,
-  } = useScoreFeedbackData(open, data);
+  } = useScoreFeedbackData(open, data, submissionId);
   const hasScore = () => {
     if (latestGradingSession && latestGradingSession.status === 1) {
       return true;

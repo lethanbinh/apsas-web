@@ -1,56 +1,33 @@
+import { academicStatsService } from './adminDashboard/academicStatsService';
+import { assessmentStatsService } from './adminDashboard/assessmentStatsService';
+import { chartDataService } from './adminDashboard/chartDataService';
+import { getDefaultAssessmentStats, getDefaultSubmissionStats, getDefaultUserStats } from './adminDashboard/defaultStats';
+import { gradeStatsService } from './adminDashboard/gradeStatsService';
+import { gradingStatsService } from './adminDashboard/gradingStatsService';
+import { submissionStatsService } from './adminDashboard/submissionStatsService';
+import type {
+  AcademicStats,
+  AssessmentStats,
+  ChartData,
+  DashboardOverview,
+  GradeStats,
+  GradingStats,
+  PendingTask,
+  RecentActivity,
+  SubmissionStats,
+  UserStats
+} from './adminDashboard/types';
+import { userStatsService } from './adminDashboard/userStatsService';
+import { isLabTemplate, isPracticalExamTemplate } from './adminDashboard/utils';
 import { adminService } from './adminService';
 import { classAssessmentService } from './classAssessmentService';
 import { classService } from './classService';
-import { courseElementService } from './courseElementService';
 import { gradingGroupService } from './gradingGroupService';
 import { gradingService } from './gradingService';
 import { submissionService } from './submissionService';
-import type {
-  DashboardOverview,
-  UserStats,
-  AcademicStats,
-  AssessmentStats,
-  SubmissionStats,
-  GradingStats,
-  GradeStats,
-  ChartData,
-  UserGrowthData,
-  SemesterActivityData,
-  AssessmentDistributionData,
-  SubmissionStatusData,
-  GradingPerformanceData,
-  SubmissionsOverTimeData,
-  RecentActivity,
-  PendingTask,
-} from './adminDashboard/types';
 export type {
-  DashboardOverview,
-  UserStats,
-  AcademicStats,
-  AssessmentStats,
-  SubmissionStats,
-  GradingStats,
-  GradeStats,
-  ChartData,
-  UserGrowthData,
-  SemesterActivityData,
-  AssessmentDistributionData,
-  SubmissionStatusData,
-  GradingPerformanceData,
-  SubmissionsOverTimeData,
-  RecentActivity,
-  PendingTask,
+  AcademicStats, AssessmentDistributionData, AssessmentStats, ChartData, DashboardOverview, GradeStats, GradingPerformanceData, GradingStats, PendingTask, RecentActivity, SemesterActivityData, SubmissionsOverTimeData, SubmissionStats, SubmissionStatusData, UserGrowthData, UserStats
 } from './adminDashboard/types';
-import { userStatsService } from './adminDashboard/userStatsService';
-import { academicStatsService } from './adminDashboard/academicStatsService';
-import { assessmentStatsService } from './adminDashboard/assessmentStatsService';
-import { submissionStatsService } from './adminDashboard/submissionStatsService';
-import { gradingStatsService } from './adminDashboard/gradingStatsService';
-import { gradeStatsService } from './adminDashboard/gradeStatsService';
-import { chartDataService } from './adminDashboard/chartDataService';
-import { activityService } from './adminDashboard/activityService';
-import { isPracticalExamTemplate, isLabTemplate } from './adminDashboard/utils';
-import { getDefaultUserStats, getDefaultAssessmentStats, getDefaultSubmissionStats } from './adminDashboard/defaultStats';
 export class AdminDashboardService {
   async getDashboardOverview(): Promise<DashboardOverview> {
     try {
@@ -263,247 +240,6 @@ export class AdminDashboardService {
   }
   async getDetailedUserStats(): Promise<UserStats> {
     return userStatsService.getUserStats();
-  }
-  private async getDetailedAcademicStatsOld(): Promise<AcademicStats> {
-    try {
-      const [semesters, classes, assessments] = await Promise.all([
-        adminService.getPaginatedSemesters(1, 100),
-        classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
-        classAssessmentService.getClassAssessments({ pageNumber: 1, pageSize: 1000 }),
-      ]);
-      const now = new Date();
-      const activeSemesters = semesters.filter((s) => {
-        const start = new Date(s.startDate);
-        const end = new Date(s.endDate);
-        return now >= start && now <= end;
-      });
-      const classesBySemesterMap = new Map<string, {
-        semesterCode: string;
-        semesterName: string;
-        classCount: number;
-        studentCount: number;
-        lecturerSet: Set<number>;
-      }>();
-      classes.classes.forEach((cls) => {
-        const key = cls.semesterName || 'Unknown';
-        if (!classesBySemesterMap.has(key)) {
-          classesBySemesterMap.set(key, {
-            semesterCode: cls.semesterName || '',
-            semesterName: cls.semesterName || '',
-            classCount: 0,
-            studentCount: 0,
-            lecturerSet: new Set(),
-          });
-        }
-        const data = classesBySemesterMap.get(key)!;
-        data.classCount++;
-        data.studentCount += parseInt(cls.studentCount || '0', 10);
-        if (cls.lecturerId) data.lecturerSet.add(parseInt(cls.lecturerId, 10));
-      });
-      const classesBySemester = Array.from(classesBySemesterMap.values()).map((d) => ({
-        semesterCode: d.semesterCode,
-        semesterName: d.semesterName,
-        classCount: d.classCount,
-        studentCount: d.studentCount,
-        lecturerCount: d.lecturerSet.size,
-      }));
-      const totalStudents = classes.classes.reduce((sum, cls) =>
-        sum + parseInt(cls.studentCount || '0', 10), 0);
-      const averageStudentsPerClass = classes.classes.length > 0
-        ? Math.round(totalStudents / classes.classes.length)
-        : 0;
-      const classesWithoutStudents = classes.classes.filter(
-        (cls) => parseInt(cls.studentCount || '0', 10) === 0
-      ).length;
-      const classesOverloaded = classes.classes.filter(
-        (cls) => parseInt(cls.studentCount || '0', 10) > 50
-      ).length;
-      const uniqueCourses = new Set<string>();
-      classes.classes.forEach((cls) => {
-        if (cls.courseName) uniqueCourses.add(cls.courseName);
-      });
-      const uniqueLecturers = new Set<string>();
-      classes.classes.forEach((cls) => {
-        if (cls.lecturerId) uniqueLecturers.add(cls.lecturerId);
-      });
-      const lecturerWorkloadMap = new Map<string, {
-        lecturerId: string;
-        lecturerName: string;
-        classCount: number;
-        studentCount: number;
-      }>();
-      classes.classes.forEach((cls) => {
-        if (cls.lecturerId && cls.lecturerName) {
-          if (!lecturerWorkloadMap.has(cls.lecturerId)) {
-            lecturerWorkloadMap.set(cls.lecturerId, {
-              lecturerId: cls.lecturerId,
-              lecturerName: cls.lecturerName,
-              classCount: 0,
-              studentCount: 0,
-            });
-          }
-          const lecturer = lecturerWorkloadMap.get(cls.lecturerId)!;
-          lecturer.classCount++;
-          lecturer.studentCount += parseInt(cls.studentCount || '0', 10);
-        }
-      });
-      const lecturerWorkload = Array.from(lecturerWorkloadMap.values())
-        .sort((a, b) => b.classCount - a.classCount)
-        .slice(0, 20);
-      const studentToLecturerRatio = uniqueLecturers.size > 0
-        ? Math.round((totalStudents / uniqueLecturers.size) * 10) / 10
-        : 0;
-      const topClassesByStudents = classes.classes
-        .map((cls) => ({
-          id: cls.id,
-          classCode: cls.classCode,
-          courseName: cls.courseName,
-          studentCount: parseInt(cls.studentCount || '0', 10),
-          lecturerName: cls.lecturerName,
-        }))
-        .sort((a, b) => b.studentCount - a.studentCount)
-        .slice(0, 10);
-      return {
-        totalSemesters: semesters.length,
-        activeSemesters: activeSemesters.length,
-        totalClasses: classes.total,
-        totalCourseElements: 0,
-        totalCourses: uniqueCourses.size,
-        totalStudents,
-        totalLecturers: uniqueLecturers.size,
-        classesOverloaded,
-        classesBySemester,
-        averageStudentsPerClass,
-        classesWithoutStudents,
-        topClassesByStudents,
-        semesterCourses: uniqueCourses.size,
-        lecturerWorkload,
-        studentToLecturerRatio,
-      };
-    } catch (error) {
-      console.error('Error fetching detailed academic stats:', error);
-      return {
-        totalSemesters: 0,
-        activeSemesters: 0,
-        totalClasses: 0,
-        totalCourseElements: 0,
-        totalCourses: 0,
-        totalStudents: 0,
-        totalLecturers: 0,
-        classesOverloaded: 0,
-        classesBySemester: [],
-        averageStudentsPerClass: 0,
-        classesWithoutStudents: 0,
-        topClassesByStudents: [],
-        semesterCourses: 0,
-        lecturerWorkload: [],
-        studentToLecturerRatio: 0,
-      };
-    }
-  }
-  private async getDetailedAssessmentStatsOld(): Promise<AssessmentStats> {
-    try {
-      const [templates, assessments] = await Promise.all([
-        adminService.getAssessmentTemplateList(1, 1000),
-        classAssessmentService.getClassAssessments({ pageNumber: 1, pageSize: 1000 }),
-      ]);
-      const byType = {
-        assignment: 0,
-        lab: 0,
-        practicalExam: 0,
-      };
-      templates.items.forEach((template) => {
-        if (isPracticalExamTemplate(template)) {
-          byType.practicalExam++;
-        } else if (isLabTemplate(template)) {
-          byType.lab++;
-        } else {
-          byType.assignment++;
-        }
-      });
-      const now = new Date();
-      const assessmentsByStatus = {
-        active: 0,
-        completed: 0,
-        pending: 0,
-      };
-      const lecturerMap = new Map<number, { lecturerId: number; lecturerName: string; count: number }>();
-      const submissions = await submissionService.getSubmissionList({});
-      assessments.items.forEach((assessment) => {
-        const endDate = new Date(assessment.endAt);
-        if (now < endDate) assessmentsByStatus.active++;
-        else assessmentsByStatus.completed++;
-        const lecturerId = assessment.lecturerName ? 0 : 0;
-        if (!lecturerMap.has(lecturerId)) {
-          lecturerMap.set(lecturerId, {
-            lecturerId,
-            lecturerName: assessment.lecturerName || 'Unknown',
-            count: 0,
-          });
-        }
-        lecturerMap.get(lecturerId)!.count++;
-        const assessmentSubmissions = submissions.filter(
-          (s) => s.classAssessmentId === assessment.id
-        );
-      });
-      const assessmentsByLecturer = Array.from(lecturerMap.values());
-      const totalSubmissions = submissions.length;
-      const averageSubmissionsPerAssessment = assessments.items.length > 0
-        ? Math.round(totalSubmissions / assessments.items.length)
-        : 0;
-      const assessmentsWithoutSubmissions = assessments.items.filter((assessment) => {
-        const assessmentSubmissions = submissions.filter(
-          (s) => s.classAssessmentId === assessment.id
-        );
-        return assessmentSubmissions.length === 0;
-      }).length;
-      const topAssessmentsBySubmissions = assessments.items
-        .map((assessment) => {
-          const assessmentSubmissions = submissions.filter(
-            (s) => s.classAssessmentId === assessment.id
-          );
-          return {
-            id: assessment.id,
-            name: assessment.assessmentTemplateName,
-            courseName: assessment.courseName,
-            submissionCount: assessmentSubmissions.length,
-            lecturerName: assessment.lecturerName,
-          };
-        })
-        .sort((a, b) => b.submissionCount - a.submissionCount)
-        .slice(0, 10);
-      const upcomingDeadlines = assessments.items
-        .filter((assessment) => {
-          const endDate = new Date(assessment.endAt);
-          return endDate > now;
-        })
-        .map((assessment) => {
-          const endDate = new Date(assessment.endAt);
-          const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          return {
-            id: assessment.id,
-            name: assessment.assessmentTemplateName,
-            endAt: assessment.endAt,
-            daysRemaining,
-          };
-        })
-        .sort((a, b) => a.daysRemaining - b.daysRemaining)
-        .slice(0, 10);
-      return {
-        totalTemplates: templates.totalCount,
-        totalClassAssessments: assessments.total,
-        byType,
-        assessmentsByStatus,
-        assessmentsByLecturer,
-        averageSubmissionsPerAssessment,
-        assessmentsWithoutSubmissions,
-        topAssessmentsBySubmissions,
-        upcomingDeadlines,
-      };
-    } catch (error) {
-      console.error('Error fetching detailed assessment stats:', error);
-      return getDefaultAssessmentStats();
-    }
   }
   async getDetailedSubmissionStats(): Promise<SubmissionStats> {
     return submissionStatsService.getDetailedSubmissionStats();

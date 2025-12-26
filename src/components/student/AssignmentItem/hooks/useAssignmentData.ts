@@ -8,31 +8,45 @@ import { gradingService } from "@/services/gradingService";
 import { rubricItemService } from "@/services/rubricItemService";
 import { submissionService } from "@/services/submissionService";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { AssignmentData } from "../../data";
 export const useAssignmentData = (
     data: AssignmentData,
     isLab: boolean
 ) => {
     const { studentId } = useStudent();
+    const isMountedRef = useRef(true);
+    
+    useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
     const { data: submissions = [] } = useQuery({
         queryKey: ['submissions', 'byStudent', studentId, data.classAssessmentId, data.examSessionId],
         queryFn: async () => {
             if (!studentId) return [];
+            try {
             if (data.classAssessmentId) {
-                return submissionService.getSubmissionList({
+                    return await submissionService.getSubmissionList({
                     studentId: studentId,
                     classAssessmentId: data.classAssessmentId,
                 });
             } else if (data.examSessionId) {
-                return submissionService.getSubmissionList({
+                    return await submissionService.getSubmissionList({
                     studentId: studentId,
                     examSessionId: data.examSessionId,
                 });
+                }
+            } catch (error) {
+                console.error('Error fetching submissions:', error);
+                return [];
             }
             return [];
         },
         enabled: !!studentId && (!!data.classAssessmentId || !!data.examSessionId),
+        retry: false,
     });
     const sortedSubmissions = useMemo(() => {
         return [...submissions].sort((a, b) => {
@@ -48,6 +62,7 @@ export const useAssignmentData = (
         queries: labSubmissionHistory.map((submission) => ({
             queryKey: ['gradingSessions', 'bySubmissionId', submission.id],
             queryFn: async () => {
+                try {
                 const result = await gradingService.getGradingSessions({
                     submissionId: submission.id,
                     pageNumber: 1,
@@ -59,8 +74,13 @@ export const useAssignmentData = (
                         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
                     ),
                 };
+                } catch (error) {
+                    console.error(`Error fetching grading sessions for submission ${submission.id}:`, error);
+                    return { items: [], totalCount: 0 };
+                }
             },
-            enabled: isLab && submission.id > 0,
+            enabled: isLab && submission.id > 0 && !!submission.id,
+            retry: false,
         })),
     });
     const labGradeItemsQueries = useQueries({
@@ -70,6 +90,7 @@ export const useAssignmentData = (
             return {
                 queryKey: ['gradeItems', 'byGradingSessionId', latestSession?.id],
                 queryFn: async () => {
+                    try {
                     if (!latestSession) return { items: [] };
                     if (latestSession.gradeItems && latestSession.gradeItems.length > 0) {
                         return { items: latestSession.gradeItems };
@@ -79,8 +100,13 @@ export const useAssignmentData = (
                         pageNumber: 1,
                         pageSize: 1000,
                     });
+                    } catch (error) {
+                        console.error(`Error fetching grade items for session ${latestSession?.id}:`, error);
+                        return { items: [] };
+                    }
                 },
-                enabled: isLab && !!latestSession?.id,
+                enabled: isLab && !!latestSession?.id && !!submission?.id,
+                retry: false,
             };
         }),
     });
@@ -96,12 +122,20 @@ export const useAssignmentData = (
     const questionsQueries = useQueries({
         queries: (papersData?.items || []).map((paper) => ({
             queryKey: queryKeys.assessmentQuestions.byPaperId(paper.id),
-            queryFn: () => assessmentQuestionService.getAssessmentQuestions({
+            queryFn: async () => {
+                try {
+                    return await assessmentQuestionService.getAssessmentQuestions({
                 assessmentPaperId: paper.id,
                 pageNumber: 1,
                 pageSize: 100,
-            }),
-            enabled: isLab && !!data.assessmentTemplateId && (papersData?.items || []).length > 0,
+                    });
+                } catch (error) {
+                    console.error(`Error fetching questions for paper ${paper.id}:`, error);
+                    return { items: [], totalCount: 0 };
+                }
+            },
+            enabled: isLab && !!data.assessmentTemplateId && (papersData?.items || []).length > 0 && !!paper.id,
+            retry: false,
         })),
     });
     const allQuestionIds = useMemo(() => {
@@ -116,12 +150,20 @@ export const useAssignmentData = (
     const rubricsQueries = useQueries({
         queries: allQuestionIds.map((questionId) => ({
             queryKey: queryKeys.rubricItems.byQuestionId(questionId),
-            queryFn: () => rubricItemService.getRubricsForQuestion({
+            queryFn: async () => {
+                try {
+                    return await rubricItemService.getRubricsForQuestion({
                 assessmentQuestionId: questionId,
                 pageNumber: 1,
                 pageSize: 100,
-            }),
-            enabled: isLab && !!data.assessmentTemplateId && allQuestionIds.length > 0,
+                    });
+                } catch (error) {
+                    console.error(`Error fetching rubrics for question ${questionId}:`, error);
+                    return { items: [], totalCount: 0 };
+                }
+            },
+            enabled: isLab && !!data.assessmentTemplateId && allQuestionIds.length > 0 && !!questionId,
+            retry: false,
         })),
     });
     const questions = useMemo(() => {

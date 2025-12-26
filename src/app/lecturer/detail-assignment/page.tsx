@@ -164,9 +164,22 @@ const AssignmentDetailItem = ({
               clearInterval(pollInterval);
               message.destroy();
               setBatchGradingLoading(false);
-              queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
-              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              // Invalidate and refetch to update grades immediately
+              // Invalidate all related queries
+              await queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
+              await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              await queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              // Refetch to update the UI immediately
+              await queryClient.refetchQueries({ 
+                predicate: (query) => {
+                  const key = query.queryKey;
+                  return (
+                    (Array.isArray(key) && key[0] === 'submissions' && key[1] === 'byClassAssessments') ||
+                    (Array.isArray(key) && key[0] === 'gradingSessions') ||
+                    (Array.isArray(key) && key[0] === 'gradeItems')
+                  );
+                }
+              });
               message.success(`Batch grading completed for ${successCount} submission(s)`);
             }
           } catch (err: any) {
@@ -584,18 +597,49 @@ const DetailAssignmentPage = () => {
       semesterInfo: semesterStartDate && semesterEndDate ? { startDate: semesterStartDate, endDate: semesterEndDate } : null,
     };
   }, [classData, allElements, assignRequestResponse, templateResponse, classAssessmentRes]);
-  const classAssessmentIds = Array.from(classAssessments.values()).map(ca => ca.id);
+  const classAssessmentIds = useMemo(() => {
+    return Array.from(classAssessments.values())
+      .map(ca => ca.id)
+      .filter(id => id !== undefined && id !== null);
+  }, [classAssessments]);
+  
   const { data: submissionsData } = useQuery({
-    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
+    queryKey: ['submissions', 'byClassAssessments', classAssessmentIds.sort((a, b) => a - b)],
     queryFn: async () => {
       if (classAssessmentIds.length === 0) return new Map<number, Submission[]>();
-      const submissionPromises = classAssessmentIds.map(classAssessmentId =>
-        submissionService.getSubmissionList({ classAssessmentId: classAssessmentId }).catch(() => [])
-      );
+      
+      // Guard: Check if submissionService is available
+      if (!submissionService) {
+        console.error('submissionService is not available');
+        return new Map<number, Submission[]>();
+      }
+      
+      if (typeof submissionService.getSubmissionList !== 'function') {
+        console.error('submissionService.getSubmissionList is not a function', submissionService);
+        return new Map<number, Submission[]>();
+      }
+      
+      const submissionPromises = classAssessmentIds.map(async (classAssessmentId) => {
+        try {
+          if (!classAssessmentId || classAssessmentId <= 0) {
+            return [];
+          }
+          const result = await submissionService.getSubmissionList({ 
+            classAssessmentId: classAssessmentId 
+          });
+          return Array.isArray(result) ? result : [];
+        } catch (error) {
+          console.error(`Failed to fetch submissions for classAssessmentId ${classAssessmentId}:`, error);
+          return [];
+        }
+      });
+      
       const submissionArrays = await Promise.all(submissionPromises);
-      const allSubmissions = submissionArrays.flat();
+      const allSubmissions = submissionArrays.flat().filter(sub => sub && sub.id);
       const submissionsByCourseElement = new Map<number, Submission[]>();
+      
       for (const submission of allSubmissions) {
+        if (!submission || !submission.classAssessmentId) continue;
         const classAssessment = Array.from(classAssessments.values()).find(ca => ca.id === submission.classAssessmentId);
           if (classAssessment && classAssessment.courseElementId) {
             const existing = submissionsByCourseElement.get(classAssessment.courseElementId) || [];
@@ -643,7 +687,18 @@ const DetailAssignmentPage = () => {
     },
     enabled: classAssessmentIds.length > 0,
   });
-  const submissions = submissionsData || new Map<number, Submission[]>();
+  const submissions = useMemo(() => {
+    if (!submissionsData) {
+      return new Map<number, Submission[]>();
+    }
+    // Ensure submissionsData is a Map
+    if (submissionsData instanceof Map) {
+      return submissionsData;
+    }
+    // If it's not a Map, convert it or return empty Map
+    console.warn('submissionsData is not a Map, converting or using empty Map');
+    return new Map<number, Submission[]>();
+  }, [submissionsData]);
   const isLoading = isLoadingClass && !classData;
   const error = !selectedClassId ? "No class selected. Please select a class first." : null;
   const updateDeadlineMutation = useMutation({
@@ -707,9 +762,18 @@ const DetailAssignmentPage = () => {
         const classAssessment = classAssessmentRes.items.find(ca => ca.courseElementId === courseElement.id);
         if (!classAssessment) continue;
         const allStudents = await classService.getStudentsInClass(Number(selectedClassId)).catch(() => []);
-        const submissions = await submissionService.getSubmissionList({
+        let submissions: Submission[] = [];
+        try {
+          if (submissionService && typeof submissionService.getSubmissionList === 'function' && classAssessment.id) {
+            submissions = await submissionService.getSubmissionList({
           classAssessmentId: classAssessment.id,
-        }).catch(() => []);
+            });
+          } else {
+            console.error('submissionService.getSubmissionList is not available');
+          }
+        } catch (error) {
+          console.error(`Failed to fetch submissions for classAssessment ${classAssessment.id}:`, error);
+        }
         const submissionMap = new Map<number, Submission>();
         for (const submission of submissions) {
           if (submission.studentId) {
@@ -898,7 +962,9 @@ const DetailAssignmentPage = () => {
                 const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
                   ? classAssessment
                   : undefined;
-                const assignmentSubmissions = approvedClassAssessment ? (submissions.get(assignment.id) || []) : [];
+                const assignmentSubmissions = approvedClassAssessment && submissions instanceof Map 
+                  ? (submissions.get(assignment.id) || []) 
+                  : [];
                 return {
                   assignment,
                   template: matchingTemplate,
@@ -945,7 +1011,9 @@ const DetailAssignmentPage = () => {
             const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
               ? classAssessment
               : undefined;
-            const assignmentSubmissions = approvedClassAssessment ? (submissions.get(assignment.id) || []) : [];
+            const assignmentSubmissions = approvedClassAssessment && submissions instanceof Map
+              ? (submissions.get(assignment.id) || [])
+              : [];
             return (
               <Panel
                 key={assignment.id}

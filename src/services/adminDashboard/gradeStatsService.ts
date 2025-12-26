@@ -51,13 +51,20 @@ export interface GradeStats {
 export class GradeStatsService {
   async getGradeStats(): Promise<GradeStats> {
     try {
-      const [submissionsFromAssessments, assessments, classes, templates, gradingGroups] = await Promise.all([
+      const [submissionsFromAssessments, assessments, classes, templates, gradingGroups, allCourseElements] = await Promise.all([
         submissionService.getSubmissionList({}),
         classAssessmentService.getClassAssessments({ pageNumber: 1, pageSize: 1000 }),
         classService.getClassList({ pageNumber: 1, pageSize: 1000 }),
         adminService.getAssessmentTemplateList(1, 1000),
         gradingGroupService.getGradingGroups({}),
+        courseElementService.getCourseElements({ pageNumber: 1, pageSize: 1000 }),
       ]);
+      
+      // Create courseElementMap for accurate type detection
+      const courseElementMap = new Map<number, any>();
+      allCourseElements.forEach((element) => {
+        courseElementMap.set(element.id, element);
+      });
       const gradingGroupIds = gradingGroups.map(g => g.id);
       const submissionsFromGroups = await Promise.all(
         gradingGroupIds.map(groupId =>
@@ -179,9 +186,30 @@ export class GradeStatsService {
         if (submission.classAssessmentId) {
           assessment = assessmentMap.get(submission.classAssessmentId);
           if (!assessment) continue;
+          
+          // Determine type using courseElement.elementType (most accurate)
           if (assessment?.assessmentTemplateId) {
             const template = templateMap.get(assessment.assessmentTemplateId);
-            if (template) {
+            if (template && template.courseElementId) {
+              const courseElement = courseElementMap.get(template.courseElementId);
+              if (courseElement) {
+                if (courseElement.elementType === 2) {
+                  assessmentType = 'practicalExam';
+                } else if (courseElement.elementType === 1) {
+                  assessmentType = 'lab';
+                } else {
+                  assessmentType = 'assignment';
+                }
+              } else {
+                // Fallback to name-based detection
+                if (isPracticalExamTemplate(template)) {
+                  assessmentType = 'practicalExam';
+                } else if (isLabTemplate(template)) {
+                  assessmentType = 'lab';
+                }
+              }
+            } else if (template) {
+              // Fallback to name-based detection if no courseElementId
               if (isPracticalExamTemplate(template)) {
                 assessmentType = 'practicalExam';
               } else if (isLabTemplate(template)) {
@@ -189,11 +217,9 @@ export class GradeStatsService {
               }
             }
           }
+          
           isPublished = assessment.isPublished || false;
           classId = assessment.classId;
-          if (assessmentType !== 'lab' && !isPublished) {
-            continue;
-          }
         } else if (submission.gradingGroupId) {
           assessmentType = 'practicalExam';
           const gradingGroup = gradingGroupMap.get(submission.gradingGroupId);
@@ -220,15 +246,18 @@ export class GradeStatsService {
             pageNumber: 1,
             pageSize: 100,
           });
-          if (gradingSessionsResult.items.length === 0) {
-            continue;
-          }
+          // Get completed sessions first
           const completedSessions = gradingSessionsResult.items.filter(
             (s) => s.status === 1
           );
+          
+          // If no completed sessions, skip
           if (completedSessions.length === 0) {
             continue;
           }
+          
+          // If assessment is not published and not a lab, we still include it if it has a completed session
+          // This ensures all graded submissions are counted in statistics
           let selectedSession = null;
           if (assessmentType === 'lab' && isPublished) {
             const teacherSession = completedSessions.find(

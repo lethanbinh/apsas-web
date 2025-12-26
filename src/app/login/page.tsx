@@ -11,11 +11,9 @@ export default function LoginPage() {
     <AuthGuard requireAuth={false}>
       <div className="login-page">
         <div className="login-container">
-          {}
           <div className="login-form-section">
             <LoginForm />
           </div>
-          {}
           <div className="login-illustration">
             <div className="illustration-wrapper">
               <Image

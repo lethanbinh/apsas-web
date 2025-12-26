@@ -339,9 +339,22 @@ const LabDetailItem = ({
               clearInterval(pollInterval);
               message.destroy();
               setBatchGradingLoading(false);
-              queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
-              queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
-              queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              // Invalidate and refetch to update grades immediately
+              // Invalidate all related queries
+              await queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
+              await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.all });
+              await queryClient.invalidateQueries({ queryKey: ['gradeItems'] });
+              // Refetch to update the UI immediately
+              await queryClient.refetchQueries({ 
+                predicate: (query) => {
+                  const key = query.queryKey;
+                  return (
+                    (Array.isArray(key) && key[0] === 'submissions' && key[1] === 'byClassAssessments') ||
+                    (Array.isArray(key) && key[0] === 'gradingSessions') ||
+                    (Array.isArray(key) && key[0] === 'gradeItems')
+                  );
+                }
+              });
               message.success(`Batch grading completed for ${successCount} submission(s)`);
             }
           } catch (err: any) {
@@ -598,7 +611,13 @@ const LabsPage = () => {
       semesterInfo: semesterStartDate && semesterEndDate ? { startDate: semesterStartDate, endDate: semesterEndDate } : null,
     };
   }, [classData, allElements, assignRequestResponse, templateResponse, classAssessmentRes]);
-  const classAssessmentIds = Array.from(classAssessments.values()).map(ca => ca.id);
+  const classAssessmentIds = useMemo(() => {
+    return Array.from(classAssessments.values())
+      .map(ca => ca.id)
+      .filter(id => id !== undefined && id !== null)
+      .sort((a, b) => a - b);
+  }, [classAssessments]);
+  
   const { data: submissionsData } = useQuery({
     queryKey: ['submissions', 'byClassAssessments', classAssessmentIds],
     queryFn: async () => {
@@ -965,7 +984,8 @@ const LabsPage = () => {
             const approvedClassAssessment = matchingTemplate && classAssessment?.assessmentTemplateId === matchingTemplate.id
               ? classAssessment
               : undefined;
-            const labSubmissions = approvedClassAssessment ? (submissions.get(lab.id) || []) : [];
+            // Get submissions for this lab (courseElementId)
+            const labSubmissions = submissions.get(lab.id) || [];
             return (
               <Panel
                 key={lab.id}

@@ -1,29 +1,45 @@
 import { submissionService } from '../submissionService';
 import { classAssessmentService } from '../classAssessmentService';
 import { adminService } from '../adminService';
+import { gradingGroupService } from '../gradingGroupService';
 import { isPracticalExamTemplate, isLabTemplate } from './utils';
 import { getDefaultSubmissionStats } from './defaultStats';
 import type { SubmissionStats } from './types';
 export class SubmissionStatsService {
   async getSubmissionStats(): Promise<SubmissionStats> {
     try {
-      const submissions = await submissionService.getSubmissionList({});
-      const assessments = await classAssessmentService.getClassAssessments({
+      const [submissions, assessments, templates, gradingGroups] = await Promise.all([
+        submissionService.getSubmissionList({}),
+        classAssessmentService.getClassAssessments({
         pageNumber: 1,
         pageSize: 1000,
-      });
-      const templates = await adminService.getAssessmentTemplateList(1, 1000);
-      const graded = submissions.filter((s) => s.lastGrade > 0).length;
-      const pending = submissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
+        }),
+        adminService.getAssessmentTemplateList(1, 1000),
+        gradingGroupService.getGradingGroups({}),
+      ]);
+      
+      // Fetch submissions from grading groups (Practical Exam)
+      const gradingGroupIds = gradingGroups.map(g => g.id);
+      const peSubmissionsArrays = await Promise.all(
+        gradingGroupIds.map(groupId =>
+          submissionService.getSubmissionList({ gradingGroupId: groupId }).catch(() => [])
+        )
+      );
+      const peSubmissions = peSubmissionsArrays.flat();
+      const allSubmissions = [...submissions, ...peSubmissions];
+      const graded = allSubmissions.filter((s) => s.lastGrade > 0).length;
+      const pending = allSubmissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
       const notSubmitted = 0;
-      const completionRate = submissions.length > 0
-        ? (graded / submissions.length) * 100
+      const completionRate = allSubmissions.length > 0
+        ? (graded / allSubmissions.length) * 100
         : 0;
       const submissionsByType = { assignment: 0, lab: 0, practicalExam: 0 };
       const templateMap = new Map<number, any>();
       templates.items.forEach((template) => {
         templateMap.set(template.id, template);
       });
+      
+      // Count submissions from class assessments
       submissions.forEach((submission) => {
         const assessment = assessments.items.find((a) => a.id === submission.classAssessmentId);
         if (assessment && assessment.assessmentTemplateId) {
@@ -43,7 +59,11 @@ export class SubmissionStatsService {
           submissionsByType.assignment++;
         }
       });
-      const gradedSubmissions = submissions.filter((s) => s.lastGrade > 0);
+      
+      // Count Practical Exam submissions from grading groups
+      submissionsByType.practicalExam += peSubmissions.length;
+      
+      const gradedSubmissions = allSubmissions.filter((s) => s.lastGrade > 0);
       const averageGrade = gradedSubmissions.length > 0
         ? gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0) / gradedSubmissions.length
         : 0;
@@ -54,9 +74,9 @@ export class SubmissionStatsService {
         belowAverage: gradedSubmissions.filter((s) => s.lastGrade < 5.5).length,
       };
       const lateSubmissions = 0;
-      const onTimeSubmissions = submissions.length;
+      const onTimeSubmissions = allSubmissions.length;
       const studentMap = new Map<number, { studentId: number; studentName: string; studentCode: string; submissionCount: number; totalGrade: number; gradedCount: number }>();
-      submissions.forEach((sub) => {
+      allSubmissions.forEach((sub) => {
         if (!studentMap.has(sub.studentId)) {
           studentMap.set(sub.studentId, {
             studentId: sub.studentId,
@@ -85,7 +105,7 @@ export class SubmissionStatsService {
         .sort((a, b) => b.submissionCount - a.submissionCount)
         .slice(0, 10);
       const submissionsByDayMap = new Map<string, number>();
-      submissions.forEach((sub) => {
+      allSubmissions.forEach((sub) => {
         if (sub.submittedAt) {
           const date = new Date(sub.submittedAt).toISOString().split('T')[0];
           submissionsByDayMap.set(date, (submissionsByDayMap.get(date) || 0) + 1);
@@ -96,7 +116,7 @@ export class SubmissionStatsService {
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(-30);
       return {
-        total: submissions.length,
+        total: allSubmissions.length,
         graded,
         pending,
         notSubmitted,
@@ -116,17 +136,30 @@ export class SubmissionStatsService {
   }
   async getDetailedSubmissionStats(): Promise<SubmissionStats> {
     try {
-      const submissions = await submissionService.getSubmissionList({});
-      const assessments = await classAssessmentService.getClassAssessments({
+      const [submissions, assessments, templates, gradingGroups] = await Promise.all([
+        submissionService.getSubmissionList({}),
+        classAssessmentService.getClassAssessments({
         pageNumber: 1,
         pageSize: 1000,
-      });
-      const templates = await adminService.getAssessmentTemplateList(1, 1000);
-      const graded = submissions.filter((s) => s.lastGrade > 0).length;
-      const pending = submissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
+        }),
+        adminService.getAssessmentTemplateList(1, 1000),
+        gradingGroupService.getGradingGroups({}),
+      ]);
+      
+      // Fetch submissions from grading groups (Practical Exam)
+      const gradingGroupIds = gradingGroups.map(g => g.id);
+      const peSubmissionsArrays = await Promise.all(
+        gradingGroupIds.map(groupId =>
+          submissionService.getSubmissionList({ gradingGroupId: groupId }).catch(() => [])
+        )
+      );
+      const peSubmissions = peSubmissionsArrays.flat();
+      const allSubmissions = [...submissions, ...peSubmissions];
+      const graded = allSubmissions.filter((s) => s.lastGrade > 0).length;
+      const pending = allSubmissions.filter((s) => s.lastGrade === 0 && s.submittedAt).length;
       const notSubmitted = 0;
-      const completionRate = submissions.length > 0
-        ? (graded / submissions.length) * 100
+      const completionRate = allSubmissions.length > 0
+        ? (graded / allSubmissions.length) * 100
         : 0;
       const submissionsByType = {
         assignment: 0,
@@ -137,6 +170,8 @@ export class SubmissionStatsService {
       templates.items.forEach((template: any) => {
         templateMap.set(template.id, template);
       });
+      
+      // Count submissions from class assessments
       submissions.forEach((submission) => {
         const assessment = assessments.items.find((a) => a.id === submission.classAssessmentId);
         if (assessment && assessment.assessmentTemplateId) {
@@ -156,7 +191,11 @@ export class SubmissionStatsService {
           submissionsByType.assignment++;
         }
       });
-      const gradedSubmissions = submissions.filter((s) => s.lastGrade > 0);
+      
+      // Count Practical Exam submissions from grading groups
+      submissionsByType.practicalExam += peSubmissions.length;
+      
+      const gradedSubmissions = allSubmissions.filter((s) => s.lastGrade > 0);
       const totalGrade = gradedSubmissions.reduce((sum, s) => sum + s.lastGrade, 0);
       const averageGrade = gradedSubmissions.length > 0
         ? Math.round((totalGrade / gradedSubmissions.length) * 100) / 100
@@ -179,6 +218,9 @@ export class SubmissionStatsService {
           else onTimeSubmissions++;
         }
       });
+      // PE submissions are always on time (no deadline check needed)
+      onTimeSubmissions += peSubmissions.length;
+      
       const studentMap = new Map<number, {
         studentId: number;
         studentName: string;
@@ -187,7 +229,7 @@ export class SubmissionStatsService {
         totalGrade: number;
         gradeCount: number;
       }>();
-      submissions.forEach((submission) => {
+      allSubmissions.forEach((submission) => {
         if (!studentMap.has(submission.studentId)) {
           studentMap.set(submission.studentId, {
             studentId: submission.studentId,
@@ -218,7 +260,7 @@ export class SubmissionStatsService {
         .sort((a, b) => b.submissionCount - a.submissionCount)
         .slice(0, 10);
       const submissionsByDayMap = new Map<string, number>();
-      submissions.forEach((submission) => {
+      allSubmissions.forEach((submission) => {
         if (submission.submittedAt) {
           const date = new Date(submission.submittedAt).toISOString().split('T')[0];
           submissionsByDayMap.set(date, (submissionsByDayMap.get(date) || 0) + 1);
@@ -229,7 +271,7 @@ export class SubmissionStatsService {
         .sort((a, b) => a.date.localeCompare(b.date))
         .slice(-30);
       return {
-        total: submissions.length,
+        total: allSubmissions.length,
         graded,
         pending,
         notSubmitted,

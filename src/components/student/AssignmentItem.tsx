@@ -12,9 +12,9 @@ import {
   HistoryOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import { Alert, Button as AntButton, App, List, Modal, Space, Tag, Typography, Upload } from "antd";
+import { Alert, Button as AntButton, App, List, Modal, Space, Spin, Tag, Typography, Upload } from "antd";
 import type { UploadFile } from "antd/es/upload/interface";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "../ui/Button";
 import { useAssignmentData } from "./AssignmentItem/hooks/useAssignmentData";
 import { useSubmissionHandlers } from "./AssignmentItem/hooks/useSubmissionHandlers";
@@ -36,6 +36,7 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [isRequirementModalVisible, setIsRequirementModalVisible] = useState(false);
   const [isScoreModalVisible, setIsScoreModalVisible] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | undefined>(undefined);
   const [isPaperModalVisible, setIsPaperModalVisible] = useState(false);
   const [isSubmitModalVisible, setIsSubmitModalVisible] = useState(false);
   const { message } = App.useApp();
@@ -47,6 +48,18 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
     autoGradedScores,
     isPublished,
   } = useAssignmentData(data, isLab);
+  
+  // Cleanup modal states on unmount to prevent crashes
+  useEffect(() => {
+    return () => {
+      setIsRequirementModalVisible(false);
+      setIsScoreModalVisible(false);
+      setIsPaperModalVisible(false);
+      setIsSubmitModalVisible(false);
+      setSelectedSubmissionId(undefined);
+      setFileList([]);
+    };
+  }, []);
   const {
     handleSubmit: handleSubmitFile,
     canSubmit,
@@ -93,7 +106,17 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       return false;
     },
   };
+  const loadingText = isLab 
+    ? "Submitting your lab..." 
+    : "Submitting your assignment...";
+  
   return (
+    <Spin 
+      spinning={isSubmitting} 
+      tip={loadingText}
+      size="large"
+      style={{ minHeight: '200px' }}
+    >
     <div className={styles.itemContent}>
       {(!isExam || isPracticalExam) && (
         <>
@@ -113,7 +136,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                 </AntButton>
                 <AntButton
                   type="default"
-                  onClick={() => setIsScoreModalVisible(true)}
+                  onClick={() => {
+                    setSelectedSubmissionId(undefined);
+                    setIsScoreModalVisible(true);
+                  }}
                   className={styles.viewScoreButton}
                   icon={<EyeOutlined />}
                 >
@@ -188,6 +214,18 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                       submission.submissionFile?.submissionUrl
                         ? [
                           <AntButton
+                            key="view-detail"
+                            type="link"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={() => {
+                              setSelectedSubmissionId(submission.id);
+                              setIsScoreModalVisible(true);
+                            }}
+                          >
+                            View detail
+                          </AntButton>,
+                          <AntButton
                             key="download"
                             type="link"
                             size="small"
@@ -205,7 +243,20 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
                             Download
                           </AntButton>,
                         ]
-                        : []
+                        : [
+                          <AntButton
+                            key="view-detail"
+                            type="link"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={() => {
+                              setSelectedSubmissionId(submission.id);
+                              setIsScoreModalVisible(true);
+                            }}
+                          >
+                            View detail
+                          </AntButton>,
+                        ]
                     }
                   >
                     <List.Item.Meta
@@ -353,7 +404,10 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
             </Title>
             <Button
               variant="outline"
-              onClick={() => setIsScoreModalVisible(true)}
+              onClick={() => {
+                setSelectedSubmissionId(undefined);
+                setIsScoreModalVisible(true);
+              }}
               className={styles.viewScoreButtonExam}
               icon={<EyeOutlined />}
             >
@@ -377,9 +431,13 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
       )}
       <ScoreFeedbackModal
         open={isScoreModalVisible}
-        onCancel={() => setIsScoreModalVisible(false)}
+        onCancel={() => {
+          setIsScoreModalVisible(false);
+          setSelectedSubmissionId(undefined);
+        }}
         data={data}
         isLab={isLab}
+        submissionId={selectedSubmissionId}
       />
       {isLab && data.assessmentTemplateId && (
         <PaperAssignmentModal
@@ -451,5 +509,6 @@ export function AssignmentItem({ data, isExam = false, isLab = false, isPractica
         </div>
       </Modal>
     </div>
+    </Spin>
   );
 }

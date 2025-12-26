@@ -215,11 +215,17 @@ export default function AssignmentGradingPage() {
       });
       return { gradingSessionId, calculatedTotal };
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       message.success("Grade saved successfully");
-      queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }) });
-      queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
-      queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submissionId] });
+      // Invalidate and refetch to update grades immediately
+      await queryClient.invalidateQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }) });
+      await queryClient.invalidateQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      await queryClient.invalidateQueries({ queryKey: ['submissionFeedback', 'bySubmissionId', submissionId] });
+      await queryClient.invalidateQueries({ queryKey: ['submissions', 'byClassAssessments'] });
+      // Refetch to update the UI immediately
+      await queryClient.refetchQueries({ queryKey: queryKeys.grading.sessions.list({ submissionId: submissionId!, pageNumber: 1, pageSize: 100 }) });
+      await queryClient.refetchQueries({ queryKey: ['gradeItems', 'byGradingSessionId'] });
+      await queryClient.refetchQueries({ queryKey: ['submissions', 'byClassAssessments'] });
     },
     onError: (err: any) => {
       console.error("Failed to save grade:", err);

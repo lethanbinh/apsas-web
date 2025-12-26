@@ -56,7 +56,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onError }) => {
   const [form] = Form.useForm();
   const { login, isLoading } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { message } = App.useApp();
   const [errors, setErrors] = useState<Record<string, string>>({});

@@ -1,13 +1,12 @@
 import { ROLES } from '@/lib/constants';
 import { adminService } from '../adminService';
-import type { UserStats, UserGrowthData } from './types';
 import { getDefaultUserStats } from './defaultStats';
+import type { UserGrowthData, UserStats } from './types';
 export class UserStatsService {
   async getUserStats(): Promise<UserStats> {
     try {
-      const { users, total } = await adminService.getAccountList(1, 1000);
+      const { users } = await adminService.getAccountList(1, 1000);
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const byRole = {
         admin: 0,
         lecturer: 0,

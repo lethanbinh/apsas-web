@@ -3,24 +3,20 @@ import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
 import { queryKeys } from "@/lib/react-query";
 import { adminService } from "@/services/adminService";
 import { classService } from "@/services/classService";
-import { BookOutlined, ReloadOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, BookOutlined, ReloadOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Col, DatePicker, Row, Select, Space, Statistic, Table, Tag, Typography } from "antd";
 import dayjs, { Dayjs } from "dayjs";
-import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import {
-  BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
+  BarChart,
   CartesianGrid,
-  Tooltip,
-  Legend,
   ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
 } from "recharts";
 import styles from "../dashboard/DashboardAdmin.module.css";
 const { Title } = Typography;

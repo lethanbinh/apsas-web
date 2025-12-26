@@ -7,7 +7,7 @@ import { CourseElement, courseElementService } from "@/services/courseElementSer
 import { DownloadOutlined, LinkOutlined } from "@ant-design/icons";
 import { Alert, App, Button, Collapse, Space, Spin, Typography } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AssignmentItem } from "./AssignmentItem";
 import styles from "./AssignmentList.module.css";
@@ -30,11 +30,13 @@ function mapCourseElementToLabData(
   let deadline: string | undefined = undefined;
   let startAt = dayjs().toISOString();
   let assessmentTemplateId: number | undefined;
+  let classAssessmentId: number | undefined;
   try {
     if (classAssessment?.endAt) {
       deadline = classAssessment.endAt;
       startAt = classAssessment.startAt || dayjs().toISOString();
       assessmentTemplateId = classAssessment.assessmentTemplateId;
+      classAssessmentId = classAssessment.id;
     }
   } catch (error) {
     console.error("Error parsing deadline:", error);
@@ -74,7 +76,7 @@ function mapCourseElementToLabData(
     submissions: [],
     assessmentTemplateId: assessmentTemplateId,
     startAt: startAt,
-    classAssessmentId: classAssessment?.id,
+    classAssessmentId: classAssessmentId,
     isPublished: classAssessment?.isPublished ?? false,
   };
 }
@@ -82,9 +84,20 @@ export default function Labs() {
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const { message } = App.useApp();
   const { studentId } = useStudent();
+  const isMountedRef = useRef(true);
+  
   useEffect(() => {
       const classId = localStorage.getItem("selectedClassId");
+    if (isMountedRef.current) {
     setSelectedClassId(classId);
+    }
+  }, []);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
   const { data: classData, isLoading: isLoadingClass } = useQuery({
     queryKey: queryKeys.classes.detail(selectedClassId!),

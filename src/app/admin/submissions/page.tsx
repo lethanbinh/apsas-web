@@ -151,6 +151,10 @@ const SubmissionsPage = () => {
         assessmentType = 'practicalExam';
         const gradingGroup = gradingGroupMap.get(sub.gradingGroupId);
         if (!gradingGroup || !gradingGroup.assessmentTemplateId) return false;
+        // Only include if grade report has been submitted
+        if (!gradingGroup.submittedGradeSheetUrl && !gradingGroup.gradeSheetSubmittedAt) {
+          return false;
+        }
         const template = templateMap.get(gradingGroup.assessmentTemplateId);
         if (!template) return false;
       } else {
@@ -468,30 +472,48 @@ const SubmissionsPage = () => {
       "Lab": 0,
       "Practical Exam": 0,
     };
-    if (!classAssessmentsRes?.items || !templatesRes?.items) {
+    if (!templatesRes?.items) {
       return Object.entries(data).map(([name, value]) => ({ name, value }));
     }
-    const assessmentMap = new Map(classAssessmentsRes.items.map(a => [a.id, a]));
+    const assessmentMap = classAssessmentsRes?.items
+      ? new Map(classAssessmentsRes.items.map(a => [a.id, a]))
+      : new Map();
     const templateMap = new Map(templatesRes.items.map(t => [t.id, t]));
+    const gradingGroupMap = gradingGroupsRes
+      ? new Map(gradingGroupsRes.map(g => [g.id, g]))
+      : new Map();
+    
     filteredSubmissions.forEach((sub) => {
-      if (!sub.classAssessmentId) return;
-      const assessment = assessmentMap.get(sub.classAssessmentId);
-      if (!assessment?.assessmentTemplateId) return;
-      const template = templateMap.get(assessment.assessmentTemplateId);
-      if (!template) return;
-      if (isPracticalExamTemplate(template)) {
+      if (sub.classAssessmentId) {
+        const assessment = assessmentMap.get(sub.classAssessmentId);
+        if (!assessment?.assessmentTemplateId) return;
+        const template = templateMap.get(assessment.assessmentTemplateId);
+        if (!template) return;
+        if (isPracticalExamTemplate(template)) {
+          data["Practical Exam"]++;
+        } else if (isLabTemplate(template)) {
+          data["Lab"]++;
+        } else {
+          data["Assignment"]++;
+        }
+      } else if (sub.gradingGroupId) {
+        // Count Practical Exam from grading groups (already filtered to only include those with submitted grade report)
         data["Practical Exam"]++;
-      } else if (isLabTemplate(template)) {
-        data["Lab"]++;
-      } else {
-        data["Assignment"]++;
       }
     });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [filteredSubmissions, classAssessmentsRes, templatesRes]);
+  }, [filteredSubmissions, classAssessmentsRes, templatesRes, gradingGroupsRes]);
   const columns = useMemo(() => {
-    if (!classAssessmentsRes?.items) return [];
-    const assessmentMap = new Map(classAssessmentsRes.items.map(a => [a.id, a]));
+    const assessmentMap = classAssessmentsRes?.items
+      ? new Map(classAssessmentsRes.items.map(a => [a.id, a]))
+      : new Map();
+    const gradingGroupMap = gradingGroupsRes
+      ? new Map(gradingGroupsRes.map(g => [g.id, g]))
+      : new Map();
+    const templateMap = templatesRes?.items
+      ? new Map(templatesRes.items.map(t => [t.id, t]))
+      : new Map();
+    
     return [
       {
         title: "ID",
@@ -512,27 +534,50 @@ const SubmissionsPage = () => {
         title: "Course",
         key: "course",
         render: (_: any, record: any) => {
-          const assessment = assessmentMap.get(record.classAssessmentId);
-          return assessment?.courseName || "N/A";
+          if (record.classAssessmentId) {
+            const assessment = assessmentMap.get(record.classAssessmentId);
+            return assessment?.courseName || "N/A";
+          } else if (record.gradingGroupId) {
+            const gradingGroup = gradingGroupMap.get(record.gradingGroupId);
+            if (gradingGroup?.assessmentTemplateId) {
+              const template = templateMap.get(gradingGroup.assessmentTemplateId);
+              // Try to get course name from template or grading group
+              return gradingGroup.courseName || template?.courseElementName || "N/A";
+            }
+            return "N/A";
+          }
+          return "N/A";
         },
       },
       {
         title: "Class",
         key: "class",
         render: (_: any, record: any) => {
-          const assessment = assessmentMap.get(record.classAssessmentId);
-          return assessment?.classCode || "N/A";
+          if (record.classAssessmentId) {
+            const assessment = assessmentMap.get(record.classAssessmentId);
+            return assessment?.classCode || "N/A";
+          } else if (record.gradingGroupId) {
+            // For grading groups, we don't have a specific class
+            return "N/A";
+          }
+          return "N/A";
         },
       },
       {
         title: "Semester",
         key: "semester",
         render: (_: any, record: any) => {
-          const assessment = assessmentMap.get(record.classAssessmentId);
-          if (!assessment) return "N/A";
-          const classData = classes.find(c => Number(c.id) === Number(assessment.classId));
-          if (classData?.semesterName) {
-            return classData.semesterName;
+          if (record.classAssessmentId) {
+            const assessment = assessmentMap.get(record.classAssessmentId);
+            if (!assessment) return "N/A";
+            const classData = classes.find(c => Number(c.id) === Number(assessment.classId));
+            if (classData?.semesterName) {
+              return classData.semesterName;
+            }
+            return "N/A";
+          } else if (record.gradingGroupId) {
+            // For grading groups, we don't have semester info directly
+            return "N/A";
           }
           return "N/A";
         },
@@ -541,17 +586,23 @@ const SubmissionsPage = () => {
         title: "Type",
         key: "type",
         render: (_: any, record: any) => {
-          const assessment = assessmentMap.get(record.classAssessmentId);
-          if (!assessment?.assessmentTemplateId || !templatesRes?.items) return "N/A";
-          const template = templatesRes.items.find(t => t.id === assessment.assessmentTemplateId);
-          if (!template) return "N/A";
-          if (isPracticalExamTemplate(template)) {
+          if (record.classAssessmentId) {
+            const assessment = assessmentMap.get(record.classAssessmentId);
+            if (!assessment?.assessmentTemplateId || !templatesRes?.items) return "N/A";
+            const template = templatesRes.items.find(t => t.id === assessment.assessmentTemplateId);
+            if (!template) return "N/A";
+            if (isPracticalExamTemplate(template)) {
+              return <Tag color="purple">Practical Exam</Tag>;
+            } else if (isLabTemplate(template)) {
+              return <Tag color="green">Lab</Tag>;
+            } else {
+              return <Tag color="blue">Assignment</Tag>;
+            }
+          } else if (record.gradingGroupId) {
+            // All submissions from grading groups are Practical Exam
             return <Tag color="purple">Practical Exam</Tag>;
-          } else if (isLabTemplate(template)) {
-            return <Tag color="green">Lab</Tag>;
-          } else {
-            return <Tag color="blue">Assignment</Tag>;
           }
+          return "N/A";
         },
       },
       {
@@ -597,7 +648,7 @@ const SubmissionsPage = () => {
         ),
       },
     ];
-  }, [classAssessmentsRes, classes, templatesRes, semesters, submissionGrades]);
+  }, [classAssessmentsRes, classes, templatesRes, semesters, submissionGrades, gradingGroupsRes]);
   return (
     <>
       <QueryParamsHandler />

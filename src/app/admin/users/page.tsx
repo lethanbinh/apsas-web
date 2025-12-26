@@ -1,25 +1,13 @@
 "use client";
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
-import { queryKeys } from "@/lib/react-query";
 import { adminService } from "@/services/adminService";
-import { classService } from "@/services/classService";
-import { courseElementService } from "@/services/courseElementService";
-import { semesterService } from "@/services/semesterService";
-import { User } from "@/types";
-import { ReloadOutlined, UserOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, ReloadOutlined, UserOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Card, Select, Space, Table, Tag, Typography } from "antd";
-import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import styles from "../dashboard/DashboardAdmin.module.css";
 const { Title, Text } = Typography;
-const COLORS = {
-  blue: "#2563EB",
-  green: "#10B981",
-  purple: "#6D28D9",
-  orange: "#F59E0B",
-  red: "#EF4444",
-};
 const UsersPage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();

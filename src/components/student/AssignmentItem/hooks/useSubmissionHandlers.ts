@@ -118,13 +118,6 @@ export const useSubmissionHandlers = (
       }
     }, 5000);
     autoGradingPollIntervalRef.current = pollInterval;
-    setTimeout(() => {
-      if (autoGradingPollIntervalRef.current) {
-        clearInterval(autoGradingPollIntervalRef.current);
-        autoGradingPollIntervalRef.current = null;
-      }
-      message.destroy();
-    }, 300000);
   };
   const handleAiFeedback = async (submissionId: number) => {
     try {
@@ -173,13 +166,6 @@ export const useSubmissionHandlers = (
         }
       }, 5000);
       (window as any).aiFeedbackPollInterval = feedbackPollInterval;
-      setTimeout(() => {
-        if ((window as any).aiFeedbackPollInterval) {
-          clearInterval((window as any).aiFeedbackPollInterval);
-          (window as any).aiFeedbackPollInterval = null;
-        }
-        message.destroy();
-      }, 300000);
     } catch (feedbackErr: any) {
       console.error("Failed to get AI feedback:", feedbackErr);
       message.destroy();

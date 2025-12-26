@@ -1,25 +1,24 @@
 "use client";
 import { QueryParamsHandler } from "@/components/common/QueryParamsHandler";
-import { queryKeys } from "@/lib/react-query";
 import { adminDashboardService } from "@/services/adminDashboardService";
-import { ReloadOutlined, TrophyOutlined, CheckCircleOutlined, ClockCircleOutlined, UserOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, ReloadOutlined, TrophyOutlined, UserOutlined } from "@ant-design/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, Col, Row, Space, Spin, Statistic, Typography, Progress, Tag } from "antd";
+import { Button, Card, Col, Progress, Row, Space, Spin, Statistic, Tag, Typography } from "antd";
 import { useRouter } from "next/navigation";
 import {
-  BarChart,
   Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
 import styles from "./DashboardAdmin.module.css";
 const { Title, Text } = Typography;

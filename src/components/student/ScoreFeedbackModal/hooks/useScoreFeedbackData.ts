@@ -21,7 +21,7 @@ export interface QuestionWithRubrics extends AssessmentQuestion {
   rubricComments: { [rubricId: number]: string };
   questionComment?: string;
 }
-export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
+export const useScoreFeedbackData = (open: boolean, data: AssignmentData, submissionId?: number) => {
   const { studentId } = useStudent();
   const { data: submissionsData = [], isLoading: isLoadingSubmissions } = useQuery({
     queryKey: ['submissions', 'byStudentAndClassAssessment', studentId, data.classAssessmentId],
@@ -33,11 +33,14 @@ export const useScoreFeedbackData = (open: boolean, data: AssignmentData) => {
   });
   const lastSubmission = useMemo(() => {
     if (!submissionsData || submissionsData.length === 0) return null;
+    if (submissionId) {
+      return submissionsData.find(s => s.id === submissionId) || null;
+    }
     const sorted = [...submissionsData].sort(
       (a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
     );
     return sorted[0];
-  }, [submissionsData]);
+  }, [submissionsData, submissionId]);
   const effectiveClassId = useMemo(() => {
     if (data.classId) return data.classId;
     const stored = localStorage.getItem("selectedClassId");
