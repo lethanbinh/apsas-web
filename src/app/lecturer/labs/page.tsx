@@ -641,7 +641,8 @@ const LabsPage = () => {
       const submissionsByCourseElement = new Map<number, Submission[]>();
       const allSubmissionsByCourseElement = new Map<number, Submission[]>();
           for (const submission of allSubmissions) {
-        const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
+            if (!submission.classAssessmentId) continue;
+            const courseElementId = classAssessmentToCourseElementMap.get(submission.classAssessmentId);
             if (courseElementId !== undefined) {
               const existing = submissionsByCourseElement.get(courseElementId) || [];
               existing.push(submission);
