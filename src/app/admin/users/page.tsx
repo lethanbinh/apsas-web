@@ -31,11 +31,11 @@ const UsersPage = () => {
     return filtered;
   }, [users, selectedRole]);
   const getRoleName = (role: number) => {
-    const roles = ["Admin", "Lecturer", "Student", "HOD"];
+    const roles = ["Admin", "Lecturer", "Student", "HOD", "Examiner"];
     return roles[role] || "Unknown";
   };
   const getRoleColor = (role: number) => {
-    const colors = ["red", "purple", "green", "blue"];
+    const colors = ["red", "purple", "green", "blue", "orange"];
     return colors[role] || "default";
   };
   const columns = [
@@ -135,6 +135,7 @@ const UsersPage = () => {
                 <Select.Option value={1}>Lecturer</Select.Option>
                 <Select.Option value={2}>Student</Select.Option>
                 <Select.Option value={3}>HOD</Select.Option>
+                <Select.Option value={4}>Examiner</Select.Option>
               </Select>
             </Space>
           </Space>
