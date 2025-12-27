@@ -15,7 +15,7 @@ export class UserStatsService {
       };
       let newThisMonth = 0;
       let active = 0;
-      const filteredUsers = users.filter((user) => user.role !== 4);
+      const filteredUsers = users;
       filteredUsers.forEach((user) => {
         if (user.role === ROLES.ADMIN) byRole.admin++;
         else if (user.role === ROLES.LECTURER) byRole.lecturer++;

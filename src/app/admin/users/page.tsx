@@ -16,7 +16,7 @@ const UsersPage = () => {
     queryKey: ['adminUsers'],
     queryFn: async () => {
       const { users } = await adminService.getAccountList(1, 1000);
-      return users.filter((user) => user.role !== 4);
+      return users;
     },
   });
   const users = usersRes || [];
