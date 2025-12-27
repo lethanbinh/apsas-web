@@ -30,7 +30,6 @@ const getStatusProps = (status: number) => {
   }
 };
 export default function LecturerApprovalList() {
-  const { message } = App.useApp();
   const [searchText, setSearchText] = useState("");
   const [selectedSemester, setSelectedSemester] = useState<string | undefined>(undefined);
   const [selectedCourse, setSelectedCourse] = useState<string | undefined>(undefined);

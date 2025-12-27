@@ -24,6 +24,26 @@ function getAssignmentTypeFromName(courseElementName: string): "Assignment" | "L
   }
   return "Assignment";
 }
+
+function formatDateVietnamTime(dateString: string | undefined | null): string {
+  if (!dateString || dateString === "") return "N/A";
+  try {
+    const date = new Date(dateString);
+    // Vietnam time is UTC+7
+    const vietnamDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+    return vietnamDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Ho_Chi_Minh"
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return "N/A";
+  }
+}
 export async function exportGradeReportToExcel(
   reportData: GradeReportData[],
   fileName: string = "Grade_Report"
@@ -150,15 +170,7 @@ export async function exportGradeReportToExcel(
               : "0")
         : "Not graded";
       const submissionId = latestSubmission?.id || 0;
-      const submittedAt = latestSubmission && latestSubmission.submittedAt && latestSubmission.submittedAt !== ""
-        ? new Date(latestSubmission.submittedAt).toLocaleString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "N/A";
+      const submittedAt = formatDateVietnamTime(latestSubmission?.submittedAt);
       if (questions.length > 0) {
         for (const question of questions) {
           const questionRubrics = rubrics[question.id] || [];

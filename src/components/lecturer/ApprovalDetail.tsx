@@ -22,7 +22,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { CommentOutlined, EditOutlined } from "@ant-design/icons";
 import { EmptyPapersState, EmptyQuestionsState, EmptyRubricsState } from "@/components/shared/EmptyState";
 const { Title, Text } = Typography;
-const { Panel } = Collapse;
 const { TextArea } = Input;
 interface ApprovalDetailProps {
   template: ApiAssessmentTemplate;

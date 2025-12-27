@@ -1,38 +1,38 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Row,
-  Col,
-  Avatar,
-  Descriptions,
-  Tag,
-  Spin,
-  Empty,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Select,
-  DatePicker,
-  App
-} from 'antd';
-import {
-  UserOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  HomeOutlined,
-  CalendarOutlined,
-  IdcardOutlined,
-  EditOutlined,
-  LockOutlined
-} from '@ant-design/icons';
-import moment from 'moment';
 import { Layout } from '@/components/layout/Layout';
-import styles from './Profile.module.css';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
 import type { User } from '@/types';
+import {
+  CalendarOutlined,
+  EditOutlined,
+  HomeOutlined,
+  IdcardOutlined,
+  LockOutlined,
+  MailOutlined,
+  PhoneOutlined,
+  UserOutlined
+} from '@ant-design/icons';
+import {
+  App,
+  Avatar,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Spin,
+  Tag
+} from 'antd';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
+import styles from './Profile.module.css';
 const { Option } = Select;
 const ProfilePage = () => {
   const { user } = useAuth();

@@ -166,7 +166,8 @@ export default function ApprovalDetail({
                         antMessage.loading("Downloading files...", 0);
                         for (const file of files) {
                           try {
-                            const response = await fetch(file.fileUrl);
+                            const proxyUrl = `/api/file-proxy?url=${encodeURIComponent(file.fileUrl)}`;
+                            const response = await fetch(proxyUrl);
                             if (response.ok) {
                               const blob = await response.blob();
                               const url = URL.createObjectURL(blob);
@@ -201,13 +202,14 @@ export default function ApprovalDetail({
                 renderItem={(file) => (
                   <List.Item>
                     <a
-                      href={file.fileUrl}
+                      href={`/api/file-proxy?url=${encodeURIComponent(file.fileUrl)}`}
                       download={file.name}
                       className={styles.fileLink}
                       onClick={async (e) => {
                         e.preventDefault();
                         try {
-                          const response = await fetch(file.fileUrl);
+                          const proxyUrl = `/api/file-proxy?url=${encodeURIComponent(file.fileUrl)}`;
+                          const response = await fetch(proxyUrl);
                           if (response.ok) {
                             const blob = await response.blob();
                             const url = URL.createObjectURL(blob);

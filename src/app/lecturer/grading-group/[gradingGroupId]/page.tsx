@@ -35,7 +35,6 @@ export default function GradingGroupPage() {
   const params = useParams();
   const gradingGroupId = params?.gradingGroupId ? Number(params.gradingGroupId) : null;
   const { message } = App.useApp();
-  const { user } = useAuth();
   const [editSubmissionModalVisible, setEditSubmissionModalVisible] = useState(false);
   const [selectedSubmissionForEdit, setSelectedSubmissionForEdit] = useState<Submission | null>(null);
   const [batchGradingLoading, setBatchGradingLoading] = useState(false);

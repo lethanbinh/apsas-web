@@ -13,7 +13,7 @@ import { FeedbackHistoryModal } from "./components/FeedbackHistoryModal";
 import { GradingDetailsSection } from "./components/GradingDetailsSection";
 import { GradingHistoryModal } from "./components/GradingHistoryModal";
 import { SubmissionHeaderCard } from "./components/SubmissionHeaderCard";
-import { ViewExamModal } from "./components/ViewExamModal";
+import { RequirementModal } from "@/components/student/RequirementModal";
 import { useAutoGrading } from "./hooks/useAutoGrading";
 import { useFeedbackOperations } from "./hooks/useFeedbackOperations";
 import { useSubmissionGradingData } from "./hooks/useSubmissionGradingData";
@@ -377,10 +377,13 @@ export default function AssignmentGradingPage() {
             ]}
           />
         </Card>
-        <ViewExamModal
-          visible={viewExamModalVisible}
-          onClose={() => setViewExamModalVisible(false)}
-          submission={submission}
+        <RequirementModal
+          open={viewExamModalVisible}
+          onCancel={() => setViewExamModalVisible(false)}
+          title={submission?.classAssessmentId ? "View Assignment Details" : "View Exam"}
+          content={[]}
+          classAssessmentId={submission?.classAssessmentId}
+          assessmentTemplateId={assessmentTemplateId ?? undefined}
         />
         <GradingHistoryModal
           visible={gradingHistoryModalVisible}

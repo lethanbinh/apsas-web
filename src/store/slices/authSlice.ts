@@ -1,9 +1,9 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { User, LoginCredentials, RegisterData } from '@/types';
-import { authService } from '@/services/authService';
-import { setCookie, deleteCookie } from '@/lib/utils/cookie';
-import { setStorageItem, getStorageItem, removeStorageItem } from '@/lib/utils/storage';
+import { deleteCookie, setCookie } from '@/lib/utils/cookie';
 import { clearSessionTimeout } from '@/lib/utils/sessionTimeout';
+import { getStorageItem, removeStorageItem, setStorageItem } from '@/lib/utils/storage';
+import { authService } from '@/services/authService';
+import { LoginCredentials, RegisterData, User } from '@/types';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 interface AuthState {
   user: User | null;
   token: string | null;
